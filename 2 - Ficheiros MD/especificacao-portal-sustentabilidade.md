@@ -11,7 +11,7 @@ Este documento junta tudo o que foi alinhado sobre a plataforma. É acompanhado 
 
 - O **protótipo é a referência funcional e visual**. Quando este documento e o protótipo divergirem, vale este documento, e a divergência deve ser assinalada.
 - No protótipo, os dados ficam no `localStorage` do navegador e não há servidor. Em produção, tudo o que está em `localStorage` passa para uma base de dados (ver secção 21).
-- Os valores do protótipo são de demonstração, tirados de um relatório de sustentabilidade público do setor. Os valores do "ano anterior" (2025) são esses valores reutilizados.
+- Os valores do protótipo são fictícios, só para demonstração, incluindo os do "ano anterior" (2025).
 - No protótipo, cada perfil entra sem palavra-passe, para facilitar demonstrações. Em produção a autenticação é obrigatória (secção 20).
 - Os termos técnicos ficam em inglês (milestone, workflow, backoffice, dashboard, data room, assurance, schema, template). O resto da interface é em português europeu.
 
@@ -534,66 +534,66 @@ Legenda: Tipo B = dado base, D = derivado. Ev. = evidência obrigatória. Utiliz
 
 | ID | Indicador | Unidade | Unidade de negócio | Tipo | Periodicidade | Perímetro | Quadro | ESRS | GRI | Limiar | Ev. | Utilizadores | Valor ano anterior (demo) |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| A01 | Água entrada no sistema | Mm³ | Operações | B | Mensal | Concessões | Desempenho | E3-4 | 303-3 | 10% |  | REL, ERSAR, OPS | 44,68 |
-| A02 | Água faturada | Mm³ | Comercial e Relação com o Cliente | B | Mensal | Grupo | Desempenho | E3 | - | 15% |  | REL, ERSAR, CONT | 58,90 |
-| A03 | Água não faturada | % | Operações | D | Mensal | Grupo | Desempenho | E3 | - | 15% |  | REL, ERSAR | 15,10 |
-| A04 | Clientes de água de abastecimento | milhares | Comercial e Relação com o Cliente | B | Trimestral | Grupo | Desempenho | Setorial | - | 15% |  | REL, ERSAR | 414 |
-| A05 | Volume de água abstraída por cliente | m³/cliente | Operações | D | Anual | Grupo | Desempenho | E3-4 | 303-3 | 15% |  | REL | 132,62 |
-| A06 | Estações de tratamento de água (ETA) | n.º | Operações | B | Anual | Grupo | Desempenho | Setorial | - | 15% |  | REL | 10 |
-| A07 | Extensão das redes de abastecimento | km | Operações | B | Anual | Grupo | Desempenho | Setorial | - | 15% |  | REL, ERSAR | 6 941,99 |
-| A08 | Água potável captada | Mm³ | Operações | B | Mensal | Grupo | Desempenho | E3-4 | 303-3 | 15% |  | REL, APA, ERSAR | 25,83 |
-| A09 | Roturas detetadas na pesquisa ativa de fugas | n.º | Operações | B | Mensal | Grupo | Desempenho | Setorial | - | 15% |  | REL, OPS | 1 181 |
-| R01 | Água residual faturada | Mm³ | Comercial e Relação com o Cliente | B | Mensal | Grupo | Desempenho | Setorial | 303-4 | 15% |  | REL, ERSAR, CONT | 97,99 |
-| R02 | Estações de tratamento de águas residuais (ETAR) | n.º | Operações | B | Anual | Grupo | Desempenho | Setorial | - | 15% |  | REL | 86 |
-| R03 | Extensão das redes de drenagem | km | Operações | B | Anual | Grupo | Desempenho | Setorial | - | 15% |  | REL, ERSAR | 2 999,32 |
-| R04G | Volume de águas residuais tratadas em ETAR (grupo) | Mm³ | Operações | B | Mensal | Grupo | Desempenho | E3-4 | 303-4 | 20% |  | REL, APA | 87,58 |
-| P02 | Colaboradores (grupo) | n.º | Recursos Humanos | B | Trimestral | Grupo | Desempenho | S1-6 | 2-7 | 50% |  | REL | 1 086 |
+| A01 | Água entrada no sistema | Mm³ | Operações | B | Mensal | Concessões | Desempenho | E3-4 | 303-3 | 10% |  | REL, ERSAR, OPS | 53,62 |
+| A02 | Água faturada | Mm³ | Comercial e Relação com o Cliente | B | Mensal | Grupo | Desempenho | E3 | - | 15% |  | REL, ERSAR, CONT | 43,59 |
+| A03 | Água não faturada | % | Operações | D | Mensal | Grupo | Desempenho | E3 | - | 15% |  | REL, ERSAR | 17,36 |
+| A04 | Clientes de água de abastecimento | milhares | Comercial e Relação com o Cliente | B | Trimestral | Grupo | Desempenho | Setorial | - | 15% |  | REL, ERSAR | 327 |
+| A05 | Volume de água abstraída por cliente | m³/cliente | Operações | D | Anual | Grupo | Desempenho | E3-4 | 303-3 | 15% |  | REL | 169,75 |
+| A06 | Estações de tratamento de água (ETA) | n.º | Operações | B | Anual | Grupo | Desempenho | Setorial | - | 15% |  | REL | 8 |
+| A07 | Extensão das redes de abastecimento | km | Operações | B | Anual | Grupo | Desempenho | Setorial | - | 15% |  | REL, ERSAR | 8 538,65 |
+| A08 | Água potável captada | Mm³ | Operações | B | Mensal | Grupo | Desempenho | E3-4 | 303-3 | 15% |  | REL, APA, ERSAR | 22,73 |
+| A09 | Roturas detetadas na pesquisa ativa de fugas | n.º | Operações | B | Mensal | Grupo | Desempenho | Setorial | - | 15% |  | REL, OPS | 1 394 |
+| R01 | Água residual faturada | Mm³ | Comercial e Relação com o Cliente | B | Mensal | Grupo | Desempenho | Setorial | 303-4 | 15% |  | REL, ERSAR, CONT | 75,45 |
+| R02 | Estações de tratamento de águas residuais (ETAR) | n.º | Operações | B | Anual | Grupo | Desempenho | Setorial | - | 15% |  | REL | 97 |
+| R03 | Extensão das redes de drenagem | km | Operações | B | Anual | Grupo | Desempenho | Setorial | - | 15% |  | REL, ERSAR | 2 429,45 |
+| R04G | Volume de águas residuais tratadas em ETAR (grupo) | Mm³ | Operações | B | Mensal | Grupo | Desempenho | E3-4 | 303-4 | 20% |  | REL, APA | 75,32 |
+| P02 | Colaboradores (grupo) | n.º | Recursos Humanos | B | Trimestral | Grupo | Desempenho | S1-6 | 2-7 | 50% |  | REL | 1 368 |
 | C01 | Projetos de sensibilização ambiental | n.º | I&D, CSR e ESG | B | Anual | Grupo | Desempenho | S3 | 413-1 | 15% |  | REL | - |
-| C02 | Satisfação dos clientes (NPS) | pontos | Comercial e Relação com o Cliente | B | Anual | Grupo | Desempenho | S4 | - | 15% |  | REL | 52 |
+| C02 | Satisfação dos clientes (NPS) | pontos | Comercial e Relação com o Cliente | B | Anual | Grupo | Desempenho | S4 | - | 15% |  | REL | 46 |
 | C03 | Investimento em transformação e inovação digital | € | Financeira | B | Anual | Grupo | Desempenho | Setorial | - | 15% |  | REL, CONT | - |
-| A10 | Eficiência da rede de abastecimento | % | Operações | D | Mensal | Maioritárias | Ambientais | E3-4 | 303-3 | 5% |  | REL, ERSAR | 83,99 |
-| A11 | Índice Linear de Perdas (ILP) | m³/km/dia | Operações | D | Mensal | Maioritárias | Ambientais | E3-4 | 303-3 | 15% |  | REL, ERSAR | 1,34 |
-| A12 | Taxa de conformidade bacteriológica | % | Qualidade e Laboratório | B | Mensal | Maioritárias | Ambientais | Setorial | - | 3% | Sim | REL, ERSAR | 99,71 |
-| A13 | Taxa de conformidade físico-química | % | Qualidade e Laboratório | B | Mensal | Maioritárias | Ambientais | Setorial | - | 3% | Sim | REL, ERSAR | 99,63 |
-| R04 | Volume de águas residuais tratadas em ETAR | Mm³ | Operações | B | Mensal | Maioritárias | Ambientais | E3-4 | 303-4 | 15% |  | REL, APA | 76,44 |
-| R05 | Eficiência do tratamento em CQO | % | Qualidade e Laboratório | D | Mensal | Maioritárias | Ambientais | E2-4 | 303-4 | 5% |  | REL, APA | 91,37 |
-| R06 | Eficiência do tratamento em CBO | % | Qualidade e Laboratório | D | Mensal | Maioritárias | Ambientais | E2-4 | 303-4 | 5% |  | REL, APA | 96,38 |
-| R07 | Eficiência do tratamento em azoto total | % | Qualidade e Laboratório | D | Mensal | Maioritárias | Ambientais | E2-4 | 303-4 | 15% |  | REL, APA | 54,64 |
-| R08 | Eficiência do tratamento em fósforo | % | Qualidade e Laboratório | D | Mensal | Maioritárias | Ambientais | E2-4 | 303-4 | 15% |  | REL, APA | 64,02 |
-| R09 | Lamas produzidas nas ETAR | t matéria seca | Operações | B | Mensal | Maioritárias | Ambientais | E5-5 | 306-3 | 15% | Sim | REL, APA | 11 430,95 |
+| A10 | Eficiência da rede de abastecimento | % | Operações | D | Mensal | Maioritárias | Ambientais | E3-4 | 303-3 | 5% |  | REL, ERSAR | 79,51 |
+| A11 | Índice Linear de Perdas (ILP) | m³/km/dia | Operações | D | Mensal | Maioritárias | Ambientais | E3-4 | 303-3 | 15% |  | REL, ERSAR | 1,11 |
+| A12 | Taxa de conformidade bacteriológica | % | Qualidade e Laboratório | B | Mensal | Maioritárias | Ambientais | Setorial | - | 3% | Sim | REL, ERSAR | 99,64 |
+| A13 | Taxa de conformidade físico-química | % | Qualidade e Laboratório | B | Mensal | Maioritárias | Ambientais | Setorial | - | 3% | Sim | REL, ERSAR | 99,68 |
+| R04 | Volume de águas residuais tratadas em ETAR | Mm³ | Operações | B | Mensal | Maioritárias | Ambientais | E3-4 | 303-4 | 15% |  | REL, APA | 95,55 |
+| R05 | Eficiência do tratamento em CQO | % | Qualidade e Laboratório | D | Mensal | Maioritárias | Ambientais | E2-4 | 303-4 | 5% |  | REL, APA | 92,58 |
+| R06 | Eficiência do tratamento em CBO | % | Qualidade e Laboratório | D | Mensal | Maioritárias | Ambientais | E2-4 | 303-4 | 5% |  | REL, APA | 95,66 |
+| R07 | Eficiência do tratamento em azoto total | % | Qualidade e Laboratório | D | Mensal | Maioritárias | Ambientais | E2-4 | 303-4 | 15% |  | REL, APA | 66,43 |
+| R08 | Eficiência do tratamento em fósforo | % | Qualidade e Laboratório | D | Mensal | Maioritárias | Ambientais | E2-4 | 303-4 | 15% |  | REL, APA | 58,62 |
+| R09 | Lamas produzidas nas ETAR | t matéria seca | Operações | B | Mensal | Maioritárias | Ambientais | E5-5 | 306-3 | 15% | Sim | REL, APA | 8 916,14 |
 | R10 | Lamas valorizadas | % | Operações | B | Trimestral | Maioritárias | Ambientais | E5-5 | 306-4 | 10% | Sim | REL, APA | 100 |
-| R11 | Lamas com destino a espalhamento | % | Operações | B | Trimestral | Maioritárias | Ambientais | E5-5 | 306-5 | 20% | Sim | REL, APA | 95,37 |
-| R12 | Lamas com destino a compostagem | % | Operações | B | Trimestral | Maioritárias | Ambientais | E5-5 | 306-4 | 20% | Sim | REL, APA | 4,63 |
-| W01 | Combustível por tonelada de resíduos recolhidos | l/t | Frota | D | Mensal | Maioritárias | Ambientais | E1-5 | 302-1 | 15% |  | REL, OPS, CONT | 8 |
-| E09 | Frota de veículos verdes | % | Frota | B | Trimestral | Maioritárias | Ambientais | E1-5 | 302-1 | 100% | Sim | REL | 2,55 |
-| E04 | Consumo de energia primária | MWh | Ambiente, Saúde e Segurança | B | Mensal | Maioritárias | Ambientais | E1-5 | 302-1 | 15% |  | REL, OPS | 12 949,71 |
-| E01 | Consumo de eletricidade | MWh | Financeira | B | Mensal | Maioritárias | Ambientais | E1-5 | 302-1 | 15% | Sim | REL, CONT, OPS | 46 072,10 |
+| R11 | Lamas com destino a espalhamento | % | Operações | B | Trimestral | Maioritárias | Ambientais | E5-5 | 306-5 | 20% | Sim | REL, APA | 94,40 |
+| R12 | Lamas com destino a compostagem | % | Operações | B | Trimestral | Maioritárias | Ambientais | E5-5 | 306-4 | 20% | Sim | REL, APA | 3,38 |
+| W01 | Combustível por tonelada de resíduos recolhidos | l/t | Frota | D | Mensal | Maioritárias | Ambientais | E1-5 | 302-1 | 15% |  | REL, OPS, CONT | 10 |
+| E09 | Frota de veículos verdes | % | Frota | B | Trimestral | Maioritárias | Ambientais | E1-5 | 302-1 | 100% | Sim | REL | 3,19 |
+| E04 | Consumo de energia primária | MWh | Ambiente, Saúde e Segurança | B | Mensal | Maioritárias | Ambientais | E1-5 | 302-1 | 15% |  | REL, OPS | 9 323,79 |
+| E01 | Consumo de eletricidade | MWh | Financeira | B | Mensal | Maioritárias | Ambientais | E1-5 | 302-1 | 15% | Sim | REL, CONT, OPS | 58 511,57 |
 | E03 | Eletricidade de fontes renováveis | % | Financeira | B | Anual | Maioritárias | Ambientais | E1-5 | 302-1 | 15% | Sim | REL | 100 |
 | E02 | Eletricidade adquirida por contrato PPA | MWh | Financeira | B | Mensal | Maioritárias | Ambientais | E1-5 | 302-1 | 15% | Sim | REL, CONT | - |
-| E05 | Eletricidade por m³ de água produzida | kWh/m³ | Operações | D | Mensal | Maioritárias | Ambientais | E1-5 | 302-3 | 15% |  | REL, OPS, ERSAR | 0,58 |
-| E06 | Emissões diretas de GHG (Âmbito 1) | kgCO2e | Ambiente, Saúde e Segurança | D | Anual | Maioritárias | Ambientais | E1-6 | 305-1 | 15% | Sim | REL | 4 044 748,26 |
+| E05 | Eletricidade por m³ de água produzida | kWh/m³ | Operações | D | Mensal | Maioritárias | Ambientais | E1-5 | 302-3 | 15% |  | REL, OPS, ERSAR | 0,68 |
+| E06 | Emissões diretas de GHG (Âmbito 1) | kgCO2e | Ambiente, Saúde e Segurança | D | Anual | Maioritárias | Ambientais | E1-6 | 305-1 | 15% | Sim | REL | 3 114 456,16 |
 | E07 | Emissões indiretas de GHG (Âmbito 2) | kgCO2e | Ambiente, Saúde e Segurança | D | Anual | Maioritárias | Ambientais | E1-6 | 305-2 | 15% |  | REL | 0 |
-| E08 | Intensidade carbónica (Âmbito 1) | kgCO2e/€ | Ambiente, Saúde e Segurança | D | Anual | Maioritárias | Ambientais | E1-6 | 305-4 | 15% |  | REL | 0,06 |
-| P01 | Total da força de trabalho a 31/12 | n.º | Recursos Humanos | B | Trimestral | Maioritárias | Sociais | S1-6 | 2-7 | 80% |  | REL | 610 |
-| P03 | Colaboradores com contrato permanente | % | Recursos Humanos | D | Trimestral | Maioritárias | Sociais | S1-6 | 2-7 | 15% |  | REL | 60,49 |
-| P04 | Mulheres no total da força de trabalho | % | Recursos Humanos | D | Trimestral | Maioritárias | Sociais | S1-9 | 405-1 | 15% |  | REL | 20,66 |
+| E08 | Intensidade carbónica (Âmbito 1) | kgCO2e/€ | Ambiente, Saúde e Segurança | D | Anual | Maioritárias | Ambientais | E1-6 | 305-4 | 15% |  | REL | 0,05 |
+| P01 | Total da força de trabalho a 31/12 | n.º | Recursos Humanos | B | Trimestral | Maioritárias | Sociais | S1-6 | 2-7 | 80% |  | REL | 488 |
+| P03 | Colaboradores com contrato permanente | % | Recursos Humanos | D | Trimestral | Maioritárias | Sociais | S1-6 | 2-7 | 15% |  | REL | 66,42 |
+| P04 | Mulheres no total da força de trabalho | % | Recursos Humanos | D | Trimestral | Maioritárias | Sociais | S1-9 | 405-1 | 15% |  | REL | 25,00 |
 | P05 | Estagiários | n.º | Recursos Humanos | B | Anual | Maioritárias | Sociais | S1-6 | 2-8 | 15% |  | REL | 0 |
-| P06 | Estudantes e estagiários na força de trabalho | % | Recursos Humanos | D | Anual | Maioritárias | Sociais | S1-6 | 2-7 | 500% |  | REL | 0,33 |
-| P07 | Taxa de rotatividade | % | Recursos Humanos | D | Trimestral | Maioritárias | Sociais | S1-6 | 401-1 | 15% |  | REL | 25,24 |
-| P08 | Mulheres em cargos de liderança | % | Recursos Humanos | D | Anual | Maioritárias | Sociais | S1-9 | 405-1 | 15% |  | REL | 33,30 |
-| P09 | Colaboradores com menos de 26 anos | % | Recursos Humanos | D | Anual | Maioritárias | Sociais | S1-9 | 405-1 | 60% |  | REL | 4,59 |
-| P10 | Colaboradores com mais de 55 anos | % | Recursos Humanos | D | Anual | Maioritárias | Sociais | S1-9 | 405-1 | 15% |  | REL | 23,61 |
-| P11 | Colaboradores com deficiência | % | Recursos Humanos | B | Anual | Maioritárias | Sociais | S1-12 | 405-1 | 40% |  | REL | 0,66 |
-| P12 | Horas de formação | horas | Recursos Humanos | B | Anual | Maioritárias | Sociais | S1-13 | 404-1 | 200% |  | REL | 3 184 |
-| P13 | Colaboradores com pelo menos uma formação concluída | % | Recursos Humanos | D | Anual | Maioritárias | Sociais | S1-13 | 404-1 | 15% |  | REL | 30,33 |
-| P14 | Taxa de severidade dos acidentes de trabalho | % | Ambiente, Saúde e Segurança | D | Trimestral | Maioritárias | Sociais | S1-14 | 403-9 | 15% | Sim | REL | 0,53 |
+| P06 | Estudantes e estagiários na força de trabalho | % | Recursos Humanos | D | Anual | Maioritárias | Sociais | S1-6 | 2-7 | 500% |  | REL | 0,38 |
+| P07 | Taxa de rotatividade | % | Recursos Humanos | D | Trimestral | Maioritárias | Sociais | S1-6 | 401-1 | 15% |  | REL | 19,43 |
+| P08 | Mulheres em cargos de liderança | % | Recursos Humanos | D | Anual | Maioritárias | Sociais | S1-9 | 405-1 | 15% |  | REL | 37,30 |
+| P09 | Colaboradores com menos de 26 anos | % | Recursos Humanos | D | Anual | Maioritárias | Sociais | S1-9 | 405-1 | 60% |  | REL | 3,76 |
+| P10 | Colaboradores com mais de 55 anos | % | Recursos Humanos | D | Anual | Maioritárias | Sociais | S1-9 | 405-1 | 15% |  | REL | 20,78 |
+| P11 | Colaboradores com deficiência | % | Recursos Humanos | B | Anual | Maioritárias | Sociais | S1-12 | 405-1 | 40% |  | REL | 0,77 |
+| P12 | Horas de formação | horas | Recursos Humanos | B | Anual | Maioritárias | Sociais | S1-13 | 404-1 | 200% |  | REL | 2 452 |
+| P13 | Colaboradores com pelo menos uma formação concluída | % | Recursos Humanos | D | Anual | Maioritárias | Sociais | S1-13 | 404-1 | 15% |  | REL | 33,97 |
+| P14 | Taxa de severidade dos acidentes de trabalho | % | Ambiente, Saúde e Segurança | D | Trimestral | Maioritárias | Sociais | S1-14 | 403-9 | 15% | Sim | REL | 0,43 |
 | P15 | Trabalhadores com formação em segurança | % | Ambiente, Saúde e Segurança | B | Anual | Maioritárias | Sociais | S1-14 | 403-5 | 15% |  | REL | 100 |
-| P16 | Taxa de absentismo | % | Recursos Humanos | D | Trimestral | Maioritárias | Sociais | S1-14 | 403-9 | 15% |  | REL | 3,17 |
+| P16 | Taxa de absentismo | % | Recursos Humanos | D | Trimestral | Maioritárias | Sociais | S1-14 | 403-9 | 15% |  | REL | 2,73 |
 | P17 | Acidentes de trabalho fatais | n.º | Ambiente, Saúde e Segurança | B | Trimestral | Maioritárias | Sociais | S1-14 | 403-9 | 15% | Sim | REL | - |
-| G01 | Valor total das compras | € | Compras | B | Trimestral | Maioritárias | Governance | G1 | 204-1 | 15% | Sim | REL, CONT | 68 664 705,66 |
-| G02 | Compras em mercados domésticos | % | Compras | D | Trimestral | Maioritárias | Governance | G1 | 204-1 | 15% |  | REL, CONT | 93,39 |
+| G01 | Valor total das compras | € | Compras | B | Trimestral | Maioritárias | Governance | G1 | 204-1 | 15% | Sim | REL, CONT | 77 591 117,40 |
+| G02 | Compras em mercados domésticos | % | Compras | D | Trimestral | Maioritárias | Governance | G1 | 204-1 | 15% |  | REL, CONT | 94,65 |
 | G03 | Colaboradores cobertos pelo canal de denúncias | % | Jurídico e Compliance | B | Anual | Maioritárias | Governance | G1-1 | 2-26 | 15% |  | REL | 100 |
-| G04 | Colaboradores expostos com formação anticorrupção | % | Jurídico e Compliance | B | Anual | Maioritárias | Governance | G1-3 | 205-2 | 15% | Sim | REL | 92 |
+| G04 | Colaboradores expostos com formação anticorrupção | % | Jurídico e Compliance | B | Anual | Maioritárias | Governance | G1-3 | 205-2 | 15% | Sim | REL | 93 |
 | G05 | Gestores que assinaram a declaração de ética | % | Jurídico e Compliance | B | Anual | Maioritárias | Governance | G1-1 | 2-23 | 15% |  | REL | 100 |
 | G06 | Alertas do canal de denúncia com resposta escrita | % | Jurídico e Compliance | B | Anual | Maioritárias | Governance | G1-1 | 2-26 | 15% |  | REL | 100 |
 | N01 | Emissões de Âmbito 3 (reagentes, materiais de obra, deslocações) | tCO2e | Compras | B | A definir | Maioritárias | ESRS | E1-6 | 305-3 | 15% |  | REL | - |
@@ -631,9 +631,9 @@ Fórmulas dos derivados:
 
 Regras de coerência iniciais:
 
-- **R04 Volume de águas residuais tratadas em ETAR**: No quadro de desempenho (perímetro grupo) o valor é 102,59 Mm³. Confirmar que a diferença se explica apenas pelo perímetro.
-- **E05 Eletricidade por m³ de água produzida**: Nos destaques do relatório aparece 0,56 kWh/m³. Confirmar perímetro e se inclui só o tratamento.
-- **P04 Mulheres no total da força de trabalho**: O texto do relatório refere 33,3% de mulheres. Confirmar se é o total, a liderança, ou outro perímetro.
+- **R04 Volume de águas residuais tratadas em ETAR**: No quadro de desempenho (perímetro grupo) o valor é 128,24 Mm³. Confirmar que a diferença se explica apenas pelo perímetro.
+- **E05 Eletricidade por m³ de água produzida**: Nos destaques do relatório aparece 0,66 kWh/m³. Confirmar perímetro e se inclui só o tratamento.
+- **P04 Mulheres no total da força de trabalho**: O texto do relatório refere 40,3% de mulheres. Confirmar se é o total, a liderança, ou outro perímetro.
 - **P16 Taxa de absentismo**: Variação muito acima do histórico. Verificar se a fórmula mudou face ao ano anterior.
 
 ## Anexo B. Milestones de demonstração (ciclo 2026)

@@ -47,7 +47,7 @@ Estado a 3 de novembro de 2026. A especificação funcional está em `especifica
 
 Pedido do André a 3 de novembro de 2026, para o portal funcionar online antes do Power Pages.
 
-- **Pages:** o `index.html` da raiz abre o mockup e o `.nojekyll` publica os ficheiros tal como estão. Falta ativar: o plano atual não permite Pages num repositório privado.
+- **Pages:** o `index.html` da raiz abre o mockup e o `.nojekyll` publica os ficheiros tal como estão. O repositório é público, como o `Platform1`, porque o plano gratuito não permite Pages em repositórios privados. Site: `https://andrealmeida6.github.io/ON/`.
 - **Supabase:** 22 tabelas `esg_*`, definidas em `1 - Código VSC/supabase/001_esg_esquema.sql`, com a configuração inicial. Ao lado das tabelas da outra aplicação, sem lhes tocar.
 - **Acesso:** RLS ligado e sem políticas, por isso a chave pública não lê nem escreve. As políticas por perfil dependem da decisão sobre o login.
 - **Falta:** carregar os 70 indicadores e as 25 milestones, criar as políticas e trocar o `localStorage` pelo Supabase em `portal-nucleo.js`.
@@ -64,7 +64,7 @@ Pedido do André a 3 de novembro de 2026, para o portal funcionar online antes d
 ## Limitações conhecidas do mockup
 
 - **Série histórica de 2011 a 2024:** é ilustrativa, porque a especificação não traz os valores. A página avisa. Falta a série publicada.
-- **Valores de demonstração:** vêm do anexo A, tirado de um relatório real, sem o nome da empresa. Trocar antes de mostrar a outros clientes, se isso for um problema. O mesmo vale para os textos das regras de coerência.
+- **Valores de demonstração:** são fictícios desde 3 de novembro de 2026, com a mesma ordem de grandeza, incluindo os números citados nas regras de coerência. Só os valores 0 e 100% ficaram iguais. Os commits anteriores a essa data ainda têm os valores originais.
 - **Derivados:** entram como valor, com a fórmula à vista. Calculá-los exige os dados base, que ainda não estão no catálogo.
 - **Backoffice, Indicadores e milestones:** permite pesquisar, mudar a evidência obrigatória e o prazo. Ainda não cria indicadores nem milestones novos.
 - **Novo ciclo:** os prazos usam intervalos fixos por periodicidade. A especificação recomenda gerá-los a partir das janelas de reporting.
@@ -73,4 +73,4 @@ Pedido do André a 3 de novembro de 2026, para o portal funcionar online antes d
 
 ## Em aberto
 
-Secção 23 da especificação, mais: substituir os valores de demonstração.
+Secção 23 da especificação, mais: o modelo de login para ligar o portal ao Supabase.

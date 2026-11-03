@@ -215,7 +215,7 @@
       });
       if (pl.id === 'M01') {
         var a = S.items['2026:A01'];
-        a.valor = 49.72; a.versoes.push({ valor: 49.72, em: new Date(Date.now() - 86400000 * 24).toISOString(), por: 'Resp. Operações', origem: 'importação de ficheiro telemetria-setembro.xlsx', motivo: '' });
+        a.valor = 59.67; a.versoes.push({ valor: 59.67, em: new Date(Date.now() - 86400000 * 24).toISOString(), por: 'Resp. Operações', origem: 'importação de ficheiro telemetria-setembro.xlsx', motivo: '' });
         a.justificacao = 'Nova ligação de adução em serviço desde março.';
         var b = S.items['2026:A09']; b.qualidade = 'estimado'; b.metodo = 'Extrapolação a partir de nove meses de registos.';
       }
