@@ -138,7 +138,7 @@
           return '<a class="ps-menu-it" href="' + rota(n.rota) + '" data-a="fecharMenu"><i class="ps-menu-dot ' + e(n.cls) + '"></i><span>' + e(n.texto) + '<small>' + e(n.sub) + '</small></span></a>';
         }).join('') : vazio('Sem notificações.')) + '</div>';
       } else if (U.menu === 'conta') {
-        menu.innerHTML = '<div class="ps-menu-head"><b>' + e(usr.nome) + '</b>' + e(P.PERFIS[usr.perfil]) + (usr.unidade ? ' · ' + e(usr.unidade) : '') + '</div><div class="ps-menu-sec"><button class="ps-menu-it" type="button" data-a="sair">Trocar de perfil</button></div>';
+        menu.innerHTML = '<div class="ps-menu-head"><b>' + e(usr.nome) + '</b>' + e(P.PERFIS[usr.perfil]) + (usr.unidade ? ' · ' + e(usr.unidade) : '') + '</div><div class="ps-menu-sec"><button class="ps-menu-it" type="button" data-a="sair">' + (P.online() ? 'Terminar sessão' : 'Trocar de perfil') + '</button></div>';
       }
     }
   };
@@ -146,6 +146,13 @@
   /* --- Entrada ----------------------------------------------------------- */
   var Blocos = {};
   Blocos['entrada-perfis'] = function () {
+    if (P.online()) {
+      return '<form class="ps-login" data-login>' +
+        campo('lg-email', 'Email', '<input id="lg-email" class="ps-in" type="email" autocomplete="username" required>') +
+        campo('lg-senha', 'Palavra-passe', '<input id="lg-senha" class="ps-in" type="password" autocomplete="current-password" required>') +
+        (U.loginErro ? '<div class="ps-aviso err" role="alert">' + e(U.loginErro) + '</div>' : '') +
+        '<button type="submit" class="ps-btn pri"' + (U.aEntrar ? ' disabled' : '') + '>' + (U.aEntrar ? 'A entrar' : 'Entrar') + '</button></form>';
+    }
     var grupos = [['Administração', 'admin'], ['Sustentabilidade', 'esg'], ['Responsáveis pelos dados', 'resp'], ['Auditoria', 'auditor'], ['Entidades externas', 'ext']];
     return grupos.map(function (g) {
       return '<div class="ps-ent-grp"><h3>' + e(g[0]) + '</h3>' + S.users.filter(function (x) { return x.perfil === g[1]; }).map(function (x) {
@@ -740,7 +747,7 @@
       new URLSearchParams(location.search).forEach(function (v, k) { q[k] = v; });
       arg = q.id || '';
     }
-    if (q.perfil && P.user(q.perfil)) P.entrar(q.perfil);
+    if (!P.online() && q.perfil && P.user(q.perfil)) P.entrar(q.perfil);
     var usr = u(), per = paginasPermitidas(usr);
     if (per.indexOf(pag) < 0 || (pag === 'Milestone' && !P.ms(arg))) pag = usr ? (usr.perfil === 'ext' ? 'Pedidos' : pag === 'Milestone' ? 'Milestones' : 'Inicio') : 'Entrada';
     return { pag: pag, arg: arg, q: q };
@@ -814,7 +821,7 @@
   var val = function (id) { var el = document.getElementById(id); return el ? el.value : ''; };
   var A = {
     entrar: function (d) { P.entrar(d.v); var usr = P.user(d.v); P.irPara(usr.perfil === 'ext' ? 'Pedidos' : 'Inicio'); },
-    sair: function () { P.sair(); U.menu = null; U.cal = null; P.irPara('Entrada'); },
+    sair: function () { P.sair(); if (P.online()) { window.PortalBackend.sair(); P.estadoVazio(); } U.menu = null; U.cal = null; P.irPara('Entrada'); },
     menuNotif: function () { U.menu = U.menu === 'notif' ? null : 'notif'; R(); },
     menuConta: function () { U.menu = U.menu === 'conta' ? null : 'conta'; R(); },
     fecharMenu: function () { U.menu = null; },
@@ -909,8 +916,8 @@
     mcImportar: function () { escolherFicheiro('.json', function (f) { lerJSON(f, function (o) { var e2 = P.validarMarca(o); if (e2) return toast(e2, 'err'); U.marca = { nome: String(o.nome || P.MARCA_BASE.nome), subtitulo: String(o.subtitulo || ''), logotipo: String(o.logotipo || ''), cores: o.cores }; P.aplicarMarca(U.marca); toast('Marca importada. Confirme e guarde.', 'ok'); R(); }); }); },
     mcRepor: function () { U.marca = JSON.parse(JSON.stringify(P.MARCA_BASE)); U.logoEstado = ''; P.aplicarMarca(U.marca); toast('Valores originais repostos. Confirme e guarde.'); R(); },
     dadosExportar: function () { P.descarregar('portal-dados.json', JSON.stringify(P.exportarTudo(), null, 2), 'application/json'); },
-    dadosImportar: function () { escolherFicheiro('.json', function (f) { lerJSON(f, function (o) { var er = P.importarTudo(o); if (er) return toast(er, 'err'); toast('Dados importados.', 'ok'); U.marca = null; R(); }); }); },
-    dadosRepor: function () { if (!window.confirm('Repor os dados de demonstração? Perde todas as alterações feitas neste navegador.')) return; P.reporDemonstracao(); P.aplicarMarca(); U.marca = null; U.imp = {}; toast('Demonstração reposta.', 'ok'); R(); }
+    dadosImportar: function () { if (P.online()) return toast('Online, os dados vivem na base de dados e não se substituem por ficheiro.', 'err'); escolherFicheiro('.json', function (f) { lerJSON(f, function (o) { var er = P.importarTudo(o); if (er) return toast(er, 'err'); toast('Dados importados.', 'ok'); U.marca = null; R(); }); }); },
+    dadosRepor: function () { if (P.online()) return toast('Online, a demonstração não se repõe a partir do navegador.', 'err'); if (!window.confirm('Repor os dados de demonstração? Perde todas as alterações feitas neste navegador.')) return; P.reporDemonstracao(); P.aplicarMarca(); U.marca = null; U.imp = {}; toast('Demonstração reposta.', 'ok'); R(); }
   };
 
   /* --- Campos (mudanca) -------------------------------------------------- */
@@ -1033,7 +1040,49 @@
       }
     }, true);
     window.addEventListener('hashchange', navegar);
+    if (P.online()) return arrancarOnline();
     navegar();
+  };
+
+  /* --- Online: login e dados do Supabase --------------------------------- */
+  var arrancarOnline = function () {
+    var B = window.PortalBackend;
+    var txtPerfis = document.querySelector('.ps-ent-dir > h2');
+    if (txtPerfis) txtPerfis.textContent = 'Entrar';
+    var notaPerfis = document.querySelector('.ps-ent-dir > p');
+    if (notaPerfis) notaPerfis.textContent = 'Use o email e a palavra-passe da sua conta.';
+    B.aoFalhar = function (x) {
+      toast('Não foi possível guardar: ' + x.message + ' Mostramos de novo os dados da base de dados.', 'err');
+      return B.carregar(S).then(function () { P.aplicarMarca(); R(); });
+    };
+    var aposLogin = function () {
+      return B.carregar(S).then(function (login) {
+        if (!login) { B.sair(); P.estadoVazio(); throw new Error('Esta conta ainda não tem perfil no portal. Fale com o administrador.'); }
+        P.entrar(login);
+        P.aplicarMarca();
+        var usr = P.user(login);
+        if ((location.hash || '').replace(/^#\/?/, '')) navegar(); else P.irPara(usr.perfil === 'ext' ? 'Pedidos' : 'Inicio');
+      });
+    };
+    document.addEventListener('submit', function (ev2) {
+      if (!ev2.target.matches('[data-login]')) return;
+      ev2.preventDefault();
+      U.aEntrar = true; U.loginErro = '';
+      var email = val('lg-email').trim(), senha = val('lg-senha');
+      R();
+      B.entrar(email, senha).then(aposLogin).catch(function (x) {
+        U.loginErro = x.codigo === 'invalid_credentials' ? 'Email ou palavra-passe incorretos.' : x.message;
+      }).then(function () {
+        U.aEntrar = false;
+        if (!P.sessao()) { R(); var c = document.getElementById('lg-email'); if (c) c.value = email; }
+      });
+    });
+    B.carregarMarca().then(function (mc) { if (mc) { S.marca = mc; P.aplicarMarca(); } if (!B.temSessao()) navegar(); });
+    if (B.temSessao()) {
+      aposLogin().catch(function (x) { B.sair(); P.sair(); U.loginErro = x.message; navegar(); });
+    } else {
+      P.sair();
+    }
   };
   document.addEventListener('DOMContentLoaded', P.iniciar);
 })();

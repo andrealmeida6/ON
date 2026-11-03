@@ -23,10 +23,16 @@ const naoUsadas = fs.readdirSync(path.join(cod, 'web-pages')).filter((d) => d !=
 if (naoUsadas.length) throw new Error('Web pages fora do mockup: ' + naoUsadas.join(', '));
 
 let html = resolver(ler('web-templates', 'layout-portal.html').replace(/\{%\s*block main\s*%\}\{%\s*endblock\s*%\}/, () => paginas));
-html = html
-  .replace(/(href|src)="\/(global\.css|[\w.-]+\.js)"/g, (_, a, f) => a + '="' + relWeb + f + '"')
-  .replace('<script src="' + relWeb + 'xlsx.full.min.js"', '<script>window.PORTAL_MODO = "mockup";</script>\n<script src="' + relWeb + 'xlsx.full.min.js"');
-html = '<!-- Gerado por gerar-mockup.js. Nao editar: alterar as web pages, snippets ou templates. -->\n' + html;
-const destino = path.join(raiz, fs.readdirSync(raiz).find((n) => n.startsWith('3 - ')), 'mockup-final.html');
-fs.writeFileSync(destino, html, 'utf8');
-console.log('mockup-final.html: ' + ORDEM.length + ' web pages, ' + (html.match(/<!-- snippet:/g) || []).length + ' snippets, ' + (html.match(/<!-- template:/g) || []).length + ' templates, ' + html.length + ' caracteres');
+const montar = (web, config) => '<!-- Gerado por gerar-mockup.js. Nao editar: alterar as web pages, snippets ou templates. -->\n' + html
+  .replace(/(href|src)="\/(global\.css|[\w.-]+\.js)"/g, (_, a, f) => a + '="' + web + f + '"')
+  .replace('<script src="' + web + 'xlsx.full.min.js"', '<script>' + config + '</script>\n<script src="' + web + 'xlsx.full.min.js"');
+const MODO_MOCKUP = 'window.PORTAL_MODO = "mockup";';
+/* A chave publicavel foi feita para estar no navegador: quem protege os dados e o RLS */
+const BACKEND = { url: 'https://yujhfscnnngaivwwunom.supabase.co', chave: 'sb_publishable_wU6S2mgSbmnTzz4hQMKZ6g_jTj6MMgo' };
+
+/* Mockup: sem palavra-passe e com os dados no navegador */
+const mockup = montar(relWeb, MODO_MOCKUP);
+fs.writeFileSync(path.join(raiz, fs.readdirSync(raiz).find((n) => n.startsWith('3 - ')), 'mockup-final.html'), mockup, 'utf8');
+/* Plataforma online (GitHub Pages): com login e os dados no Supabase */
+fs.writeFileSync(path.join(raiz, 'index.html'), montar(encodeURI(path.basename(cod) + '/web-files/'), MODO_MOCKUP + ' window.PORTAL_BACKEND = ' + JSON.stringify(BACKEND) + ';'), 'utf8');
+console.log('mockup-final.html e index.html: ' + ORDEM.length + ' web pages, ' + (mockup.match(/<!-- snippet:/g) || []).length + ' snippets, ' + (mockup.match(/<!-- template:/g) || []).length + ' templates, ' + mockup.length + ' caracteres');

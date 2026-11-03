@@ -1,12 +1,294 @@
+<!-- Gerado por gerar-mockup.js. Nao editar: alterar as web pages, snippets ou templates. -->
 <!doctype html>
 <html lang="pt-PT">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Portal de Sustentabilidade</title>
-<meta http-equiv="refresh" content="0; url=3%20-%20Mockups/mockup-final.html">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="1%20-%20C%C3%B3digo%20VSC/web-files/global.css">
 </head>
 <body>
-<p><a href="3%20-%20Mockups/mockup-final.html">Abrir o Portal de Sustentabilidade</a></p>
+<a class="ps-skip" href="#conteudo">Saltar para o conteúdo</a>
+<!-- template: cabecalho -->
+<header class="ps-h" data-cabecalho>
+  <div class="ps-h-row">
+    <a class="ps-marca" href="/inicio/" data-nav-marca data-marca-c="cabecalho" aria-label="Página inicial"></a>
+    <nav class="ps-h-nav" aria-label="Navegação principal">
+      <a class="ps-h-link" href="/inicio/" data-nav="Inicio">Início</a>
+      <a class="ps-h-link" href="/pendentes/" data-nav="Pendentes">Pendentes <span class="n" data-campo="nav-pend" hidden></span></a>
+      <a class="ps-h-link" href="/milestones/" data-nav="Milestones">Milestones</a>
+      <a class="ps-h-link" href="/consolidado/" data-nav="Consolidado">Consolidado</a>
+      <a class="ps-h-link" href="/documentos/" data-nav="Documentos">Documentos</a>
+      <a class="ps-h-link" href="/relatorio/" data-nav="Relatorio">Relatório</a>
+      <a class="ps-h-link" href="/historico/" data-nav="Historico">Histórico</a>
+      <a class="ps-h-link" href="/auditoria/" data-nav="Auditoria">Auditoria</a>
+      <a class="ps-h-link admin" href="/backoffice/" data-nav="Backoffice">Backoffice</a>
+      <a class="ps-h-link" href="/pedidos/" data-nav="Pedidos">Pedidos de dados</a>
+    </nav>
+    <div class="ps-h-acts">
+      <span class="ps-h-pill">Ciclo <b data-campo="ciclo"></b></span>
+      <button type="button" class="ps-h-ico" data-a="menuNotif" aria-label="Notificações">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+        <span class="ps-h-badge" data-campo="sino-n" hidden></span>
+      </button>
+      <button type="button" class="ps-av" data-a="menuConta" data-campo="avatar" aria-label="Conta"></button>
+      <button type="button" class="ps-h-ico ps-h-toggle" data-a="toggleNav" aria-label="Menu">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
+    </div>
+    <div class="ps-menu" data-menu hidden></div>
+  </div>
+</header>
+
+<main id="conteudo">
+<!-- web page: Entrada -->
+<section class="ps-pagina" hidden data-pagina="Entrada">
+  <div class="ps-ent">
+    <!-- snippet: Entrada/Apresentacao -->
+<div class="ps-ent-esq ps-fundo-marca">
+  <div>
+    <span data-marca-c="logo-claro"></span>
+    <h1>Os dados de sustentabilidade, recolhidos uma vez.</h1>
+    <p>Concentra os pedidos de dados, valida os valores no momento em que entram e monta os quadros do relatório a partir do que foi aprovado.</p>
+  </div>
+  <ul class="ps-ent-pontos">
+    <li><b>Milestones</b>Cada entrega tem unidade, prazo, ano e workflow próprios.</li>
+    <li><b>Validação no momento</b>Cada valor é validado ao ser escrito ou importado.</li>
+    <li><b>Tudo auditável</b>Versões, evidências e aprovadores de cada valor.</li>
+  </ul>
+</div>
+
+    <div class="ps-ent-dir">
+      <!-- snippet: Entrada/Perfis -->
+<h2>Escolha um perfil</h2>
+<p class="ps-mut">Nesta demonstração entra-se sem palavra-passe. Em produção, a autenticação é obrigatória.</p>
+
+      <!-- template: bloco-dinamico -->
+<div data-bloco="entrada-perfis"></div>
+
+    </div>
+  </div>
+</section>
+
+<!-- web page: Inicio -->
+<section class="ps-pagina" hidden data-pagina="Inicio">
+  <!-- snippet: Inicio/Hero -->
+<section class="ps-hero ps-fundo-marca">
+  <svg class="ps-hero-fx" aria-hidden="true"><defs><pattern id="ps-grelha" width="64" height="64" patternUnits="userSpaceOnUse"><rect x="6" y="6" width="52" height="52" rx="8"/></pattern></defs><rect class="ps-hero-g" width="100%" height="100%" fill="url(#ps-grelha)"/></svg>
+  <div class="ps-hero-in">
+    <div>
+      <div class="ps-hero-lock" data-marca-c="hero"></div>
+      <span class="ps-hero-ciclo" data-campo="hero-ciclo"></span>
+      <div class="ps-hero-ola"><small data-campo="hero-data"></small><span data-campo="hero-ola"></span></div>
+      <p class="ps-hero-frase" data-campo="hero-frase"></p>
+    </div>
+    <div class="ps-glass">
+      <a class="ps-gk dest" href="/pendentes/" data-kpi-rota="Pendentes">
+        <div><div class="ps-gk-l"><i></i>Pendentes consigo</div><div class="ps-gk-v" data-campo="kpi-pend">-</div></div>
+        <span class="ps-gk-cta">Ver agora →</span>
+      </a>
+      <a class="ps-gk ps-gk-err" href="/milestones/" data-kpi-rota="Milestones">
+        <div class="ps-gk-l"><i></i>Em atraso</div><div class="ps-gk-v" data-campo="kpi-atraso">-</div>
+      </a>
+      <a class="ps-gk ps-gk-rev" href="/milestones/" data-kpi-rota="Milestones">
+        <div class="ps-gk-l"><i></i>Em revisão ou aprovação</div><div class="ps-gk-v" data-campo="kpi-rev">-</div>
+      </a>
+      <a class="ps-gk ps-gk-ok dest" href="/milestones/" data-kpi-rota="Milestones">
+        <div><div class="ps-gk-l"><i></i>Concluídas</div><div class="ps-gk-v" data-campo="kpi-conc">-</div></div>
+      </a>
+    </div>
+  </div>
+</section>
+
+  <div class="ps-wrap">
+    <div class="ps-ini">
+      <div class="ps-ini-esq">
+        <!-- template: bloco-dinamico -->
+<div data-bloco="inicio-pendentes"></div>
+
+        <!-- template: bloco-dinamico -->
+<div data-bloco="inicio-entregas"></div>
+
+      </div>
+      <!-- template: bloco-dinamico -->
+<div data-bloco="inicio-calendario"></div>
+
+    </div>
+  </div>
+</section>
+
+<!-- web page: Pendentes -->
+<section class="ps-pagina" hidden data-pagina="Pendentes">
+  <div class="ps-pag">
+    <!-- snippet: Pendentes/Introducao -->
+<header class="ps-pag-head">
+  <h1>Milestones pendentes</h1>
+  <p>O que está à sua espera e o que convém acompanhar.</p>
+</header>
+
+    <!-- template: bloco-dinamico -->
+<div data-bloco="pendentes"></div>
+
+  </div>
+</section>
+
+<!-- web page: Milestones -->
+<section class="ps-pagina" hidden data-pagina="Milestones">
+  <div class="ps-pag">
+    <!-- snippet: Milestones/Introducao -->
+<header class="ps-pag-head">
+  <h1>Milestones</h1>
+  <p>Todas as entregas do ciclo em curso, por unidade de negócio.</p>
+</header>
+
+    <!-- template: bloco-dinamico -->
+<div data-bloco="milestones"></div>
+
+  </div>
+</section>
+
+<!-- web page: Milestone -->
+<section class="ps-pagina" hidden data-pagina="Milestone">
+  <div class="ps-pag">
+    <!-- template: bloco-dinamico -->
+<div data-bloco="milestone-cabecalho"></div>
+
+    <!-- template: bloco-dinamico -->
+<div data-bloco="milestone-workflow"></div>
+
+    <!-- template: bloco-dinamico -->
+<div data-bloco="milestone-corpo"></div>
+
+  </div>
+</section>
+
+<!-- web page: Consolidado -->
+<section class="ps-pagina" hidden data-pagina="Consolidado">
+  <div class="ps-pag">
+    <!-- snippet: Consolidado/Introducao -->
+<header class="ps-pag-head">
+  <h1>Consolidado</h1>
+  <p>O que as áreas já reportaram, o que está aprovado e o que falta para o relatório.</p>
+</header>
+
+    <!-- template: bloco-dinamico -->
+<div data-bloco="consolidado"></div>
+
+  </div>
+</section>
+
+<!-- web page: Documentos -->
+<section class="ps-pagina" hidden data-pagina="Documentos">
+  <div class="ps-pag">
+    <!-- snippet: Documentos/Introducao -->
+<header class="ps-pag-head">
+  <h1>Documentos</h1>
+  <p>Uma fatura entra uma vez e alimenta a sustentabilidade, a contabilidade e as operações.</p>
+</header>
+
+    <!-- template: bloco-dinamico -->
+<div data-bloco="documentos"></div>
+
+  </div>
+</section>
+
+<!-- web page: Relatorio -->
+<section class="ps-pagina" hidden data-pagina="Relatorio">
+  <div class="ps-pag">
+    <!-- snippet: Relatorio/Introducao -->
+<header class="ps-pag-head">
+  <h1>Relatório</h1>
+  <p>Os quadros do relatório. Só os valores aprovados aparecem.</p>
+</header>
+
+    <!-- template: bloco-dinamico -->
+<div data-bloco="relatorio"></div>
+
+  </div>
+</section>
+
+<!-- web page: Historico -->
+<section class="ps-pagina" hidden data-pagina="Historico">
+  <div class="ps-pag">
+    <!-- snippet: Historico/Introducao -->
+<header class="ps-pag-head">
+  <h1>Histórico</h1>
+  <p>A série de cada indicador ao longo dos ciclos.</p>
+</header>
+
+    <!-- template: bloco-dinamico -->
+<div data-bloco="historico"></div>
+
+  </div>
+</section>
+
+<!-- web page: Auditoria -->
+<section class="ps-pagina" hidden data-pagina="Auditoria">
+  <div class="ps-pag">
+    <!-- snippet: Auditoria/Introducao -->
+<header class="ps-pag-head">
+  <h1>Auditoria</h1>
+  <p>Rastreabilidade por milestone, amostra e pedidos de informação do auditor.</p>
+</header>
+
+    <!-- template: bloco-dinamico -->
+<div data-bloco="auditoria"></div>
+
+  </div>
+</section>
+
+<!-- web page: Backoffice -->
+<section class="ps-pagina" hidden data-pagina="Backoffice">
+  <div class="ps-pag">
+    <!-- snippet: Backoffice/Introducao -->
+<header class="ps-pag-head">
+  <span class="ps-bo-eyebrow">Backoffice</span>
+  <h1>Configuração da plataforma</h1>
+  <p>Ciclo, materialidade, utilizadores, workflow, indicadores, calendário, regras, marca e dados.</p>
+</header>
+
+    <!-- template: bloco-dinamico -->
+<div data-bloco="backoffice"></div>
+
+  </div>
+</section>
+
+<!-- web page: Pedidos -->
+<section class="ps-pagina" hidden data-pagina="Pedidos">
+  <div class="ps-pag">
+    <!-- snippet: Pedidos/Introducao -->
+<header class="ps-pag-head">
+  <h1>Pedidos de dados</h1>
+  <p>Os pedidos dirigidos à sua organização. Envie o valor e o documento de suporte.</p>
+</header>
+
+    <!-- template: bloco-dinamico -->
+<div data-bloco="pedidos"></div>
+
+  </div>
+</section>
+
+</main>
+<!-- template: navegacao-movel -->
+<nav class="ps-bnav" data-bnav aria-label="Navegação no telemóvel">
+  <a href="/inicio/" data-nav="Inicio"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>Início</a>
+  <a href="/pendentes/" data-nav="Pendentes"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"/></svg>Pendentes</a>
+  <a href="/milestones/" data-nav="Milestones"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Milestones</a>
+  <a href="/consolidado/" data-nav="Consolidado"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 20V10M12 20V4M18 20v-7"/></svg>Consolidado</a>
+  <button type="button" data-a="maisNav"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>Mais</button>
+</nav>
+
+<!-- template: paineis -->
+<div data-painel hidden></div>
+<div class="ps-toast" data-toast role="status" aria-live="polite" hidden></div>
+
+<script>window.PORTAL_MODO = "mockup"; window.PORTAL_BACKEND = {"url":"https://yujhfscnnngaivwwunom.supabase.co","chave":"sb_publishable_wU6S2mgSbmnTzz4hQMKZ6g_jTj6MMgo"};</script>
+<script src="1%20-%20C%C3%B3digo%20VSC/web-files/xlsx.full.min.js"></script>
+<script src="1%20-%20C%C3%B3digo%20VSC/web-files/portal-supabase.js"></script>
+<script src="1%20-%20C%C3%B3digo%20VSC/web-files/portal-catalogo.js"></script>
+<script src="1%20-%20C%C3%B3digo%20VSC/web-files/portal-nucleo.js"></script>
+<script src="1%20-%20C%C3%B3digo%20VSC/web-files/portal-paginas.js"></script>
 </body>
 </html>

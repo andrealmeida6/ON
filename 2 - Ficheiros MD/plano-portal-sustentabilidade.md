@@ -47,10 +47,20 @@ Estado a 3 de novembro de 2026. A especificação funcional está em `especifica
 
 Pedido do André a 3 de novembro de 2026, para o portal funcionar online antes do Power Pages.
 
-- **Pages:** o `index.html` da raiz abre o mockup e o `.nojekyll` publica os ficheiros tal como estão. O repositório é público, como o `Platform1`, porque o plano gratuito não permite Pages em repositórios privados. Site: `https://andrealmeida6.github.io/ON/`.
-- **Supabase:** 22 tabelas `esg_*`, definidas em `1 - Código VSC/supabase/001_esg_esquema.sql`, com a configuração inicial. Ao lado das tabelas da outra aplicação, sem lhes tocar.
-- **Acesso:** RLS ligado e sem políticas, por isso a chave pública não lê nem escreve. As políticas por perfil dependem da decisão sobre o login.
-- **Falta:** carregar os 70 indicadores e as 25 milestones, criar as políticas e trocar o `localStorage` pelo Supabase em `portal-nucleo.js`.
+- **Pages:** o repositório é público, como o `Platform1`, porque o plano gratuito não permite Pages em repositórios privados. O `.nojekyll` publica os ficheiros tal como estão.
+- **Duas versões, geradas por `gerar-mockup.js`:** `index.html` (site `https://andrealmeida6.github.io/ON/`), com login e dados no Supabase, e `3 - Mockups/mockup-final.html`, sem palavra-passe e com os dados no navegador. Nenhuma se edita à mão.
+- **Supabase:** 22 tabelas `esg_*`, ao lado das tabelas da outra aplicação, sem lhes tocar. `supabase/001_esg_esquema.sql` cria o modelo, `002_esg_permissoes.sql` as permissões, `carregar-demonstracao.js` os dados fictícios e `repor-demonstracao.sql` limpa-os.
+- **Login:** Supabase Auth com email e palavra-passe. Uma conta só entra se estiver ligada a um perfil, por `esg_utilizadores.auth_user_id`. As 16 contas de demonstração são `<login>@portal-esg.invalid`, e a palavra-passe não fica no repositório.
+- **Sincronização:** `portal-supabase.js` compara o estado em memória com o último conhecido e envia só o que mudou. Se uma gravação falhar, avisa e volta a mostrar os dados da base de dados.
+- **Aplicado na base de dados:** cada perfil lê e escreve só o que lhe cabe, um responsável só altera valores da sua unidade durante a recolha, só avança o passo que tem consigo, e eventos e versões não se alteram nem se apagam.
+
+### Limitações do modo online
+
+- **Atualização:** os dados de outros utilizadores só aparecem ao recarregar a página. Não há atualização em tempo real.
+- **Backoffice, Utilizadores:** adicionar um utilizador cria o perfil, não a conta. A conta e a ligação ainda se criam à parte.
+- **Regras só no navegador:** as faltas para submeter (valor, justificação, evidência) e a ordem dos passos para a equipa de sustentabilidade validam-se no navegador.
+- **Evidências:** continua a guardar-se só o nome do ficheiro.
+- **Entidades:** não se muda o nome de uma entidade que já tenha faturas associadas.
 
 ## O que falta para produção
 
@@ -73,4 +83,4 @@ Pedido do André a 3 de novembro de 2026, para o portal funcionar online antes d
 
 ## Em aberto
 
-Secção 23 da especificação, mais: o modelo de login para ligar o portal ao Supabase.
+Secção 23 da especificação.

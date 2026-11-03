@@ -83,6 +83,9 @@ button,input,select,textarea{font:inherit;color:inherit}
 .ps-btn.peq{min-height:30px;padding:4px 10px;font-size:12px;border-radius:8px}
 
 .ps-lab{display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:4px}
+.ps-login{display:grid;gap:14px;justify-items:start;max-width:420px;margin-top:20px}
+.ps-login>*{width:100%}
+.ps-login>.ps-btn{width:auto;min-height:44px;padding-inline:22px}
 .ps-in,.ps-sel,.ps-ta{width:100%;min-height:38px;padding:8px 11px;border:1px solid var(--line);border-radius:9px;background:var(--surface);font-size:14px}
 .ps-ta{min-height:76px;resize:vertical}
 .ps-in:focus,.ps-sel:focus,.ps-ta:focus{outline:2px solid var(--secondary);outline-offset:0;border-color:transparent}

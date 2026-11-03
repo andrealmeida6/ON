@@ -70,9 +70,19 @@
   var escrever = function (k, v) {
     try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { memoria[k] = v; }
   };
+  var B = window.PortalBackend;
+  P.online = function () { return !!(B && B.ativo); };
   var guardar = (P.guardar = function () {
+    if (P.online()) { B.sincronizar(S); return; }
     Object.keys(CHAVES).forEach(function (n) { escrever(CHAVES[n], S[n]); });
   });
+  /* Online: o estado vem do Supabase depois do login. Ate la, fica vazio e com a marca publica. */
+  var estadoVazio = function () {
+    S.ciclo = { ano: new Date().getFullYear(), estado: 'aberto', data_abertura: null, fechados: [] };
+    S.ms = []; S.items = {}; S.wfbase = []; S.ext = []; S.aud = []; S.mat = []; S.docs = []; S.ent = []; S.janelas = []; S.amostra = []; S.users = []; S.areas = []; S.cat = []; S.metas = [];
+    S.marca = S.marca || clone(P.MARCA_BASE);
+  };
+  P.estadoVazio = estadoVazio;
 
   /* --- Dados iniciais ---------------------------------------------------- */
   P.TEMAS = { 'Água e saneamento': '#0091DA', 'Energia e clima': '#EAAA00', 'Pessoas': '#C6007E', 'Governance': '#483698', 'Comunidade e cliente': '#00A3A1' };
@@ -240,9 +250,12 @@
   };
 
   P.carregar = function () {
+    if (P.online()) { estadoVazio(); return; }
     if (!ler(CHAVES.ms)) { P.cat = catBoot; semear(); return; }
     Object.keys(CHAVES).forEach(function (n) { S[n] = ler(CHAVES[n]); });
   };
+  /* Gera os dados de demonstracao sem tocar no armazenamento: serve o carregamento inicial do Supabase */
+  P.dadosDemonstracao = function () { semear(); return S; };
   P.reporDemonstracao = function () {
     Object.keys(CHAVES).forEach(function (n) { try { localStorage.removeItem(CHAVES[n]); } catch (e) { delete memoria[CHAVES[n]]; } });
     semear();
@@ -268,7 +281,7 @@
   P.item = function (id, ano) { return S.items[(ano || S.ciclo.ano) + ':' + id] || null; };
   P.user = function (login) { return S.users.filter(function (u) { return u.login === login; })[0] || null; };
 
-  /* Sessao: no mockup entra-se sem palavra-passe, em producao vem da autenticacao do portal */
+  /* Sessao: no mockup entra-se sem palavra-passe. Online, o login vem da conta autenticada (P.entrar depois de B.carregar). */
   P.sessao = function () {
     var l = null;
     try { l = sessionStorage.getItem('esg_sess'); } catch (e) { l = memoria.sess; }
