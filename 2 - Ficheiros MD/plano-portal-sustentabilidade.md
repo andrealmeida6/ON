@@ -43,6 +43,15 @@ Estado a 3 de novembro de 2026. A especificação funcional está em `especifica
 | `portal-paginas.js` | Desenho das páginas e ações |
 | `xlsx.full.min.js` | SheetJS Community Edition 0.18.5, Apache-2.0 |
 
+## GitHub Pages e Supabase
+
+Pedido do André a 3 de novembro de 2026, para o portal funcionar online antes do Power Pages.
+
+- **Pages:** o `index.html` da raiz abre o mockup e o `.nojekyll` publica os ficheiros tal como estão. Falta ativar: o plano atual não permite Pages num repositório privado.
+- **Supabase:** 22 tabelas `esg_*`, definidas em `1 - Código VSC/supabase/001_esg_esquema.sql`, com a configuração inicial. Ao lado das tabelas da outra aplicação, sem lhes tocar.
+- **Acesso:** RLS ligado e sem políticas, por isso a chave pública não lê nem escreve. As políticas por perfil dependem da decisão sobre o login.
+- **Falta:** carregar os 70 indicadores e as 25 milestones, criar as políticas e trocar o `localStorage` pelo Supabase em `portal-nucleo.js`.
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.
