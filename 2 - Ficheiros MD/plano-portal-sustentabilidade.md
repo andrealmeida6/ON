@@ -19,7 +19,7 @@ Estado a 3 de novembro de 2026. A especificação funcional está em `especifica
 | Tipografia | Instrument Sans e JetBrains Mono, secção 22.2 | Os mockups usavam uma fonte de marca |
 | Conteúdo dos mockups | Empresas, serviços e newsletters ficam de fora | São da outra plataforma. A especificação não os pede |
 | Empresas | Sem nomes de empresas. As entidades são fictícias e o sistema de origem de exemplo é "ERP" | Indicação do André |
-| Reguladores | ERSAR e APA mantêm-se | São entidades públicas com função própria nos dados, não empresas. A confirmar |
+| Reguladores | ERSAR e APA mantêm-se, pela sigla | Decisão do André. São entidades públicas, não empresas. Os relatórios do setor usam a sigla ERSAR |
 
 ## Marca (backoffice, separador Marca)
 
@@ -64,4 +64,4 @@ Estado a 3 de novembro de 2026. A especificação funcional está em `especifica
 
 ## Em aberto
 
-Secção 23 da especificação, mais: confirmar os reguladores na interface e substituir os valores de demonstração.
+Secção 23 da especificação, mais: substituir os valores de demonstração.
