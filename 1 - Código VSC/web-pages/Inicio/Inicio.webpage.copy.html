@@ -1,0 +1,12 @@
+<section class="ps-pagina" data-pagina="Inicio">
+  {{ snippets['Inicio/Hero'] }}
+  <div class="ps-wrap">
+    <div class="ps-ini">
+      <div class="ps-ini-esq">
+        {% include 'bloco-dinamico' id: 'inicio-pendentes' %}
+        {% include 'bloco-dinamico' id: 'inicio-entregas' %}
+      </div>
+      {% include 'bloco-dinamico' id: 'inicio-calendario' %}
+    </div>
+  </div>
+</section>
