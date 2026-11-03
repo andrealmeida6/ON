@@ -33,6 +33,10 @@ const BACKEND = { url: 'https://yujhfscnnngaivwwunom.supabase.co', chave: 'sb_pu
 /* Mockup: sem palavra-passe e com os dados no navegador */
 const mockup = montar(relWeb, MODO_MOCKUP);
 fs.writeFileSync(path.join(raiz, fs.readdirSync(raiz).find((n) => n.startsWith('3 - ')), 'mockup-final.html'), mockup, 'utf8');
-/* Plataforma online (GitHub Pages): com login e os dados no Supabase */
-fs.writeFileSync(path.join(raiz, 'index.html'), montar(encodeURI(path.basename(cod) + '/web-files/'), MODO_MOCKUP + ' window.PORTAL_BACKEND = ' + JSON.stringify(BACKEND) + ';'), 'utf8');
+/* Plataforma online (GitHub Pages). Com LOGIN_ONLINE = true pede email e palavra-passe e guarda os dados no Supabase.
+   Por agora esta desligado: entra-se logo como administrador e os dados ficam no navegador, como no mockup. */
+const LOGIN_ONLINE = false;
+const ENTRADA_DIRETA = 'window.PORTAL_ENTRADA_DIRETA = "admin";';
+const configOnline = LOGIN_ONLINE ? MODO_MOCKUP + ' window.PORTAL_BACKEND = ' + JSON.stringify(BACKEND) + ';' : MODO_MOCKUP + ' ' + ENTRADA_DIRETA;
+fs.writeFileSync(path.join(raiz, 'index.html'), montar(encodeURI(path.basename(cod) + '/web-files/'), configOnline), 'utf8');
 console.log('mockup-final.html e index.html: ' + ORDEM.length + ' web pages, ' + (mockup.match(/<!-- snippet:/g) || []).length + ' snippets, ' + (mockup.match(/<!-- template:/g) || []).length + ' templates, ' + mockup.length + ' caracteres');

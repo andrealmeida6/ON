@@ -1041,6 +1041,9 @@
     }, true);
     window.addEventListener('hashchange', navegar);
     if (P.online()) return arrancarOnline();
+    /* Entrada direta: sem ecra de entrada, abre logo com o perfil indicado. "Trocar de perfil" continua a mostrar a lista. */
+    var direto = window.PORTAL_ENTRADA_DIRETA;
+    if (direto && !P.sessao() && P.user(direto)) P.entrar(direto);
     navegar();
   };
 
