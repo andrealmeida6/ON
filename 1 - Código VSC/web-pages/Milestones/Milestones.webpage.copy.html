@@ -1,6 +1,12 @@
 <section class="ps-pagina" data-pagina="Milestones">
   <div class="ps-pag">
     {{ snippets['Milestones/Introducao'] }}
-    {% include 'bloco-dinamico' id: 'milestones' %}
+    <div class="ps-ini ps-ini-ms">
+      <div class="ps-ini-esq">
+        {% include 'bloco-dinamico' id: 'milestones-empresas' %}
+        {% include 'bloco-dinamico' id: 'milestones' %}
+      </div>
+      {% include 'bloco-dinamico' id: 'milestones-calendario' %}
+    </div>
   </div>
 </section>

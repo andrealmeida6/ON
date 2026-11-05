@@ -61,7 +61,7 @@
     docs: 'esg_docs', ent: 'esg_ent', janelas: 'esg_windows', marca: 'esg_brand', amostra: 'esg_sample', users: 'esg_users',
     areas: 'esg_areas', cat: 'esg_catalog', metas: 'esg_metas', deps: 'esg_deps'
   };
-  var VERSAO_DADOS = 2;
+  var VERSAO_DADOS = 3;
   var S = (P.S = {});
   var memoria = {};
   var ler = function (k) {
@@ -113,11 +113,11 @@
   };
   var UTILIZADORES = [
     ['admin', 'Administrador da plataforma', 'admin', ''], ['esg', 'Equipa de sustentabilidade', 'esg', 'I&D, CSR e ESG'],
-    ['operacoes', 'Resp. Operações', 'resp', 'Operações'], ['qualidade', 'Resp. Qualidade e Laboratório', 'resp', 'Qualidade e Laboratório'],
-    ['comercial', 'Resp. Comercial e Cliente', 'resp', 'Comercial e Relação com o Cliente'], ['ass', 'Resp. Ambiente, Saúde e Segurança', 'resp', 'Ambiente, Saúde e Segurança'],
-    ['rh', 'Resp. Recursos Humanos', 'resp', 'Recursos Humanos'], ['financeira', 'Resp. Financeira', 'resp', 'Financeira'],
-    ['juridico', 'Resp. Jurídico e Compliance', 'resp', 'Jurídico e Compliance'], ['compras', 'Resp. Compras (a confirmar)', 'resp', 'Compras'],
-    ['frota', 'Resp. Frota (a confirmar)', 'resp', 'Frota'], ['si', 'Resp. Sistemas de Informação', 'resp', 'Sistemas de Informação'],
+    ['operacoes', 'Marta Lopes', 'resp', 'Operações'], ['qualidade', 'Rui Antunes', 'resp', 'Qualidade e Laboratório'],
+    ['comercial', 'Sofia Reis', 'resp', 'Comercial e Relação com o Cliente'], ['ass', 'Tiago Moura', 'resp', 'Ambiente, Saúde e Segurança'],
+    ['rh', 'Inês Faria', 'resp', 'Recursos Humanos'], ['financeira', 'Paulo Serra', 'resp', 'Financeira'],
+    ['juridico', 'Joana Pinto', 'resp', 'Jurídico e Compliance'], ['compras', 'Carlos Neves', 'resp', 'Compras'],
+    ['frota', 'Ana Duarte', 'resp', 'Frota'], ['si', 'Miguel Costa', 'resp', 'Sistemas de Informação'],
     ['auditor', 'Auditor externo (assurance)', 'auditor', ''], ['ext-energia', 'Comercializador de eletricidade', 'ext', ''],
     ['ext-frota', 'Gestora de frota em renting', 'ext', ''], ['ext-reagentes', 'Fornecedor de reagentes químicos', 'ext', '']
   ];
@@ -206,11 +206,13 @@
       M20: { i: 0, d: 42 }, M21: { i: 0, d: 45 }, M22: { i: 0, d: 48 }, M23: { i: 0, d: 42 }, M24: { i: 0, d: 50 }, M25: { i: 0, d: 55 }
     };
     var EMPRESAS_DEMO = ['Sede do grupo', 'Concessão Vale', 'Concessão Rio', 'Serviços ambientais'];
+    var pessoaDe = function (un) { var x = UTILIZADORES.filter(function (l) { return l[2] === 'resp' && l[3] === un; })[0]; return x || null; };
+    var nomeDe = function (un) { var x = pessoaDe(un); return x ? x[1] : 'Equipa de sustentabilidade'; };
     window.PORTAL_PLANO.forEach(function (pl, ixPlano) {
       var cfg = estados[pl.id];
       var lista = pl.workflow.length ? pl.workflow.map(function (n) { return passoDeNome(n, pl.unidade); }) : WF_BASE();
       var m = {
-        id: pl.id, nome: nomeMs(pl.periodicidade, 2026, pl.unidade), ano: 2026, empresa: EMPRESAS_DEMO[ixPlano % EMPRESAS_DEMO.length], departamentos: [pl.unidade], unidade: pl.unidade, periodicidade: pl.periodicidade, prazo: diasDe(cfg.d),
+        id: pl.id, nome: nomeMs(pl.periodicidade, 2026, pl.unidade), ano: 2026, empresa: EMPRESAS_DEMO[ixPlano % EMPRESAS_DEMO.length], departamentos: [pl.unidade], atribuido_a: ixPlano % 2 === 0 && pessoaDe(pl.unidade) ? pessoaDe(pl.unidade)[0] : null, ficheiros_pedidos: [], unidade: pl.unidade, periodicidade: pl.periodicidade, prazo: diasDe(cfg.d),
         indicadores: pl.indicadores.slice(), passos: passosDe(lista), passo_atual: 0, devolvida: !!cfg.dev, workflow_ajustado: pl.workflow.length > 0,
         documentos_gerais: [], comentarios: [], eventos: []
       };
@@ -223,24 +225,26 @@
         var parcial = (pl.id === 'M10' && ix < 2) || (pl.id === 'M16' && ix < 3);
         if (preencher || parcial) {
           it.valor = valorDemo(c);
-          it.versoes.push({ valor: it.valor, em: new Date(Date.now() - 86400000 * 25).toISOString(), por: 'Resp. ' + pl.unidade, origem: 'manual', motivo: '' });
-          if (preencher && c.evidencia_obrigatoria) it.evidencias.push({ id: 'ev-' + id, ficheiro: 'suporte-' + id.toLowerCase() + '-2026.pdf', por: 'Resp. ' + pl.unidade, em: new Date(Date.now() - 86400000 * 25).toISOString() });
+          it.versoes.push({ valor: it.valor, em: new Date(Date.now() - 86400000 * 25).toISOString(), por: nomeDe(pl.unidade), origem: 'manual', motivo: '' });
+          if (preencher && c.evidencia_obrigatoria) it.evidencias.push({ id: 'ev-' + id, ficheiro: 'suporte-' + id.toLowerCase() + '-2026.pdf', por: nomeDe(pl.unidade), em: new Date(Date.now() - 86400000 * 25).toISOString() });
           if (preencher && P.validar(c, it.valor, 2026).alertas.length) it.justificacao = 'Diferença confirmada pela unidade: perímetro e fórmula iguais aos do ano anterior.';
         }
       });
       if (pl.id === 'M01') {
         var a = S.items['2026:A01'];
-        a.valor = 59.67; a.versoes.push({ valor: 59.67, em: new Date(Date.now() - 86400000 * 24).toISOString(), por: 'Resp. Operações', origem: 'file import telemetria-setembro.xlsx', motivo: '' });
+        a.valor = 59.67; a.versoes.push({ valor: 59.67, em: new Date(Date.now() - 86400000 * 24).toISOString(), por: nomeDe('Operações'), origem: 'file import telemetria-setembro.xlsx', motivo: '' });
         a.justificacao = 'Nova ligação de adução em serviço desde março.';
         var b = S.items['2026:A09']; b.qualidade = 'estimado'; b.metodo = 'Extrapolação a partir de nove meses de registos.';
       }
       for (var k = 0; k < cfg.i; k++) {
         var t = new Date(Date.now() - 86400000 * (Math.max(2, 30 - cfg.d / 3) - k * 2)).toISOString();
         m.passos[k].concluido_em = t;
-        m.passos[k].concluido_por = m.passos[k].responsavel === 'sistema' ? 'System' : m.passos[k].responsavel === 'unidade' ? 'Resp. ' + m.unidade : m.passos[k].responsavel.indexOf('area:') === 0 ? 'Resp. ' + m.passos[k].responsavel.slice(5) : 'Sustainability team';
+        m.passos[k].concluido_por = m.passos[k].responsavel === 'sistema' ? 'System' : m.passos[k].responsavel === 'unidade' ? nomeDe(m.unidade) : m.passos[k].responsavel.indexOf('area:') === 0 ? nomeDe(m.passos[k].responsavel.slice(5)) : 'Sustainability team';
         m.eventos.push({ texto: 'Step completed: ' + m.passos[k].nome + '.', em: t, por: m.passos[k].concluido_por });
       }
       m.passo_atual = cfg.i;
+      /* O que ja passou da recolha entregou os ficheiros pedidos */
+      if (cfg.i > 0) (FICHEIROS_BASE[pl.unidade] || []).forEach(function (f, ixF) { m.documentos_gerais.push({ ficheiro: f[3] + '-' + pl.id.toLowerCase() + '-2026.' + f[2][0], por: nomeDe(pl.unidade), em: new Date(Date.now() - 86400000 * 25).toISOString(), pedido: 'base:' + ixF }); });
       if (cfg.dev) {
         m.comentarios.push({ autor: 'Equipa de sustentabilidade', texto: 'A percentagem de veículos verdes parece baixa. Confirmem com a gestora da frota, por favor.', em: new Date(Date.now() - 86400000).toISOString() });
         m.eventos.push({ texto: 'Returned to the unit.', em: new Date(Date.now() - 86400000).toISOString(), por: 'Sustainability team' });
@@ -338,7 +342,88 @@
       if (it.qualidade === 'estimado' && !String(it.metodo || '').trim()) f.push({ id: id, campo: 'met', msg: c.nome + ': estimation method missing.' });
       if (c.evidencia_obrigatoria && !it.evidencias.length) f.push({ id: id, campo: 'evi', msg: c.nome + ': required evidence missing.' });
     });
+    P.ficheirosPedidos(m).forEach(function (x) { if (x.obrigatorio && !x.indicador && !x.entregues.length) f.push({ id: x.id, campo: 'fic', msg: x.nome + ': requested file missing.' }); });
     return f;
+  };
+
+  /* --- Pedido de dados: ficheiros pedidos em cada milestone ------------------ */
+  /* [nome, porque e pedido, formatos aceites, prefixo do ficheiro de exemplo] */
+  var FICHEIROS_BASE = {
+    'Operações': [['Extrato de telemetria do período', 'Sustenta os volumes e as ocorrências reportados.', ['xlsx', 'csv'], 'extrato-telemetria']],
+    'Qualidade e Laboratório': [['Boletins de análise do período', 'Sustentam os resultados de qualidade reportados.', ['pdf', 'xlsx'], 'boletins-analise']],
+    'Comercial e Relação com o Cliente': [['Extrato de faturação do período', 'Sustenta os volumes faturados e o número de clientes.', ['xlsx', 'csv'], 'extrato-faturacao']],
+    'Ambiente, Saúde e Segurança': [['Registo de resíduos e de acidentes', 'Sustenta os indicadores de ambiente e de segurança.', ['xlsx', 'pdf'], 'registo-ass']],
+    'Recursos Humanos': [['Mapa de pessoal e de formação', 'Sustenta os indicadores de pessoas.', ['xlsx', 'csv'], 'mapa-pessoal']],
+    'Financeira': [['Balancete e mapa de custos', 'Sustenta os valores financeiros e de energia.', ['xlsx', 'pdf'], 'balancete']],
+    'Jurídico e Compliance': [['Registo de ocorrências de conformidade', 'Sustenta os indicadores de governance.', ['xlsx', 'pdf'], 'registo-conformidade']],
+    'Compras': [['Lista de compras e de fornecedores', 'Sustenta os indicadores da cadeia de valor.', ['xlsx', 'csv'], 'lista-compras']],
+    'Frota': [['Mapa de frota e de abastecimentos', 'Sustenta os consumos e a composição da frota.', ['xlsx', 'csv'], 'mapa-frota']],
+    'Sistemas de Informação': [['Registo de incidentes de segurança', 'Sustenta os indicadores de cibersegurança.', ['xlsx', 'pdf'], 'registo-incidentes']],
+    'I&D, CSR e ESG': [['Relatório de atividades do período', 'Sustenta os indicadores de comunidade.', ['pdf', 'xlsx'], 'relatorio-atividades']]
+  };
+  P.ficheirosPedidos = function (m) {
+    var docs = m.documentos_gerais || [], l = [];
+    var entregues = function (pid) { return docs.filter(function (d) { return d.pedido === pid; }); };
+    (FICHEIROS_BASE[m.unidade] || []).forEach(function (f, i) { l.push({ id: 'base:' + i, nome: f[0], motivo: f[1], formatos: f[2], obrigatorio: true, entregues: entregues('base:' + i) }); });
+    (m.ficheiros_pedidos || []).forEach(function (f) { l.push({ id: f.id, nome: f.nome, motivo: f.motivo || '', formatos: [], obrigatorio: !!f.obrigatorio, proprio: true, entregues: entregues(f.id) }); });
+    m.indicadores.forEach(function (id) {
+      var c = P.cat(id);
+      if (c.evidencia_obrigatoria) l.push({ id: 'ev:' + id, nome: 'Evidência de ' + c.nome, motivo: 'Obrigatória para este indicador.', formatos: [], obrigatorio: true, indicador: id, entregues: P.item(id, m.ano).evidencias });
+    });
+    return l;
+  };
+  P.entregarFicheiro = function (m, pid, nome, u) {
+    if (!P.podePreencher(m, u)) return { erro: 'This milestone is not with you right now.' };
+    var f = P.ficheirosPedidos(m).filter(function (x) { return x.id === pid; })[0];
+    if (!f) return { erro: 'That file is no longer requested.' };
+    var ext = String(nome).split('.').pop().toLowerCase();
+    if (f.formatos.length && f.formatos.indexOf(ext) < 0) return { erro: 'This request accepts ' + f.formatos.join(', ') + ' files.' };
+    if (f.indicador) P.anexar(P.item(f.indicador, m.ano), nome, u);
+    else m.documentos_gerais.push({ ficheiro: nome, por: u.nome, em: agora(), pedido: pid });
+    ev(m, 'File delivered for "' + f.nome + '": ' + nome + '.', u.nome);
+    guardar();
+    return { ok: true };
+  };
+  P.pedirFicheiro = function (m, nome, obrigatorio, u) {
+    if (!P.gereTudo(u)) return { erro: 'No permission.' };
+    if (!String(nome || '').trim()) return { erro: 'Enter the name of the file.' };
+    m.ficheiros_pedidos = m.ficheiros_pedidos || [];
+    m.ficheiros_pedidos.push({ id: 'fp' + Date.now(), nome: nome.trim(), obrigatorio: !!obrigatorio });
+    ev(m, 'File requested: ' + nome.trim() + '.', u.nome);
+    guardar();
+    return { ok: true };
+  };
+  P.retirarPedidoFicheiro = function (m, pid, u) {
+    if (!P.gereTudo(u)) return { erro: 'No permission.' };
+    m.ficheiros_pedidos = (m.ficheiros_pedidos || []).filter(function (f) { return f.id !== pid; });
+    guardar();
+    return { ok: true };
+  };
+
+  /* --- Atribuicao: a pessoa escolhida ou a tag de quem tem o passo atual ----- */
+  P.atribuido = function (m) {
+    var p = P.passoAtual(m);
+    if (!p) return null;
+    var x = p.tipo === 'recolha' && m.atribuido_a ? P.user(m.atribuido_a) : null;
+    return x ? { tipo: 'pessoa', nome: x.nome } : { tipo: 'tag', nome: P.nomeResp(m, p.responsavel) };
+  };
+  P.atribuiveis = function (m) { return S.users.filter(function (x) { return x.perfil === 'resp' && x.unidade === m.unidade; }); };
+  P.atribuir = function (m, login, u) {
+    if (!P.acompanha(m, u)) return { erro: 'No permission.' };
+    m.atribuido_a = login || null;
+    ev(m, login ? 'Assigned to ' + P.user(login).nome + '.' : 'Assigned to the ' + m.unidade + ' department.', u.nome);
+    guardar();
+    return { ok: true };
+  };
+
+  /* --- Acessos aos dados no explorador --------------------------------------- */
+  P.podeVerIndicador = function (c, u) {
+    if (!u) return false;
+    if (P.gereTudo(u) || u.perfil === 'auditor') return true;
+    if (u.perfil !== 'resp') return false;
+    if (c.unidade_negocio === u.unidade) return true;
+    var m = P.msDoIndicador(c.id);
+    return !!m && m.unidade === u.unidade;
   };
 
   /* --- Estados e permissoes ---------------------------------------------- */
@@ -521,6 +606,16 @@
     ev(m, 'Value restated in ' + c.nome + ': from ' + P.fmtNum(ant, c.casas_decimais) + ' to ' + P.fmtNum(n, c.casas_decimais) + '. Reason: ' + motivo.trim(), u.nome);
     guardar();
     return { ok: true };
+  };
+  /* O que vem do Excel: tira o simbolo de percentagem e trata os traços como vazio */
+  P.limparColado = function (bruto) {
+    var s = String(bruto === null || bruto === undefined ? '' : bruto).replace(/\u00a0/g, ' ').trim();
+    if (/^(-|–|—|n\/a|n\.a\.?|na)$/i.test(s)) return '';
+    return s.replace(/\s*%$/, '');
+  };
+  P.lerQualidade = function (bruto) {
+    var s = String(bruto || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    return { measured: 'medido', medido: 'medido', calculated: 'calculado', calculado: 'calculado', estimated: 'estimado', estimado: 'estimado' }[s] || null;
   };
   P.anexar = function (it, nome, u) { it.evidencias.push({ id: 'ev' + Date.now() + Math.random().toString(36).slice(2, 5), ficheiro: nome, por: u.nome, em: agora() }); guardar(); };
 
@@ -848,7 +943,7 @@
     var offset = { Mensal: 30, Trimestral: 60, Anual: 90, 'Novos dados ESRS': 120 };
     P.msCiclo(antigo).forEach(function (a) {
       var id = a.id.split('_')[0] + sufixo;
-      var m = { id: id, nome: nomeMs(a.periodicidade, ano, a.unidade), ano: ano, empresa: a.empresa, departamentos: a.departamentos.slice(), unidade: a.unidade, periodicidade: a.periodicidade, prazo: diasDe(offset[a.periodicidade] || 90), indicadores: a.indicadores.slice(), passos: passosDe(S.wfbase), passo_atual: 0, devolvida: false, workflow_ajustado: false, documentos_gerais: [], comentarios: [], eventos: [] };
+      var m = { id: id, nome: nomeMs(a.periodicidade, ano, a.unidade), ano: ano, empresa: a.empresa, departamentos: a.departamentos.slice(), atribuido_a: a.atribuido_a || null, ficheiros_pedidos: (a.ficheiros_pedidos || []).slice(), unidade: a.unidade, periodicidade: a.periodicidade, prazo: diasDe(offset[a.periodicidade] || 90), indicadores: a.indicadores.slice(), passos: passosDe(S.wfbase), passo_atual: 0, devolvida: false, workflow_ajustado: false, documentos_gerais: [], comentarios: [], eventos: [] };
       ev(m, 'Milestone created in the ' + ano + ' cycle.', u.nome);
       S.ms.push(m);
       m.indicadores.forEach(function (i) { S.items[ano + ':' + i] = novoItem(i, ano, id, P.cat(i).tipo); });

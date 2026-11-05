@@ -11,7 +11,7 @@
   var e = function (v) {
     return String(v === null || v === undefined ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; });
   };
-  var U = { rota: { pag: '', arg: '', q: {} }, sep: 'dados', msFiltro: { empresa: '', dep: '', estado: 'todas', esrs: true, minhas: false }, msVista: 'lista', entVista: 'board', imp: {}, cal: null, consEsrs: false, histInd: 'A03', audFiltro: 'todas', boTab: 'ciclo', painel: null, menu: null, docNova: false, indBusca: '', marca: null, regraBusca: '', logoEstado: '' };
+  var U = { rota: { pag: '', arg: '', q: {} }, sep: 'dados', msFiltro: { empresa: '', dep: '', estado: 'todas', esrs: true, minhas: false }, msEmpTodas: false, dadosVista: 'form', colRel: {}, exp: {}, msVista: 'lista', entVista: 'board', imp: {}, cal: null, consEsrs: false, histInd: 'A03', audFiltro: 'todas', boTab: 'ciclo', painel: null, menu: null, docNova: false, indBusca: '', marca: null, regraBusca: '', logoEstado: '' };
 
   /* --- Icones ------------------------------------------------------------ */
   var svg = function (d, t) { return '<svg width="' + (t || 16) + '" height="' + (t || 16) + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + d + '</svg>'; };
@@ -28,6 +28,15 @@
     return '/' + p[0].toLowerCase() + '/' + (p[1] || q[1] ? '?' + [p[1] ? 'id=' + p[1] : '', q[1] || ''].filter(Boolean).join('&') : '');
   };
   var tagsDe = function (m) { return '<span class="ps-tags">' + (m.departamentos || []).map(function (d) { return '<span class="ps-tag">' + e(d) + '</span>'; }).join('') + '</span>'; };
+  var atribHtml = function (m) {
+    var a = P.atribuido(m);
+    if (!a) return '<span class="ps-mut">-</span>';
+    return a.tipo === 'pessoa' ? '<span class="ps-pess"><i aria-hidden="true">' + e(iniciais(a.nome)) + '</i>' + e(a.nome) + '</span>' : '<span class="ps-tag">' + e(a.nome) + '</span>';
+  };
+  var rotaEmp = function (nome) { var x = S.ent.filter(function (y) { return y.nome === nome; })[0]; return rota('Milestones' + (x ? '?empresa=' + encodeURIComponent(x.id) : '')); };
+  /* A mesma regra em todas as tabelas de milestones: empresa e a quem esta atribuida */
+  var COLS_MS = [{ t: 'Milestone' }, { t: 'Company' }, { t: 'Assigned to' }, { t: 'Due' }, { t: 'Status' }];
+  var linhaTabMs = function (m) { return ['<a href="' + rota('Milestone/' + m.id) + '">' + e(m.nome) + '</a>', e(m.empresa), atribHtml(m), '<span class="ps-nowrap">' + e(prazoTxt(m)) + '</span>', estChip(m)]; };
   var chip = function (txt, cls) { return '<span class="ps-chip ' + (cls || '') + '">' + e(txt) + '</span>'; };
   var estChip = function (m) { var s = P.estadoMs(m); return chip(s.txt, s.cls); };
   var iniciais = function (n) { return String(n).replace(/^Resp\.\s*/, '').split(/\s+/).filter(function (x) { return x.length > 2 || x === x.toUpperCase(); }).slice(0, 2).map(function (x) { return x[0]; }).join('') || '?'; };
@@ -206,9 +215,7 @@
     var dir = '<div class="ps-sp"><div class="ps-seg" role="group" aria-label="View"><button type="button" class="' + (U.entVista === 'board' ? 'on' : '') + '" data-a="entVista" data-v="board">Board</button><button type="button" class="' + (U.entVista === 'tabela' ? 'on' : '') + '" data-a="entVista" data-v="tabela">Table</button></div><a class="ps-btn liga" href="' + rota('Milestones') + '">View all milestones</a></div>';
     var corpo;
     if (U.entVista === 'tabela') {
-      corpo = '<div class="ps-card-body">' + tabela([{ t: 'Milestone' }, { t: 'Company' }, { t: 'Departments' }, { t: 'Due' }, { t: 'Status' }], todas.sort(porPrazo).map(function (m) {
-        return ['<a href="' + rota('Milestone/' + m.id) + '">' + e(m.nome) + '</a>', e(m.empresa), tagsDe(m), '<span class="ps-nowrap">' + e(prazoTxt(m)) + '</span>', estChip(m)];
-      }), 'No upcoming deliveries.') + '</div>';
+      corpo = '<div class="ps-card-body">' + tabela(COLS_MS, todas.sort(porPrazo).map(linhaTabMs), 'No upcoming deliveries.') + '</div>';
     } else {
       corpo = '<div class="ps-tl">' + cols.map(function (c) {
         c[1].sort(porPrazo);
@@ -221,12 +228,12 @@
   };
   var classeCal = function (m) { var c = P.estadoMs(m).cod; return c === 'concluida' ? 'ok' : (c === 'atraso' || c === 'devolvida') ? 'err' : (c === 'revisao' || c === 'parecer' || c === 'aprovacao') ? 'rev' : ''; };
   var janelasDoDia = function (a, me, d) { return S.janelas.filter(function (j) { return j.meses.indexOf(me + 1) > -1 && d >= j.dia_inicio && d <= j.dia_fim; }); };
-  Blocos['inicio-calendario'] = function () {
+  var calendario = function (lista, pref) {
     var hoje = new Date();
     if (!U.cal) U.cal = { ano: hoje.getFullYear(), mes: hoje.getMonth(), dia: hoje.getDate() };
     var a = U.cal.ano, me = U.cal.mes, prim = new Date(a, me, 1), n = new Date(a, me + 1, 0).getDate(), desloc = (prim.getDay() + 6) % 7, iso = function (d) { return a + '-' + String(me + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0'); };
     var porDia = {};
-    P.msCiclo().forEach(function (m) { (porDia[m.prazo] = porDia[m.prazo] || []).push(m); });
+    lista.forEach(function (m) { (porDia[m.prazo] = porDia[m.prazo] || []).push(m); });
     var cel = '';
     ['M', 'T', 'W', 'T', 'F', 'S', 'S'].forEach(function (x) { cel += '<div class="ps-cal-sem" aria-hidden="true">' + x + '</div>'; });
     for (var i = 0; i < desloc; i++) cel += '<div></div>';
@@ -235,24 +242,23 @@
       if (janelasDoDia(a, me, d).length) cl.push('jan');
       if (iso(d) === P.hojeISO()) cl.push('hoje');
       if (d === U.cal.dia) cl.push('sel');
-      cel += '<button type="button" id="cal-' + d + '" class="' + cl.join(' ') + '" data-a="calDia" data-v="' + d + '" aria-label="' + d + ', ' + ms.length + ' deadlines"' + (d === U.cal.dia ? ' aria-pressed="true"' : '') + '>' + d + (ms.length ? '<span class="pts">' + ms.slice(0, 3).map(function (m) { return '<i class="' + classeCal(m) + '"></i>'; }).join('') + '</span>' : '') + '</button>';
+      cel += '<button type="button" id="' + pref + d + '" class="' + cl.join(' ') + '" data-a="calDia" data-v="' + d + '" aria-label="' + d + ', ' + ms.length + ' deadlines"' + (d === U.cal.dia ? ' aria-pressed="true"' : '') + '>' + d + (ms.length ? '<span class="pts">' + ms.slice(0, 3).map(function (m) { return '<i class="' + classeCal(m) + '"></i>'; }).join('') + '</span>' : '') + '</button>';
     }
     var ds = U.cal.dia, msDia = porDia[iso(ds)] || [], jan = janelasDoDia(a, me, ds);
     var nomeMes = new Intl.DateTimeFormat('en-GB', { month: 'long', year: 'numeric' }).format(prim);
-    var atrasadas = P.msCiclo().filter(function (m) { return P.estadoMs(m).cod === 'atraso'; });
     return '<aside class="ps-cal ps-fundo-marca" aria-label="Calendar"><div class="ps-cal-h"><h2>Calendar</h2><div class="ps-cal-nav"><button type="button" data-a="calMes" data-v="-1" aria-label="Previous month">‹</button><button type="button" data-a="calHoje">Today</button><button type="button" data-a="calMes" data-v="1" aria-label="Next month">›</button></div></div>' +
       '<div class="ps-cal-mes">' + e(nomeMes) + '</div><div class="ps-cal-g">' + cel + '</div>' +
       '<div class="ps-cal-leg"><span><i></i>In collection</span><span><i class="err"></i>Overdue or returned</span><span><i class="rev"></i>In review</span><span><i class="ok"></i>Completed</span></div>' +
       '<div class="ps-cal-det"><h3>' + ds + ' ' + e(new Intl.DateTimeFormat('en-GB', { month: 'long' }).format(prim)) + '</h3>' +
       (jan.length ? jan.map(function (j) { return '<div class="ps-cal-jan" style="--c:' + e(P.TEMAS[j.tema] || '#888') + '"><i></i>' + e(j.nome) + '</div>'; }).join('') : '') +
-      (msDia.length ? msDia.map(function (m) { return '<a href="' + rota('Milestone/' + m.id) + '">' + e(m.nome) + '</a>'; }).join('') : '<div class="ps-mut">No milestones due on this day.</div>') +
-      (P.gereTudo(u()) && atrasadas.length ? '<button type="button" class="ps-btn peq ps-mt" data-a="lembrete">Send reminder to the ' + atrasadas.length + ' overdue</button>' : '') + '</div></aside>';
+      (msDia.length ? msDia.map(function (m) { return '<a href="' + rota('Milestone/' + m.id) + '">' + e(m.nome) + '</a>'; }).join('') : '<div class="ps-mut">No milestones due on this day.</div>') + '</div></aside>';
   };
+  Blocos['inicio-calendario'] = function () { return calendario(P.msCiclo(), 'cal-'); };
 
   /* --- Milestones -------------------------------------------------------- */
-  Blocos['milestones'] = function () {
+  var msFiltradas = function () {
     var f = U.msFiltro, usr = u();
-    var lista = P.msCiclo().filter(function (m) {
+    return P.msCiclo().filter(function (m) {
       var c = P.estadoMs(m).cod;
       if (f.empresa && m.empresa !== f.empresa) return false;
       if (f.dep && m.departamentos.indexOf(f.dep) < 0) return false;
@@ -262,31 +268,56 @@
       if (f.estado === 'concluidas' && c !== 'concluida') return false;
       if (!f.esrs && m.periodicidade === 'Novos dados ESRS') return false;
       return true;
+    }).sort(function (a, b) {
+      /* O que esta em aberto vem primeiro, por prazo. O concluido fica no fim. */
+      var ca = P.concluida(a) ? 1 : 0, cb = P.concluida(b) ? 1 : 0;
+      return ca - cb || (a.prazo < b.prazo ? -1 : a.prazo > b.prazo ? 1 : 0);
     });
-    var filtros = '<div class="ps-filtros">' + campo('f-emp', 'Company', '<select id="f-emp" class="ps-sel" data-c="msEmpresaF">' + opt('', 'All', f.empresa) + S.ent.map(function (x) { return opt(x.nome, x.nome, f.empresa); }).join('') + '</select>') +
-      campo('f-dep', 'Department', '<select id="f-dep" class="ps-sel" data-c="msDepF">' + opt('', 'All', f.dep) + P.UNIDADES.map(function (x) { return opt(x, x, f.dep); }).join('') + '</select>') +
+  };
+  Blocos['milestones-empresas'] = function () {
+    var f = U.msFiltro, ms = P.msCiclo();
+    var cartao = function (href, nome, mono, l, on) {
+      var conc = l.filter(P.concluida).length, atr = l.filter(function (m) { return P.estadoMs(m).cod === 'atraso'; }).length, pct = l.length ? Math.round((conc / l.length) * 100) : 0;
+      return '<a class="ps-emp' + (on ? ' on' : '') + '" href="' + href + '"' + (on ? ' aria-current="true"' : '') + '><span class="ps-emp-mono" aria-hidden="true">' + e(mono) + '</span><span class="ps-emp-txt"><b>' + e(nome) + '</b><small>' + l.length + (l.length === 1 ? ' milestone' : ' milestones') + (atr ? ' · <em>' + atr + ' overdue</em>' : '') + '</small><span class="ps-emp-barra" aria-hidden="true"><i style="width:' + pct + '%"></i></span><small>' + conc + ' of ' + l.length + ' completed</small></span></a>';
+    };
+    var daEmpresa = function (nome) { return ms.filter(function (m) { return m.empresa === nome; }); };
+    var com = S.ent.filter(function (x) { return daEmpresa(x.nome).length; }), sem = S.ent.filter(function (x) { return !daEmpresa(x.nome).length; });
+    var vis = com.concat(U.msEmpTodas ? sem : sem.filter(function (x) { return x.nome === f.empresa; }));
+    return '<div class="ps-card"><div class="ps-card-head"><h2>Companies</h2>' + (sem.length ? '<button type="button" class="ps-btn liga" data-a="msEmpTodas">' + (U.msEmpTodas ? 'Show only companies with milestones' : 'Show ' + sem.length + ' more with no milestones') + '</button>' : '') + '</div><div class="ps-emps">' +
+      cartao(rota('Milestones'), 'All companies', 'All', ms, !f.empresa) +
+      vis.map(function (x) { return cartao(rota('Milestones?empresa=' + encodeURIComponent(x.id)), x.nome, iniciais(x.nome), daEmpresa(x.nome), f.empresa === x.nome); }).join('') + '</div></div>';
+  };
+  Blocos['milestones-calendario'] = function () {
+    var f = U.msFiltro;
+    return calendario(P.msCiclo().filter(function (m) { return !f.empresa || m.empresa === f.empresa; }), 'calm-');
+  };
+  var exportarMilestones = function (lista) {
+    var linhas = [['Milestone', 'Company', 'Assigned to', 'Due', 'Status']].concat(lista.map(function (m) { var a = P.atribuido(m); return [m.nome, m.empresa, a ? a.nome : '', m.prazo, P.estadoMs(m).txt]; }));
+    var wb = window.XLSX.utils.book_new(), ws = window.XLSX.utils.aoa_to_sheet(linhas);
+    ws['!cols'] = [{ wch: 48 }, { wch: 26 }, { wch: 32 }, { wch: 12 }, { wch: 18 }];
+    window.XLSX.utils.book_append_sheet(wb, ws, 'Milestones');
+    window.XLSX.writeFile(wb, 'milestones.xlsx');
+    toast('Excel file exported.', 'ok');
+  };
+  Blocos['milestones'] = function () {
+    var f = U.msFiltro, lista = msFiltradas();
+    var filtros = '<div class="ps-filtros">' + campo('f-dep', 'Department', '<select id="f-dep" class="ps-sel" data-c="msDepF">' + opt('', 'All', f.dep) + P.UNIDADES.map(function (x) { return opt(x, x, f.dep); }).join('') + '</select>') +
       campo('f-es', 'Status', '<select id="f-es" class="ps-sel" data-c="msEstado">' + opt('todas', 'All', f.estado) + opt('curso', 'In progress', f.estado) + opt('atraso', 'Overdue', f.estado) + opt('concluidas', 'Completed', f.estado) + '</select>') +
       '<label class="ps-chk"><input id="f-minhas" type="checkbox" data-c="msMinhas"' + (f.minhas ? ' checked' : '') + '> Waiting on me</label>' +
-      '<label class="ps-chk"><input id="f-esrs" type="checkbox" data-c="msEsrs"' + (f.esrs ? ' checked' : '') + '> Include ESRS track</label>' +
-      '<div class="ps-seg" role="group" aria-label="View"><button type="button" class="' + (U.msVista === 'lista' ? 'on' : '') + '" data-a="msVista" data-v="lista">List</button><button type="button" class="' + (U.msVista === 'board' ? 'on' : '') + '" data-a="msVista" data-v="board">Board</button></div></div>';
-    if (!lista.length) return filtros + '<div class="ps-card">' + vazio('No milestones match these filters.') + '</div>';
+      '<label class="ps-chk"><input id="f-esrs" type="checkbox" data-c="msEsrs"' + (f.esrs ? ' checked' : '') + '> Include ESRS track</label></div>';
+    var dir = '<div class="ps-sp"><div class="ps-seg" role="group" aria-label="View"><button type="button" class="' + (U.msVista === 'lista' ? 'on' : '') + '" data-a="msVista" data-v="lista">Table</button><button type="button" class="' + (U.msVista === 'board' ? 'on' : '') + '" data-a="msVista" data-v="board">Board</button></div><button type="button" class="ps-btn peq" data-a="msExcel"' + (lista.length ? '' : ' disabled') + '>Export to Excel</button></div>';
+    var cab = cabCartao((f.empresa || 'All companies') + ' (' + lista.length + ')', 'tarefa', dir);
+    if (!lista.length) return filtros + '<div class="ps-card">' + cab + vazio('No milestones match these filters.') + '</div>';
     if (U.msVista === 'board') {
       var cols = [['Collection', ['recolha', 'atraso', 'devolvida']], ['Review and opinion', ['revisao', 'parecer']], ['Approval', ['aprovacao']], ['Completed', ['concluida']]];
-      return filtros + '<div class="ps-board">' + cols.map(function (c) {
+      return filtros + '<div class="ps-card">' + cab + '<div class="ps-card-body"><div class="ps-board">' + cols.map(function (c) {
         var it = lista.filter(function (m) { return c[1].indexOf(P.estadoMs(m).cod) > -1; });
         return '<div class="ps-board-col"><h3>' + e(c[0]) + '<span class="ps-n">' + it.length + '</span></h3>' + it.map(function (m) {
-          return '<a class="ps-board-it" href="' + rota('Milestone/' + m.id) + '"><b>' + e(m.nome) + '</b><small class="ps-mut">' + e(m.empresa) + '</small>' + tagsDe(m) + miniWf(m) + '<div class="ps-sp-b ps-mt">' + estChip(m) + '<span class="ps-mut ps-small">' + e(P.fmtData(m.prazo)) + '</span></div></a>';
+          return '<a class="ps-board-it" href="' + rota('Milestone/' + m.id) + '"><b>' + e(m.nome) + '</b><small class="ps-mut">' + e(m.empresa) + '</small><div>' + atribHtml(m) + '</div><div class="ps-sp-b ps-mt">' + estChip(m) + '<span class="ps-mut ps-small">' + e(P.fmtData(m.prazo)) + '</span></div></a>';
         }).join('') + '</div>';
-      }).join('') + '</div>';
+      }).join('') + '</div></div></div>';
     }
-    var grupos = S.ent.map(function (x) { return x.nome; }).filter(function (x) { return lista.some(function (m) { return m.empresa === x; }); });
-    return filtros + '<div class="ps-card"><div class="ps-card-body">' + grupos.map(function (g) {
-      return '<h2 class="ps-grupo-t">' + e(g) + '</h2>' + tabela(
-        [{ t: 'Milestone' }, { t: 'Departments' }, { t: 'Current step and owner' }, { t: 'Workflow' }, { t: 'Due' }, { t: 'Status' }],
-        lista.filter(function (m) { return m.empresa === g; }).map(function (m) {
-          return [ '<a href="' + rota('Milestone/' + m.id) + '">' + e(m.nome) + '</a>', tagsDe(m), e(passoTxt(m)), miniWf(m), '<span class="ps-nowrap">' + e(prazoTxt(m)) + '</span>', estChip(m) ];
-        }));
-    }).join('') + '</div></div>';
+    return filtros + '<div class="ps-card">' + cab + '<div class="ps-card-body">' + tabela(COLS_MS, lista.map(linhaTabMs)) + '</div></div>';
   };
 
   /* --- Milestone --------------------------------------------------------- */
@@ -297,7 +328,7 @@
   Blocos['milestone-cabecalho'] = function () {
     var m = msAtual(), d = P.diasAte(m.prazo);
     var ext = S.ext.filter(function (x) { return x.milestone_id === m.id; }).length;
-    return '<nav class="ps-mig" aria-label="Breadcrumb"><a href="' + rota('Inicio') + '">Home</a><span>/</span><a href="' + rota('Milestones') + '">Milestones</a><span>/</span><span>' + e(m.empresa) + '</span><span>/</span><b>' + e(m.nome) + '</b></nav>' +
+    return '<nav class="ps-mig" aria-label="Breadcrumb"><a href="' + rota('Inicio') + '">Home</a><span>/</span><a href="' + rota('Milestones') + '">Milestones</a><span>/</span><a href="' + rotaEmp(m.empresa) + '">' + e(m.empresa) + '</a><span>/</span><b>' + e(m.nome) + '</b></nav>' +
       '<div class="ps-ban"><div class="ps-ban-top"><div><div class="ps-ban-tags"><span class="ps-ban-tag">' + e(m.empresa) + '</span><span class="ps-ban-tag">' + e(m.ano) + '</span><span class="ps-ban-tag">' + e(PERIODO_TXT[m.periodicidade] || m.periodicidade) + '</span>' + (m.periodicidade === 'Novos dados ESRS' ? '<span class="ps-ban-tag">ESRS track</span>' : '') + (m.workflow_ajustado ? '<span class="ps-ban-tag">Adjusted workflow</span>' : '') + '</div>' +
       '<h1>' + e(m.nome) + '</h1><div class="ps-ban-sub">Reporting year ' + e(m.ano) + ' · ' + e(m.unidade) + ' · data users: ' + e(usados(m).join(', ')) + '</div></div>' +
       '<div class="ps-ban-dir"><div class="ps-ban-pill"><small>Due</small>' + e(P.fmtDataAno(m.prazo)) + '</div>' + estChip(m) + '<button type="button" class="ps-btn" data-a="abrirTecnica">Technical view</button></div></div>' +
@@ -315,10 +346,15 @@
     var m = msAtual(), usr = u(), decide = P.podeAgir(m, usr) && P.passoAtual(m).tipo !== 'recolha';
     var nAud = S.aud.filter(function (a) { var x = P.msDoIndicador(a.indicador_id, m.ano); return x && x.id === m.id && a.estado !== 'resolvido'; }).length;
     var nExt = S.ext.filter(function (x) { return x.milestone_id === m.id && x.estado !== 'aplicado'; }).length;
-    var seps = [['dados', decide ? 'Review' : 'Data', 0], ['evidencias', 'Evidence and quality', 0], ['externos', 'External contributions', nExt], ['auditoria', 'Audit', nAud], ['conversa', 'Conversation and history', m.comentarios.length]];
-    var html = U.sep === 'evidencias' ? sepEvidencias(m) : U.sep === 'externos' ? sepExternos(m) : U.sep === 'auditoria' ? sepAuditoria(m) : U.sep === 'conversa' ? sepConversa(m) : decide ? sepRevisao(m) : P.podePreencher(m, usr) ? sepRecolha(m) : sepLeitura(m);
+    var seps = [['dados', decide ? 'Review' : 'Data request', 0], ['explorar', 'Data explorer', 0], ['evidencias', 'Evidence and quality', 0], ['externos', 'External contributions', nExt], ['auditoria', 'Audit', nAud], ['conversa', 'Conversation and history', m.comentarios.length]];
+    var html = U.sep === 'explorar' ? sepExplorar(m) : U.sep === 'evidencias' ? sepEvidencias(m) : U.sep === 'externos' ? sepExternos(m) : U.sep === 'auditoria' ? sepAuditoria(m) : U.sep === 'conversa' ? sepConversa(m) : pedidoTopo(m) + cartaoFicheiros(m) + (decide ? sepRevisao(m) : P.podePreencher(m, usr) ? sepRecolha(m) : sepLeitura(m));
     return '<div class="ps-seps" role="tablist">' + seps.map(function (s) { return '<button type="button" role="tab" aria-selected="' + (U.sep === s[0]) + '" class="ps-sep ' + (U.sep === s[0] ? 'on' : '') + '" data-a="sep" data-v="' + s[0] + '">' + e(s[1]) + (s[2] ? '<span class="n">' + s[2] + '</span>' : '') + '</button>'; }).join('') + '</div>' +
-      '<div class="ps-grid-side"><div class="ps-col">' + html + '</div><div class="ps-col"><div class="ps-card">' + cabCartao('Details') + '<div class="ps-card-body"><dl class="ps-det"><dt>Company</dt><dd>' + (P.gereTudo(usr) ? '<select id="ms-emp" class="ps-sel" aria-label="Company" data-c="msEmpresa">' + S.ent.map(function (x) { return opt(x.nome, x.nome, m.empresa); }).join('') + '</select>' : e(m.empresa)) + '</dd><dt>Departments</dt><dd>' + editorTags(m, usr) + '</dd><dt>Unit</dt><dd>' + e(m.unidade) + '</dd><dt>Current step</dt><dd>' + e(P.concluida(m) ? 'Completed' : P.passoAtual(m).nome) + '</dd><dt>Owner</dt><dd>' + e(P.concluida(m) ? '-' : P.nomeResp(m, P.passoAtual(m).responsavel)) + '</dd><dt>Due</dt><dd>' + e(prazoTxt(m)) + '</dd><dt>Indicators</dt><dd>' + m.indicadores.length + '</dd></dl></div></div></div></div>';
+      (U.sep === 'explorar' ? '<div class="ps-col">' + html + '</div>' : '<div class="ps-grid-side"><div class="ps-col">' + html + '</div><div class="ps-col"><div class="ps-card">' + cabCartao('Details') + '<div class="ps-card-body"><dl class="ps-det"><dt>Company</dt><dd>' + (P.gereTudo(usr) ? '<select id="ms-emp" class="ps-sel" aria-label="Company" data-c="msEmpresa">' + S.ent.map(function (x) { return opt(x.nome, x.nome, m.empresa); }).join('') + '</select>' : e(m.empresa)) + '</dd><dt>Departments</dt><dd>' + editorTags(m, usr) + '</dd><dt>Unit</dt><dd>' + e(m.unidade) + '</dd><dt>Current step</dt><dd>' + e(P.concluida(m) ? 'Completed' : P.passoAtual(m).nome) + '</dd><dt>Assigned to</dt><dd>' + editorAtrib(m, usr) + '</dd><dt>Due</dt><dd>' + e(prazoTxt(m)) + '</dd><dt>Indicators</dt><dd>' + m.indicadores.length + '</dd></dl></div></div></div></div>');
+  };
+  var editorAtrib = function (m, usr) {
+    var p = P.passoAtual(m);
+    if (!p || p.tipo !== 'recolha' || !P.acompanha(m, usr)) return atribHtml(m);
+    return '<select id="ms-atr" class="ps-sel" aria-label="Assigned to" data-c="msAtrib">' + opt('', m.unidade + ' (department)', m.atribuido_a || '') + P.atribuiveis(m).map(function (x) { return opt(x.login, x.nome, m.atribuido_a || ''); }).join('') + '</select>';
   };
   var editorTags = function (m, usr) {
     if (!P.acompanha(m, usr) || P.concluida(m)) return tagsDe(m);
@@ -352,8 +388,216 @@
     return '<div class="ps-card">' + cabCartao('Import file', 'doc', '<button type="button" class="ps-btn peq" data-a="abrirTecnica" data-v="schema">View schema</button>') +
       '<div class="ps-drop"><button type="button" class="ps-btn pri" data-a="importar">Import file</button><button type="button" class="ps-btn" data-a="tplExcel">Template Excel</button><button type="button" class="ps-btn" data-a="tplCsv">Template CSV</button><button type="button" class="ps-btn" data-a="impExemplo">Test with a sample file</button><span class="ps-mut ps-small">Excel (.xlsx), CSV or JSON</span></div>' +
       (rel ? relatorioImport(m, rel) : '') + '</div>' +
-      '<div class="ps-card ps-com-acao">' + cabCartao('Entry and validation', 'tarefa', '<span class="ps-mut ps-small">Saves when you leave each field</span>') + linhas +
+      '<div class="ps-card ps-com-acao">' + cabCartao('Requested data', 'tarefa', ferrDados(m)) + (U.dadosVista === 'grid' ? corpoGrelha(m) : linhas) +
       '<div class="ps-sticky"><span class="ps-small ps-mut" aria-live="polite">' + feitos + ' of ' + m.indicadores.length + ' indicators with a value</span><button type="button" id="btn-submeter" class="ps-btn pri" data-a="submeter">Submit milestone</button></div></div>';
+  };
+  /* --- Pedido de dados ---------------------------------------------------- */
+  var pedidoTopo = function (m) {
+    var p = P.passoAtual(m), recolha = !!p && p.tipo === 'recolha', fics = P.ficheirosPedidos(m), obrig = fics.filter(function (f) { return f.obrigatorio; }), fOk = obrig.filter(function (f) { return f.entregues.length; }).length;
+    var faltas = recolha ? P.faltasSubmissao(m) : [], comFalta = {}, erros = 0, alertas = 0;
+    faltas.forEach(function (f) { if (f.campo === 'val' || f.campo === 'just' || f.campo === 'met') comFalta[f.id] = 1; });
+    m.indicadores.forEach(function (id) { var it = P.item(id, m.ano), v = P.validarItem(it); if (v.erros.length) erros++; if (v.alertas.length && !String(it.justificacao || '').trim()) alertas++; });
+    var dOk = recolha ? m.indicadores.filter(function (id) { return !comFalta[id]; }).length : preenchidos(m), tot = m.indicadores.length + obrig.length, pct = tot ? Math.round(((dOk + fOk) / tot) * 100) : 100, C2 = 2 * Math.PI * 36;
+    var titulo = !p ? 'Delivered and approved' : !recolha ? 'Delivered, now with ' + P.nomeResp(m, p.responsavel) : faltas.length ? faltas.length + (faltas.length === 1 ? ' item still needed' : ' items still needed') : 'Everything is ready to submit';
+    var txt = !recolha ? 'This is what was requested and what was delivered.' : 'Provide the data and the files below by ' + P.fmtDataAno(m.prazo) + '. Every value is checked against the prior year and the rules of its indicator.';
+    var passo = function (n, nome, det, ok) { return '<li class="' + (ok ? 'ok' : '') + '"><span class="n" aria-hidden="true">' + (ok ? svg(I.tick, 14) : n) + '</span><b>' + e(nome) + '</b><small>' + e(det) + '</small></li>'; };
+    return '<div class="ps-card ps-ped"><div class="ps-ped-top"><div class="ps-ped-anel" role="img" aria-label="' + pct + '% ready"><svg viewBox="0 0 88 88" aria-hidden="true"><circle cx="44" cy="44" r="36"/><circle class="v" cx="44" cy="44" r="36" stroke-dasharray="' + (C2 * pct / 100).toFixed(1) + ' ' + C2.toFixed(1) + '" transform="rotate(-90 44 44)"/></svg><b>' + pct + '%</b></div>' +
+      '<div class="ps-ped-txt"><span class="ps-ped-k">Data request</span><h2>' + e(titulo) + '</h2><p>' + e(txt) + '</p></div></div>' +
+      '<ol class="ps-ped-passos">' + passo(1, 'Provide the data', dOk + ' of ' + m.indicadores.length + ' data points', dOk === m.indicadores.length) + passo(2, 'Attach the files', fOk + ' of ' + obrig.length + ' required files', fOk === obrig.length) + passo(3, 'Validate', erros ? erros + ' with errors' : alertas ? alertas + ' alerts to justify' : 'No open issues', !erros && !alertas && preenchidos(m) === m.indicadores.length) + '</ol>' +
+      (faltas.length ? '<details class="ps-ped-faltas" id="ped-faltas"><summary>See what is missing (' + faltas.length + ')</summary><ul>' + faltas.slice(0, 12).map(function (f) { return '<li><button type="button" class="ps-btn liga" data-a="irFalta" data-campo="' + e(f.campo) + '" data-id="' + e(f.id) + '">' + e(f.msg) + '</button></li>'; }).join('') + (faltas.length > 12 ? '<li class="ps-mut ps-small">And ' + (faltas.length - 12) + ' more.</li>' : '') + '</ul></details>' : '') + '</div>';
+  };
+  var cartaoFicheiros = function (m) {
+    var usr = u(), pode = P.podePreencher(m, usr), gere = P.gereTudo(usr) && !P.concluida(m), fics = P.ficheirosPedidos(m);
+    return '<div class="ps-card">' + cabCartao('Requested files', 'doc') + '<div class="ps-card-body">' + tabela([{ t: 'File' }, { t: 'Why it is requested' }, { t: 'Format' }, { t: 'Delivered' }, { t: 'Status' }], fics.map(function (f) {
+      var ent = f.entregues, acao = (pode ? '<button type="button" id="fp-' + e(f.id) + '" class="ps-btn peq' + (ent.length ? '' : ' pri') + '" data-a="ficEntregar" data-v="' + e(f.id) + '">' + (ent.length ? 'Add another' : 'Upload') + '</button>' : '') + (gere && f.proprio ? ' <button type="button" class="ps-btn peq err" data-a="ficRetirar" data-v="' + e(f.id) + '">Remove</button>' : '');
+      return [e(f.nome) + (f.obrigatorio ? '' : ' <span class="ps-mut ps-small">(optional)</span>'), e(f.motivo || '-'), e(f.formatos.length ? f.formatos.join(', ') : 'Any'), ent.length ? ent.map(function (x) { return '<span class="ps-small">' + e(x.ficheiro) + '<br><span class="ps-mut">' + e(x.por) + '</span></span>'; }).join('<br>') : '<span class="ps-mut">-</span>', '<span class="ps-sp">' + (ent.length ? chip('Delivered', 'ok') : f.obrigatorio ? chip('Missing', 'warn') : chip('Optional')) + acao + '</span>'];
+    }), 'No files requested for this milestone.') +
+      (gere ? '<div class="ps-form ps-mt ps-fic-novo">' + campo('fp-nome', 'Request another file', '<input id="fp-nome" class="ps-in" placeholder="Nome do ficheiro pedido">') + '<label class="ps-chk"><input id="fp-obr" type="checkbox" checked> Required</label><button type="button" class="ps-btn" data-a="ficPedir">Add to the request</button></div>' : '') + '</div></div>';
+  };
+  var ferrDados = function (m) {
+    return '<div class="ps-sp"><div class="ps-seg" role="group" aria-label="View"><button type="button" class="' + (U.dadosVista === 'grid' ? '' : 'on') + '" data-a="dadosVista" data-v="form">' + (P.podePreencher(m, u()) ? 'Form' : 'Table') + '</button><button type="button" class="' + (U.dadosVista === 'grid' ? 'on' : '') + '" data-a="dadosVista" data-v="grid">Grid</button></div><button type="button" class="ps-btn peq" data-a="dadosExcel">Export to Excel</button></div>';
+  };
+
+  /* --- Grelha de dados ---------------------------------------------------- */
+  var bruNum = function (v) { return v === null || v === undefined ? '' : String(v).replace('.', ','); };
+  var cfgDados = function (m) {
+    var pode = P.podePreencher(m, u());
+    return {
+      id: 'gr-' + m.id, titulo: 'Requested data', vazio: 'No data requested.',
+      dica: pode ? 'Copy from Excel and paste here with Ctrl+V. Double-click or type to edit. Ctrl+Z undoes.' : 'Read only. Select cells and copy them to Excel with Ctrl+C.',
+      cols: [{ k: 'id', t: 'ID' }, { k: 'nome', t: 'Indicator', larg: 280 }, { k: 'un', t: 'Unit' }, { k: 'ant', t: String(m.ano - 1), dir: 1 }, { k: 'valor', t: m.ano + ' value', dir: 1, edita: pode, larg: 110 }, { k: 'var', t: 'Change %', dir: 1 }, { k: 'qual', t: 'Data quality', edita: pode, larg: 110 }, { k: 'metodo', t: 'Estimation method', edita: pode, larg: 170 }, { k: 'just', t: 'Justification', edita: pode, larg: 220 }, { k: 'evid', t: 'Evidence', larg: 130 }, { k: 'res', t: 'Validation', larg: 130 }],
+      linhas: m.indicadores.map(function (id) {
+        var c = P.cat(id), it = P.item(id, m.ano), v = P.validarItem(it), ant = P.valorAnterior(id, m.ano), tem = it.valor !== null, msg = v.erros.concat(v.alertas).join(' ');
+        var evid = it.evidencias.map(function (x) { return x.ficheiro; }).join(', ');
+        return { id: id, c: {
+          id: { t: id }, nome: { t: c.nome }, un: { t: c.unidade_medida },
+          ant: { t: ant === null || ant === undefined ? '' : fmtV(id, ant), bruto: bruNum(ant), num: typeof ant === 'number' ? ant : null },
+          valor: { t: it.rascunho || (tem ? fmtV(id, it.valor) : ''), bruto: it.rascunho || bruNum(it.valor), num: it.valor, cls: v.erros.length ? 'err' : v.alertas.length ? 'alerta' : !tem && pode ? 'falta' : '', tip: msg },
+          'var': { t: v.variacao === null ? '' : (v.variacao > 0 ? '+' : '') + P.fmtNum(v.variacao, 1), bruto: v.variacao === null ? '' : bruNum(Math.round(v.variacao * 10) / 10), num: v.variacao === null ? null : Math.round(v.variacao * 10) / 10 },
+          qual: { t: P.QUALIDADE_TXT[it.qualidade] }, metodo: { t: it.metodo || '', cls: it.qualidade === 'estimado' && !String(it.metodo || '').trim() ? 'falta' : '' },
+          just: { t: it.justificacao || '', cls: v.alertas.length && !String(it.justificacao || '').trim() ? 'falta' : '', tip: v.alertas.length && !String(it.justificacao || '').trim() ? 'A justification is required because of the alert.' : '' },
+          evid: { t: evid, cls: c.evidencia_obrigatoria && !evid ? 'falta' : '', tip: c.evidencia_obrigatoria && !evid ? 'Required evidence missing. Upload it in Requested files.' : '' },
+          res: { t: v.erros.length ? 'Error' : v.alertas.length ? 'Alert' : tem ? 'Valid' : 'To fill in', html: v.erros.length ? chip('Error', 'err') : v.alertas.length ? chip(v.alertas.length + ' alert(s)', 'warn') : tem ? chip('Valid', 'ok') : chip('To fill in'), tip: msg }
+        } };
+      }),
+      aoAplicar: function (lista, origem) { return aplicarDados(m, lista, origem); },
+      aoColar: function (mat) { return planoColagem(m, mat); },
+      aoColado: function (rel) {
+        U.colRel[m.id] = rel;
+        toast(rel.aplicados + ' cell(s) updated from your copy.' + (rel.recusados.length + rel.ignorados.length ? ' See the notes under the grid.' : ''), rel.aplicados ? 'ok' : 'err');
+        R();
+      },
+      aoRecusar: function () { toast('This milestone is read only for you right now.', 'err'); },
+      aoAnular: function (n) { toast(n + ' cell(s) restored.', 'ok'); }
+    };
+  };
+  var corpoGrelha = function (m) {
+    var rel = U.colRel[m.id], notas = rel ? rel.recusados.concat(rel.ignorados) : [];
+    var cfg = cfgDados(m);
+    return '<div class="ps-card-body">' + window.PortalGrelha.html(cfg) + (notas.length ? '<div class="ps-aviso warn ps-mt" role="status"><div class="ps-sp-b"><b>Not applied from your copy</b><button type="button" class="ps-btn liga" data-a="colRelFechar">Dismiss</button></div><ul class="ps-notas">' + notas.slice(0, 15).map(function (n) { return '<li>' + e(n) + '</li>'; }).join('') + '</ul>' + (notas.length > 15 ? '<small>And ' + (notas.length - 15) + ' more.</small>' : '') + '</div>' : '') + '</div>';
+  };
+  var aplicarDados = function (m, lista, origem) {
+    var usr = u(), n = 0, rec = [];
+    if (!P.podePreencher(m, usr)) return { aplicados: 0, recusados: ['This milestone is read only for you right now.'], semAlteracao: true };
+    lista.forEach(function (a) {
+      var c = P.cat(a.id), it = P.item(a.id, m.ano);
+      if (a.k === 'valor') {
+        var s = P.limparColado(a.valor), num = s === '' ? null : P.lerNumero(s);
+        if (s === '' ? (it.valor === null && !it.rascunho) : num === null ? it.rascunho === s : (num === it.valor && !it.rascunho)) return;
+        P.gravarValor(m, a.id, s, usr, origem === 'colar' && num !== null ? 'paste from Excel' : undefined);
+        n++;
+        if (s !== '' && num === null) rec.push(c.nome + ': "' + s + '" is not a number. It stays marked in the grid.');
+      } else if (a.k === 'qual') {
+        if (!String(a.valor).trim()) return;
+        var q = P.lerQualidade(a.valor);
+        if (!q) { rec.push(c.nome + ': quality "' + a.valor + '" not recognised. Use Measured, Calculated or Estimated.'); return; }
+        if (it.qualidade !== q) { it.qualidade = q; if (q !== 'estimado') it.metodo = ''; n++; }
+      } else if (a.k === 'metodo' || a.k === 'just') {
+        var campo2 = a.k === 'metodo' ? 'metodo' : 'justificacao', t = String(a.valor);
+        if (a.k === 'metodo' && it.qualidade !== 'estimado' && t.trim()) { rec.push(c.nome + ': an estimation method only applies to Estimated data.'); return; }
+        if (String(it[campo2] || '') !== t) { it[campo2] = t; n++; }
+      }
+    });
+    if (n) { if (origem === 'colar') P.evento(m, n + ' cells updated by paste from Excel.', usr.nome); P.guardar(); }
+    R();
+    return { aplicados: n, recusados: rec, semAlteracao: !n };
+  };
+  /* Colar "assume bem": procura cabecalhos e indicadores no que veio, para nao depender da ordem do Excel */
+  var norm = function (s) { return String(s === null || s === undefined ? '' : s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[_\s]+/g, ' ').trim(); };
+  var planoColagem = function (m, mat) {
+    var ano = String(m.ano), ALIAS = { id: ['id', 'indicator id', 'indicador id', 'codigo', 'code', 'ref'], nome: ['indicator', 'indicador', 'nome', 'name', 'indicator name', 'designacao'], un: ['unit', 'unidade', 'unidade de medida', 'unit of measure', 'un'], valor: ['value', 'valor', ano, ano + ' value', 'valor ' + ano, 'value ' + ano], qual: ['data quality', 'quality', 'qualidade', 'qualidade dos dados'], metodo: ['estimation method', 'method', 'metodo', 'metodo de estimativa'], just: ['justification', 'justificacao', 'justificativa'] };
+    var porId = {}, porNome = {};
+    S.cat.forEach(function (c) { porId[norm(c.id)] = c; porNome[norm(c.nome)] = c; });
+    var achar = function (txt) { var k = norm(txt); return porId[k] || porNome[k] || null; };
+    var mapa = {}, cab = mat[0] || [];
+    cab.forEach(function (t, i) { var k = norm(t); Object.keys(ALIAS).forEach(function (a) { if (ALIAS[a].indexOf(k) > -1 && mapa[a] === undefined) mapa[a] = i; }); });
+    var comCab = (mapa.id !== undefined || mapa.nome !== undefined) && (mapa.valor !== undefined || mapa.just !== undefined || mapa.qual !== undefined);
+    var dados = comCab ? mat.slice(1) : mat, base = comCab ? 2 : 1;
+    if (!comCab) {
+      /* Sem cabecalho: a primeira coluna tem de identificar os indicadores, e o valor e a primeira coluna com numeros */
+      var cheias = dados.filter(function (l) { return String(l[0] || '').trim(); });
+      if (!cheias.length || !dados[0] || dados[0].length < 2 || cheias.filter(function (l) { return achar(l[0]); }).length * 2 < cheias.length) return null;
+      mapa = { id: 0 };
+      for (var ci = 1; ci < dados[0].length && mapa.valor === undefined; ci++) {
+        var cels = dados.map(function (l) { return P.limparColado(l[ci]); }).filter(Boolean);
+        if (cels.length && cels.filter(function (x) { return P.lerNumero(x) !== null; }).length * 2 >= cels.length) mapa.valor = ci;
+        else if (cels.length && dados.some(function (l) { var c0 = achar(l[0]); return c0 && norm(l[ci]) === norm(c0.unidade_medida); })) mapa.un = ci;
+        else if (cels.length && dados.some(function (l) { var c0 = achar(l[0]); return c0 && norm(l[ci]) === norm(c0.nome); })) mapa.nome = ci;
+      }
+      if (mapa.valor === undefined) return null;
+    }
+    var lista = [], ign = [], colId = mapa.id !== undefined ? mapa.id : mapa.nome;
+    dados.forEach(function (l, ix) {
+      if (!l.some(function (x) { return String(x).trim(); })) return;
+      var ref = 'Row ' + (ix + base), c = achar(l[colId]) || (mapa.nome !== undefined ? achar(l[mapa.nome]) : null);
+      if (!c) { ign.push(ref + ': "' + l[colId] + '" is not an indicator.'); return; }
+      if (m.indicadores.indexOf(c.id) < 0) { ign.push(ref + ': ' + c.nome + ' is not part of this milestone.'); return; }
+      if (mapa.un !== undefined && String(l[mapa.un] || '').trim() && norm(l[mapa.un]) !== norm(c.unidade_medida)) { ign.push(ref + ': ' + c.nome + ' must be in ' + c.unidade_medida + ', not ' + l[mapa.un] + '.'); return; }
+      ['valor', 'qual', 'metodo', 'just'].forEach(function (k) { if (mapa[k] !== undefined && l[mapa[k]] !== undefined) lista.push({ id: c.id, k: k, valor: l[mapa[k]] }); });
+    });
+    return { lista: lista, ignorados: ign };
+  };
+  var exportarGrelha = function (cfg, ficheiro, folha, extra) {
+    var cols = cfg.cols.filter(function (c) { return !c.semExport; });
+    var linhas = [cols.map(function (c) { return c.t; })].concat(cfg.linhas.map(function (l) {
+      return cols.map(function (c) { var x = l.c[c.k] || {}; return typeof x.num === 'number' ? x.num : x.t === undefined ? '' : x.t; });
+    }));
+    var wb = window.XLSX.utils.book_new(), ws = window.XLSX.utils.aoa_to_sheet(linhas);
+    ws['!cols'] = cols.map(function (c) { return { wch: Math.max(10, Math.round((c.larg || 80) / 7)) }; });
+    window.XLSX.utils.book_append_sheet(wb, ws, folha);
+    if (extra) window.XLSX.utils.book_append_sheet(wb, window.XLSX.utils.aoa_to_sheet(extra.linhas), extra.nome);
+    window.XLSX.writeFile(wb, ficheiro);
+    return linhas;
+  };
+  P.exportarGrelha = exportarGrelha;
+  P.cfgDados = function (m) { return cfgDados(m); };
+  var folhaFicheiros = function (m) {
+    return { nome: 'Requested files', linhas: [['File', 'Why it is requested', 'Format', 'Required', 'Delivered']].concat(P.ficheirosPedidos(m).map(function (f) { return [f.nome, f.motivo || '', f.formatos.join(', '), f.obrigatorio ? 'Yes' : 'No', f.entregues.map(function (x) { return x.ficheiro; }).join(', ')]; })) };
+  };
+
+  /* --- Explorador de dados (cilindro) ------------------------------------- */
+  var estadoExp = function (m) {
+    /* Por pessoa: quem troca de perfil nao herda camadas nem dados a que nao tem acesso */
+    var chave = m.id + ':' + u().login;
+    if (U.exp[chave]) return U.exp[chave];
+    var usr = u(), vis = m.indicadores.filter(function (id) { return P.podeVerIndicador(P.cat(id), usr); });
+    var abertos = S.cat.filter(function (k) { return P.podeVerIndicador(k, usr); }), primeiro = vis.length ? P.cat(vis[0]).tema : abertos.length ? abertos[0].tema : Object.keys(P.TEMAS)[0];
+    return (U.exp[chave] = { dom: primeiro, sel: vis.slice(), q: '' });
+  };
+  var idsDominio = function (tema) { var usr = u(); return S.cat.filter(function (c) { return c.tema === tema && P.podeVerIndicador(c, usr); }).map(function (c) { return c.id; }); };
+  var cilindro = function (doms, ativo) {
+    var H = 52, ry = 15, x0 = 12, x1 = 252, rx = (x1 - x0) / 2, cx = (x0 + x1) / 2, alt = ry * 2 + doms.length * H + 8;
+    var banda = function (d, i) {
+      var y = ry + 2 + i * H, on = d.tema === ativo, fechado = !d.ok.length, q = Math.max(55, 100 - i * 11);
+      var cor = fechado ? '#B6C0CE' : on ? 'var(--accent)' : 'color-mix(in srgb,var(--primary) ' + q + '%,var(--secondary))';
+      var lado = 'M' + x0 + ' ' + y + ' A' + rx + ' ' + ry + ' 0 0 0 ' + x1 + ' ' + y + ' L' + x1 + ' ' + (y + H) + ' A' + rx + ' ' + ry + ' 0 0 1 ' + x0 + ' ' + (y + H) + ' Z';
+      return '<g class="ps-cil-b' + (on ? ' on' : '') + (fechado ? ' fechado' : '') + '"' + (fechado ? '' : ' data-a="expDom" data-v="' + e(d.tema) + '"') + ' style="--f:' + cor + '"><path class="lado" d="' + lado + '"/><path d="' + lado + '" fill="url(#ps-cil-luz)"/><ellipse class="topo" cx="' + cx + '" cy="' + y + '" rx="' + rx + '" ry="' + ry + '"/>' +
+        '<text x="' + cx + '" y="' + (y + ry + H / 2 - 2) + '" text-anchor="middle">' + e(d.tema) + '</text><text class="det" x="' + cx + '" y="' + (y + ry + H / 2 + 12) + '" text-anchor="middle">' + (fechado ? 'No access' : d.ok.length + ' of ' + d.todos.length + ' available') + '</text></g>';
+    };
+    var gs = '';
+    for (var i = doms.length - 1; i >= 0; i--) gs += banda(doms[i], i);
+    return '<svg class="ps-cil" viewBox="0 0 280 ' + alt + '" role="img" aria-label="Data store with ' + doms.length + ' data domains"><defs><linearGradient id="ps-cil-luz" x1="0" x2="1" y1="0" y2="0"><stop offset="0" stop-color="#000" stop-opacity=".28"/><stop offset=".22" stop-color="#fff" stop-opacity=".16"/><stop offset=".55" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".32"/></linearGradient></defs>' + gs + '</svg>';
+  };
+  var ultimoPonto = function (id) { var pts = serieDe(id); return pts.length ? pts[pts.length - 1] : null; };
+  var faisca = function (pts) {
+    var l = pts.slice(-10);
+    if (l.length < 2) return '<span class="ps-mut">-</span>';
+    var vs = l.map(function (p) { return p.v; }), mi = Math.min.apply(null, vs), ma = Math.max.apply(null, vs), W = 84, Hh = 22, xy = l.map(function (p, i) { return [(i / (l.length - 1)) * (W - 6) + 3, ma === mi ? Hh / 2 : Hh - 3 - ((p.v - mi) / (ma - mi)) * (Hh - 6)]; });
+    var u2 = xy[xy.length - 1];
+    return '<svg class="ps-faisca" width="' + W + '" height="' + Hh + '" viewBox="0 0 ' + W + ' ' + Hh + '" aria-hidden="true"><polyline points="' + xy.map(function (q) { return q[0].toFixed(1) + ',' + q[1].toFixed(1); }).join(' ') + '"/><circle cx="' + u2[0].toFixed(1) + '" cy="' + u2[1].toFixed(1) + '" r="2.8"/></svg>';
+  };
+  var cfgRelatorio = function (m) {
+    var x = estadoExp(m), usr = u(), ids = x.sel.filter(function (id) { return P.podeVerIndicador(P.cat(id), usr); }), series = {}, anos = {};
+    ids.forEach(function (id) { series[id] = serieDe(id); series[id].forEach(function (p) { anos[p.ano] = 1; }); });
+    var lAnos = Object.keys(anos).map(Number).sort().slice(-4);
+    return {
+      id: 'gr-rel-' + m.id, titulo: 'Your report', vazio: 'Select data points to build your report.', dica: 'Read only. Select cells and copy them to Excel with Ctrl+C, or export the whole report.',
+      cols: [{ k: 'id', t: 'ID' }, { k: 'nome', t: 'Indicator', larg: 260 }, { k: 'emp', t: 'Company', larg: 130 }, { k: 'atr', t: 'Assigned to', larg: 150 }, { k: 'un', t: 'Unit' }].concat(lAnos.map(function (a) { return { k: 'a' + a, t: String(a), dir: 1, larg: 84 }; })).concat([{ k: 'var', t: 'Change %', dir: 1 }, { k: 'tend', t: 'Trend', larg: 100, semExport: true }, { k: 'est', t: 'Status', larg: 120 }]),
+      linhas: ids.map(function (id) {
+        var c = P.cat(id), mx = P.msDoIndicador(id), est = mx ? P.estadoIndicador(mx, id) : { txt: 'To collect', cls: '' }, a = mx ? P.atribuido(mx) : null, pts = series[id], o = { id: { t: id }, nome: { t: c.nome }, emp: { t: mx ? mx.empresa : '' }, atr: { t: a ? a.nome : '' }, un: { t: c.unidade_medida } };
+        lAnos.forEach(function (an) { var pt = pts.filter(function (p) { return p.ano === an; }).pop(); o['a' + an] = pt ? { t: fmtV(id, pt.v), bruto: bruNum(pt.v), num: pt.v, cls: pt.nota === 'pending approval' ? 'pend' : '', tip: pt.nota === 'pending approval' ? 'Pending approval' : '' } : { t: '' }; });
+        var fim = pts[pts.length - 1], ant2 = pts[pts.length - 2], va = fim && ant2 && ant2.v ? Math.round(((fim.v - ant2.v) / Math.abs(ant2.v)) * 1000) / 10 : null;
+        o['var'] = { t: va === null ? '' : (va > 0 ? '+' : '') + P.fmtNum(va, 1), bruto: bruNum(va), num: va };
+        o.tend = { t: '', html: faisca(pts) };
+        o.est = { t: est.txt, html: chip(est.txt, est.cls) };
+        return { id: id, c: o };
+      })
+    };
+  };
+  var sepExplorar = function (m) {
+    var usr = u(), x = estadoExp(m), doms = Object.keys(P.TEMAS).map(function (t) { var todos = S.cat.filter(function (c) { return c.tema === t; }); return { tema: t, todos: todos, ok: todos.filter(function (c) { return P.podeVerIndicador(c, usr); }) }; });
+    var totOk = doms.reduce(function (s, d) { return s + d.ok.length; }, 0), totT = doms.reduce(function (s, d) { return s + d.todos.length; }, 0), dom = doms.filter(function (d) { return d.tema === x.dom; })[0] || doms[0];
+    var q = norm(x.q), lista = dom.ok.filter(function (c) { return !q || norm(c.id + ' ' + c.nome).indexOf(q) > -1; });
+    var perfil = P.PERFIS[usr.perfil] + (usr.unidade ? ', ' + usr.unidade : '');
+    var cfg = cfgRelatorio(m);
+    return '<div class="ps-card"><div class="ps-exp"><div class="ps-exp-esq"><h2>Data store</h2><p class="ps-mut ps-small">Pick a layer to browse it.</p>' + cilindro(doms, dom.tema) + '<div class="ps-exp-acesso"><b>' + totOk + ' of ' + totT + '</b> data points open to you<br><span class="ps-mut">' + e(perfil) + '</span></div></div>' +
+      '<div class="ps-exp-dir"><div class="ps-sp-b"><div><h2>' + e(dom.tema) + '</h2><p class="ps-mut ps-small">' + dom.ok.length + ' data points available' + (dom.todos.length > dom.ok.length ? ', ' + (dom.todos.length - dom.ok.length) + ' outside your access' : '') + '</p></div><div class="ps-sp"><button type="button" class="ps-btn peq" data-a="expTodos">Select all</button><button type="button" class="ps-btn peq" data-a="expLimpar">Clear report</button></div></div>' +
+      '<div class="ps-mt">' + campo('exp-q', 'Search this layer', '<input id="exp-q" class="ps-in" value="' + e(x.q) + '" data-c="expBusca" autocomplete="off">') + '</div>' +
+      (lista.length ? '<ul class="ps-exp-lista">' + lista.map(function (c) {
+        var pt = ultimoPonto(c.id), mx = P.msDoIndicador(c.id), est = mx ? P.estadoIndicador(mx, c.id) : { txt: 'To collect', cls: '' };
+        return '<li><label><input id="exp-' + e(c.id) + '" type="checkbox" data-c="expSel" data-id="' + e(c.id) + '"' + (x.sel.indexOf(c.id) > -1 ? ' checked' : '') + '><span class="ps-mono">' + e(c.id) + '</span><span class="n">' + e(c.nome) + '</span><span class="v ps-num">' + (pt ? e(fmtV(c.id, pt.v)) + ' <small>' + e(c.unidade_medida) + ' · ' + pt.ano + '</small>' : '<small>No value yet</small>') + '</span>' + chip(est.txt, est.cls) + '</label></li>';
+      }).join('') + '</ul>' : vazio(dom.ok.length ? 'Nothing matches your search.' : 'You have no access to this layer.')) + '</div></div></div>' +
+      '<div class="ps-card">' + cabCartao('Your report (' + cfg.linhas.length + ')', 'ativ', '<button type="button" class="ps-btn peq pri" data-a="expExcel"' + (cfg.linhas.length ? '' : ' disabled') + '>Export to Excel</button>') + '<div class="ps-card-body">' + window.PortalGrelha.html(cfg) + '</div></div>';
   };
   var relatorioImport = function (m, rel) {
     if (rel.erro || rel.erroFormato) return '<div class="ps-card-body"><div class="ps-aviso err" role="alert">' + e(rel.erro || rel.erroFormato) + '</div></div>';
@@ -368,17 +612,17 @@
   };
   var sepRevisao = function (m) {
     var p = P.passoAtual(m), rot = p.tipo === 'parecer' ? 'Give favourable opinion' : p.tipo === 'aprovacao' ? 'Approve and lock' : 'Complete review';
-    return '<div class="ps-card ps-com-acao">' + cabCartao(p.nome, 'tarefa') + '<div class="ps-card-body">' + tabela([{ t: 'Indicator' }, { t: 'Value', dir: 1 }, { t: String(m.ano - 1), dir: 1 }, { t: 'Change', dir: 1 }, { t: 'Alerts and justification' }, { t: 'Quality' }], m.indicadores.map(function (id) {
+    return '<div class="ps-card ps-com-acao">' + cabCartao(p.nome, 'tarefa', ferrDados(m)) + '<div class="ps-card-body">' + (U.dadosVista === 'grid' ? corpoGrelha(m) : tabela([{ t: 'Indicator' }, { t: 'Value', dir: 1 }, { t: String(m.ano - 1), dir: 1 }, { t: 'Change', dir: 1 }, { t: 'Alerts and justification' }, { t: 'Quality' }], m.indicadores.map(function (id) {
       var it = P.item(id, m.ano), v = P.validarItem(it), ant = P.valorAnterior(id, m.ano);
       return [linkFicha(id), celValor(m, id) + ' ' + e(P.cat(id).unidade_medida), ant === null || ant === undefined ? '-' : fmtV(id, ant), v.variacao === null ? '-' : (v.variacao > 0 ? '+' : '') + P.fmtNum(v.variacao, 1) + '%', v.alertas.length ? '<span class="ps-small">' + e(v.alertas.join(' ')) + '<br><b>Justification:</b> ' + e(it.justificacao || '-') + '</span>' : chip('No alerts', 'ok'), e(P.QUALIDADE_TXT[it.qualidade])];
-    })) + '<div class="ps-mt">' + campo('rev-com', 'Comment (required to return)', '<textarea id="rev-com" class="ps-ta"></textarea>') + '</div></div><div class="ps-sticky"><button type="button" class="ps-btn err" data-a="devolver">Return to the unit</button><button type="button" class="ps-btn pri" data-a="concluirPasso">' + e(rot) + '</button></div></div>';
+    }))) + '<div class="ps-mt">' + campo('rev-com', 'Comment (required to return)', '<textarea id="rev-com" class="ps-ta"></textarea>') + '</div></div><div class="ps-sticky"><button type="button" class="ps-btn err" data-a="devolver">Return to the unit</button><button type="button" class="ps-btn pri" data-a="concluirPasso">' + e(rot) + '</button></div></div>';
   };
   var sepLeitura = function (m) {
     var msg = P.concluida(m) ? 'Milestone completed. Approved values only change by restatement.' : 'The current step is with ' + P.nomeResp(m, P.passoAtual(m).responsavel) + '. You can view the values.';
-    return '<div class="ps-card">' + cabCartao('Data', 'doc') + '<div class="ps-card-body"><div class="ps-aviso">' + e(msg) + '</div>' + tabela([{ t: 'Indicator' }, { t: 'Value', dir: 1 }, { t: String(m.ano - 1), dir: 1 }, { t: 'Status' }, { t: 'Quality' }], m.indicadores.map(function (id) {
+    return '<div class="ps-card">' + cabCartao('Requested data', 'doc', ferrDados(m)) + '<div class="ps-card-body"><div class="ps-aviso">' + e(msg) + '</div>' + (U.dadosVista === 'grid' ? corpoGrelha(m) : tabela([{ t: 'Indicator' }, { t: 'Value', dir: 1 }, { t: String(m.ano - 1), dir: 1 }, { t: 'Status' }, { t: 'Quality' }], m.indicadores.map(function (id) {
       var est = P.estadoIndicador(m, id), it = P.item(id, m.ano), ant = P.valorAnterior(id, m.ano);
       return [linkFicha(id) + marcaAmostra(id) + (it.reexpresso ? ' ' + chip('Restated', 'warn') : ''), celValor(m, id) + ' ' + e(P.cat(id).unidade_medida), ant === null || ant === undefined ? '-' : fmtV(id, ant), chip(est.txt, est.cls), e(P.QUALIDADE_TXT[it.qualidade])];
-    })) + '</div></div>';
+    }))) + '</div></div>';
   };
   var sepEvidencias = function (m) {
     var obrig = m.indicadores.filter(function (id) { return P.cat(id).evidencia_obrigatoria; }), comEv = obrig.filter(function (id) { return P.item(id, m.ano).evidencias.length; }).length, usr = u();
@@ -568,9 +812,9 @@
     return '<div class="ps-kpis"><div class="ps-kpi"><span>Approved with evidence</span><b>' + (apr.length ? Math.round((comEv / apr.length) * 100) : 0) + '%</b><small>' + comEv + ' of ' + apr.length + '</small></div><div class="ps-kpi"><span>Estimated values</span><b>' + est + '</b></div><div class="ps-kpi"><span>Restated values</span><b>' + reex + '</b></div><div class="ps-kpi"><span>Open requests</span><b>' + abertos.length + '</b></div></div>' +
       '<div class="ps-sp ps-mt">' + (podeAmostra ? '<button type="button" class="ps-btn pri" data-a="amostra">Select a sample of 5</button>' : '') + '<button type="button" class="ps-btn" data-a="dataRoom">Export data room (Excel)</button>' + (usr.perfil === 'auditor' || usr.perfil === 'admin' ? '<button type="button" class="ps-btn" data-a="novoPedAud">New information request</button>' : '') + '</div>' +
       (S.amostra.length ? '<div class="ps-card ps-mt">' + cabCartao('Sample', 'tarefa') + '<ul class="ps-list">' + S.amostra.map(function (id) { var m = P.msDoIndicador(id); return '<li class="ps-row"><span class="ps-row-txt">' + linkFicha(id) + '<span>' + e(m ? m.nome : '') + '</span></span></li>'; }).join('') + '</ul></div>' : '') +
-      '<div class="ps-card ps-mt">' + cabCartao('Milestones', 'doc', '<div class="ps-seg" role="group" aria-label="Filter">' + [['todas', 'All'], ['concluidas', 'Completed'], ['abertos', 'With open requests'], ['amostra', 'In the sample']].map(function (x) { return '<button type="button" class="' + (f === x[0] ? 'on' : '') + '" data-a="audFiltro" data-v="' + x[0] + '">' + x[1] + '</button>'; }).join('') + '</div>') + '<div class="ps-card-body">' + tabela([{ t: 'Milestone' }, { t: 'Status' }, { t: 'Approved', dir: 1 }, { t: 'Required evidence', dir: 1 }, { t: 'Estimated', dir: 1 }, { t: 'Restated', dir: 1 }, { t: 'Open requests', dir: 1 }], lista.map(function (m) {
+      '<div class="ps-card ps-mt">' + cabCartao('Milestones', 'doc', '<div class="ps-seg" role="group" aria-label="Filter">' + [['todas', 'All'], ['concluidas', 'Completed'], ['abertos', 'With open requests'], ['amostra', 'In the sample']].map(function (x) { return '<button type="button" class="' + (f === x[0] ? 'on' : '') + '" data-a="audFiltro" data-v="' + x[0] + '">' + x[1] + '</button>'; }).join('') + '</div>') + '<div class="ps-card-body">' + tabela([{ t: 'Milestone' }, { t: 'Company' }, { t: 'Assigned to' }, { t: 'Status' }, { t: 'Approved', dir: 1 }, { t: 'Required evidence', dir: 1 }, { t: 'Estimated', dir: 1 }, { t: 'Restated', dir: 1 }, { t: 'Open requests', dir: 1 }], lista.map(function (m) {
         var ob = m.indicadores.filter(function (id) { return P.cat(id).evidencia_obrigatoria; }), okEv = ob.filter(function (id) { return P.item(id, m.ano).evidencias.length; }).length;
-        return ['<a href="' + rota('Milestone/' + m.id + '?sep=auditoria') + '">' + e(m.nome) + '</a>', estChip(m), P.concluida(m) ? m.indicadores.length + '/' + m.indicadores.length : '0/' + m.indicadores.length, okEv + '/' + ob.length, m.indicadores.filter(function (id) { return P.item(id, m.ano).qualidade === 'estimado'; }).length, m.indicadores.filter(function (id) { return P.item(id, m.ano).reexpresso; }).length, pedidosDe(m)];
+        return ['<a href="' + rota('Milestone/' + m.id + '?sep=auditoria') + '">' + e(m.nome) + '</a>', e(m.empresa), atribHtml(m), estChip(m), P.concluida(m) ? m.indicadores.length + '/' + m.indicadores.length : '0/' + m.indicadores.length, okEv + '/' + ob.length, m.indicadores.filter(function (id) { return P.item(id, m.ano).qualidade === 'estimado'; }).length, m.indicadores.filter(function (id) { return P.item(id, m.ano).reexpresso; }).length, pedidosDe(m)];
       }), 'No milestones match this filter.') + '</div></div>' +
       '<div class="ps-card ps-mt">' + cabCartao('Information requests', 'ativ') + (S.aud.length ? cartaoPedidos(S.aud) : vazio('No requests yet.')) + '</div>';
   };
@@ -618,9 +862,9 @@
     })) + '<h3 class="ps-grupo-t">New user</h3><div class="ps-form">' + campo('nu-nome', 'Name', '<input id="nu-nome" class="ps-in">') + campo('nu-login', 'Login', '<input id="nu-login" class="ps-in">') + campo('nu-perfil', 'Profile', '<select id="nu-perfil" class="ps-sel">' + Object.keys(P.PERFIS).map(function (k) { return opt(k, P.PERFIS[k], 'resp'); }).join('') + '</select>') + campo('nu-un', 'Unit', '<select id="nu-un" class="ps-sel">' + opt('', '-') + P.UNIDADES.map(function (o) { return opt(o); }).join('') + '</select>') + '</div><button type="button" class="ps-btn pri ps-mt" data-a="userNovo">Add user</button></div></div>';
   };
   B.externas = function () {
-    return '<div class="ps-card">' + cabCartao('External entities: requests and status', 'doc') + '<div class="ps-card-body">' + tabela([{ t: 'Entity' }, { t: 'Indicator' }, { t: 'Milestone' }, { t: 'Due' }, { t: 'Status' }], S.ext.map(function (x) {
-      var cl = { pendente: 'warn', recebido: 'info', aplicado: 'ok' }[x.estado];
-      return [e(x.entidade_externa), e(P.cat(x.indicador_id).nome), '<a href="' + rota('Milestone/' + x.milestone_id + '?sep=externos') + '">' + e(x.milestone_id) + '</a>', e(P.fmtData(x.prazo)), chip({ pendente: 'Pending', recebido: 'Received', aplicado: 'Applied' }[x.estado], cl)];
+    return '<div class="ps-card">' + cabCartao('External entities: requests and status', 'doc') + '<div class="ps-card-body">' + tabela([{ t: 'Entity' }, { t: 'Indicator' }, { t: 'Milestone' }, { t: 'Company' }, { t: 'Due' }, { t: 'Status' }], S.ext.map(function (x) {
+      var cl = { pendente: 'warn', recebido: 'info', aplicado: 'ok' }[x.estado], mx = P.ms(x.milestone_id);
+      return [e(x.entidade_externa), e(P.cat(x.indicador_id).nome), '<a href="' + rota('Milestone/' + x.milestone_id + '?sep=externos') + '">' + e(mx ? mx.nome : x.milestone_id) + '</a>', e(mx ? mx.empresa : '-'), e(P.fmtData(x.prazo)), chip({ pendente: 'Pending', recebido: 'Received', aplicado: 'Applied' }[x.estado], cl)];
     }), 'No requests yet.') + '</div></div>';
   };
   B.wfbase = function () {
@@ -631,8 +875,8 @@
     return '<div class="ps-card">' + cabCartao('Indicators (' + S.cat.length + ')', 'doc') + '<div class="ps-card-body">' + campo('ind-busca', 'Search', '<input id="ind-busca" class="ps-in" value="' + e(U.indBusca) + '" data-c="indBusca">') + '<div class="ps-mt">' + tabela([{ t: 'Indicator' }, { t: 'Unit' }, { t: 'Department' }, { t: 'Type' }, { t: 'Frequency' }, { t: 'Table' }, { t: 'Required evidence' }], l.map(function (c) {
       return [linkFicha(c.id, c.id + ' ' + c.nome), e(c.unidade_medida), e(c.unidade_negocio), c.tipo === 'derivado' ? 'Derived' : 'Base', e(PERIODO_TXT[c.periodicidade] || c.periodicidade), e(QUADRO_TXT[c.quadro] || c.quadro), '<label class="ps-chk"><input id="evo-' + e(c.id) + '" type="checkbox" data-c="evObrig" data-id="' + e(c.id) + '"' + (c.evidencia_obrigatoria ? ' checked' : '') + '><span class="ps-sr">Required evidence for ' + e(c.nome) + '</span></label>'];
     }), 'No indicators found.') + '</div></div></div>' +
-      '<div class="ps-card">' + cabCartao('Cycle milestones (' + P.msCiclo().length + ')', 'tarefa') + '<div class="ps-card-body">' + tabela([{ t: 'Milestone' }, { t: 'Company' }, { t: 'Indicators' }, { t: 'Due' }, { t: 'Status' }], P.msCiclo().map(function (m) {
-        return ['<a href="' + rota('Milestone/' + m.id) + '">' + e(m.nome) + '</a>', '<select id="bo-emp-' + e(m.id) + '" class="ps-sel" aria-label="Company of ' + e(m.nome) + '" data-c="msEmpresa" data-id="' + e(m.id) + '">' + S.ent.map(function (x) { return opt(x.nome, x.nome, m.empresa); }).join('') + '</select>', e(m.indicadores.join(', ')), '<input id="pz-' + e(m.id) + '" class="ps-in" type="date" aria-label="Due date of ' + e(m.nome) + '" value="' + e(m.prazo) + '" data-c="msPrazo" data-id="' + e(m.id) + '">', estChip(m)];
+      '<div class="ps-card">' + cabCartao('Cycle milestones (' + P.msCiclo().length + ')', 'tarefa') + '<div class="ps-card-body">' + tabela([{ t: 'Milestone' }, { t: 'Company' }, { t: 'Assigned to' }, { t: 'Indicators', dir: 1 }, { t: 'Due' }, { t: 'Status' }], P.msCiclo().map(function (m) {
+        return ['<a href="' + rota('Milestone/' + m.id) + '">' + e(m.nome) + '</a>', '<select id="bo-emp-' + e(m.id) + '" class="ps-sel" aria-label="Company of ' + e(m.nome) + '" data-c="msEmpresa" data-id="' + e(m.id) + '">' + S.ent.map(function (x) { return opt(x.nome, x.nome, m.empresa); }).join('') + '</select>', P.concluida(m) || P.passoAtual(m).tipo !== 'recolha' ? atribHtml(m) : '<select id="bo-atr-' + e(m.id) + '" class="ps-sel" aria-label="Assigned to, ' + e(m.nome) + '" data-c="msAtrib" data-id="' + e(m.id) + '">' + opt('', m.unidade + ' (department)', m.atribuido_a || '') + P.atribuiveis(m).map(function (x) { return opt(x.login, x.nome, m.atribuido_a || ''); }).join('') + '</select>', m.indicadores.length, '<input id="pz-' + e(m.id) + '" class="ps-in" type="date" aria-label="Due date of ' + e(m.nome) + '" value="' + e(m.prazo) + '" data-c="msPrazo" data-id="' + e(m.id) + '">', estChip(m)];
       })) + '</div></div>';
   };
   var MESES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -775,6 +1019,7 @@
     try { ini = ativo.selectionStart; fim = ativo.selectionEnd; } catch (x) { /* nem todos os campos tem selecao */ }
     var sy = window.scrollY;
     var pag = U.rota.pag;
+    if (window.PortalGrelha) window.PortalGrelha.antes();
     document.querySelectorAll('[data-pagina]').forEach(function (s) { s.hidden = s.getAttribute('data-pagina') !== pag; });
     pintarCabecalho();
     pintarMarca();
@@ -789,6 +1034,7 @@
     });
     pintarMarca();
     pintarPainel();
+    if (window.PortalGrelha) window.PortalGrelha.depois();
     if (!U.painelFoco && idF && document.getElementById(idF) && ativo !== document.getElementById(idF)) {
       var n = document.getElementById(idF);
       n.focus({ preventScroll: true });
@@ -801,6 +1047,8 @@
     U.rota = lerRota();
     var novo = U.rota.pag + '/' + U.rota.arg;
     U.msFiltro.minhas = U.rota.pag === 'Milestones' && !!U.rota.q.minhas;
+    var empRota = U.rota.pag === 'Milestones' && U.rota.q.empresa ? S.ent.filter(function (x) { return x.id === U.rota.q.empresa; })[0] : null;
+    U.msFiltro.empresa = empRota ? empRota.nome : '';
     if (U.rota.q.sep) U.sep = U.rota.q.sep;
     else if (ant !== novo) U.sep = 'dados';
     U.menu = null; U.painel = null;
@@ -849,8 +1097,25 @@
     calDia: function (d) { U.cal.dia = +d.v; R(); },
     calMes: function (d) { var n = U.cal.mes + (+d.v), dt = new Date(U.cal.ano, n, 1); U.cal = { ano: dt.getFullYear(), mes: dt.getMonth(), dia: 1 }; R(); },
     calHoje: function () { U.cal = null; R(); },
-    lembrete: function () { var usr = u(), l = P.msCiclo().filter(function (m) { return P.estadoMs(m).cod === 'atraso'; }); l.forEach(function (m) { P.evento(m, 'Reminder sent to the unit.', usr.nome); }); P.guardar(); toast('Reminder sent to ' + l.length + ' overdue milestones.', 'ok'); R(); },
     msVista: function (d) { U.msVista = d.v; R(); },
+    msEmpTodas: function () { U.msEmpTodas = !U.msEmpTodas; R(); },
+    msExcel: function () { exportarMilestones(msFiltradas()); },
+    dadosVista: function (d) { U.dadosVista = d.v; R(); },
+    dadosExcel: function () { var m = msAtual(); exportarGrelha(cfgDados(m), 'data-request-' + m.id + '-' + m.ano + '.xlsx', 'Data', folhaFicheiros(m)); toast('Excel file exported.', 'ok'); },
+    colRelFechar: function () { delete U.colRel[msAtual().id]; R(); },
+    irFalta: function (d) {
+      if (d.campo !== 'fic' && d.campo !== 'evi') U.dadosVista = 'form';
+      R();
+      var el = document.getElementById({ val: 'v-', just: 'j-', met: 'm-', evi: 'fp-ev:', fic: 'fp-' }[d.campo] + d.id);
+      if (el) { el.focus({ preventScroll: true }); el.scrollIntoView({ block: 'center' }); }
+    },
+    ficEntregar: function (d) { var m = msAtual(); escolherFicheiro('', function (f) { var r = P.entregarFicheiro(m, d.v, f.name, u()); if (r.erro) return toast(r.erro, 'err'); toast('File delivered.', 'ok'); R(); }); },
+    ficPedir: function () { var c = document.getElementById('fp-obr'); var r = P.pedirFicheiro(msAtual(), val('fp-nome'), c && c.checked, u()); res(r, 'File added to the request.'); },
+    ficRetirar: function (d) { res(P.retirarPedidoFicheiro(msAtual(), d.v, u()), 'File removed from the request.'); },
+    expDom: function (d) { estadoExp(msAtual()).dom = d.v; R(); },
+    expTodos: function () { var x = estadoExp(msAtual()); idsDominio(x.dom).forEach(function (id) { if (x.sel.indexOf(id) < 0) x.sel.push(id); }); R(); },
+    expLimpar: function () { estadoExp(msAtual()).sel = []; R(); },
+    expExcel: function () { var m = msAtual(); exportarGrelha(cfgRelatorio(m), 'report-' + m.id + '-' + m.ano + '.xlsx', 'Report'); toast('Report exported to Excel.', 'ok'); },
     entVista: function (d) { U.entVista = d.v; R(); },
     msTagDel: function (d) { var m = msAtual(); m.departamentos = m.departamentos.filter(function (x) { return x !== d.v; }); P.evento(m, 'Department tag removed: ' + d.v + '.', u().nome); P.guardar(); R(); },
     sep: function (d) { U.sep = d.v; R(); },
@@ -872,7 +1137,9 @@
       if (r.erro) return toast(r.erro, 'err');
       if (r.faltas) {
         toast(r.faltas.length === 1 ? r.faltas[0].msg : r.faltas.length + ' items missing. ' + r.faltas[0].msg, 'err');
-        var f = r.faltas[0], el = document.getElementById({ val: 'v-', just: 'j-', met: 'm-', evi: 'e-' }[f.campo] + f.id);
+        var f = r.faltas[0];
+        if (f.campo !== 'fic' && U.dadosVista === 'grid') { U.dadosVista = 'form'; R(); }
+        var el = document.getElementById({ val: 'v-', just: 'j-', met: 'm-', evi: 'e-', fic: 'fp-' }[f.campo] + f.id);
         if (el) el.focus();
         return;
       }
@@ -951,9 +1218,11 @@
     just: function (el) { P.item(el.dataset.id, msAtual().ano).justificacao = el.value; P.guardar(); },
     qual: function (el) { var it = P.item(el.dataset.id, msAtual().ano); it.qualidade = el.value; if (el.value !== 'estimado') it.metodo = ''; P.guardar(); },
     metodo: function (el) { P.item(el.dataset.id, msAtual().ano).metodo = el.value; P.guardar(); },
-    msEmpresaF: function (el) { U.msFiltro.empresa = el.value; },
     msDepF: function (el) { U.msFiltro.dep = el.value; },
     msMinhas: function (el) { U.msFiltro.minhas = el.checked; },
+    msAtrib: function (el) { var m = el.dataset.id ? P.ms(el.dataset.id) : msAtual(), r = P.atribuir(m, el.value, u()); if (r.erro) toast(r.erro, 'err'); },
+    expSel: function (el) { var x = estadoExp(msAtual()); if (el.checked) { if (x.sel.indexOf(el.dataset.id) < 0) x.sel.push(el.dataset.id); } else x.sel = x.sel.filter(function (i) { return i !== el.dataset.id; }); },
+    expBusca: function (el) { estadoExp(msAtual()).q = el.value; },
     msEmpresa: function (el) { var m = el.dataset.id ? P.ms(el.dataset.id) : msAtual(); m.empresa = el.value; P.evento(m, 'Company changed to ' + el.value + '.', u().nome); P.guardar(); },
     msTagAdd: function (el) { if (!el.value) return; var m = msAtual(); m.departamentos.push(el.value); P.evento(m, 'Department tag added: ' + el.value + '.', u().nome); P.guardar(); },
     msEstado: function (el) { U.msFiltro.estado = el.value; },
@@ -1022,6 +1291,7 @@
   P.iniciar = function () {
     P.carregar();
     P.aplicarMarca();
+    if (window.PortalGrelha) window.PortalGrelha.instalar();
     document.addEventListener('click', function (ev2) {
       var t = ev2.target.closest('[data-a]');
       if (U.menu && !ev2.target.closest('[data-menu]') && !(t && /^menu/.test(t.getAttribute('data-a')))) { U.menu = null; R(); }

@@ -107,7 +107,7 @@
     S.docs.forEach(function (x) { por('esg_documentos', x.id, { id: x.id, tipo: x.tipo, fornecedor: x.fornecedor, periodo: x.periodo, instalacao: x.instalacao, entidade: nulo(x.entidade), consumo: x.consumo, valor_sem_iva: x.valor_sem_iva, iva: x.iva, percentagem_renovavel: x.percentagem_renovavel, centro_custo: nulo(x.centro_custo), leitura_telemetria: x.leitura_telemetria, estado: x.estado }); });
 
     S.ms.forEach(function (m) {
-      por('esg_milestones', m.id, { id: m.id, nome: m.nome, ano: m.ano, empresa: m.empresa, departamentos: m.departamentos || [], unidade: m.unidade, periodicidade: m.periodicidade, prazo: m.prazo, passo_atual: m.passo_atual, devolvida: !!m.devolvida, workflow_ajustado: !!m.workflow_ajustado, documentos_gerais: m.documentos_gerais || [] });
+      por('esg_milestones', m.id, { id: m.id, nome: m.nome, ano: m.ano, empresa: m.empresa, departamentos: m.departamentos || [], atribuido_a: m.atribuido_a || null, ficheiros_pedidos: m.ficheiros_pedidos || [], unidade: m.unidade, periodicidade: m.periodicidade, prazo: m.prazo, passo_atual: m.passo_atual, devolvida: !!m.devolvida, workflow_ajustado: !!m.workflow_ajustado, documentos_gerais: m.documentos_gerais || [] });
       m.indicadores.forEach(function (id, i) { por('esg_milestone_indicadores', m.id + '|' + id, { milestone_id: m.id, indicador_id: id, ordem: i }); });
       m.passos.forEach(function (p, i) { por('esg_passos_workflow', p.id, { id: p.id, milestone_id: m.id, ordem: i, nome: p.nome, tipo: p.tipo, responsavel: p.responsavel, concluido_em: p.concluido_em || null, concluido_por: p.concluido_por || null }); });
       m.comentarios.forEach(function (x, i) { por('esg_comentarios', m.id + '|' + i, { milestone_id: m.id, autor: x.autor, texto: x.texto, em: x.em, sistema: !!x.sistema }); });
@@ -149,7 +149,7 @@
     var doMs = function (l, id) { return l.filter(function (x) { return x.milestone_id === id; }); };
     S.ms = d.esg_milestones.map(function (m) {
       return {
-        id: m.id, nome: m.nome, ano: m.ano, empresa: m.empresa, departamentos: m.departamentos || [], unidade: m.unidade, periodicidade: m.periodicidade, prazo: m.prazo, passo_atual: m.passo_atual, devolvida: m.devolvida, workflow_ajustado: m.workflow_ajustado, documentos_gerais: m.documentos_gerais || [],
+        id: m.id, nome: m.nome, ano: m.ano, empresa: m.empresa, departamentos: m.departamentos || [], atribuido_a: m.atribuido_a || null, ficheiros_pedidos: m.ficheiros_pedidos || [], unidade: m.unidade, periodicidade: m.periodicidade, prazo: m.prazo, passo_atual: m.passo_atual, devolvida: m.devolvida, workflow_ajustado: m.workflow_ajustado, documentos_gerais: m.documentos_gerais || [],
         indicadores: doMs(d.esg_milestone_indicadores, m.id).map(function (x) { return x.indicador_id; }),
         passos: doMs(d.esg_passos_workflow, m.id).map(function (p) { return { id: p.id, nome: p.nome, tipo: p.tipo, responsavel: p.responsavel, concluido_em: p.concluido_em, concluido_por: p.concluido_por }; }),
         comentarios: doMs(d.esg_comentarios, m.id).map(function (x) { var o = { autor: x.autor, texto: x.texto, em: x.em }; if (x.sistema) o.sistema = true; return o; }),
