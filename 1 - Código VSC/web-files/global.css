@@ -562,3 +562,10 @@ a.ps-row:hover{background:var(--bg)}
   .ps-so-imprimir{display:flex !important}
 }
 .ps-so-imprimir{display:none}
+
+/* Tags de departamento */
+.ps-tags{display:flex;flex-wrap:wrap;gap:4px}
+.ps-tag{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;background:var(--primary-50);color:var(--primary);font-size:11px;font-weight:600;white-space:nowrap}
+.ps-tag button{border:0;background:none;color:inherit;font-size:14px;line-height:1;padding:0 0 0 2px;cursor:pointer}
+.ps-board-it>small{display:block;margin-top:2px}
+.ps-board-it>.ps-tags{margin:6px 0}

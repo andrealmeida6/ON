@@ -1,8 +1,8 @@
 /* ============================================================================
    portal-nucleo.js - regras da plataforma, sem desenho
    Estado, permissoes, workflow, validacao, importacao, exportacoes e marca.
-   No mockup o estado vive no localStorage. Em producao, troca-se so a secao
-   "Armazenamento" por chamadas a Web API do portal.
+   Sem backend, o estado vive no localStorage. Com backend, portal-supabase.js
+   trata do login e da gravacao.
    ============================================================================ */
 (function () {
   'use strict';
@@ -59,8 +59,9 @@
   var CHAVES = {
     ciclo: 'esg_cycle', ms: 'esg_ms', items: 'esg_items', wfbase: 'esg_wfbase', ext: 'esg_ext', aud: 'esg_aud', mat: 'esg_mat',
     docs: 'esg_docs', ent: 'esg_ent', janelas: 'esg_windows', marca: 'esg_brand', amostra: 'esg_sample', users: 'esg_users',
-    areas: 'esg_areas', cat: 'esg_catalog', metas: 'esg_metas'
+    areas: 'esg_areas', cat: 'esg_catalog', metas: 'esg_metas', deps: 'esg_deps'
   };
+  var VERSAO_DADOS = 2;
   var S = (P.S = {});
   var memoria = {};
   var ler = function (k) {
@@ -79,7 +80,7 @@
   /* Online: o estado vem do Supabase depois do login. Ate la, fica vazio e com a marca publica. */
   var estadoVazio = function () {
     S.ciclo = { ano: new Date().getFullYear(), estado: 'aberto', data_abertura: null, fechados: [] };
-    S.ms = []; S.items = {}; S.wfbase = []; S.ext = []; S.aud = []; S.mat = []; S.docs = []; S.ent = []; S.janelas = []; S.amostra = []; S.users = []; S.areas = []; S.cat = []; S.metas = [];
+    S.ms = []; S.items = {}; S.wfbase = []; S.ext = []; S.aud = []; S.mat = []; S.docs = []; S.ent = []; S.deps = []; S.janelas = []; S.amostra = []; S.users = []; S.areas = []; S.cat = []; S.metas = [];
     S.marca = S.marca || clone(P.MARCA_BASE);
   };
   P.estadoVazio = estadoVazio;
@@ -87,16 +88,18 @@
   /* --- Dados iniciais ---------------------------------------------------- */
   P.TEMAS = { 'Água e saneamento': '#0091DA', 'Energia e clima': '#EAAA00', 'Pessoas': '#C6007E', 'Governance': '#483698', 'Comunidade e cliente': '#00A3A1' };
   P.QUADROS = ['Desempenho', 'Ambientais', 'Sociais', 'Governance', 'ESRS'];
-  P.TIPOS_PASSO = { recolha: 'Recolha e submissão', validacao: 'Validação automática', revisao: 'Revisão', parecer: 'Parecer de outra área', aprovacao: 'Aprovação', publicacao: 'Publicação no relatório' };
-  P.PERFIS = { admin: 'Administrador', esg: 'Equipa de sustentabilidade', resp: 'Responsável pelos dados', auditor: 'Auditor', ext: 'Entidade externa' };
-  P.UNIDADES = ['Operações', 'Qualidade e Laboratório', 'Comercial e Relação com o Cliente', 'Ambiente, Saúde e Segurança', 'Recursos Humanos', 'Financeira', 'Jurídico e Compliance', 'Compras', 'Frota', 'Sistemas de Informação', 'I&D, CSR e ESG'];
-  P.MARCA_BASE = { nome: 'Portal de Sustentabilidade', subtitulo: 'Dados e relatório', logotipo: '', cores: { primary: '#00338D', secondary: '#0091DA', accent: '#1E49E2', bg: '#F4F7FC', text: '#0C233C' } };
+  P.TIPOS_PASSO = { recolha: 'Collection and submission', validacao: 'Automatic validation', revisao: 'Review', parecer: 'Opinion from another area', aprovacao: 'Approval', publicacao: 'Report publication' };
+  P.PERFIS = { admin: 'Administrator', esg: 'Sustainability team', resp: 'Data owner', auditor: 'Auditor', ext: 'External entity' };
+  var DEPARTAMENTOS = ['Operações', 'Qualidade e Laboratório', 'Comercial e Relação com o Cliente', 'Ambiente, Saúde e Segurança', 'Recursos Humanos', 'Financeira', 'Jurídico e Compliance', 'Compras', 'Frota', 'Sistemas de Informação', 'I&D, CSR e ESG'];
+  /* Os departamentos geridos no backoffice sao as unidades de negocio */
+  Object.defineProperty(P, 'UNIDADES', { get: function () { return (S.deps || []).map(function (d) { return d.nome; }); } });
+  P.MARCA_BASE = { nome: 'Record to Report (R2R)', subtitulo: '', logotipo: '', cores: { primary: '#00338D', secondary: '#0091DA', accent: '#1E49E2', bg: '#F4F7FC', text: '#0C233C' } };
   P.PALETAS = [
-    { nome: 'Azul', cores: { primary: '#00338D', secondary: '#0091DA', accent: '#1E49E2', bg: '#F4F7FC', text: '#0C233C' } },
-    { nome: 'Azul-petróleo', cores: { primary: '#0B4F6C', secondary: '#01A7A3', accent: '#0F7C8F', bg: '#F2F8F9', text: '#10282F' } },
-    { nome: 'Verde', cores: { primary: '#14573F', secondary: '#2E9E6B', accent: '#1F7A55', bg: '#F3F8F5', text: '#12261E' } },
-    { nome: 'Violeta', cores: { primary: '#3F2A8C', secondary: '#7A5AF8', accent: '#5B3FD6', bg: '#F6F5FC', text: '#1D1740' } },
-    { nome: 'Grafite', cores: { primary: '#2B3545', secondary: '#5B7083', accent: '#44546A', bg: '#F5F6F8', text: '#161C25' } }
+    { nome: 'Blue', cores: { primary: '#00338D', secondary: '#0091DA', accent: '#1E49E2', bg: '#F4F7FC', text: '#0C233C' } },
+    { nome: 'Teal', cores: { primary: '#0B4F6C', secondary: '#01A7A3', accent: '#0F7C8F', bg: '#F2F8F9', text: '#10282F' } },
+    { nome: 'Green', cores: { primary: '#14573F', secondary: '#2E9E6B', accent: '#1F7A55', bg: '#F3F8F5', text: '#12261E' } },
+    { nome: 'Violet', cores: { primary: '#3F2A8C', secondary: '#7A5AF8', accent: '#5B3FD6', bg: '#F6F5FC', text: '#1D1740' } },
+    { nome: 'Graphite', cores: { primary: '#2B3545', secondary: '#5B7083', accent: '#44546A', bg: '#F5F6F8', text: '#161C25' } }
   ];
 
   var WF_BASE = function () {
@@ -176,7 +179,8 @@
     S.wfbase = WF_BASE();
     S.users = UTILIZADORES.map(function (u) { return { login: u[0], nome: u[1], perfil: u[2], unidade: u[3] }; });
     S.mat = MATERIALIDADE.map(function (m) { return { norma: m[0], tema: m[1], avaliacao: m[2], justificacao: m[3] }; });
-    S.ent = ENTIDADES.map(function (e) { return { nome: e[0], perimetro_grupo: !!e[1], perimetro_maioritario: !!e[2] }; });
+    S.ent = ENTIDADES.map(function (e) { return { id: e[0], nome: e[0], perimetro_grupo: !!e[1], perimetro_maioritario: !!e[2] }; });
+    S.deps = DEPARTAMENTOS.map(function (n) { return { id: n, nome: n }; });
     S.janelas = JANELAS.map(function (j) { return { nome: j[0], tema: j[1], meses: j[2], dia_inicio: j[3], dia_fim: j[4] }; });
     S.areas = AREAS.map(function (a) { return { codigo: a[0], nome: a[1], uso: a[2] }; });
     S.marca = clone(P.MARCA_BASE);
@@ -201,15 +205,16 @@
       M15: { i: 3, d: 14 }, M16: { i: 0, d: 18 }, M17: { i: 0, d: 12 }, M18: { i: 5, d: -38 }, M19: { i: 5, d: -60 },
       M20: { i: 0, d: 42 }, M21: { i: 0, d: 45 }, M22: { i: 0, d: 48 }, M23: { i: 0, d: 42 }, M24: { i: 0, d: 50 }, M25: { i: 0, d: 55 }
     };
-    window.PORTAL_PLANO.forEach(function (pl) {
+    var EMPRESAS_DEMO = ['Sede do grupo', 'Concessão Vale', 'Concessão Rio', 'Serviços ambientais'];
+    window.PORTAL_PLANO.forEach(function (pl, ixPlano) {
       var cfg = estados[pl.id];
       var lista = pl.workflow.length ? pl.workflow.map(function (n) { return passoDeNome(n, pl.unidade); }) : WF_BASE();
       var m = {
-        id: pl.id, nome: nomeMs(pl.periodicidade, 2026, pl.unidade), ano: 2026, unidade: pl.unidade, periodicidade: pl.periodicidade, prazo: diasDe(cfg.d),
+        id: pl.id, nome: nomeMs(pl.periodicidade, 2026, pl.unidade), ano: 2026, empresa: EMPRESAS_DEMO[ixPlano % EMPRESAS_DEMO.length], departamentos: [pl.unidade], unidade: pl.unidade, periodicidade: pl.periodicidade, prazo: diasDe(cfg.d),
         indicadores: pl.indicadores.slice(), passos: passosDe(lista), passo_atual: 0, devolvida: !!cfg.dev, workflow_ajustado: pl.workflow.length > 0,
         documentos_gerais: [], comentarios: [], eventos: []
       };
-      m.eventos.push({ texto: 'Milestone criada no ciclo 2026.', em: new Date(Date.now() - 86400000 * 300).toISOString(), por: 'Sistema' });
+      m.eventos.push({ texto: 'Milestone created in the 2026 cycle.', em: new Date(Date.now() - 86400000 * 300).toISOString(), por: 'System' });
       S.ms.push(m);
       var preencher = cfg.i > 0 || cfg.dev;
       pl.indicadores.forEach(function (id, ix) {
@@ -225,20 +230,20 @@
       });
       if (pl.id === 'M01') {
         var a = S.items['2026:A01'];
-        a.valor = 59.67; a.versoes.push({ valor: 59.67, em: new Date(Date.now() - 86400000 * 24).toISOString(), por: 'Resp. Operações', origem: 'importação de ficheiro telemetria-setembro.xlsx', motivo: '' });
+        a.valor = 59.67; a.versoes.push({ valor: 59.67, em: new Date(Date.now() - 86400000 * 24).toISOString(), por: 'Resp. Operações', origem: 'file import telemetria-setembro.xlsx', motivo: '' });
         a.justificacao = 'Nova ligação de adução em serviço desde março.';
         var b = S.items['2026:A09']; b.qualidade = 'estimado'; b.metodo = 'Extrapolação a partir de nove meses de registos.';
       }
       for (var k = 0; k < cfg.i; k++) {
         var t = new Date(Date.now() - 86400000 * (Math.max(2, 30 - cfg.d / 3) - k * 2)).toISOString();
         m.passos[k].concluido_em = t;
-        m.passos[k].concluido_por = m.passos[k].responsavel === 'sistema' ? 'Sistema' : m.passos[k].responsavel === 'unidade' ? 'Resp. ' + m.unidade : m.passos[k].responsavel.indexOf('area:') === 0 ? 'Resp. ' + m.passos[k].responsavel.slice(5) : 'Equipa de sustentabilidade';
-        m.eventos.push({ texto: 'Passo concluído: ' + m.passos[k].nome + '.', em: t, por: m.passos[k].concluido_por });
+        m.passos[k].concluido_por = m.passos[k].responsavel === 'sistema' ? 'System' : m.passos[k].responsavel === 'unidade' ? 'Resp. ' + m.unidade : m.passos[k].responsavel.indexOf('area:') === 0 ? 'Resp. ' + m.passos[k].responsavel.slice(5) : 'Sustainability team';
+        m.eventos.push({ texto: 'Step completed: ' + m.passos[k].nome + '.', em: t, por: m.passos[k].concluido_por });
       }
       m.passo_atual = cfg.i;
       if (cfg.dev) {
         m.comentarios.push({ autor: 'Equipa de sustentabilidade', texto: 'A percentagem de veículos verdes parece baixa. Confirmem com a gestora da frota, por favor.', em: new Date(Date.now() - 86400000).toISOString() });
-        m.eventos.push({ texto: 'Devolvida à unidade.', em: new Date(Date.now() - 86400000).toISOString(), por: 'Equipa de sustentabilidade' });
+        m.eventos.push({ texto: 'Returned to the unit.', em: new Date(Date.now() - 86400000).toISOString(), por: 'Sustainability team' });
       }
     });
     S.ext = [
@@ -251,7 +256,7 @@
 
   P.carregar = function () {
     if (P.online()) { estadoVazio(); return; }
-    if (!ler(CHAVES.ms)) { P.cat = catBoot; semear(); return; }
+    if (!ler(CHAVES.ms) || ler('esg_versao') !== VERSAO_DADOS) { P.cat = catBoot; semear(); escrever('esg_versao', VERSAO_DADOS); return; }
     Object.keys(CHAVES).forEach(function (n) { S[n] = ler(CHAVES[n]); });
   };
   /* Gera os dados de demonstracao sem tocar no armazenamento: serve o carregamento inicial do Supabase */
@@ -262,7 +267,7 @@
   };
   P.exportarTudo = function () { var o = {}; Object.keys(CHAVES).forEach(function (n) { o[CHAVES[n]] = S[n]; }); return o; };
   P.importarTudo = function (o) {
-    if (!o || !o.esg_ms || !o.esg_items || !o.esg_cycle) return 'O ficheiro não é uma cópia completa dos dados.';
+    if (!o || !o.esg_ms || !o.esg_items || !o.esg_cycle) return 'The file is not a complete copy of the data.';
     Object.keys(CHAVES).forEach(function (n) { if (o[CHAVES[n]] !== undefined) S[n] = o[CHAVES[n]]; });
     guardar();
     P.aplicarMarca();
@@ -281,7 +286,7 @@
   P.item = function (id, ano) { return S.items[(ano || S.ciclo.ano) + ':' + id] || null; };
   P.user = function (login) { return S.users.filter(function (u) { return u.login === login; })[0] || null; };
 
-  /* Sessao: no mockup entra-se sem palavra-passe. Online, o login vem da conta autenticada (P.entrar depois de B.carregar). */
+  /* Sessao: sem backend entra-se sem palavra-passe. Online, o login vem da conta autenticada (P.entrar depois de B.carregar). */
   P.sessao = function () {
     var l = null;
     try { l = sessionStorage.getItem('esg_sess'); } catch (e) { l = memoria.sess; }
@@ -304,14 +309,14 @@
   P.validar = function (c, valor, ano) {
     var r = { erros: [], alertas: [], variacao: null };
     if (valor === null || valor === undefined) return r;
-    if (c.unidade_medida === '%') { if (valor < 0 || valor > 100) r.erros.push('Percentagem fora de 0 a 100.'); }
-    else if (valor < 0) r.erros.push('Valor negativo não é aceite neste indicador.');
+    if (c.unidade_medida === '%') { if (valor < 0 || valor > 100) r.erros.push('Percentage outside 0 to 100.'); }
+    else if (valor < 0) r.erros.push('Negative values are not accepted for this indicator.');
     if (r.erros.length) return r;
     var ant = P.valorAnterior(c.id, ano);
     if (ant !== null && ant !== undefined && ant !== 0) {
       r.variacao = ((valor - ant) / Math.abs(ant)) * 100;
       if (Math.abs(r.variacao) > c.limiar_variacao_pct) {
-        r.alertas.push('Variação de ' + (r.variacao > 0 ? '+' : '') + P.fmtNum(r.variacao, 1) + '% face a ' + (ano - 1) + ', acima do limiar de ' + c.limiar_variacao_pct + '%.');
+        r.alertas.push('Change of ' + (r.variacao > 0 ? '+' : '') + P.fmtNum(r.variacao, 1) + '% against ' + (ano - 1) + ', above the ' + c.limiar_variacao_pct + '% threshold.');
       }
     }
     (c.regras_coerencia || []).forEach(function (t) { r.alertas.push(t); });
@@ -319,7 +324,7 @@
   };
   P.validarItem = function (it) {
     var c = P.cat(it.id);
-    if (it.rascunho !== null && it.rascunho !== undefined && it.rascunho !== '') return { erros: ['Valor não numérico.'], alertas: [], variacao: null };
+    if (it.rascunho !== null && it.rascunho !== undefined && it.rascunho !== '') return { erros: ['Value is not numeric.'], alertas: [], variacao: null };
     return P.validar(c, it.valor, it.ano);
   };
   /* O que falta para submeter. Cada entrada leva o campo onde o cursor deve ir. */
@@ -327,11 +332,11 @@
     var f = [];
     m.indicadores.forEach(function (id) {
       var it = P.item(id, m.ano), c = P.cat(id), v = P.validarItem(it);
-      if (it.valor === null && !it.rascunho) f.push({ id: id, campo: 'val', msg: c.nome + ': falta o valor.' });
+      if (it.valor === null && !it.rascunho) f.push({ id: id, campo: 'val', msg: c.nome + ': value missing.' });
       v.erros.forEach(function (e) { f.push({ id: id, campo: 'val', msg: c.nome + ': ' + e }); });
-      if (v.alertas.length && !String(it.justificacao || '').trim()) f.push({ id: id, campo: 'just', msg: c.nome + ': falta a justificação do alerta.' });
-      if (it.qualidade === 'estimado' && !String(it.metodo || '').trim()) f.push({ id: id, campo: 'met', msg: c.nome + ': falta o método de estimativa.' });
-      if (c.evidencia_obrigatoria && !it.evidencias.length) f.push({ id: id, campo: 'evi', msg: c.nome + ': falta a evidência obrigatória.' });
+      if (v.alertas.length && !String(it.justificacao || '').trim()) f.push({ id: id, campo: 'just', msg: c.nome + ': alert justification missing.' });
+      if (it.qualidade === 'estimado' && !String(it.metodo || '').trim()) f.push({ id: id, campo: 'met', msg: c.nome + ': estimation method missing.' });
+      if (c.evidencia_obrigatoria && !it.evidencias.length) f.push({ id: id, campo: 'evi', msg: c.nome + ': required evidence missing.' });
     });
     return f;
   };
@@ -340,31 +345,31 @@
   P.concluida = function (m) { return m.passo_atual >= m.passos.length; };
   P.passoAtual = function (m) { return P.concluida(m) ? null : m.passos[m.passo_atual]; };
   P.estadoMs = function (m) {
-    if (P.concluida(m)) return { cod: 'concluida', txt: 'Concluída', cls: 'ok' };
+    if (P.concluida(m)) return { cod: 'concluida', txt: 'Completed', cls: 'ok' };
     var p = P.passoAtual(m);
     if (p.tipo === 'recolha') {
-      if (m.devolvida) return { cod: 'devolvida', txt: 'Devolvida', cls: 'err' };
-      if (P.diasAte(m.prazo) < 0) return { cod: 'atraso', txt: 'Em atraso', cls: 'err' };
-      return { cod: 'recolha', txt: 'Em recolha', cls: 'info' };
+      if (m.devolvida) return { cod: 'devolvida', txt: 'Returned', cls: 'err' };
+      if (P.diasAte(m.prazo) < 0) return { cod: 'atraso', txt: 'Overdue', cls: 'err' };
+      return { cod: 'recolha', txt: 'In collection', cls: 'info' };
     }
-    if (p.tipo === 'parecer') return { cod: 'parecer', txt: 'A aguardar parecer', cls: 'warn' };
-    if (p.tipo === 'aprovacao') return { cod: 'aprovacao', txt: 'Em aprovação', cls: 'rev' };
-    return { cod: 'revisao', txt: 'Em revisão', cls: 'rev' };
+    if (p.tipo === 'parecer') return { cod: 'parecer', txt: 'Awaiting opinion', cls: 'warn' };
+    if (p.tipo === 'aprovacao') return { cod: 'aprovacao', txt: 'In approval', cls: 'rev' };
+    return { cod: 'revisao', txt: 'In review', cls: 'rev' };
   };
   P.estadoIndicador = function (m, id) {
     var it = P.item(id, m.ano);
-    if (P.concluida(m)) return { txt: 'Aprovado', cls: 'ok' };
+    if (P.concluida(m)) return { txt: 'Approved', cls: 'ok' };
     if (P.passoAtual(m).tipo === 'recolha') {
-      if (m.devolvida) return { txt: 'Devolvido', cls: 'err' };
-      return it.valor === null ? { txt: 'Por recolher', cls: '' } : { txt: 'Em preenchimento', cls: 'info' };
+      if (m.devolvida) return { txt: 'Returned', cls: 'err' };
+      return it.valor === null ? { txt: 'To collect', cls: '' } : { txt: 'In progress', cls: 'info' };
     }
-    return P.validarItem(it).alertas.length ? { txt: 'Com alertas', cls: 'warn' } : { txt: 'Em revisão', cls: 'rev' };
+    return P.validarItem(it).alertas.length ? { txt: 'With alerts', cls: 'warn' } : { txt: 'In review', cls: 'rev' };
   };
   P.nomeResp = function (m, resp) {
-    if (resp === 'unidade') return m ? m.unidade : 'Unidade responsável pela milestone';
-    if (resp === 'esg') return 'Equipa de sustentabilidade';
-    if (resp === 'admin') return 'Administrador';
-    if (resp === 'sistema') return 'Automático';
+    if (resp === 'unidade') return m ? m.unidade : 'Milestone unit';
+    if (resp === 'esg') return 'Sustainability team';
+    if (resp === 'admin') return 'Administrator';
+    if (resp === 'sistema') return 'Automatic';
     return resp.indexOf('area:') === 0 ? resp.slice(5) : resp;
   };
   P.podeAgir = function (m, u) {
@@ -387,37 +392,37 @@
   var correrAutomaticos = function (m) {
     while (!P.concluida(m) && P.passoAtual(m).responsavel === 'sistema') {
       var p = P.passoAtual(m);
-      p.concluido_em = agora(); p.concluido_por = 'Sistema';
+      p.concluido_em = agora(); p.concluido_por = 'System';
       if (p.tipo === 'validacao') {
         var n = m.indicadores.filter(function (id) { return P.validarItem(P.item(id, m.ano)).alertas.length; }).length;
-        ev(m, 'Validação automática concluída: ' + n + ' indicador(es) com alertas.', 'Sistema');
+        ev(m, 'Automatic validation completed: ' + n + ' indicator(s) with alerts.', 'System');
       } else if (p.tipo === 'publicacao') {
-        ev(m, 'Valores publicados nos quadros do relatório.', 'Sistema');
+        ev(m, 'Values published to the report tables.', 'System');
       } else {
-        ev(m, 'Passo automático concluído: ' + p.nome + '.', 'Sistema');
+        ev(m, 'Automatic step completed: ' + p.nome + '.', 'System');
       }
       m.passo_atual++;
     }
   };
   P.submeter = function (m, u) {
-    if (!P.podePreencher(m, u)) return { erro: 'Esta milestone não está consigo neste momento.' };
+    if (!P.podePreencher(m, u)) return { erro: 'This milestone is not with you right now.' };
     var f = P.faltasSubmissao(m);
     if (f.length) return { faltas: f };
     var p = P.passoAtual(m);
     p.concluido_em = agora(); p.concluido_por = u.nome;
     m.devolvida = false;
-    ev(m, 'Milestone submetida.', u.nome);
+    ev(m, 'Milestone submitted.', u.nome);
     m.passo_atual++;
     correrAutomaticos(m);
     guardar();
     return { ok: true };
   };
   P.concluirPasso = function (m, u, comentario) {
-    if (!P.podeAgir(m, u)) return { erro: 'Este passo não está consigo.' };
+    if (!P.podeAgir(m, u)) return { erro: 'This step is not with you.' };
     var p = P.passoAtual(m);
     if (p.tipo === 'recolha') return P.submeter(m, u);
     p.concluido_em = agora(); p.concluido_por = u.nome;
-    var verbo = p.tipo === 'parecer' ? 'Parecer favorável dado' : p.tipo === 'aprovacao' ? 'Valores aprovados e bloqueados' : 'Revisão concluída';
+    var verbo = p.tipo === 'parecer' ? 'Favourable opinion given' : p.tipo === 'aprovacao' ? 'Values approved and locked' : 'Review completed';
     ev(m, verbo + ': ' + p.nome + '.', u.nome);
     if (comentario && comentario.trim()) m.comentarios.push({ autor: u.nome, texto: comentario.trim(), em: agora() });
     m.passo_atual++;
@@ -426,31 +431,31 @@
     return { ok: true };
   };
   P.devolver = function (m, u, comentario) {
-    if (!P.podeAgir(m, u) || P.passoAtual(m).tipo === 'recolha') return { erro: 'Este passo não está consigo.' };
-    if (!comentario || !comentario.trim()) return { erro: 'Escreva um comentário para devolver a milestone.' };
+    if (!P.podeAgir(m, u) || P.passoAtual(m).tipo === 'recolha') return { erro: 'This step is not with you.' };
+    if (!comentario || !comentario.trim()) return { erro: 'Write a comment to return the milestone.' };
     m.passos.forEach(function (p) { p.concluido_em = null; p.concluido_por = null; });
     m.passo_atual = 0;
     m.devolvida = true;
     if (P.diasAte(m.prazo) < 3) m.prazo = diasDe(3);
     m.comentarios.push({ autor: u.nome, texto: comentario.trim(), em: agora() });
-    ev(m, 'Devolvida à unidade. Prazo: ' + P.fmtData(m.prazo) + '.', u.nome);
+    ev(m, 'Returned to the unit. Due: ' + P.fmtData(m.prazo) + '.', u.nome);
     guardar();
     return { ok: true };
   };
   /* Regras do editor (6.4). Devolve a mensagem do que falha, ou null. */
   P.validarWorkflow = function (m, passos) {
-    if (!passos.length || passos[0].tipo !== 'recolha') return 'O primeiro passo é sempre de recolha.';
-    if (!passos.some(function (p) { return ['revisao', 'parecer', 'aprovacao'].indexOf(p.tipo) > -1; })) return 'O workflow precisa de pelo menos um passo de revisão, parecer ou aprovação.';
+    if (!passos.length || passos[0].tipo !== 'recolha') return 'The first step is always collection.';
+    if (!passos.some(function (p) { return ['revisao', 'parecer', 'aprovacao'].indexOf(p.tipo) > -1; })) return 'The workflow needs at least one review, opinion or approval step.';
     for (var i = 0; i < passos.length; i++) {
-      if (!String(passos[i].nome || '').trim()) return 'Todos os passos precisam de nome.';
-      if (passos[i].tipo === 'publicacao' && i < passos.length - 1) return 'A publicação tem de ser o último passo.';
+      if (!String(passos[i].nome || '').trim()) return 'All steps need a name.';
+      if (passos[i].tipo === 'publicacao' && i < passos.length - 1) return 'Publication must be the last step.';
     }
     if (m) {
       for (var k = 0; k < m.passo_atual && k < m.passos.length; k++) {
-        if (!passos[k] || passos[k].id !== m.passos[k].id) return 'Os passos concluídos não podem mudar.';
+        if (!passos[k] || passos[k].id !== m.passos[k].id) return 'Completed steps cannot change.';
       }
       var at = P.passoAtual(m);
-      if (at && (!passos[m.passo_atual] || passos[m.passo_atual].id !== at.id || passos[m.passo_atual].tipo !== at.tipo)) return 'O passo atual só pode mudar de nome e de responsável.';
+      if (at && (!passos[m.passo_atual] || passos[m.passo_atual].id !== at.id || passos[m.passo_atual].tipo !== at.tipo)) return 'The current step can only change its name and owner.';
     }
     return null;
   };
@@ -459,7 +464,7 @@
     if (e) return { erro: e };
     m.passos = passos;
     m.workflow_ajustado = true;
-    ev(m, 'Workflow alterado: ' + passos.map(function (p) { return p.nome; }).join(' > ') + '.', u.nome);
+    ev(m, 'Workflow changed: ' + passos.map(function (p) { return p.nome; }).join(' > ') + '.', u.nome);
     guardar();
     return { ok: true };
   };
@@ -481,7 +486,7 @@
     if (aplicar) {
       P.msCiclo().forEach(function (m) {
         var porComecar = m.passo_atual === 0 && !m.workflow_ajustado && !m.devolvida && !m.indicadores.some(function (id) { return P.item(id, m.ano).valor !== null; });
-        if (porComecar) { m.passos = passosDe(S.wfbase); n++; ev(m, 'Workflow base atualizado aplicado.', 'Backoffice'); }
+        if (porComecar) { m.passos = passosDe(S.wfbase); n++; ev(m, 'Updated base workflow applied.', 'Backoffice'); }
       });
     }
     guardar();
@@ -503,17 +508,17 @@
     guardar();
   };
   P.reexpressar = function (m, id, bruto, motivo, u) {
-    if (!P.podeReexpressar(u)) return { erro: 'Só a equipa de sustentabilidade e o administrador podem reexpressar.' };
-    if (!P.concluida(m)) return { erro: 'Só se reexpressam valores aprovados.' };
+    if (!P.podeReexpressar(u)) return { erro: 'Only the sustainability team and the administrator can restate.' };
+    if (!P.concluida(m)) return { erro: 'Only approved values can be restated.' };
     var n = lerNumero(bruto), c = P.cat(id), it = P.item(id, m.ano);
-    if (n === null) return { erro: 'Indique um valor numérico.' };
-    if (!motivo || !motivo.trim()) return { erro: 'O motivo é obrigatório na reexpressão.' };
+    if (n === null) return { erro: 'Enter a numeric value.' };
+    if (!motivo || !motivo.trim()) return { erro: 'A reason is required to restate.' };
     var v = P.validar(c, n, m.ano);
     if (v.erros.length) return { erro: v.erros[0] };
     var ant = it.valor;
     it.valor = n; it.reexpresso = true;
-    it.versoes.push({ valor: n, em: agora(), por: u.nome, origem: 'reexpressão', motivo: motivo.trim() });
-    ev(m, 'Valor reexpresso em ' + c.nome + ': de ' + P.fmtNum(ant, c.casas_decimais) + ' para ' + P.fmtNum(n, c.casas_decimais) + '. Motivo: ' + motivo.trim(), u.nome);
+    it.versoes.push({ valor: n, em: agora(), por: u.nome, origem: 'restatement', motivo: motivo.trim() });
+    ev(m, 'Value restated in ' + c.nome + ': from ' + P.fmtNum(ant, c.casas_decimais) + ' to ' + P.fmtNum(n, c.casas_decimais) + '. Reason: ' + motivo.trim(), u.nome);
     guardar();
     return { ok: true };
   };
@@ -521,31 +526,31 @@
 
   /* --- Contributos externos (secao 9) ------------------------------------ */
   P.criarPedidoExterno = function (m, indId, entidade, descricao, prazo, u) {
-    if (!entidade || !String(descricao || '').trim() || !prazo) return { erro: 'Indique a entidade, a descrição e o prazo.' };
+    if (!entidade || !String(descricao || '').trim() || !prazo) return { erro: 'Enter the entity, the description and the due date.' };
     S.ext.push({ id: 'X' + Date.now(), indicador_id: indId, milestone_id: m.id, entidade_externa: entidade, descricao: descricao.trim(), prazo: prazo, estado: 'pendente', valor: null, evidencia: '', respondido_em: null });
-    ev(m, 'Pedido externo criado para ' + entidade + ': ' + P.cat(indId).nome + '.', u.nome);
+    ev(m, 'External request created for ' + entidade + ': ' + P.cat(indId).nome + '.', u.nome);
     guardar();
     return { ok: true };
   };
   P.responderExterno = function (x, bruto, evidencia, u) {
-    if (x.entidade_externa !== u.nome) return { erro: 'Este pedido não é da sua organização.' };
+    if (x.entidade_externa !== u.nome) return { erro: 'This request is not for your organisation.' };
     var n = lerNumero(bruto), c = P.cat(x.indicador_id);
-    if (n === null) return { erro: 'Indique um valor numérico.' };
+    if (n === null) return { erro: 'Enter a numeric value.' };
     var m = P.ms(x.milestone_id), v = P.validar(c, n, m.ano);
     if (v.erros.length) return { erro: v.erros[0] };
     x.valor = n; x.evidencia = evidencia || ''; x.estado = 'recebido'; x.respondido_em = agora();
-    ev(m, 'Valor recebido de ' + x.entidade_externa + ' para ' + c.nome + '.', x.entidade_externa);
+    ev(m, 'Value received from ' + x.entidade_externa + ' for ' + c.nome + '.', x.entidade_externa);
     guardar();
     return { ok: true };
   };
   P.usarExterno = function (x, u) {
     var m = P.ms(x.milestone_id), it = P.item(x.indicador_id, m.ano);
-    if (!P.podePreencher(m, u)) return { erro: 'Só durante a recolha, por quem a tem consigo.' };
+    if (!P.podePreencher(m, u)) return { erro: 'Only during collection, by whoever has it.' };
     it.valor = x.valor; it.rascunho = null; it.qualidade = 'medido'; it.metodo = '';
-    it.versoes.push({ valor: x.valor, em: agora(), por: u.nome, origem: 'externo: ' + x.entidade_externa, motivo: '' });
+    it.versoes.push({ valor: x.valor, em: agora(), por: u.nome, origem: 'external: ' + x.entidade_externa, motivo: '' });
     if (x.evidencia) it.evidencias.push({ id: 'ev' + Date.now(), ficheiro: x.evidencia, por: x.entidade_externa, em: agora() });
     x.estado = 'aplicado';
-    ev(m, 'Contributo externo aplicado em ' + P.cat(x.indicador_id).nome + '.', u.nome);
+    ev(m, 'External contribution applied to ' + P.cat(x.indicador_id).nome + '.', u.nome);
     guardar();
     return { ok: true };
   };
@@ -558,20 +563,20 @@
   };
   P.sortearAmostra = function (u) {
     var a = P.aprovados();
-    if (a.length < 5) return { erro: 'São precisos pelo menos 5 indicadores aprovados. Há ' + a.length + '.' };
+    if (a.length < 5) return { erro: 'At least 5 approved indicators are needed. There are ' + a.length + '.' };
     for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)), t = a[i]; a[i] = a[j]; a[j] = t; }
     var sel = a.slice(0, 5);
     S.amostra = sel.map(function (x) { return x.id; });
-    sel.forEach(function (x) { ev(x.m, 'Indicador na amostra do auditor: ' + P.cat(x.id).nome + '.', u.nome); });
+    sel.forEach(function (x) { ev(x.m, 'Indicator in the auditor sample: ' + P.cat(x.id).nome + '.', u.nome); });
     guardar();
     return { ok: true };
   };
   P.msDoIndicador = function (id, ano) { return P.msCiclo(ano).filter(function (m) { return m.indicadores.indexOf(id) > -1; })[0] || null; };
   P.criarPedidoAuditor = function (indId, texto, u) {
-    if (!texto || !texto.trim()) return { erro: 'Escreva o pedido.' };
+    if (!texto || !texto.trim()) return { erro: 'Write the request.' };
     var m = P.msDoIndicador(indId);
     S.aud.push({ id: 'A' + Date.now(), indicador_id: indId, texto: texto.trim(), por: u.nome, em: agora(), estado: 'aberto', resposta: null });
-    if (m) { m.comentarios.push({ autor: u.nome, texto: 'Pedido de informação sobre ' + P.cat(indId).nome + ': ' + texto.trim(), em: agora(), sistema: true }); ev(m, 'Pedido de informação do auditor sobre ' + P.cat(indId).nome + '.', u.nome); }
+    if (m) { m.comentarios.push({ autor: u.nome, texto: 'Information request on ' + P.cat(indId).nome + ': ' + texto.trim(), em: agora(), sistema: true }); ev(m, 'Auditor information request on ' + P.cat(indId).nome + '.', u.nome); }
     guardar();
     return { ok: true };
   };
@@ -582,19 +587,19 @@
     return u.perfil === 'resp' && !!m && m.unidade === u.unidade;
   };
   P.responderAuditor = function (a, texto, u) {
-    if (!P.podeResponderAuditor(a, u)) return { erro: 'Este pedido não é da sua unidade.' };
-    if (!texto || !texto.trim()) return { erro: 'Escreva a resposta.' };
+    if (!P.podeResponderAuditor(a, u)) return { erro: 'This request is not for your unit.' };
+    if (!texto || !texto.trim()) return { erro: 'Write the answer.' };
     a.resposta = { texto: texto.trim(), por: u.nome, em: agora() }; a.estado = 'respondido';
     var m = P.msDoIndicador(a.indicador_id);
-    if (m) m.comentarios.push({ autor: u.nome, texto: 'Resposta ao auditor: ' + texto.trim(), em: agora() });
+    if (m) m.comentarios.push({ autor: u.nome, texto: 'Answer to the auditor: ' + texto.trim(), em: agora() });
     guardar();
     return { ok: true };
   };
   P.resolverAuditor = function (a, u) {
-    if (u.perfil !== 'auditor' && u.perfil !== 'admin') return { erro: 'Só o auditor dá o pedido por resolvido.' };
+    if (u.perfil !== 'auditor' && u.perfil !== 'admin') return { erro: 'Only the auditor can resolve the request.' };
     a.estado = 'resolvido';
     var m = P.msDoIndicador(a.indicador_id);
-    if (m) ev(m, 'Pedido do auditor resolvido: ' + P.cat(a.indicador_id).nome + '.', u.nome);
+    if (m) ev(m, 'Auditor request resolved: ' + P.cat(a.indicador_id).nome + '.', u.nome);
     guardar();
     return { ok: true };
   };
@@ -627,14 +632,14 @@
   P.lerFicheiro = function (file) {
     var nome = file.name, ext = (nome.split('.').pop() || '').toLowerCase();
     return new Promise(function (ok) {
-      if (ext === 'xls') return ok({ nome: nome, erro: 'O formato .xls antigo não é aceite. Guarde o ficheiro como .xlsx e tente de novo.' });
-      if (['xlsx', 'csv', 'json'].indexOf(ext) < 0) return ok({ nome: nome, erro: 'Formato não suportado. Use .xlsx, .csv ou .json.' });
+      if (ext === 'xls') return ok({ nome: nome, erro: 'The old .xls format is not accepted. Save the file as .xlsx and try again.' });
+      if (['xlsx', 'csv', 'json'].indexOf(ext) < 0) return ok({ nome: nome, erro: 'Format not supported. Use .xlsx, .csv or .json.' });
       var r = new FileReader();
-      r.onerror = function () { ok({ nome: nome, erro: 'Não foi possível ler o ficheiro.' }); };
+      r.onerror = function () { ok({ nome: nome, erro: 'The file could not be read.' }); };
       r.onload = function () {
         try {
           if (ext === 'xlsx') {
-            if (!window.XLSX) return ok({ nome: nome, erro: 'A biblioteca de Excel não carregou.' });
+            if (!window.XLSX) return ok({ nome: nome, erro: 'The Excel library did not load.' });
             var wb = window.XLSX.read(new Uint8Array(r.result), { type: 'array' });
             var folha = wb.Sheets.dados || wb.Sheets[wb.SheetNames[0]];
             return ok({ nome: nome, linhas: window.XLSX.utils.sheet_to_json(folha, { defval: '' }) });
@@ -642,20 +647,20 @@
           if (ext === 'csv') return ok({ nome: nome, linhas: lerCSV(r.result) });
           var j = JSON.parse(r.result);
           var regs = Array.isArray(j) ? j : j && Array.isArray(j.records) ? j.records.map(function (x) { var o = {}; for (var k in x) o[k] = x[k]; if (o.milestone_id === undefined && j.milestone_id) o.milestone_id = j.milestone_id; return o; }) : null;
-          if (!regs) return ok({ nome: nome, erro: 'O JSON tem de ser uma lista de registos ou um objeto com "records".' });
+          if (!regs) return ok({ nome: nome, erro: 'The JSON must be a list of records or an object with "records".' });
           return ok({ nome: nome, linhas: regs });
-        } catch (e) { ok({ nome: nome, erro: 'Ficheiro inválido: ' + e.message }); }
+        } catch (e) { ok({ nome: nome, erro: 'Invalid file: ' + e.message }); }
       };
       if (ext === 'xlsx') r.readAsArrayBuffer(file); else r.readAsText(file, 'utf-8');
     });
   };
   P.validarImportacao = function (m, linhas) {
     var rel = { linhas: [], desconhecidas: [], erroFormato: null, emFalta: [] };
-    if (!linhas || !linhas.length) { rel.erroFormato = 'O ficheiro não tem linhas de dados.'; return rel; }
+    if (!linhas || !linhas.length) { rel.erroFormato = 'The file has no data rows.'; return rel; }
     var cols = {};
     linhas.forEach(function (l) { Object.keys(l).forEach(function (k) { cols[k] = 1; }); });
     var falta = OBRIG.filter(function (c) { return !cols[c]; });
-    if (falta.length) { rel.erroFormato = 'Faltam as colunas obrigatórias: ' + falta.join(', ') + '.'; return rel; }
+    if (falta.length) { rel.erroFormato = 'Required columns missing: ' + falta.join(', ') + '.'; return rel; }
     rel.desconhecidas = Object.keys(cols).filter(function (c) { return COLS.indexOf(c) < 0; });
     var vistos = {};
     linhas.forEach(function (l, i) {
@@ -665,27 +670,27 @@
       if (sem && m.indicadores.indexOf(id) > -1 && !vistos[id]) { r.estado = 'vazia'; rel.linhas.push(r); return; }
       var rej = function (t) { r.estado = 'rejeitada'; r.motivos.push(t); };
       /* 2. Milestone e indicadores */
-      if (String(l.milestone_id).trim() !== m.id) rej('milestone_id deve ser ' + m.id + '.');
-      if (m.indicadores.indexOf(id) < 0) rej('O indicador ' + (id || '(vazio)') + ' não pertence a esta milestone.');
-      else if (vistos[id]) rej('Indicador repetido no ficheiro.');
+      if (String(l.milestone_id).trim() !== m.id) rej('milestone_id must be ' + m.id + '.');
+      if (m.indicadores.indexOf(id) < 0) rej('Indicator ' + (id || '(empty)') + ' does not belong to this milestone.');
+      else if (vistos[id]) rej('Indicator repeated in the file.');
       var c = P.cat(id), n = lerNumero(l.value);
       /* 3. Tipos, ano e unidades */
-      if (n === null) rej('value tem de ser numérico.');
-      if (String(l.period).trim() !== String(m.ano)) rej('period deve ser ' + m.ano + '.');
-      if (c && String(l.unit).trim() !== c.unidade_medida) rej('unit deve ser ' + c.unidade_medida + '.');
+      if (n === null) rej('value must be numeric.');
+      if (String(l.period).trim() !== String(m.ano)) rej('period must be ' + m.ano + '.');
+      if (c && String(l.unit).trim() !== c.unidade_medida) rej('unit must be ' + c.unidade_medida + '.');
       var q = String(l.data_quality || '').trim() || 'measured';
-      if (['measured', 'calculated', 'estimated'].indexOf(q) < 0) rej('data_quality deve ser measured, calculated ou estimated.');
+      if (['measured', 'calculated', 'estimated'].indexOf(q) < 0) rej('data_quality must be measured, calculated or estimated.');
       if (r.estado === 'valida' && c) {
         /* 4. Intervalos e 5. regras de negocio */
         var v = P.validar(c, n, m.ano);
         v.erros.forEach(rej);
         var it = P.item(id, m.ano);
-        if (q === 'estimated' && !String(l.estimation_method || '').trim()) rej('estimation_method é obrigatório quando data_quality é estimated.');
-        if (c.evidencia_obrigatoria && !String(l.evidence_ref || '').trim() && !it.evidencias.length) rej('evidence_ref é obrigatório neste indicador.');
+        if (q === 'estimated' && !String(l.estimation_method || '').trim()) rej('estimation_method is required when data_quality is estimated.');
+        if (c.evidencia_obrigatoria && !String(l.evidence_ref || '').trim() && !it.evidencias.length) rej('evidence_ref is required for this indicator.');
         if (r.estado === 'valida' && v.alertas.length) {
           r.estado = 'alerta';
           r.motivos = v.alertas.slice();
-          if (!String(l.justification || '').trim()) r.motivos.push('Falta justification: terá de a preencher antes de submeter.');
+          if (!String(l.justification || '').trim()) r.motivos.push('justification missing: fill it in before submitting.');
         }
       }
       if (id) vistos[id] = 1;
@@ -699,7 +704,7 @@
     rel.linhas.forEach(function (r) {
       if (r.estado !== 'valida' && r.estado !== 'alerta') return;
       var l = r.dados, it = P.item(r.indicador, m.ano);
-      P.gravarValor(m, r.indicador, l.value, u, 'importação de ficheiro ' + ficheiro);
+      P.gravarValor(m, r.indicador, l.value, u, 'file import ' + ficheiro);
       it.qualidade = QUAL[String(l.data_quality || '').trim() || 'measured'];
       it.metodo = String(l.estimation_method || '').trim();
       if (String(l.justification || '').trim()) it.justificacao = String(l.justification).trim();
@@ -708,7 +713,7 @@
       if (String(l.evidence_ref || '').trim() && !it.evidencias.some(function (e) { return e.ficheiro === String(l.evidence_ref).trim(); })) it.evidencias.push({ id: 'ev' + Date.now() + r.n, ficheiro: String(l.evidence_ref).trim(), por: u.nome, em: agora() });
       n++;
     });
-    ev(m, 'Importação de ' + ficheiro + ': ' + n + ' linha(s) aplicada(s).', u.nome);
+    ev(m, 'Import of ' + ficheiro + ': ' + n + ' row(s) applied.', u.nome);
     guardar();
     return n;
   };
@@ -720,10 +725,10 @@
   };
   P.exemploImportacao = function (m) {
     var l = linhasTemplate(m);
-    l.forEach(function (x) { var c = P.cat(x.indicator_id); x.value = valorDemo(c); if (c.evidencia_obrigatoria) x.evidence_ref = 'DOC-' + m.ano + '-0001'; x.justification = c.regras_coerencia.length ? 'Confirmado com a área.' : ''; });
+    l.forEach(function (x) { var c = P.cat(x.indicator_id); x.value = valorDemo(c); if (c.evidencia_obrigatoria) x.evidence_ref = 'DOC-' + m.ano + '-0001'; x.justification = c.regras_coerencia.length ? 'Confirmed with the area.' : ''; });
     if (l[0]) l[0].unit = 'unidade-errada';
     if (l[1]) l[1].period = String(m.ano - 1);
-    l.push({ milestone_id: m.id, indicator_id: m.indicadores.indexOf('G01') > -1 ? 'A01' : 'G01', indicator_name: 'Indicador de outra milestone', entity: 'Consolidado', period: String(m.ano), value: 10, unit: '€', justification: '', source_system: 'ERP', evidence_ref: '', data_quality: 'measured', estimation_method: '' });
+    l.push({ milestone_id: m.id, indicator_id: m.indicadores.indexOf('G01') > -1 ? 'A01' : 'G01', indicator_name: 'Indicator from another milestone', entity: 'Consolidado', period: String(m.ano), value: 10, unit: '€', justification: '', source_system: 'ERP', evidence_ref: '', data_quality: 'measured', estimation_method: '' });
     if (l[2]) { l[2].data_quality = 'estimated'; l[2].estimation_method = ''; }
     return l;
   };
@@ -734,11 +739,19 @@
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
   };
+  var COLUNAS_EN = {
+    dados: 'data', instrucoes: 'instructions', rastreabilidade: 'traceability', historico_valores: 'value_history', pedidos_auditor: 'auditor_requests', workflow: 'workflow', materialidade: 'materiality',
+    Desempenho: 'Performance', Ambientais: 'Environmental', Sociais: 'Social', indicador: 'indicator', indicador_id: 'indicator_id', nome: 'name', unidade: 'unit', ano_anterior: 'prior_year', limiar_pct: 'threshold_pct', evidencia_obrigatoria: 'required_evidence', regra: 'rule',
+    valor: 'value', unidade_medida: 'unit_of_measure', qualidade: 'quality', metodo: 'method', milestone: 'milestone', submetido_por: 'submitted_by', submetido_em: 'submitted_at', aprovado_por: 'approved_by', aprovado_em: 'approved_at', evidencias: 'evidence', reexpresso: 'restated', na_amostra: 'in_sample', estado: 'status',
+    em: 'at', por: 'by', origem: 'source', motivo: 'reason', pedido: 'request', resposta: 'answer', respondido_por: 'answered_by', ordem: 'order', passo: 'step', tipo: 'type', responsavel: 'owner', concluido_por: 'completed_by', concluido_em: 'completed_at', norma: 'standard', tema: 'topic', avaliacao: 'assessment', justificacao: 'justification', perimetro: 'perimeter'
+  };
   var escreverLivro = function (nome, folhas) {
     var wb = window.XLSX.utils.book_new();
+    var txt = function (k) { return COLUNAS_EN[k] || k; };
     Object.keys(folhas).forEach(function (n) {
-      var ws = Array.isArray(folhas[n]) && folhas[n].length ? window.XLSX.utils.json_to_sheet(folhas[n]) : window.XLSX.utils.aoa_to_sheet([['Sem dados']]);
-      window.XLSX.utils.book_append_sheet(wb, ws, n.slice(0, 31));
+      var linhas = Array.isArray(folhas[n]) ? folhas[n].map(function (l) { var o = {}; Object.keys(l).forEach(function (k) { o[txt(k)] = l[k]; }); return o; }) : [];
+      var ws = linhas.length ? window.XLSX.utils.json_to_sheet(linhas) : window.XLSX.utils.aoa_to_sheet([['No data']]);
+      window.XLSX.utils.book_append_sheet(wb, ws, txt(n).slice(0, 31));
     });
     window.XLSX.writeFile(wb, nome);
     return wb;
@@ -748,7 +761,7 @@
       dados: linhasTemplate(m),
       instrucoes: m.indicadores.map(function (id) {
         var c = P.cat(id), ant = P.valorAnterior(id, m.ano);
-        return { indicador: id, nome: c.nome, unidade: c.unidade_medida, ano_anterior: ant === null || ant === undefined ? '' : ant, limiar_pct: c.limiar_variacao_pct, evidencia_obrigatoria: c.evidencia_obrigatoria ? 'Sim' : 'Não', regra: 'period = ' + m.ano + '; unit igual à indicada; value numérico; justification obrigatória quando há alerta; estimation_method obrigatório quando data_quality é estimated.' };
+        return { indicador: id, nome: c.nome, unidade: c.unidade_medida, ano_anterior: ant === null || ant === undefined ? '' : ant, limiar_pct: c.limiar_variacao_pct, evidencia_obrigatoria: c.evidencia_obrigatoria ? 'Yes' : 'No', regra: 'period = ' + m.ano + '; unit as stated; numeric value; justification required when there is an alert; estimation_method required when data_quality is estimated.' };
       })
     };
   };
@@ -762,12 +775,12 @@
   P.jsonSchema = function (m) {
     var uni = m.indicadores.map(function (id) { return { const: id, title: P.cat(id).nome }; });
     return {
-      $schema: 'https://json-schema.org/draft/2020-12/schema', title: 'Submissão da milestone ' + m.id, type: 'object', required: ['milestone_id', 'records'],
+      $schema: 'https://json-schema.org/draft/2020-12/schema', title: 'Milestone submission ' + m.id, type: 'object', required: ['milestone_id', 'records'],
       properties: {
         milestone_id: { const: m.id }, submitted_by: { type: 'string' }, source_system: { type: 'string' },
         records: { type: 'array', minItems: 1, items: { type: 'object', required: ['indicator_id', 'period', 'value', 'unit'], properties: {
           indicator_id: { oneOf: uni }, indicator_name: { type: 'string' }, entity: { type: 'string', default: 'Consolidado' }, period: { const: String(m.ano) }, value: { type: 'number' },
-          unit: { type: 'string', description: 'Tem de ser igual à unidade do indicador.' }, justification: { type: 'string' }, source_system: { type: 'string' }, evidence_ref: { type: 'string' },
+          unit: { type: 'string', description: 'Must match the indicator unit.' }, justification: { type: 'string' }, source_system: { type: 'string' }, evidence_ref: { type: 'string' },
           data_quality: { enum: ['measured', 'calculated', 'estimated'], default: 'measured' }, estimation_method: { type: 'string' }
         } } }
       }
@@ -777,7 +790,7 @@
   /* --- Exportacoes (secao 18) -------------------------------------------- */
   var submissao = function (m) { var p = m.passos.filter(function (x) { return x.tipo === 'recolha'; })[0]; return p || {}; };
   var aprovacao = function (m) { var a = m.passos.filter(function (x) { return x.tipo === 'aprovacao'; }); return a[a.length - 1] || {}; };
-  var QUALIDADE_TXT = { medido: 'Medido', calculado: 'Calculado', estimado: 'Estimado' };
+  var QUALIDADE_TXT = { medido: 'Measured', calculado: 'Calculated', estimado: 'Estimated' };
   P.QUALIDADE_TXT = QUALIDADE_TXT;
   P.rastreabilidade = function (mFiltro) {
     var r = [];
@@ -787,7 +800,7 @@
         var c = P.cat(id), it = P.item(id, m.ano), s = submissao(m), a = aprovacao(m);
         r.push({ indicador_id: id, indicador: c.nome, valor: it.valor, unidade_medida: c.unidade_medida, qualidade: QUALIDADE_TXT[it.qualidade], metodo: it.metodo, esrs: c.esrs_requisito, gri: c.gri, unidade: m.unidade, milestone: m.nome,
           submetido_por: s.concluido_por || '', submetido_em: s.concluido_em ? P.fmtDataHora(s.concluido_em) : '', aprovado_por: a.concluido_por || '', aprovado_em: a.concluido_em ? P.fmtDataHora(a.concluido_em) : '',
-          evidencias: it.evidencias.map(function (e) { return e.ficheiro; }).join(', '), reexpresso: it.reexpresso ? 'Sim' : 'Não', na_amostra: S.amostra.indexOf(id) > -1 ? 'Sim' : 'Não', estado: P.estadoIndicador(m, id).txt });
+          evidencias: it.evidencias.map(function (e) { return e.ficheiro; }).join(', '), reexpresso: it.reexpresso ? 'Yes' : 'No', na_amostra: S.amostra.indexOf(id) > -1 ? 'Yes' : 'No', estado: P.estadoIndicador(m, id).txt });
       });
     });
     return r;
@@ -812,7 +825,7 @@
         var m = P.msDoIndicador(c.id, ano), it = P.item(c.id, ano), apr = m && P.concluida(m);
         var o = { indicador: c.nome, unidade: c.unidade_medida, perimetro: c.perimetro };
         o[String(ano)] = apr ? it.valor : ''; o[String(ano - 1)] = P.valorAnterior(c.id, ano);
-        o.estado = m ? P.estadoIndicador(m, c.id).txt : 'Por recolher'; o.qualidade = apr ? QUALIDADE_TXT[it.qualidade] : ''; o.esrs = c.esrs_requisito; o.gri = c.gri;
+        o.estado = m ? P.estadoIndicador(m, c.id).txt : 'To collect'; o.qualidade = apr ? QUALIDADE_TXT[it.qualidade] : ''; o.esrs = c.esrs_requisito; o.gri = c.gri;
         return o;
       });
     });
@@ -830,13 +843,13 @@
 
   /* --- Novo ciclo (secoes 5.1 e 17) -------------------------------------- */
   P.abrirCiclo = function (u) {
-    if (!P.gereTudo(u)) return { erro: 'Sem permissão.' };
+    if (!P.gereTudo(u)) return { erro: 'No permission.' };
     var antigo = S.ciclo.ano, ano = antigo + 1, sufixo = '_' + ano;
     var offset = { Mensal: 30, Trimestral: 60, Anual: 90, 'Novos dados ESRS': 120 };
     P.msCiclo(antigo).forEach(function (a) {
       var id = a.id.split('_')[0] + sufixo;
-      var m = { id: id, nome: nomeMs(a.periodicidade, ano, a.unidade), ano: ano, unidade: a.unidade, periodicidade: a.periodicidade, prazo: diasDe(offset[a.periodicidade] || 90), indicadores: a.indicadores.slice(), passos: passosDe(S.wfbase), passo_atual: 0, devolvida: false, workflow_ajustado: false, documentos_gerais: [], comentarios: [], eventos: [] };
-      ev(m, 'Milestone criada no ciclo ' + ano + '.', u.nome);
+      var m = { id: id, nome: nomeMs(a.periodicidade, ano, a.unidade), ano: ano, empresa: a.empresa, departamentos: a.departamentos.slice(), unidade: a.unidade, periodicidade: a.periodicidade, prazo: diasDe(offset[a.periodicidade] || 90), indicadores: a.indicadores.slice(), passos: passosDe(S.wfbase), passo_atual: 0, devolvida: false, workflow_ajustado: false, documentos_gerais: [], comentarios: [], eventos: [] };
+      ev(m, 'Milestone created in the ' + ano + ' cycle.', u.nome);
       S.ms.push(m);
       m.indicadores.forEach(function (i) { S.items[ano + ':' + i] = novoItem(i, ano, id, P.cat(i).tipo); });
     });
@@ -846,33 +859,87 @@
     return { ok: true, ano: ano, criadas: P.msCiclo(ano).length };
   };
 
+  /* --- Empresas e departamentos --------------------------------------------- */
+  var erroNome = function (nome, lista, proprio) {
+    if (!nome) return 'Enter a name.';
+    return lista.some(function (x) { return x !== proprio && x.nome === nome; }) ? 'That name already exists.' : null;
+  };
+  P.criarEmpresa = function (nome) {
+    var e = erroNome(nome, S.ent); if (e) return { erro: e };
+    S.ent.push({ id: 'ent' + Date.now(), nome: nome, perimetro_grupo: true, perimetro_maioritario: false });
+    guardar(); return { ok: true };
+  };
+  P.renomearEmpresa = function (x, nome) {
+    var e = erroNome(nome, S.ent, x); if (e) return { erro: e };
+    var antigo = x.nome;
+    x.nome = nome;
+    S.ms.forEach(function (m) { if (m.empresa === antigo) m.empresa = nome; });
+    S.docs.forEach(function (d) { if (d.entidade === antigo) d.entidade = nome; });
+    guardar(); return { ok: true };
+  };
+  P.apagarEmpresa = function (x) {
+    var usos = S.ms.filter(function (m) { return m.empresa === x.nome; }).length + S.docs.filter(function (d) { return d.entidade === x.nome; }).length;
+    if (usos) return { erro: 'This company is in use by ' + usos + ' milestones or invoices.' };
+    S.ent.splice(S.ent.indexOf(x), 1);
+    guardar(); return { ok: true };
+  };
+  var usosDepartamento = function (nome) {
+    return S.users.filter(function (u) { return u.unidade === nome; }).length + S.cat.filter(function (c) { return c.unidade_negocio === nome; }).length +
+      S.ms.filter(function (m) { return m.unidade === nome || m.departamentos.indexOf(nome) > -1 || m.passos.some(function (p) { return p.responsavel === 'area:' + nome; }); }).length;
+  };
+  P.usosDepartamento = usosDepartamento;
+  P.criarDepartamento = function (nome) {
+    var e = erroNome(nome, S.deps); if (e) return { erro: e };
+    S.deps.push({ id: 'dep' + Date.now(), nome: nome });
+    guardar(); return { ok: true };
+  };
+  P.renomearDepartamento = function (x, nome) {
+    var e = erroNome(nome, S.deps, x); if (e) return { erro: e };
+    var antigo = x.nome;
+    x.nome = nome;
+    S.users.forEach(function (u) { if (u.unidade === antigo) u.unidade = nome; });
+    S.cat.forEach(function (c) { if (c.unidade_negocio === antigo) c.unidade_negocio = nome; });
+    S.ms.forEach(function (m) {
+      if (m.unidade === antigo) m.unidade = nome;
+      m.departamentos = m.departamentos.map(function (d) { return d === antigo ? nome : d; });
+      m.passos.forEach(function (p) { if (p.responsavel === 'area:' + antigo) p.responsavel = 'area:' + nome; });
+    });
+    guardar(); return { ok: true };
+  };
+  P.apagarDepartamento = function (x) {
+    var usos = usosDepartamento(x.nome);
+    if (usos) return { erro: 'This department is in use by ' + usos + ' users, indicators or milestones.' };
+    S.deps.splice(S.deps.indexOf(x), 1);
+    guardar(); return { ok: true };
+  };
+
   /* --- Notificacoes (secao 14.13) ---------------------------------------- */
   P.notificacoes = function (u) {
     var n = [];
     if (!u) return n;
     var add = function (cls, texto, sub, rota) { n.push({ cls: cls, texto: texto, sub: sub, rota: rota }); };
     if (u.perfil === 'ext') {
-      S.ext.filter(function (x) { return x.entidade_externa === u.nome && x.estado === 'pendente'; }).forEach(function (x) { add('warn', 'Pedido de dados: ' + P.cat(x.indicador_id).nome, 'Prazo ' + P.fmtData(x.prazo), 'Pedidos'); });
+      S.ext.filter(function (x) { return x.entidade_externa === u.nome && x.estado === 'pendente'; }).forEach(function (x) { add('warn', 'Data request: ' + P.cat(x.indicador_id).nome, 'Due ' + P.fmtData(x.prazo), 'Pedidos'); });
       return n;
     }
     P.msCiclo().forEach(function (m) {
       var est = P.estadoMs(m), r = 'Milestone/' + m.id;
       var minha = u.perfil === 'resp' && u.unidade === m.unidade;
       if (minha || P.gereTudo(u)) {
-        if (est.cod === 'devolvida') add('err', m.nome + ' foi devolvida', 'Corrigir e submeter de novo', r);
-        if (est.cod === 'atraso') add('err', m.nome + ' está em atraso', 'Prazo ' + P.fmtData(m.prazo), r);
-        if (est.cod === 'recolha' && P.diasAte(m.prazo) <= 5) add('warn', m.nome + ' com prazo próximo', 'Prazo ' + P.fmtData(m.prazo), r);
+        if (est.cod === 'devolvida') add('err', m.nome + ' was returned', 'Correct and resubmit', r);
+        if (est.cod === 'atraso') add('err', m.nome + ' is overdue', 'Due ' + P.fmtData(m.prazo), r);
+        if (est.cod === 'recolha' && P.diasAte(m.prazo) <= 5) add('warn', m.nome + ' due soon', 'Due ' + P.fmtData(m.prazo), r);
       }
-      if (P.podeAgir(m, u) && ['revisao', 'parecer', 'aprovacao'].indexOf(est.cod) > -1) add('info', m.nome + ' à espera de decisão', P.passoAtual(m).nome, r);
+      if (P.podeAgir(m, u) && ['revisao', 'parecer', 'aprovacao'].indexOf(est.cod) > -1) add('info', m.nome + ' awaiting decision', P.passoAtual(m).nome, r);
     });
     S.aud.forEach(function (a) {
       var m = P.msDoIndicador(a.indicador_id), r = m ? 'Milestone/' + m.id + '?sep=auditoria' : 'Auditoria';
-      if (a.estado === 'aberto' && P.podeResponderAuditor(a, u)) add('warn', 'Pedido do auditor: ' + P.cat(a.indicador_id).nome, 'Em aberto', r);
-      if (a.estado === 'respondido' && u.perfil === 'auditor') add('ok', 'Pedido respondido: ' + P.cat(a.indicador_id).nome, 'Pode dar por resolvido', r);
+      if (a.estado === 'aberto' && P.podeResponderAuditor(a, u)) add('warn', 'Auditor request: ' + P.cat(a.indicador_id).nome, 'Open', r);
+      if (a.estado === 'respondido' && u.perfil === 'auditor') add('ok', 'Request answered: ' + P.cat(a.indicador_id).nome, 'You can resolve it', r);
     });
     S.ext.filter(function (x) { return x.estado === 'recebido'; }).forEach(function (x) {
       var m = P.ms(x.milestone_id);
-      if (m && P.acompanha(m, u)) add('ok', 'Valor recebido de ' + x.entidade_externa, P.cat(x.indicador_id).nome, 'Milestone/' + m.id + '?sep=externos');
+      if (m && P.acompanha(m, u)) add('ok', 'Value received from ' + x.entidade_externa, P.cat(x.indicador_id).nome, 'Milestone/' + m.id + '?sep=externos');
     });
     return n;
   };
@@ -891,10 +958,10 @@
     if (f) f(mc);
   };
   P.validarMarca = function (o) {
-    if (!o || typeof o !== 'object' || !o.cores) return 'O ficheiro não tem as cores da marca.';
+    if (!o || typeof o !== 'object' || !o.cores) return 'The file does not have the brand colours.';
     var cores = ['primary', 'secondary', 'accent', 'bg', 'text'];
-    for (var i = 0; i < cores.length; i++) if (!HEX.test(o.cores[cores[i]] || '')) return 'A cor ' + cores[i] + ' não é válida.';
-    if (!P.urlLogoValida(o.logotipo)) return 'O link do logótipo tem de começar por http:// ou https://.';
+    for (var i = 0; i < cores.length; i++) if (!HEX.test(o.cores[cores[i]] || '')) return 'Colour ' + cores[i] + ' is not valid.';
+    if (!P.urlLogoValida(o.logotipo)) return 'The logo link must start with http:// or https://.';
     return null;
   };
   P.contraste = function (a, b) {

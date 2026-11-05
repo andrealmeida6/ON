@@ -23,14 +23,17 @@
   var deToken = function (d) { return { token: d.access_token, renovar: d.refresh_token, expira: Date.now() + d.expires_in * 1000, uid: d.user.id }; };
   var pedirToken = function (tipo, corpo) {
     return fetch(CFG.url + '/auth/v1/token?grant_type=' + tipo, { method: 'POST', headers: { apikey: CFG.chave, 'Content-Type': 'application/json' }, body: JSON.stringify(corpo) })
-      .then(function (r) { return r.json().then(function (d) { if (!r.ok) { var e = new Error(d.msg || d.error_description || 'Falha na autenticação.'); e.codigo = d.error_code || ''; throw e; } return d; }); });
+      .then(function (r) { return r.json().then(function (d) { if (!r.ok) { var e = new Error(d.msg || d.error_description || 'Authentication failed.'); e.codigo = d.error_code || ''; throw e; } return d; }); });
   };
   var tokenValido = function () {
     if (!sessao) return Promise.resolve(null);
     if (sessao.expira - Date.now() > 60000) return Promise.resolve(sessao.token);
     return pedirToken('refresh_token', { refresh_token: sessao.renovar }).then(function (d) { gravarSessao(deToken(d)); return sessao.token; });
   };
-  B.entrar = function (email, senha) { return pedirToken('password', { email: email, password: senha }).then(function (d) { gravarSessao(deToken(d)); }); };
+  B.entrar = function (conta, senha) {
+    var email = conta.indexOf('@') > -1 ? conta : conta + '@' + (CFG.dominio || '');
+    return pedirToken('password', { email: email, password: senha }).then(function (d) { gravarSessao(deToken(d)); });
+  };
   B.sair = function () {
     var s = sessao;
     gravarSessao(null);
@@ -51,7 +54,7 @@
         return new Promise(function (ok) { setTimeout(ok, 500); }).then(chamar);
       }).then(function (r) {
         if (r.ok) return r.status === 204 ? null : r.text().then(function (x) { return x ? JSON.parse(x) : null; });
-        return r.json().catch(function () { return {}; }).then(function (d) { throw new Error(d.message || 'Erro ' + r.status); });
+        return r.json().catch(function () { return {}; }).then(function (d) { throw new Error(d.message || 'Error ' + r.status); });
       });
     });
   };
@@ -71,7 +74,7 @@
      pk: colunas da chave. So acrescentar: tabelas de registo, nunca se alteram. */
   var TABELAS = [
     { t: 'esg_ciclos', pk: ['ano'] }, { t: 'esg_utilizadores', pk: ['login'] }, { t: 'esg_indicadores', pk: ['id'] }, { t: 'esg_workflow_base', pk: ['ordem'] },
-    { t: 'esg_entidades', pk: ['nome'] }, { t: 'esg_janelas', pk: ['id'] }, { t: 'esg_materialidade', pk: ['norma'] }, { t: 'esg_areas', pk: ['codigo'] }, { t: 'esg_marca', pk: ['id'] },
+    { t: 'esg_entidades', pk: ['id'] }, { t: 'esg_departamentos', pk: ['id'] }, { t: 'esg_janelas', pk: ['id'] }, { t: 'esg_materialidade', pk: ['norma'] }, { t: 'esg_areas', pk: ['codigo'] }, { t: 'esg_marca', pk: ['id'] },
     { t: 'esg_metas', pk: ['indicador_id'] }, { t: 'esg_amostra', pk: ['ano', 'indicador_id'] }, { t: 'esg_documentos', pk: ['id'] }, { t: 'esg_milestones', pk: ['id'] },
     { t: 'esg_milestone_indicadores', pk: ['milestone_id', 'indicador_id'] }, { t: 'esg_passos_workflow', pk: ['id'] }, { t: 'esg_valores', pk: ['indicador_id', 'ano'] },
     { t: 'esg_valor_versoes', so: true }, { t: 'esg_evidencias', pk: ['id'] }, { t: 'esg_pedidos_externos', pk: ['id'] }, { t: 'esg_pedidos_auditor', pk: ['id'] },
@@ -92,7 +95,8 @@
       por('esg_indicadores', c.id, { id: c.id, nome: c.nome, unidade_medida: c.unidade_medida, tema: c.tema, quadro: c.quadro, unidade_negocio: c.unidade_negocio, tipo: c.tipo, formula: nulo(c.formula), periodicidade: c.periodicidade, perimetro: c.perimetro, limiar_variacao_pct: c.limiar_variacao_pct, evidencia_obrigatoria: !!c.evidencia_obrigatoria, regras_coerencia: c.regras_coerencia || [], esrs: nulo(c.esrs), esrs_requisito: nulo(c.esrs_requisito), gri: nulo(c.gri), utilizado_por: c.utilizado_por || [], novo_esrs: !!c.novo_esrs, casas_decimais: c.casas_decimais, valor_base_anterior: c.ano_anterior === undefined ? null : c.ano_anterior });
     });
     S.wfbase.forEach(function (p, i) { por('esg_workflow_base', i + 1, { ordem: i + 1, nome: p.nome, tipo: p.tipo, responsavel: p.responsavel }); });
-    S.ent.forEach(function (x) { por('esg_entidades', x.nome, { nome: x.nome, perimetro_grupo: !!x.perimetro_grupo, perimetro_maioritario: !!x.perimetro_maioritario }); });
+    S.ent.forEach(function (x) { por('esg_entidades', x.id, { id: x.id, nome: x.nome, perimetro_grupo: !!x.perimetro_grupo, perimetro_maioritario: !!x.perimetro_maioritario }); });
+    S.deps.forEach(function (x) { por('esg_departamentos', x.id, { id: x.id, nome: x.nome }); });
     S.janelas.forEach(function (j, i) { por('esg_janelas', i + 1, { id: i + 1, nome: j.nome, tema: j.tema, meses: j.meses, dia_inicio: j.dia_inicio, dia_fim: j.dia_fim }); });
     S.mat.forEach(function (x) { por('esg_materialidade', x.norma, { norma: x.norma, tema: x.tema, avaliacao: x.avaliacao, justificacao: nulo(x.justificacao) }); });
     S.areas.forEach(function (a) { por('esg_areas', a.codigo, { codigo: a.codigo, nome: a.nome, uso: nulo(a.uso) }); });
@@ -103,7 +107,7 @@
     S.docs.forEach(function (x) { por('esg_documentos', x.id, { id: x.id, tipo: x.tipo, fornecedor: x.fornecedor, periodo: x.periodo, instalacao: x.instalacao, entidade: nulo(x.entidade), consumo: x.consumo, valor_sem_iva: x.valor_sem_iva, iva: x.iva, percentagem_renovavel: x.percentagem_renovavel, centro_custo: nulo(x.centro_custo), leitura_telemetria: x.leitura_telemetria, estado: x.estado }); });
 
     S.ms.forEach(function (m) {
-      por('esg_milestones', m.id, { id: m.id, nome: m.nome, ano: m.ano, unidade: m.unidade, periodicidade: m.periodicidade, prazo: m.prazo, passo_atual: m.passo_atual, devolvida: !!m.devolvida, workflow_ajustado: !!m.workflow_ajustado, documentos_gerais: m.documentos_gerais || [] });
+      por('esg_milestones', m.id, { id: m.id, nome: m.nome, ano: m.ano, empresa: m.empresa, departamentos: m.departamentos || [], unidade: m.unidade, periodicidade: m.periodicidade, prazo: m.prazo, passo_atual: m.passo_atual, devolvida: !!m.devolvida, workflow_ajustado: !!m.workflow_ajustado, documentos_gerais: m.documentos_gerais || [] });
       m.indicadores.forEach(function (id, i) { por('esg_milestone_indicadores', m.id + '|' + id, { milestone_id: m.id, indicador_id: id, ordem: i }); });
       m.passos.forEach(function (p, i) { por('esg_passos_workflow', p.id, { id: p.id, milestone_id: m.id, ordem: i, nome: p.nome, tipo: p.tipo, responsavel: p.responsavel, concluido_em: p.concluido_em || null, concluido_por: p.concluido_por || null }); });
       m.comentarios.forEach(function (x, i) { por('esg_comentarios', m.id + '|' + i, { milestone_id: m.id, autor: x.autor, texto: x.texto, em: x.em, sistema: !!x.sistema }); });
@@ -132,7 +136,8 @@
       return o;
     });
     S.wfbase = d.esg_workflow_base.map(function (p) { return { nome: p.nome, tipo: p.tipo, responsavel: p.responsavel }; });
-    S.ent = d.esg_entidades.map(function (x) { return { nome: x.nome, perimetro_grupo: x.perimetro_grupo, perimetro_maioritario: x.perimetro_maioritario }; });
+    S.ent = d.esg_entidades.map(function (x) { return { id: x.id, nome: x.nome, perimetro_grupo: x.perimetro_grupo, perimetro_maioritario: x.perimetro_maioritario }; });
+    S.deps = d.esg_departamentos.map(function (x) { return { id: x.id, nome: x.nome }; });
     S.janelas = d.esg_janelas.map(function (j) { return { nome: j.nome, tema: j.tema, meses: j.meses, dia_inicio: j.dia_inicio, dia_fim: j.dia_fim }; });
     S.mat = d.esg_materialidade.map(function (x) { return { norma: x.norma, tema: x.tema, avaliacao: x.avaliacao, justificacao: x.justificacao || '' }; });
     S.areas = d.esg_areas.map(function (a) { return { codigo: a.codigo, nome: a.nome, uso: a.uso || '' }; });
@@ -144,7 +149,7 @@
     var doMs = function (l, id) { return l.filter(function (x) { return x.milestone_id === id; }); };
     S.ms = d.esg_milestones.map(function (m) {
       return {
-        id: m.id, nome: m.nome, ano: m.ano, unidade: m.unidade, periodicidade: m.periodicidade, prazo: m.prazo, passo_atual: m.passo_atual, devolvida: m.devolvida, workflow_ajustado: m.workflow_ajustado, documentos_gerais: m.documentos_gerais || [],
+        id: m.id, nome: m.nome, ano: m.ano, empresa: m.empresa, departamentos: m.departamentos || [], unidade: m.unidade, periodicidade: m.periodicidade, prazo: m.prazo, passo_atual: m.passo_atual, devolvida: m.devolvida, workflow_ajustado: m.workflow_ajustado, documentos_gerais: m.documentos_gerais || [],
         indicadores: doMs(d.esg_milestone_indicadores, m.id).map(function (x) { return x.indicador_id; }),
         passos: doMs(d.esg_passos_workflow, m.id).map(function (p) { return { id: p.id, nome: p.nome, tipo: p.tipo, responsavel: p.responsavel, concluido_em: p.concluido_em, concluido_por: p.concluido_por }; }),
         comentarios: doMs(d.esg_comentarios, m.id).map(function (x) { var o = { autor: x.autor, texto: x.texto, em: x.em }; if (x.sistema) o.sistema = true; return o; }),
@@ -169,7 +174,7 @@
   };
 
   /* --- Carregar ---------------------------------------------------------- */
-  var ORDEM = { esg_ciclos: 'ano', esg_janelas: 'id', esg_workflow_base: 'ordem', esg_milestones: 'id', esg_milestone_indicadores: 'milestone_id,ordem', esg_passos_workflow: 'milestone_id,ordem', esg_valor_versoes: 'id', esg_comentarios: 'id', esg_eventos: 'id', esg_indicadores: 'id', esg_utilizadores: 'login', esg_documentos: 'id.desc', esg_pedidos_auditor: 'em', esg_evidencias: 'carregado_em' };
+  var ORDEM = { esg_entidades: 'nome', esg_departamentos: 'nome', esg_ciclos: 'ano', esg_janelas: 'id', esg_workflow_base: 'ordem', esg_milestones: 'id', esg_milestone_indicadores: 'milestone_id,ordem', esg_passos_workflow: 'milestone_id,ordem', esg_valor_versoes: 'id', esg_comentarios: 'id', esg_eventos: 'id', esg_indicadores: 'id', esg_utilizadores: 'login', esg_documentos: 'id.desc', esg_pedidos_auditor: 'em', esg_evidencias: 'carregado_em' };
   var snapshot = {};
   B.carregarMarca = function () {
     return pedir('esg_marca?select=*').then(function (l) { return marcaDe(l[0]); }).catch(function () { return null; });
@@ -217,7 +222,7 @@
     }, Promise.resolve());
   };
   /* Com RLS, uma alteracao recusada responde com sucesso e zero linhas: tem de contar como erro */
-  var confirmar = function (r) { if (!r || !r.length) throw new Error('Sem permissão para esta alteração.'); };
+  var confirmar = function (r) { if (!r || !r.length) throw new Error('No permission for this change.'); };
   var aplicar = function (a) {
     var p = Promise.resolve();
     a.apagar.forEach(function (x) { p = p.then(function () { return pedir(x.d.t + '?' + filtro(x.d, x.chave), { method: 'DELETE', headers: { Prefer: 'return=representation' } }).then(confirmar); }); });

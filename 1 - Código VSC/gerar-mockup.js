@@ -4,7 +4,7 @@ const fs = require('fs'), path = require('path');
 const cod = __dirname, raiz = path.dirname(cod);
 const ler = (...p) => fs.readFileSync(path.join(cod, ...p), 'utf8');
 const relWeb = encodeURI('../' + path.basename(cod) + '/web-files/');
-const ORDEM = ['Entrada', 'Inicio', 'Pendentes', 'Milestones', 'Milestone', 'Consolidado', 'Documentos', 'Relatorio', 'Historico', 'Auditoria', 'Backoffice', 'Pedidos'];
+const ORDEM = ['Entrada', 'Inicio', 'Milestones', 'Milestone', 'Consolidado', 'Documentos', 'Relatorio', 'Historico', 'Auditoria', 'Backoffice', 'Pedidos'];
 
 const resolver = (html) => html
   .replace(/\{\{\s*snippets\['([^']+)'\]\s*\}\}/g, (_, nome) => {
@@ -26,13 +26,13 @@ let html = resolver(ler('web-templates', 'layout-portal.html').replace(/\{%\s*bl
 const montar = (web, config) => '<!-- Gerado por gerar-mockup.js. Nao editar: alterar as web pages, snippets ou templates. -->\n' + html
   .replace(/(href|src)="\/(global\.css|[\w.-]+\.js)"/g, (_, a, f) => a + '="' + web + f + '"')
   .replace('<script src="' + web + 'xlsx.full.min.js"', '<script>' + config + '</script>\n<script src="' + web + 'xlsx.full.min.js"');
-const MODO_MOCKUP = 'window.PORTAL_MODO = "mockup";';
+const MODO_MOCKUP = 'window.PORTAL_MODO = "hash";';
 /* A chave publicavel foi feita para estar no navegador: quem protege os dados e o RLS */
-const BACKEND = { url: 'https://yujhfscnnngaivwwunom.supabase.co', chave: 'sb_publishable_wU6S2mgSbmnTzz4hQMKZ6g_jTj6MMgo' };
+const BACKEND = { url: 'https://yujhfscnnngaivwwunom.supabase.co', chave: 'sb_publishable_wU6S2mgSbmnTzz4hQMKZ6g_jTj6MMgo', dominio: 'portal-esg.invalid' };
 
 /* Mockup: sem palavra-passe e com os dados no navegador */
 const mockup = montar(relWeb, MODO_MOCKUP);
 fs.writeFileSync(path.join(raiz, fs.readdirSync(raiz).find((n) => n.startsWith('3 - ')), 'mockup-final.html'), mockup, 'utf8');
-/* Plataforma online (GitHub Pages): com login e os dados no Supabase */
-fs.writeFileSync(path.join(raiz, 'index.html'), montar(encodeURI(path.basename(cod) + '/web-files/'), MODO_MOCKUP + ' window.PORTAL_BACKEND = ' + JSON.stringify(BACKEND) + ';'), 'utf8');
+/* Plataforma online (GitHub Pages): com login e os dados no Supabase. Sem os comentarios de origem dos blocos, que so servem o mapeamento para Power Pages. */
+fs.writeFileSync(path.join(raiz, 'index.html'), montar(encodeURI(path.basename(cod) + '/web-files/'), MODO_MOCKUP + ' window.PORTAL_BACKEND = ' + JSON.stringify(BACKEND) + ';').replace(/<!--[\s\S]*?-->\s*/g, ''), 'utf8');
 console.log('mockup-final.html e index.html: ' + ORDEM.length + ' web pages, ' + (mockup.match(/<!-- snippet:/g) || []).length + ' snippets, ' + (mockup.match(/<!-- template:/g) || []).length + ' templates, ' + mockup.length + ' caracteres');
