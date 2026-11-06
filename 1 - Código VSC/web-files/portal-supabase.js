@@ -78,7 +78,10 @@
     { t: 'esg_metas', pk: ['indicador_id'] }, { t: 'esg_amostra', pk: ['ano', 'indicador_id'] }, { t: 'esg_documentos', pk: ['id'] }, { t: 'esg_milestones', pk: ['id'] },
     { t: 'esg_milestone_indicadores', pk: ['milestone_id', 'indicador_id'] }, { t: 'esg_passos_workflow', pk: ['id'] }, { t: 'esg_valores', pk: ['indicador_id', 'ano'] },
     { t: 'esg_valor_versoes', so: true }, { t: 'esg_evidencias', pk: ['id'] }, { t: 'esg_pedidos_externos', pk: ['id'] }, { t: 'esg_pedidos_auditor', pk: ['id'] },
-    { t: 'esg_comentarios', so: true }, { t: 'esg_eventos', so: true }
+    { t: 'esg_atribuicao', pk: ['indicador_id'] }, { t: 'esg_regras_entrada', pk: ['entidade_id', 'indicador_id'] }, { t: 'esg_fatores', pk: ['id'] }, { t: 'esg_ligacoes', pk: ['id'] },
+    { t: 'esg_kpi_master', pk: ['indicador_id'] }, { t: 'esg_dp_decisoes', pk: ['datapoint_id'] }, { t: 'esg_glossario_empresa', pk: ['termo_n'] },
+    { t: 'esg_report_valores', pk: ['linha_id'] }, { t: 'esg_report_documento', pk: ['id'] }, { t: 'esg_fontes_puxadas', pk: ['milestone_id'] },
+    { t: 'esg_comentarios', so: true }, { t: 'esg_eventos', so: true }, { t: 'esg_registo_config', so: true }, { t: 'esg_selos', so: true }
   ];
   var nulo = function (v) { return v === '' || v === undefined ? null : v; };
 
@@ -91,11 +94,13 @@
     (S.ciclo.fechados || []).forEach(function (a) { por('esg_ciclos', a, { ano: a, estado: 'fechado' }); });
     por('esg_ciclos', S.ciclo.ano, { ano: S.ciclo.ano, estado: 'aberto', data_abertura: S.ciclo.data_abertura });
     S.users.forEach(function (u) { por('esg_utilizadores', u.login, { login: u.login, nome: u.nome, perfil: u.perfil, unidade: nulo(u.unidade) }); });
+    var esrs = function (id) { return window.Portal && window.Portal.esrsDe ? window.Portal.esrsDe(id) : { rel: 'especifico', dps: [] }; };
     S.cat.forEach(function (c) {
-      por('esg_indicadores', c.id, { id: c.id, nome: c.nome, unidade_medida: c.unidade_medida, tema: c.tema, quadro: c.quadro, unidade_negocio: c.unidade_negocio, tipo: c.tipo, formula: nulo(c.formula), periodicidade: c.periodicidade, perimetro: c.perimetro, limiar_variacao_pct: c.limiar_variacao_pct, evidencia_obrigatoria: !!c.evidencia_obrigatoria, regras_coerencia: c.regras_coerencia || [], esrs: nulo(c.esrs), esrs_requisito: nulo(c.esrs_requisito), gri: nulo(c.gri), utilizado_por: c.utilizado_por || [], novo_esrs: !!c.novo_esrs, casas_decimais: c.casas_decimais, valor_base_anterior: c.ano_anterior === undefined ? null : c.ano_anterior });
+      var k = esrs(c.id);
+      por('esg_indicadores', c.id, { id: c.id, nome: c.nome, unidade_medida: c.unidade_medida, tema: c.tema, quadro: c.quadro, unidade_negocio: c.unidade_negocio, tipo: c.tipo, formula: nulo(c.formula), periodicidade: c.periodicidade, perimetro: c.perimetro, limiar_variacao_pct: c.limiar_variacao_pct, evidencia_obrigatoria: !!c.evidencia_obrigatoria, regras_coerencia: c.regras_coerencia || [], esrs: nulo(c.esrs), esrs_requisito: nulo(c.esrs_requisito), gri: nulo(c.gri), utilizado_por: c.utilizado_por || [], novo_esrs: !!c.novo_esrs, casas_decimais: c.casas_decimais, valor_base_anterior: c.ano_anterior === undefined ? null : c.ano_anterior, descricao: nulo(k.desc), subtema: nulo(k.sub), agregacao: nulo(k.agreg), esrs_ligacao: k.rel, esrs_datapoints: k.dps || [], esrs_nota: nulo(k.nota) });
     });
     S.wfbase.forEach(function (p, i) { por('esg_workflow_base', i + 1, { ordem: i + 1, nome: p.nome, tipo: p.tipo, responsavel: p.responsavel }); });
-    S.ent.forEach(function (x) { por('esg_entidades', x.id, { id: x.id, nome: x.nome, perimetro_grupo: !!x.perimetro_grupo, perimetro_maioritario: !!x.perimetro_maioritario }); });
+    S.ent.forEach(function (x) { por('esg_entidades', x.id, { id: x.id, nome: x.nome, perimetro_grupo: !!x.perimetro_grupo, perimetro_maioritario: !!x.perimetro_maioritario, pais: nulo(x.pais), detencao: x.detencao === undefined ? null : x.detencao, metodo: nulo(x.metodo), instalacoes: x.instalacoes === undefined ? null : x.instalacoes, nace: nulo(x.nace), nipc: nulo(x.nipc), moeda: nulo(x.moeda) }); });
     S.deps.forEach(function (x) { por('esg_departamentos', x.id, { id: x.id, nome: x.nome }); });
     S.janelas.forEach(function (j, i) { por('esg_janelas', i + 1, { id: i + 1, nome: j.nome, tema: j.tema, meses: j.meses, dia_inicio: j.dia_inicio, dia_fim: j.dia_fim }); });
     S.mat.forEach(function (x) { por('esg_materialidade', x.norma, { norma: x.norma, tema: x.tema, avaliacao: x.avaliacao, justificacao: nulo(x.justificacao) }); });
@@ -120,6 +125,18 @@
       it.evidencias.forEach(function (x) { por('esg_evidencias', x.id, { id: x.id, ficheiro: x.ficheiro, indicador_id: it.id, ano: it.ano, milestone_id: it.milestone_id, carregado_por: x.por, carregado_em: x.em }); });
     });
     S.ext.forEach(function (x) { por('esg_pedidos_externos', x.id, { id: x.id, indicador_id: x.indicador_id, milestone_id: x.milestone_id, entidade_externa: x.entidade_externa, descricao: x.descricao, prazo: x.prazo, estado: x.estado, valor: x.valor, evidencia: nulo(x.evidencia), respondido_em: x.respondido_em || null }); });
+    Object.keys(S.atrib || {}).forEach(function (id) { var a = S.atrib[id]; por('esg_atribuicao', id, { indicador_id: id, submete: nulo(a.submete), reve: nulo(a.reve), valida: nulo(a.valida) }); });
+    Object.keys(S.regrasEnt || {}).forEach(function (ent) { Object.keys(S.regrasEnt[ent]).forEach(function (id) { var r = S.regrasEnt[ent][id]; por('esg_regras_entrada', ent + '|' + id, { entidade_id: ent, indicador_id: id, multi: !!r.multi, por: nulo(r.por), agreg: r.agreg || 'soma' }); }); });
+    (S.fatores || []).forEach(function (f) { por('esg_fatores', f.id, { id: f.id, nome: f.nome, unidade: nulo(f.unidade), fator: f.fator, unidade_fator: nulo(f.unidade_fator), versao: f.versao, qtd: f.qtd, origem: nulo(f.origem), historico: f.historico || [] }); });
+    (S.apis || []).forEach(function (a) { por('esg_ligacoes', a.id, { id: a.id, nome: a.nome, ambito: nulo(a.ambito), frequencia: nulo(a.frequencia), estado: a.estado || 'pendente' }); });
+    Object.keys(S.kpim || {}).forEach(function (id) { var r = S.kpim[id]; por('esg_kpi_master', id, { indicador_id: id, recolha: nulo(r.recolha), disponivel: r.disponivel || '', fonte: nulo(r.fonte), controlos: r.controlos || '', controlo_txt: nulo(r.controlo_txt), divulga: r.divulga || '', motivo: nulo(r.motivo) }); });
+    Object.keys(S.dpdec || {}).forEach(function (id) { var r = S.dpdec[id]; por('esg_dp_decisoes', id, { datapoint_id: id, divulga: r.divulga || '', motivo: nulo(r.motivo) }); });
+    Object.keys(S.gloss || {}).forEach(function (n) { por('esg_glossario_empresa', n, { termo_n: Number(n), definicao: S.gloss[n] }); });
+    Object.keys(S.rq || {}).forEach(function (k) { var r = S.rq[k]; por('esg_report_valores', k, { linha_id: k, ant: r.ant === undefined ? null : r.ant, val: r.val === undefined ? null : r.val }); });
+    if (S.doc) por('esg_report_documento', 'true', { id: true, titulo: S.doc.titulo, blocos: S.doc.blocos || [] });
+    Object.keys(S.puxados || {}).forEach(function (id) { var x = S.puxados[id]; if (x && x.em) por('esg_fontes_puxadas', id, { milestone_id: id, em: x.em, por: x.por, vals: x.vals || {}, registos: x.registos || 0 }); });
+    (S.evg || []).forEach(function (x, i) { por('esg_registo_config', i, { texto: x.texto, em: x.em, por: x.por, tipo: nulo(x.tipo) }); });
+    (S.selos || []).forEach(function (s, i) { por('esg_selos', s.k, { ordem: i + 1, chave: s.k, hash: s.h }); });
     S.aud.forEach(function (a) { por('esg_pedidos_auditor', a.id, { id: a.id, indicador_id: a.indicador_id, texto: a.texto, por: a.por, em: a.em, estado: a.estado, resposta_texto: a.resposta ? a.resposta.texto : null, resposta_por: a.resposta ? a.resposta.por : null, resposta_em: a.resposta ? a.resposta.em : null }); });
     return o;
   });
@@ -135,9 +152,8 @@
       o.esrs = c.esrs || ''; o.esrs_requisito = c.esrs_requisito || ''; o.gri = c.gri || '';
       return o;
     });
-    if (window.Portal && window.Portal.garantirEsrs) window.Portal.garantirEsrs();
     S.wfbase = d.esg_workflow_base.map(function (p) { return { nome: p.nome, tipo: p.tipo, responsavel: p.responsavel }; });
-    S.ent = d.esg_entidades.map(function (x) { return { id: x.id, nome: x.nome, perimetro_grupo: x.perimetro_grupo, perimetro_maioritario: x.perimetro_maioritario }; });
+    S.ent = d.esg_entidades.map(function (x) { return { id: x.id, nome: x.nome, perimetro_grupo: x.perimetro_grupo, perimetro_maioritario: x.perimetro_maioritario, pais: x.pais || '', detencao: x.detencao === null ? 100 : Number(x.detencao), metodo: x.metodo || 'integral', instalacoes: x.instalacoes || 0, nace: x.nace || '', nipc: x.nipc || '', moeda: x.moeda || 'EUR' }; });
     S.deps = d.esg_departamentos.map(function (x) { return { id: x.id, nome: x.nome }; });
     S.janelas = d.esg_janelas.map(function (j) { return { nome: j.nome, tema: j.tema, meses: j.meses, dia_inicio: j.dia_inicio, dia_fim: j.dia_fim }; });
     S.mat = d.esg_materialidade.map(function (x) { return { norma: x.norma, tema: x.tema, avaliacao: x.avaliacao, justificacao: x.justificacao || '' }; });
@@ -167,6 +183,19 @@
       };
     });
     S.ext = d.esg_pedidos_externos.map(function (x) { var o = Object.assign({}, x); o.evidencia = x.evidencia || ''; return o; });
+    S.atrib = {}; d.esg_atribuicao.forEach(function (a) { S.atrib[a.indicador_id] = { submete: a.submete || '', reve: a.reve || '', valida: a.valida || '' }; });
+    S.regrasEnt = {}; d.esg_regras_entrada.forEach(function (r) { (S.regrasEnt[r.entidade_id] = S.regrasEnt[r.entidade_id] || {})[r.indicador_id] = { multi: r.multi, por: r.por || '', agreg: r.agreg }; });
+    S.fatores = d.esg_fatores.map(function (f) { return { id: f.id, nome: f.nome, unidade: f.unidade || '', fator: Number(f.fator), unidade_fator: f.unidade_fator || '', versao: f.versao, qtd: f.qtd === null ? null : Number(f.qtd), origem: f.origem || '', historico: f.historico || [] }; });
+    S.apis = d.esg_ligacoes.map(function (a) { return { id: a.id, nome: a.nome, ambito: a.ambito || '', frequencia: a.frequencia || '', estado: a.estado }; });
+    S.kpim = {}; d.esg_kpi_master.forEach(function (r) { var o = Object.assign({}, r); delete o.indicador_id; S.kpim[r.indicador_id] = o; });
+    S.dpdec = {}; d.esg_dp_decisoes.forEach(function (r) { S.dpdec[r.datapoint_id] = { divulga: r.divulga || '', motivo: r.motivo || '' }; });
+    S.gloss = {}; d.esg_glossario_empresa.forEach(function (r) { S.gloss[r.termo_n] = r.definicao; });
+    S.rq = {}; d.esg_report_valores.forEach(function (r) { S.rq[r.linha_id] = { ant: r.ant === null ? null : Number(r.ant), val: r.val === null ? null : Number(r.val) }; });
+    S.doc = d.esg_report_documento[0] ? { titulo: d.esg_report_documento[0].titulo, blocos: d.esg_report_documento[0].blocos || [] } : null;
+    S.puxados = {}; d.esg_fontes_puxadas.forEach(function (r) { S.puxados[r.milestone_id] = { em: r.em, por: r.por, vals: r.vals || {}, registos: r.registos }; });
+    S.evg = d.esg_registo_config.map(function (x) { return { texto: x.texto, em: x.em, por: x.por, tipo: x.tipo || 'Change' }; });
+    S.selos = d.esg_selos.map(function (s) { return { k: s.chave, h: s.hash }; });
+    if (window.Portal && window.Portal.garantirEsrs) window.Portal.garantirEsrs();
     S.aud = d.esg_pedidos_auditor.map(function (a) { return { id: a.id, indicador_id: a.indicador_id, texto: a.texto, por: a.por, em: a.em, estado: a.estado, resposta: a.resposta_texto ? { texto: a.resposta_texto, por: a.resposta_por, em: a.resposta_em } : null }; });
     return login;
   };
@@ -175,7 +204,7 @@
   };
 
   /* --- Carregar ---------------------------------------------------------- */
-  var ORDEM = { esg_entidades: 'nome', esg_departamentos: 'nome', esg_ciclos: 'ano', esg_janelas: 'id', esg_workflow_base: 'ordem', esg_milestones: 'id', esg_milestone_indicadores: 'milestone_id,ordem', esg_passos_workflow: 'milestone_id,ordem', esg_valor_versoes: 'id', esg_comentarios: 'id', esg_eventos: 'id', esg_indicadores: 'id', esg_utilizadores: 'login', esg_documentos: 'id.desc', esg_pedidos_auditor: 'em', esg_evidencias: 'carregado_em' };
+  var ORDEM = { esg_entidades: 'nome', esg_departamentos: 'nome', esg_ciclos: 'ano', esg_janelas: 'id', esg_workflow_base: 'ordem', esg_milestones: 'id', esg_milestone_indicadores: 'milestone_id,ordem', esg_passos_workflow: 'milestone_id,ordem', esg_valor_versoes: 'id', esg_comentarios: 'id', esg_eventos: 'id', esg_indicadores: 'id', esg_utilizadores: 'login', esg_documentos: 'id.desc', esg_pedidos_auditor: 'em', esg_evidencias: 'carregado_em', esg_registo_config: 'id', esg_selos: 'ordem', esg_regras_entrada: 'entidade_id,indicador_id' };
   var snapshot = {};
   B.carregarMarca = function () {
     return pedir('esg_marca?select=*').then(function (l) { return marcaDe(l[0]); }).catch(function () { return null; });

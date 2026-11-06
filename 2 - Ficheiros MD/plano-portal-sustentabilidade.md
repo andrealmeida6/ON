@@ -104,7 +104,7 @@ Pedido do André a 5 de novembro de 2026, a partir dos 9 ecrãs de `ESG Data Lak
 - **Atribuição:** define o dono do KPI em Reporting status. Quem pode agir continua a ser quem pertence ao departamento do passo.
 - **Registo:** cada gravação sela os eventos novos, encadeados com SHA-256. Detecta alterações e remoções de eventos, versões e configuração selados. Corre no navegador, por isso quem controla o armazenamento pode refazer a cadeia. A imutabilidade real exige o servidor.
 - **Exemplos a confirmar:** fatores de emissão, perímetro, detenções, códigos NACE e ligações. As ligações não sincronizam, ficam a aguardar credenciais.
-- **Login:** as tabelas novas (perímetro, atribuição, fatores, ligações, selos) não estão no Supabase. Esta parte funciona só com os dados no navegador, e falta um novo SQL antes de ligar o login.
+- **Login:** as tabelas novas estão em `supabase/005_esg_controlo_esrs_report.sql` (inclui o 004) e os dados em `006_esg_dados_controlo_esrs.sql`, gerado por `gerar-006-dados.js`. Correm-se no editor do Supabase por esta ordem e nenhum apaga dados. A sincronização (`portal-supabase.js`) já escreve e lê estas tabelas, mas a versão com login não foi testada online com elas. O registo de configuração e os selos só aceitam linhas novas, nem o administrador os altera.
 - **Código:** `portal-controlo.js` tem as regras e `portal-gestao.js` as páginas.
 
 ## IDs ESRS, KPI master e quadros do Report
