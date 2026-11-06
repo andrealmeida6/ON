@@ -108,8 +108,10 @@
   var paginasPermitidas = function (usr) {
     if (!usr) return ['Entrada'];
     if (usr.perfil === 'ext') return ['Pedidos'];
-    var base = ['Inicio', 'Milestones', 'Milestone', 'Consolidado', 'Documentos', 'Relatorio', 'Historico', 'Auditoria'];
-    if (P.gereTudo(usr)) base.push('Backoffice');
+    var base = ['Inicio', 'Milestones', 'Milestone', 'Consolidado', 'Documentos', 'Evidencias', 'Calculos', 'Relatorio', 'Kpis', 'Historico', 'Auditoria'];
+    if (usr.perfil !== 'auditor') base.push('Dados');
+    if (P.gereTudo(usr) || usr.perfil === 'auditor') base.push('Aprovacoes', 'Estado', 'Trilho');
+    if (P.gereTudo(usr)) base.push('Atribuicao', 'Perimetro', 'Backoffice');
     return base;
   };
   var ativaNav = function (pag) { return pag === 'Milestone' ? 'Milestones' : pag; };
@@ -133,6 +135,9 @@
     });
     var nPend = pendentesDe(usr).length;
     document.querySelectorAll('[data-campo="nav-pend"]').forEach(function (el) { el.textContent = nPend || ''; el.hidden = !nPend; });
+    var nAprov = pendentesDe(usr).filter(function (m) { return P.passoAtual(m).tipo !== 'recolha'; }).length;
+    document.querySelectorAll('[data-campo="nav-aprov"]').forEach(function (el) { el.textContent = nAprov || ''; el.hidden = !nAprov; });
+    document.querySelectorAll('[data-nav-grp]').forEach(function (g) { var v = false, n = g.nextElementSibling; while (n && !n.hasAttribute('data-nav-grp')) { if (!n.hidden) v = true; n = n.nextElementSibling; } g.hidden = !v; });
     var notifs = P.notificacoes(usr);
     var badge = document.querySelector('[data-campo="sino-n"]');
     if (badge) { badge.textContent = notifs.length; badge.hidden = !notifs.length; }
@@ -331,7 +336,7 @@
     return '<nav class="ps-mig" aria-label="Breadcrumb"><a href="' + rota('Inicio') + '">Home</a><span>/</span><a href="' + rota('Milestones') + '">Milestones</a><span>/</span><a href="' + rotaEmp(m.empresa) + '">' + e(m.empresa) + '</a><span>/</span><b>' + e(m.nome) + '</b></nav>' +
       '<div class="ps-ban"><div class="ps-ban-top"><div><div class="ps-ban-tags"><span class="ps-ban-tag">' + e(m.empresa) + '</span><span class="ps-ban-tag">' + e(m.ano) + '</span><span class="ps-ban-tag">' + e(PERIODO_TXT[m.periodicidade] || m.periodicidade) + '</span>' + (m.periodicidade === 'Novos dados ESRS' ? '<span class="ps-ban-tag">ESRS track</span>' : '') + (m.workflow_ajustado ? '<span class="ps-ban-tag">Adjusted workflow</span>' : '') + '</div>' +
       '<h1>' + e(m.nome) + '</h1><div class="ps-ban-sub">Reporting year ' + e(m.ano) + ' · ' + e(m.unidade) + ' · data users: ' + e(usados(m).join(', ')) + '</div></div>' +
-      '<div class="ps-ban-dir"><div class="ps-ban-pill"><small>Due</small>' + e(P.fmtDataAno(m.prazo)) + '</div>' + estChip(m) + '<button type="button" class="ps-btn" data-a="abrirTecnica">Technical view</button></div></div>' +
+      '<div class="ps-ban-dir"><div class="ps-ban-pill"><small>Due</small>' + e(P.fmtDataAno(m.prazo)) + '</div>' + estChip(m) + '</div></div>' +
       '<div class="ps-ban-stats"><div class="ps-ban-stat"><b>' + preenchidos(m) + '/' + m.indicadores.length + '</b><span>Indicators filled in</span></div><div class="ps-ban-stat"><b>' + m.indicadores.filter(function (id) { return P.item(id, m.ano).evidencias.length; }).length + '</b><span>With evidence</span></div><div class="ps-ban-stat"><b>' + ext + '</b><span>External requests</span></div><div class="ps-ban-stat"><b>' + (P.concluida(m) ? '-' : d + 'd') + '</b><span>Until due</span></div></div></div>';
   };
   Blocos['milestone-workflow'] = function () {
@@ -346,10 +351,13 @@
     var m = msAtual(), usr = u(), decide = P.podeAgir(m, usr) && P.passoAtual(m).tipo !== 'recolha';
     var nAud = S.aud.filter(function (a) { var x = P.msDoIndicador(a.indicador_id, m.ano); return x && x.id === m.id && a.estado !== 'resolvido'; }).length;
     var nExt = S.ext.filter(function (x) { return x.milestone_id === m.id && x.estado !== 'aplicado'; }).length;
-    var seps = [['dados', decide ? 'Review' : 'Data request', 0], ['explorar', 'Data explorer', 0], ['evidencias', 'Evidence and quality', 0], ['externos', 'External contributions', nExt], ['auditoria', 'Audit', nAud], ['conversa', 'Conversation and history', m.comentarios.length]];
-    var html = U.sep === 'explorar' ? sepExplorar(m) : U.sep === 'evidencias' ? sepEvidencias(m) : U.sep === 'externos' ? sepExternos(m) : U.sep === 'auditoria' ? sepAuditoria(m) : U.sep === 'conversa' ? sepConversa(m) : pedidoTopo(m) + cartaoFicheiros(m) + (decide ? sepRevisao(m) : P.podePreencher(m, usr) ? sepRecolha(m) : sepLeitura(m));
-    return '<div class="ps-seps" role="tablist">' + seps.map(function (s) { return '<button type="button" role="tab" aria-selected="' + (U.sep === s[0]) + '" class="ps-sep ' + (U.sep === s[0] ? 'on' : '') + '" data-a="sep" data-v="' + s[0] + '">' + e(s[1]) + (s[2] ? '<span class="n">' + s[2] + '</span>' : '') + '</button>'; }).join('') + '</div>' +
-      (U.sep === 'explorar' ? '<div class="ps-col">' + html + '</div>' : '<div class="ps-grid-side"><div class="ps-col">' + html + '</div><div class="ps-col"><div class="ps-card">' + cabCartao('Details') + '<div class="ps-card-body"><dl class="ps-det"><dt>Company</dt><dd>' + (P.gereTudo(usr) ? '<select id="ms-emp" class="ps-sel" aria-label="Company" data-c="msEmpresa">' + S.ent.map(function (x) { return opt(x.nome, x.nome, m.empresa); }).join('') + '</select>' : e(m.empresa)) + '</dd><dt>Departments</dt><dd>' + editorTags(m, usr) + '</dd><dt>Unit</dt><dd>' + e(m.unidade) + '</dd><dt>Current step</dt><dd>' + e(P.concluida(m) ? 'Completed' : P.passoAtual(m).nome) + '</dd><dt>Assigned to</dt><dd>' + editorAtrib(m, usr) + '</dd><dt>Due</dt><dd>' + e(prazoTxt(m)) + '</dd><dt>Indicators</dt><dd>' + m.indicadores.length + '</dd></dl></div></div></div></div>');
+    /* Uma so pagina, pela ordem do trabalho: pedido, fontes e calculos, dados, ficheiros, exploracao, qualidade, terceiros, auditoria e conversa */
+    var secs = [['dados', decide ? 'Review' : 'Data request', 0, pedidoTopo(m) + (P.fontesHtml ? '<div id="sec-fontes" class="ps-sec">' + P.fontesHtml(m) + '</div>' : '') + (decide ? sepRevisao(m) : P.podePreencher(m, usr) ? sepRecolha(m) : sepLeitura(m)) + cartaoFicheiros(m)],
+      ['explorar', 'Data explorer', 0, sepExplorar(m)], ['evidencias', 'Evidence and quality', 0, sepEvidencias(m)], ['externos', 'External contributions', nExt, sepExternos(m)], ['auditoria', 'Audit', nAud, sepAuditoria(m)], ['conversa', 'Conversation and history', m.comentarios.length, sepConversa(m)]];
+    var indice = [['dados', secs[0][1]], ['fontes', 'Data sources and calculations']].concat(secs.slice(1).map(function (s) { return [s[0], s[1], s[2]]; }));
+    return '<div class="ps-grid-side ps-ms-corrida"><div class="ps-col">' + secs.map(function (s) { return '<section id="sec-' + s[0] + '" class="ps-sec ps-col" aria-label="' + e(s[1]) + '">' + s[3] + '</section>'; }).join('') + '</div>' +
+      '<div class="ps-col ps-ms-lado"><nav class="ps-card ps-ms-indice" aria-label="On this page">' + cabCartao('On this page') + '<ul>' + indice.map(function (s) { return '<li><button type="button" class="ps-btn liga" data-a="sep" data-v="' + s[0] + '">' + e(s[1]) + (s[2] ? ' <span class="ps-n">' + s[2] + '</span>' : '') + '</button></li>'; }).join('') + '</ul></nav>' +
+      '<div class="ps-card">' + cabCartao('Details') + '<div class="ps-card-body"><dl class="ps-det"><dt>Company</dt><dd>' + (P.gereTudo(usr) ? '<select id="ms-emp" class="ps-sel" aria-label="Company" data-c="msEmpresa">' + S.ent.map(function (x) { return opt(x.nome, x.nome, m.empresa); }).join('') + '</select>' : e(m.empresa)) + '</dd><dt>Departments</dt><dd>' + editorTags(m, usr) + '</dd><dt>Unit</dt><dd>' + e(m.unidade) + '</dd><dt>Current step</dt><dd>' + e(P.concluida(m) ? 'Completed' : P.passoAtual(m).nome) + '</dd><dt>Assigned to</dt><dd>' + editorAtrib(m, usr) + '</dd><dt>Due</dt><dd>' + e(prazoTxt(m)) + '</dd><dt>Indicators</dt><dd>' + m.indicadores.length + '</dd></dl></div></div></div></div>';
   };
   var editorAtrib = function (m, usr) {
     var p = P.passoAtual(m);
@@ -374,7 +382,7 @@
       var cls = v.erros.length ? 'erro' : v.alertas.length ? 'alerta' : '';
       var res = v.erros.length ? chip('Error', 'err') : v.alertas.length ? chip(v.alertas.length + ' alert(s)', 'warn') : it.valor !== null ? chip('Valid', 'ok') : chip('To fill in');
       var recebido = S.ext.filter(function (x) { return x.indicador_id === id && x.milestone_id === m.id && x.estado === 'recebido'; })[0];
-      return '<div class="ps-ind" id="ind-' + e(id) + '"><div class="ps-ind-top"><div class="ps-ind-nome"><button type="button" data-a="ficha" data-v="' + e(id) + '">' + e(c.nome) + '</button><small>' + e(c.unidade_medida) + ' · ' + (c.tipo === 'derivado' ? 'Derived' : 'Base data') + ' · ' + e(c.perimetro) + '</small></div>' +
+      return '<div class="ps-ind" id="ind-' + e(id) + '"><div class="ps-ind-top"><div class="ps-ind-nome"><button type="button" data-a="ficha" data-v="' + e(id) + '">' + e(c.nome) + '</button><small>' + e(c.unidade_medida) + ' · ' + (c.tipo === 'derivado' ? 'Derived' : 'Base data') + ' · ' + e(c.perimetro) + (P.esrsDe(id).dps.length ? ' · ' + e(P.esrsDe(id).dps[0]) : '') + '</small><span class="ps-ind-desc">' + e(P.esrsDe(id).desc) + '</span>' + (P.formulaTxt ? '<span class="ps-ind-form">ƒ ' + e(P.formulaTxt(id)) + '</span>' : '') + '</div>' +
         '<div><span class="ps-ind-k">' + (m.ano - 1) + '</span><span class="ps-num">' + (ant === null || ant === undefined ? '-' : fmtV(id, ant)) + '</span></div>' +
         '<div class="ps-ind-campo"><label class="ps-ind-k" for="v-' + e(id) + '">Value ' + e(m.ano) + '</label><input id="v-' + e(id) + '" class="ps-in ps-num ' + cls + '" inputmode="decimal" autocomplete="off" value="' + e(txtBruto) + '" data-c="valor" data-id="' + e(id) + '"' + (v.erros.length ? ' aria-invalid="true" aria-describedby="err-' + e(id) + '"' : '') + '></div>' +
         '<div><span class="ps-ind-k">Change</span><span class="ps-num">' + (v.variacao === null ? '-' : (v.variacao > 0 ? '+' : '') + P.fmtNum(v.variacao, 1) + '%') + '</span></div><div>' + res + '</div></div>' +
@@ -385,7 +393,7 @@
         '<div class="ps-sp"><button type="button" id="e-' + e(id) + '" class="ps-btn peq" data-a="anexar" data-v="' + e(id) + '">Attach evidence</button>' + (c.evidencia_obrigatoria ? (it.evidencias.length ? chip('Evidence attached', 'ok') : chip('Evidence required', 'warn')) : (it.evidencias.length ? chip(it.evidencias.length + ' evidence item(s)', 'ok') : '')) + '<button type="button" class="ps-btn peq" data-a="pedirExt" data-v="' + e(id) + '">Ask an external entity</button></div></div>' +
         (recebido ? '<div class="ps-aviso ok ps-mt">' + e(recebido.entidade_externa) + ' sent ' + e(fmtV(id, recebido.valor)) + ' ' + e(c.unidade_medida) + '. <button type="button" class="ps-btn peq" data-a="usarExt" data-v="' + e(recebido.id) + '">Use this value</button></div>' : '') + '</div>';
     }).join('');
-    return '<div class="ps-card">' + cabCartao('Import file', 'doc', '<button type="button" class="ps-btn peq" data-a="abrirTecnica" data-v="schema">View schema</button>') +
+    return '<div class="ps-card">' + cabCartao('Import file', 'doc') +
       '<div class="ps-drop"><button type="button" class="ps-btn pri" data-a="importar">Import file</button><button type="button" class="ps-btn" data-a="tplExcel">Template Excel</button><button type="button" class="ps-btn" data-a="tplCsv">Template CSV</button><button type="button" class="ps-btn" data-a="impExemplo">Test with a sample file</button><span class="ps-mut ps-small">Excel (.xlsx), CSV or JSON</span></div>' +
       (rel ? relatorioImport(m, rel) : '') + '</div>' +
       '<div class="ps-card ps-com-acao">' + cabCartao('Requested data', 'tarefa', ferrDados(m)) + (U.dadosVista === 'grid' ? corpoGrelha(m) : linhas) +
@@ -614,14 +622,14 @@
     var p = P.passoAtual(m), rot = p.tipo === 'parecer' ? 'Give favourable opinion' : p.tipo === 'aprovacao' ? 'Approve and lock' : 'Complete review';
     return '<div class="ps-card ps-com-acao">' + cabCartao(p.nome, 'tarefa', ferrDados(m)) + '<div class="ps-card-body">' + (U.dadosVista === 'grid' ? corpoGrelha(m) : tabela([{ t: 'Indicator' }, { t: 'Value', dir: 1 }, { t: String(m.ano - 1), dir: 1 }, { t: 'Change', dir: 1 }, { t: 'Alerts and justification' }, { t: 'Quality' }], m.indicadores.map(function (id) {
       var it = P.item(id, m.ano), v = P.validarItem(it), ant = P.valorAnterior(id, m.ano);
-      return [linkFicha(id), celValor(m, id) + ' ' + e(P.cat(id).unidade_medida), ant === null || ant === undefined ? '-' : fmtV(id, ant), v.variacao === null ? '-' : (v.variacao > 0 ? '+' : '') + P.fmtNum(v.variacao, 1) + '%', v.alertas.length ? '<span class="ps-small">' + e(v.alertas.join(' ')) + '<br><b>Justification:</b> ' + e(it.justificacao || '-') + '</span>' : chip('No alerts', 'ok'), e(P.QUALIDADE_TXT[it.qualidade])];
+      return [linkFicha(id) + (P.formulaTxt ? '<span class="ps-ind-form">ƒ ' + e(P.formulaTxt(id)) + '</span>' : ''), celValor(m, id) + ' ' + e(P.cat(id).unidade_medida), ant === null || ant === undefined ? '-' : fmtV(id, ant), v.variacao === null ? '-' : (v.variacao > 0 ? '+' : '') + P.fmtNum(v.variacao, 1) + '%', v.alertas.length ? '<span class="ps-small">' + e(v.alertas.join(' ')) + '<br><b>Justification:</b> ' + e(it.justificacao || '-') + '</span>' : chip('No alerts', 'ok'), e(P.QUALIDADE_TXT[it.qualidade])];
     }))) + '<div class="ps-mt">' + campo('rev-com', 'Comment (required to return)', '<textarea id="rev-com" class="ps-ta"></textarea>') + '</div></div><div class="ps-sticky"><button type="button" class="ps-btn err" data-a="devolver">Return to the unit</button><button type="button" class="ps-btn pri" data-a="concluirPasso">' + e(rot) + '</button></div></div>';
   };
   var sepLeitura = function (m) {
     var msg = P.concluida(m) ? 'Milestone completed. Approved values only change by restatement.' : 'The current step is with ' + P.nomeResp(m, P.passoAtual(m).responsavel) + '. You can view the values.';
     return '<div class="ps-card">' + cabCartao('Requested data', 'doc', ferrDados(m)) + '<div class="ps-card-body"><div class="ps-aviso">' + e(msg) + '</div>' + (U.dadosVista === 'grid' ? corpoGrelha(m) : tabela([{ t: 'Indicator' }, { t: 'Value', dir: 1 }, { t: String(m.ano - 1), dir: 1 }, { t: 'Status' }, { t: 'Quality' }], m.indicadores.map(function (id) {
       var est = P.estadoIndicador(m, id), it = P.item(id, m.ano), ant = P.valorAnterior(id, m.ano);
-      return [linkFicha(id) + marcaAmostra(id) + (it.reexpresso ? ' ' + chip('Restated', 'warn') : ''), celValor(m, id) + ' ' + e(P.cat(id).unidade_medida), ant === null || ant === undefined ? '-' : fmtV(id, ant), chip(est.txt, est.cls), e(P.QUALIDADE_TXT[it.qualidade])];
+      return [linkFicha(id) + marcaAmostra(id) + (it.reexpresso ? ' ' + chip('Restated', 'warn') : '') + (P.formulaTxt ? '<span class="ps-ind-form">ƒ ' + e(P.formulaTxt(id)) + '</span>' : ''), celValor(m, id) + ' ' + e(P.cat(id).unidade_medida), ant === null || ant === undefined ? '-' : fmtV(id, ant), chip(est.txt, est.cls), e(P.QUALIDADE_TXT[it.qualidade])];
     }))) + '</div></div>';
   };
   var sepEvidencias = function (m) {
@@ -937,7 +945,8 @@
     var refs = (S.mat.filter(function (x) { return x.norma === c.esrs; })[0] || {}).avaliacao;
     var b = '<div class="ps-sp">' + chip(est.txt, est.cls) + marcaAmostra(id) + (it.reexpresso ? chip('Restated', 'warn') : '') + '</div><div class="ps-kpis"><div class="ps-kpi"><span>' + (m.ano - 1) + '</span><b>' + (ant === null || ant === undefined ? '-' : e(fmtV(id, ant))) + '</b></div><div class="ps-kpi"><span>' + m.ano + '</span><b>' + (it.valor === null ? '-' : e(fmtV(id, it.valor))) + '</b></div><div class="ps-kpi"><span>Change</span><b>' + (v.variacao === null ? '-' : (v.variacao > 0 ? '+' : '') + P.fmtNum(v.variacao, 1) + '%') + '</b></div></div>' +
       (v.alertas.length ? '<div class="ps-aviso warn">' + v.alertas.map(e).join('<br>') + '</div>' : '') + (it.justificacao ? '<div><span class="ps-lab">Justification</span>' + e(it.justificacao) + '</div>' : '') +
-      '<dl class="ps-det"><dt>Year and unit</dt><dd>' + m.ano + ' · ' + e(c.unidade_medida) + '</dd><dt>Milestone</dt><dd>' + e(m.nome) + '</dd><dt>Type</dt><dd>' + (c.tipo === 'derivado' ? 'Derived' : 'Base data') + '</dd>' + (c.formula ? '<dt>Formula</dt><dd>' + e(c.formula) + '</dd>' : '') + '<dt>Threshold</dt><dd>' + c.limiar_variacao_pct + '%</dd><dt>Users</dt><dd>' + e(c.utilizado_por.join(', ')) + '</dd><dt>Quality</dt><dd>' + e(P.QUALIDADE_TXT[it.qualidade]) + (it.metodo ? ' · ' + e(it.metodo) : '') + '</dd><dt>Evidence</dt><dd>' + (it.evidencias.map(function (x) { return e(x.ficheiro); }).join(', ') || '-') + '</dd><dt>Frameworks</dt><dd>ESRS ' + e(c.esrs_requisito) + (refs ? ' (' + e(MAT_TXT[refs] || refs) + ')' : '') + ' · GRI ' + e(c.gri) + '</dd></dl>' +
+      '<p class="ps-ficha-desc">' + e(P.esrsDe(id).desc) + '</p>' +
+      '<dl class="ps-det"><dt>Year and unit</dt><dd>' + m.ano + ' · ' + e(c.unidade_medida) + '</dd><dt>Milestone</dt><dd>' + e(m.nome) + '</dd><dt>Type</dt><dd>' + (c.tipo === 'derivado' ? 'Derived' : 'Base data') + '</dd>' + (c.formula ? '<dt>Formula</dt><dd>' + e(c.formula) + '</dd>' : '') + '<dt>Threshold</dt><dd>' + c.limiar_variacao_pct + '%</dd><dt>Users</dt><dd>' + e(c.utilizado_por.join(', ')) + '</dd><dt>Quality</dt><dd>' + e(P.QUALIDADE_TXT[it.qualidade]) + (it.metodo ? ' · ' + e(it.metodo) : '') + '</dd><dt>Evidence</dt><dd>' + (it.evidencias.map(function (x) { return e(x.ficheiro); }).join(', ') || '-') + '</dd><dt>ESRS datapoint</dt><dd>' + (P.esrsDe(id).dps.length ? '<span class="ps-mono">' + e(P.esrsDe(id).dps.join(', ')) + '</span>' : 'Entity-specific') + '</dd><dt>Frameworks</dt><dd>ESRS ' + e(c.esrs_requisito) + (refs ? ' (' + e(MAT_TXT[refs] || refs) + ')' : '') + ' · GRI ' + e(c.gri) + '</dd></dl>' +
       '<div><h3 class="ps-grupo-t">Value history</h3>' + (it.versoes.length ? '<ul class="ps-ev ps-sem-pad">' + it.versoes.slice().reverse().map(function (x) { return '<li><b class="ps-num">' + e(fmtV(id, x.valor)) + '</b> · ' + e(x.origem) + (x.motivo ? '. Reason: ' + e(x.motivo) : '') + '<small>' + e(x.por) + ' · ' + e(P.fmtDataHora(x.em)) + '</small></li>'; }).join('') + '</ul>' : '<p class="ps-mut ps-small">No values yet.</p>') + '</div>';
     if (P.concluida(m) && P.podeReexpressar(usr)) b += '<div class="ps-card ps-card-body"><h3 class="ps-grupo-t ps-sem-topo">Restate approved value</h3><div class="ps-form">' + campo('rx-val', 'New value', '<input id="rx-val" class="ps-in" inputmode="decimal">') + campo('rx-mot', 'Reason (required)', '<input id="rx-mot" class="ps-in">') + '</div><button type="button" class="ps-btn pri ps-mt" data-a="reexpressar" data-v="' + e(id) + '">Restate value</button></div>';
     if (usr.perfil === 'auditor' || usr.perfil === 'admin') b += '<div class="ps-card ps-card-body"><h3 class="ps-grupo-t ps-sem-topo">Auditor information request</h3>' + campo('pa-txt', 'What you need to know', '<textarea id="pa-txt" class="ps-ta"></textarea>') + '<button type="button" class="ps-btn ps-mt" data-a="pedidoAud" data-v="' + e(id) + '">Send request</button></div>';
@@ -1057,6 +1066,7 @@
     if (U.marca) { U.marca = null; U.logoEstado = ''; P.aplicarMarca(); }
     R();
     if (ant !== novo) window.scrollTo(0, 0);
+    if (U.rota.q.sep) { var alvoSec = document.getElementById('sec-' + U.rota.q.sep); if (alvoSec) alvoSec.scrollIntoView({ block: 'start' }); }
     var alvo = U.rota.pag;
     if (MODO === 'hash' && !location.hash && alvo !== 'Entrada') location.replace('#/' + alvo);
   };
@@ -1118,7 +1128,7 @@
     expExcel: function () { var m = msAtual(); exportarGrelha(cfgRelatorio(m), 'report-' + m.id + '-' + m.ano + '.xlsx', 'Report'); toast('Report exported to Excel.', 'ok'); },
     entVista: function (d) { U.entVista = d.v; R(); },
     msTagDel: function (d) { var m = msAtual(); m.departamentos = m.departamentos.filter(function (x) { return x !== d.v; }); P.evento(m, 'Department tag removed: ' + d.v + '.', u().nome); P.guardar(); R(); },
-    sep: function (d) { U.sep = d.v; R(); },
+    sep: function (d) { U.sep = d.v; var s = document.getElementById('sec-' + d.v); if (s) setTimeout(function () { s.scrollIntoView({ block: 'start' }); }, 0); },
     ficha: function (d) { abrePainel('ficha', { id: d.v }); },
     fecharPainel: function () { fechaPainel(); },
     abrirTecnica: function (d) { abrePainel('tecnica', { sec: d.v || 'schema' }); },
@@ -1386,5 +1396,7 @@
       P.sair();
     }
   };
+  /* As paginas de controlo (portal-gestao.js) acrescentam-se aqui */
+  P.ext = { msAtual: function () { return msAtual(); }, Blocos: Blocos, A: A, C: C, U: U, e: e, svg: svg, I: I, rota: rota, chip: chip, estChip: estChip, cabCartao: cabCartao, vazio: vazio, opt: opt, campo: campo, tabela: tabela, toast: toast, R: R, val: val, res: res, escolherFicheiro: escolherFicheiro, atribHtml: atribHtml, iniciais: iniciais, u: u, fmtV: fmtV, prazoTxt: prazoTxt };
   document.addEventListener('DOMContentLoaded', P.iniciar);
 })();

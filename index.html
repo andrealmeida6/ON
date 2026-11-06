@@ -14,15 +14,29 @@
   <div class="ps-h-row">
     <a class="ps-marca" href="/inicio/" data-nav-marca data-marca-c="cabecalho" aria-label="Home"></a>
     <nav class="ps-h-nav" aria-label="Main navigation">
+      <span class="ps-h-grp" data-nav-grp>Monitoring</span>
       <a class="ps-h-link" href="/inicio/" data-nav="Inicio">Home</a>
+      <a class="ps-h-link" href="/consolidado/" data-nav="Consolidado">Overview</a>
+      <a class="ps-h-link" href="/estado/" data-nav="Estado">Reporting status</a>
+      <span class="ps-h-grp" data-nav-grp>Data</span>
       <a class="ps-h-link" href="/milestones/" data-nav="Milestones">Milestones <span class="n" data-campo="nav-pend" hidden></span></a>
-      <a class="ps-h-link" href="/consolidado/" data-nav="Consolidado">Consolidated</a>
+      <a class="ps-h-link" href="/dados/" data-nav="Dados">Data entry</a>
+      <a class="ps-h-link" href="/aprovacoes/" data-nav="Aprovacoes">Approvals <span class="n" data-campo="nav-aprov" hidden></span></a>
       <a class="ps-h-link" href="/documentos/" data-nav="Documentos">Documents</a>
-      <a class="ps-h-link" href="/relatorio/" data-nav="Relatorio">Report</a>
-      <a class="ps-h-link" href="/historico/" data-nav="Historico">History</a>
-      <a class="ps-h-link" href="/auditoria/" data-nav="Auditoria">Audit</a>
-      <a class="ps-h-link admin" href="/backoffice/" data-nav="Backoffice">Backoffice</a>
+      <a class="ps-h-link" href="/evidencias/" data-nav="Evidencias">Evidence</a>
       <a class="ps-h-link" href="/pedidos/" data-nav="Pedidos">Data requests</a>
+      <span class="ps-h-grp" data-nav-grp>Reporting</span>
+      <a class="ps-h-link" href="/calculos/" data-nav="Calculos">Calculations</a>
+      <a class="ps-h-link" href="/relatorio/" data-nav="Relatorio">Report</a>
+      <a class="ps-h-link" href="/kpis/" data-nav="Kpis">KPI master</a>
+      <a class="ps-h-link" href="/historico/" data-nav="Historico">History</a>
+      <span class="ps-h-grp" data-nav-grp>Control</span>
+      <a class="ps-h-link" href="/auditoria/" data-nav="Auditoria">Audit</a>
+      <a class="ps-h-link" href="/trilho/" data-nav="Trilho">Audit trail</a>
+      <span class="ps-h-grp" data-nav-grp>Administration</span>
+      <a class="ps-h-link" href="/atribuicao/" data-nav="Atribuicao">KPI assignment</a>
+      <a class="ps-h-link" href="/perimetro/" data-nav="Perimetro">Companies and perimeter</a>
+      <a class="ps-h-link admin" href="/backoffice/" data-nav="Backoffice">Backoffice</a>
     </nav>
     <div class="ps-h-acts">
       <button type="button" class="ps-h-ico" data-a="menuNotif" aria-label="Notifications">
@@ -139,11 +153,49 @@
 <section class="ps-pagina" hidden data-pagina="Consolidado">
   <div class="ps-pag">
     <header class="ps-pag-head">
-  <h1>Consolidated</h1>
-  <p>What the areas have reported, what is approved and what the report still needs.</p>
+  <h1>Overview</h1>
+  <p>Consolidated or by company, following the perimeter set for each company.</p>
 </header>
 
+    <div data-bloco="visao"></div>
+
     <div data-bloco="consolidado"></div>
+
+  </div>
+</section>
+
+<section class="ps-pagina" hidden data-pagina="Estado">
+  <div class="ps-pag">
+    <header class="ps-pag-head">
+  <h1>Reporting status</h1>
+  <p>What is approved, in approval, missing and overdue, KPI by KPI.</p>
+</header>
+
+    <div data-bloco="estado"></div>
+
+  </div>
+</section>
+
+<section class="ps-pagina" hidden data-pagina="Dados">
+  <div class="ps-pag">
+    <header class="ps-pag-head">
+  <h1>Data entry</h1>
+  <p>Three ways into the platform. Everything goes through the milestone workflow before it counts.</p>
+</header>
+
+    <div data-bloco="data-entry"></div>
+
+  </div>
+</section>
+
+<section class="ps-pagina" hidden data-pagina="Aprovacoes">
+  <div class="ps-pag">
+    <header class="ps-pag-head">
+  <h1>Approvals</h1>
+  <p>Segregation of duties: whoever submits a milestone cannot decide on it.</p>
+</header>
+
+    <div data-bloco="approvals"></div>
 
   </div>
 </section>
@@ -160,14 +212,50 @@
   </div>
 </section>
 
+<section class="ps-pagina" hidden data-pagina="Evidencias">
+  <div class="ps-pag">
+    <header class="ps-pag-head">
+  <h1>Evidence</h1>
+  <p>Evidence linked to each KPI, ready for assurance.</p>
+</header>
+
+    <div data-bloco="evidencias"></div>
+
+  </div>
+</section>
+
+<section class="ps-pagina" hidden data-pagina="Calculos">
+  <div class="ps-pag">
+    <header class="ps-pag-head">
+  <h1>Calculations</h1>
+  <p>Configured formulas and a versioned emission factor library.</p>
+</header>
+
+    <div data-bloco="calculos"></div>
+
+  </div>
+</section>
+
 <section class="ps-pagina" hidden data-pagina="Relatorio">
   <div class="ps-pag">
     <header class="ps-pag-head">
   <h1>Report</h1>
-  <p>The report tables. Only approved values appear.</p>
+  <p>The report tables, ready to export or to build into a document.</p>
 </header>
 
     <div data-bloco="relatorio"></div>
+
+  </div>
+</section>
+
+<section class="ps-pagina" hidden data-pagina="Kpis">
+  <div class="ps-pag">
+    <header class="ps-pag-head">
+  <h1>KPI master</h1>
+  <p>Each KPI with its ESRS datapoint, its description and how it is reported.</p>
+</header>
+
+    <div data-bloco="kpi-master"></div>
 
   </div>
 </section>
@@ -192,6 +280,42 @@
 </header>
 
     <div data-bloco="auditoria"></div>
+
+  </div>
+</section>
+
+<section class="ps-pagina" hidden data-pagina="Trilho">
+  <div class="ps-pag">
+    <header class="ps-pag-head">
+  <h1>Audit trail</h1>
+  <p>Everything that changed, who did it and why, sealed in a hash chain.</p>
+</header>
+
+    <div data-bloco="trilho"></div>
+
+  </div>
+</section>
+
+<section class="ps-pagina" hidden data-pagina="Atribuicao">
+  <div class="ps-pag">
+    <header class="ps-pag-head">
+  <h1>KPI assignment</h1>
+  <p>Each KPI has someone who submits, someone who reviews and someone who validates.</p>
+</header>
+
+    <div data-bloco="atribuicao"></div>
+
+  </div>
+</section>
+
+<section class="ps-pagina" hidden data-pagina="Perimetro">
+  <div class="ps-pag">
+    <header class="ps-pag-head">
+  <h1>Companies and perimeter</h1>
+  <p>Group companies, consolidation perimeter and data entry rules by KPI.</p>
+</header>
+
+    <div data-bloco="perimetro"></div>
 
   </div>
 </section>
@@ -225,7 +349,7 @@
 <nav class="ps-bnav" data-bnav aria-label="Mobile navigation">
   <a href="/inicio/" data-nav="Inicio"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>Home</a>
   <a href="/milestones/" data-nav="Milestones"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Milestones</a>
-  <a href="/consolidado/" data-nav="Consolidado"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 20V10M12 20V4M18 20v-7"/></svg>Consolidated</a>
+  <a href="/consolidado/" data-nav="Consolidado"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 20V10M12 20V4M18 20v-7"/></svg>Overview</a>
   <button type="button" data-a="maisNav"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>More</button>
 </nav>
 
@@ -236,8 +360,14 @@
 <script src="1%20-%20C%C3%B3digo%20VSC/web-files/xlsx.full.min.js"></script>
 <script src="1%20-%20C%C3%B3digo%20VSC/web-files/portal-supabase.js"></script>
 <script src="1%20-%20C%C3%B3digo%20VSC/web-files/portal-catalogo.js"></script>
+<script src="1%20-%20C%C3%B3digo%20VSC/web-files/portal-esrs.js"></script>
 <script src="1%20-%20C%C3%B3digo%20VSC/web-files/portal-nucleo.js"></script>
+<script src="1%20-%20C%C3%B3digo%20VSC/web-files/portal-controlo.js"></script>
 <script src="1%20-%20C%C3%B3digo%20VSC/web-files/portal-grelha.js"></script>
 <script src="1%20-%20C%C3%B3digo%20VSC/web-files/portal-paginas.js"></script>
+<script src="1%20-%20C%C3%B3digo%20VSC/web-files/portal-gestao.js"></script>
+<script src="1%20-%20C%C3%B3digo%20VSC/web-files/portal-fontes.js"></script>
+<script src="1%20-%20C%C3%B3digo%20VSC/web-files/portal-quadros.js"></script>
+<script src="1%20-%20C%C3%B3digo%20VSC/web-files/portal-master.js"></script>
 </body>
 </html>

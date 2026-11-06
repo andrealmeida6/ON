@@ -59,9 +59,11 @@
   var CHAVES = {
     ciclo: 'esg_cycle', ms: 'esg_ms', items: 'esg_items', wfbase: 'esg_wfbase', ext: 'esg_ext', aud: 'esg_aud', mat: 'esg_mat',
     docs: 'esg_docs', ent: 'esg_ent', janelas: 'esg_windows', marca: 'esg_brand', amostra: 'esg_sample', users: 'esg_users',
-    areas: 'esg_areas', cat: 'esg_catalog', metas: 'esg_metas', deps: 'esg_deps'
+    areas: 'esg_areas', cat: 'esg_catalog', metas: 'esg_metas', deps: 'esg_deps',
+    atrib: 'esg_assign', regrasEnt: 'esg_entity_rules', fatores: 'esg_factors', apis: 'esg_connections', evg: 'esg_config_log', selos: 'esg_seals',
+    kpim: 'esg_kpi_master', puxados: 'esg_source_pulls', dpdec: 'esg_dp_decisions', gloss: 'esg_glossary', rq: 'esg_report_tables', doc: 'esg_report_doc'
   };
-  var VERSAO_DADOS = 3;
+  var VERSAO_DADOS = 4;
   var S = (P.S = {});
   var memoria = {};
   var ler = function (k) {
@@ -74,13 +76,14 @@
   var B = window.PortalBackend;
   P.online = function () { return !!(B && B.ativo); };
   var guardar = (P.guardar = function () {
+    if (P.aoGuardar) P.aoGuardar();
     if (P.online()) { B.sincronizar(S); return; }
     Object.keys(CHAVES).forEach(function (n) { escrever(CHAVES[n], S[n]); });
   });
   /* Online: o estado vem do Supabase depois do login. Ate la, fica vazio e com a marca publica. */
   var estadoVazio = function () {
     S.ciclo = { ano: new Date().getFullYear(), estado: 'aberto', data_abertura: null, fechados: [] };
-    S.ms = []; S.items = {}; S.wfbase = []; S.ext = []; S.aud = []; S.mat = []; S.docs = []; S.ent = []; S.deps = []; S.janelas = []; S.amostra = []; S.users = []; S.areas = []; S.cat = []; S.metas = [];
+    S.ms = []; S.items = {}; S.wfbase = []; S.ext = []; S.aud = []; S.mat = []; S.docs = []; S.ent = []; S.deps = []; S.janelas = []; S.amostra = []; S.users = []; S.areas = []; S.cat = []; S.metas = []; S.atrib = {}; S.regrasEnt = {}; S.fatores = []; S.apis = []; S.evg = []; S.selos = [];
     S.marca = S.marca || clone(P.MARCA_BASE);
   };
   P.estadoVazio = estadoVazio;
@@ -255,6 +258,7 @@
       { id: 'X2', indicador_id: 'E09', milestone_id: 'M12', entidade_externa: 'Gestora de frota em renting', descricao: 'Percentagem de viaturas elétricas ou híbridas plug-in na frota em renting a 31/12.', prazo: diasDe(2), estado: 'recebido', valor: 6.4, evidencia: 'frota-renting-dezembro.pdf', respondido_em: new Date(Date.now() - 3600000 * 5).toISOString() },
       { id: 'X3', indicador_id: 'N02', milestone_id: 'M20', entidade_externa: 'Fornecedor de reagentes químicos', descricao: 'Toneladas de reagentes fornecidos às ETA e ETAR do perímetro no ano.', prazo: diasDe(30), estado: 'pendente', valor: null, evidencia: '', respondido_em: null }
     ];
+    if (P.semearControlo) P.semearControlo();
     guardar();
   };
 
@@ -262,6 +266,7 @@
     if (P.online()) { estadoVazio(); return; }
     if (!ler(CHAVES.ms) || ler('esg_versao') !== VERSAO_DADOS) { P.cat = catBoot; semear(); escrever('esg_versao', VERSAO_DADOS); return; }
     Object.keys(CHAVES).forEach(function (n) { S[n] = ler(CHAVES[n]); });
+    if (P.garantirEsrs) P.garantirEsrs();
   };
   /* Gera os dados de demonstracao sem tocar no armazenamento: serve o carregamento inicial do Supabase */
   P.dadosDemonstracao = function () { semear(); return S; };
@@ -506,6 +511,7 @@
     if (!P.podeAgir(m, u)) return { erro: 'This step is not with you.' };
     var p = P.passoAtual(m);
     if (p.tipo === 'recolha') return P.submeter(m, u);
+    if (P.violaSegregacao && P.violaSegregacao(m, u)) return { erro: 'Segregation of duties: you submitted this milestone, so someone else has to decide on it.' };
     p.concluido_em = agora(); p.concluido_por = u.nome;
     var verbo = p.tipo === 'parecer' ? 'Favourable opinion given' : p.tipo === 'aprovacao' ? 'Values approved and locked' : 'Review completed';
     ev(m, verbo + ': ' + p.nome + '.', u.nome);
@@ -893,7 +899,7 @@
       if (mFiltro && m.id !== mFiltro.id) return;
       m.indicadores.forEach(function (id) {
         var c = P.cat(id), it = P.item(id, m.ano), s = submissao(m), a = aprovacao(m);
-        r.push({ indicador_id: id, indicador: c.nome, valor: it.valor, unidade_medida: c.unidade_medida, qualidade: QUALIDADE_TXT[it.qualidade], metodo: it.metodo, esrs: c.esrs_requisito, gri: c.gri, unidade: m.unidade, milestone: m.nome,
+        r.push({ indicador_id: id, indicador: c.nome, valor: it.valor, unidade_medida: c.unidade_medida, qualidade: QUALIDADE_TXT[it.qualidade], metodo: it.metodo, esrs: c.esrs_requisito, esrs_id: P.esrsDe ? P.esrsDe(id).dps.join(', ') : '', gri: c.gri, unidade: m.unidade, milestone: m.nome,
           submetido_por: s.concluido_por || '', submetido_em: s.concluido_em ? P.fmtDataHora(s.concluido_em) : '', aprovado_por: a.concluido_por || '', aprovado_em: a.concluido_em ? P.fmtDataHora(a.concluido_em) : '',
           evidencias: it.evidencias.map(function (e) { return e.ficheiro; }).join(', '), reexpresso: it.reexpresso ? 'Yes' : 'No', na_amostra: S.amostra.indexOf(id) > -1 ? 'Yes' : 'No', estado: P.estadoIndicador(m, id).txt });
       });
@@ -920,7 +926,7 @@
         var m = P.msDoIndicador(c.id, ano), it = P.item(c.id, ano), apr = m && P.concluida(m);
         var o = { indicador: c.nome, unidade: c.unidade_medida, perimetro: c.perimetro };
         o[String(ano)] = apr ? it.valor : ''; o[String(ano - 1)] = P.valorAnterior(c.id, ano);
-        o.estado = m ? P.estadoIndicador(m, c.id).txt : 'To collect'; o.qualidade = apr ? QUALIDADE_TXT[it.qualidade] : ''; o.esrs = c.esrs_requisito; o.gri = c.gri;
+        o.estado = m ? P.estadoIndicador(m, c.id).txt : 'To collect'; o.qualidade = apr ? QUALIDADE_TXT[it.qualidade] : ''; o.esrs = c.esrs_requisito; o.esrs_id = P.esrsDe ? P.esrsDe(c.id).dps.join(', ') : ''; o.gri = c.gri;
         return o;
       });
     });
@@ -961,7 +967,7 @@
   };
   P.criarEmpresa = function (nome) {
     var e = erroNome(nome, S.ent); if (e) return { erro: e };
-    S.ent.push({ id: 'ent' + Date.now(), nome: nome, perimetro_grupo: true, perimetro_maioritario: false });
+    S.ent.push({ id: 'ent' + Date.now(), nome: nome, perimetro_grupo: true, perimetro_maioritario: false, pais: 'Portugal', detencao: 100, metodo: 'integral', instalacoes: 0, nace: '', nipc: '', moeda: 'EUR' });
     guardar(); return { ok: true };
   };
   P.renomearEmpresa = function (x, nome) {

@@ -135,6 +135,7 @@
       o.esrs = c.esrs || ''; o.esrs_requisito = c.esrs_requisito || ''; o.gri = c.gri || '';
       return o;
     });
+    if (window.Portal && window.Portal.garantirEsrs) window.Portal.garantirEsrs();
     S.wfbase = d.esg_workflow_base.map(function (p) { return { nome: p.nome, tipo: p.tipo, responsavel: p.responsavel }; });
     S.ent = d.esg_entidades.map(function (x) { return { id: x.id, nome: x.nome, perimetro_grupo: x.perimetro_grupo, perimetro_maioritario: x.perimetro_maioritario }; });
     S.deps = d.esg_departamentos.map(function (x) { return { id: x.id, nome: x.nome }; });

@@ -82,6 +82,65 @@ Pedido do André a 5 de novembro de 2026.
 - **Ao voltar a ligar o login:** aplicar `supabase/004_esg_atribuicao_ficheiros.sql` e recarregar os dados, porque os nomes das pessoas mudaram. Esta parte ainda não foi testada online.
 - **Limitação:** os ficheiros continuam a guardar-se só pelo nome, não o conteúdo.
 
+## Controlo: perímetro, atribuição, aprovações e registo
+
+Pedido do André a 5 de novembro de 2026, a partir dos 9 ecrãs de `ESG Data Lake.html`. Entrou o que a plataforma não tinha. O nome R2R, o inglês da interface e os dados fictícios ficam. Saíram a marca da consultora, o nome do cliente e os lembretes, por indicação anterior.
+
+| Ecrã recebido | Onde ficou | Nota |
+| --- | --- | --- |
+| Visão geral | Overview (`Consolidado`) | Consolidado ou por empresa, completude ESRS, origem dos dados e atividade, todos calculados |
+| Estado de reporte | Reporting status (`Estado`) | Sem lembretes, e com Company e Assigned to em vez de "entidades reportadas" |
+| Entrada de dados | Data entry (`Dados`) | Manual com várias entradas, Excel e contrato de API |
+| Workflow de aprovação | Approvals (`Aprovacoes`) | Por milestone, porque o nosso workflow é por milestone. Sem "Rejeitar" |
+| Audit trail | Audit trail (`Trilho`) | Cadeia SHA-256 calculada de verdade |
+| Calculatória | Calculations (`Calculos`) | Fórmulas do catálogo e cálculo do Âmbito 1. Sem "Nova fórmula" |
+| Atribuição de KPIs | KPI assignment (`Atribuicao`) | Bloqueia a mesma pessoa a submeter e a aprovar |
+| Evidências | Evidence (`Evidencias`) | O pacote é um índice em Excel, não um ZIP |
+| Empresas e perímetro | Companies and perimeter (`Perimetro`) | Detenção, método e regras de introdução por KPI |
+
+- **Navegação:** barra lateral em ecrã largo, como no HTML recebido, porque 15 páginas não cabem no cabeçalho. Abaixo de 1100 px mantém-se o menu no cabeçalho e a barra inferior.
+- **Segregação de funções:** passa a ser forçada. Quem submeteu uma milestone não conclui a revisão, o parecer nem a aprovação, mesmo sendo administrador. Pode devolver.
+- **Consolidação:** Integral conta a 100%, Proporcional pela detenção, Equivalência patrimonial e empresas excluídas não contam. Percentagens e rácios não se ponderam. Como cada indicador pertence a uma só milestone e a uma só empresa, o consolidado pondera o valor dessa empresa, não soma várias empresas para o mesmo indicador.
+- **Atribuição:** define o dono do KPI em Reporting status. Quem pode agir continua a ser quem pertence ao departamento do passo.
+- **Registo:** cada gravação sela os eventos novos, encadeados com SHA-256. Detecta alterações e remoções de eventos, versões e configuração selados. Corre no navegador, por isso quem controla o armazenamento pode refazer a cadeia. A imutabilidade real exige o servidor.
+- **Exemplos a confirmar:** fatores de emissão, perímetro, detenções, códigos NACE e ligações. As ligações não sincronizam, ficam a aguardar credenciais.
+- **Login:** as tabelas novas (perímetro, atribuição, fatores, ligações, selos) não estão no Supabase. Esta parte funciona só com os dados no navegador, e falta um novo SQL antes de ligar o login.
+- **Código:** `portal-controlo.js` tem as regras e `portal-gestao.js` as páginas.
+
+## IDs ESRS, KPI master e quadros do Report
+
+Pedidos do André a 5 de novembro de 2026, a partir do modelo de datapoints ESRS em Excel e das páginas 56 a 59 de um relatório de sustentabilidade em PDF. Nada na plataforma cita a consultora, o relatório nem a empresa que o publicou.
+
+**IDs e descrições.** Os 70 indicadores mantêm o ID da plataforma (A01, E06) e ganham a ligação aos datapoints do Excel: 10 diretos, 31 parciais e 29 específicos, sem datapoint. O mapeamento e as descrições em português são uma proposta, em `1 - Código VSC/esrs-mapeamento.js`, a confirmar pela equipa de sustentabilidade. O código ESRS mostrado passa à numeração de 2026 (energia E1-7, emissões E1-8, efetivos S1-5).
+
+**Restante informação do Excel.**
+
+| Coluna do Excel | Onde ficou |
+| --- | --- |
+| IG3 ID, parágrafo, AR, tipo de dado, texto oficial | KPI master, datapoints |
+| Unidade, cálculo, frequência, perímetro, departamento, uso | Já existiam no catálogo, a exportação preenche-as |
+| Pessoa responsável | KPI assignment |
+| Tópico, subtópico e agregação | Proposta no mapeamento. A agregação do Excel é sempre "End-of-period date", o que não serve para fluxos como a energia |
+| Controlos | Gerados das regras da plataforma, com campo para outros |
+| Frequência de recolha, disponibilidade, fonte, decisão de divulgar | Por preencher no KPI master |
+| Definition of terms | Glossário no KPI master, com 25 termos por definir |
+
+**Quadros do Report.** Natural World, Climate, Social e Societal, com o desenho do relatório no ecrã, em Excel e em Word. As linhas ligadas a um indicador vêm da plataforma; as restantes têm valores fictícios editáveis. O destaque "France data" passou a "National data" e o nome do auditor saiu. O texto das páginas 57 a 63 não foi copiado, por ser próprio da empresa; entra pelos blocos de texto do documento.
+
+**Montagem do documento.** No separador Document builder escolhem-se os quadros, títulos, textos e legenda, muda-se a ordem e exporta-se para Word. O Excel e o Word são escritos em `portal-quadros.js`, porque a biblioteca de folhas não grava formatos.
+
+**Regenerar.** `node gerar-esrs.js "<Excel>"` e depois `node gerar-mockup.js`. O Excel não fica no repositório.
+
+## Milestone numa só página, com fontes de dados e cálculos
+
+Pedido do André a 5 de novembro de 2026. A milestone deixou de ter separadores: as secções seguem a ordem do trabalho (pedido, fontes e cálculos, dados, ficheiros, exploração, evidências, contribuições externas, auditoria e conversa), com um índice ao lado.
+
+- **Campos dos dados:** cada indicador é uma fórmula sobre campos de seis bases (ERP, RH, telemetria, laboratório, comercial e ambiente). A vista técnica com o ficheiro da milestone (milestone_id, indicator_id) saiu; a API e o JSON Schema mostrados são os dos campos.
+- **Puxar, calcular e preencher:** puxar lê os registos de cada campo da milestone, os cálculos mostram a fórmula com os valores e o resultado, e preencher grava os valores com versão e fica no histórico. Só quem pode preencher a milestone o faz.
+- **Fórmulas:** aparecem em cada indicador do formulário, da revisão e da leitura. P09, P10 e P13 não tinham fórmula no catálogo e ganharam uma.
+- **Limitação:** nenhuma base está ligada. Os registos são de teste, gerados em `portal-fontes.js`, e aparecem como "Test data". O endpoint da API está como planeado.
+- **Exemplos alterados:** as quantidades da biblioteca de fatores passaram a dar as emissões de Âmbito 1 do ano anterior (eram 5 vezes menores).
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.
@@ -98,7 +157,6 @@ Pedido do André a 5 de novembro de 2026.
 - **Derivados:** entram como valor, com a fórmula à vista. Calculá-los exige os dados base, que ainda não estão no catálogo.
 - **Backoffice, Indicadores e milestones:** permite pesquisar, mudar a evidência obrigatória e o prazo. Ainda não cria indicadores nem milestones novos.
 - **Novo ciclo:** os prazos usam intervalos fixos por periodicidade. A especificação recomenda gerá-los a partir das janelas de reporting.
-- **Segregação de funções:** não está forçada, como a secção 4 prevê para o protótipo.
 - **Protótipo original:** o ficheiro referido na especificação não foi entregue. A referência funcional foi o texto da especificação.
 
 ## Em aberto
