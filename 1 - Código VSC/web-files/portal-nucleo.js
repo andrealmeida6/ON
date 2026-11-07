@@ -61,9 +61,9 @@
     docs: 'esg_docs', ent: 'esg_ent', janelas: 'esg_windows', marca: 'esg_brand', amostra: 'esg_sample', users: 'esg_users',
     areas: 'esg_areas', cat: 'esg_catalog', metas: 'esg_metas', deps: 'esg_deps',
     atrib: 'esg_assign', regrasEnt: 'esg_entity_rules', fatores: 'esg_factors', apis: 'esg_connections', evg: 'esg_config_log', selos: 'esg_seals',
-    kpim: 'esg_kpi_master', puxados: 'esg_source_pulls', periodos: 'esg_periods', relatorios: 'esg_reports', tipos: 'esg_data_types', dpdec: 'esg_dp_decisions', gloss: 'esg_glossary', rq: 'esg_report_tables', doc: 'esg_report_doc'
+    kpim: 'esg_kpi_master', puxados: 'esg_source_pulls', periodos: 'esg_periods', relatorios: 'esg_reports', tipos: 'esg_data_types', dpdec: 'esg_dp_decisions', gloss: 'esg_glossary', rq: 'esg_report_tables', doc: 'esg_report_doc', defs: 'esg_definitions', saidas: 'esg_outputs'
   };
-  var VERSAO_DADOS = 8;
+  var VERSAO_DADOS = 9;
   var S = (P.S = {});
   var memoria = {};
   var ler = function (k) {
@@ -84,6 +84,7 @@
   var estadoVazio = function () {
     S.ciclo = { ano: new Date().getFullYear(), estado: 'aberto', data_abertura: null, fechados: [] };
     S.ms = []; S.items = {}; S.wfbase = []; S.ext = []; S.aud = []; S.mat = []; S.docs = []; S.ent = []; S.deps = []; S.janelas = []; S.periodos = []; S.relatorios = []; S.tipos = []; S.amostra = []; S.users = []; S.areas = []; S.cat = []; S.metas = []; S.atrib = {}; S.regrasEnt = {}; S.fatores = []; S.apis = []; S.evg = []; S.selos = [];
+    S.defs = {}; S.saidas = [];
     S.marca = S.marca || clone(P.MARCA_BASE);
   };
   P.estadoVazio = estadoVazio;
@@ -376,6 +377,8 @@
       { id: 'X3', indicador_id: 'N02', milestone_id: 'M20', entidade_externa: 'Fornecedor de reagentes químicos', descricao: 'Toneladas de reagentes fornecidos às ETA e ETAR do perímetro no ano.', prazo: diasDe(30), estado: 'pendente', valor: null, evidencia: '', respondido_em: null }
     ];
     if (P.semearControlo) P.semearControlo();
+    if (P.semearDefinicoes) P.semearDefinicoes();
+    if (P.semearSaidas) P.semearSaidas();
     guardar();
   };
 

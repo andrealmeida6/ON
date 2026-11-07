@@ -1222,3 +1222,39 @@ body.ps-chat-aberto .ps-toast{bottom:100px}
   .ps-cm{max-width:86%}
 }
 body:has([data-painel]:not([hidden])) .ps-chat-fab,body:has([data-painel]:not([hidden])) .ps-ch{display:none}
+
+/* 29. DEFINICAO DOS INDICADORES E SAIDAS NOS FORMATOS DE DESTINO -------------- */
+.ps-form-1{grid-template-columns:1fr}
+.ps-def{border:1px solid var(--line);border-radius:var(--r-lg);padding:14px 16px;background:var(--surface);display:flex;flex-direction:column;gap:10px}
+.ps-def-l{display:grid;grid-template-columns:170px 1fr;gap:8px 14px;margin:0;font-size:13.5px}
+.ps-def-l dt{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:var(--muted);padding-top:2px}
+.ps-def-l dd{margin:0;line-height:1.5}
+.ps-def-alt{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.ps-def-alt b{display:inline-block;min-width:40px;color:var(--primary)}
+.ps-toast.warn{background:var(--warn)}
+.sd-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;margin-top:16px}
+.sd-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--sh-sm);padding:16px 18px;display:flex;flex-direction:column;gap:10px}
+.sd-card.late{border-color:var(--err)}
+.sd-card header{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.sd-card header>div{display:flex;align-items:center;gap:8px}
+.sd-sig{font-weight:800;font-size:15px;color:var(--primary)}
+.sd-card h3{margin:0;font-size:14.5px;line-height:1.35}
+.sd-det{display:grid;grid-template-columns:72px 1fr;gap:4px 10px;margin:0;font-size:12.5px}
+.sd-det dt{color:var(--muted)}
+.sd-det dd{margin:0}
+.sd-pr{display:flex;flex-direction:column;gap:6px;font-size:13px}
+.sd-falta{color:var(--err);font-weight:600}
+.sd-barra{height:8px;border-radius:999px;background:var(--line);overflow:hidden}
+.sd-barra i{display:block;height:100%;width:var(--x);background:var(--warn);border-radius:inherit}
+.sd-barra i.ok{background:var(--ok)}
+.sd-ult{margin:0}
+.sd-card footer{display:flex;flex-wrap:wrap;gap:8px;margin-top:auto;padding-top:4px}
+.sd-det-p{display:grid;grid-template-columns:110px 1fr;gap:4px 12px}
+.sd-det-p dt{margin:0}
+.sd-det-p dd{margin:0}
+@media (max-width:640px){
+  .ps-def-l{grid-template-columns:1fr;gap:2px}
+  .ps-def-l dd{margin-bottom:8px}
+  .sd-grid{grid-template-columns:1fr}
+  .sd-card footer .ps-btn{flex:1 1 auto;justify-content:center}
+}

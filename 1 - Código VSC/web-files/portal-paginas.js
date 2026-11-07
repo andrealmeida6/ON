@@ -121,12 +121,16 @@
   var paginasPermitidas = function (usr) {
     if (!usr) return ['Entrada'];
     if (usr.perfil === 'ext') return ['Pedidos'];
-    var base = ['Inicio', 'Milestones', 'Milestone', 'Timeline', 'Consolidado', 'Documentos', 'Evidencias', 'Calculos', 'Relatorio', 'Kpis', 'Historico', 'Auditoria'];
+    /* Quem contribui so precisa das suas milestones (com a folha) e do chat. O resto e para quem acompanha o reporte. */
+    if (usr.perfil === 'resp') return ['Inicio', 'Milestones', 'Milestone'];
+    var base = ['Inicio', 'Milestones', 'Milestone', 'Timeline', 'Consolidado', 'Documentos', 'Evidencias', 'Calculos', 'Relatorio', 'Saidas', 'Kpis', 'Historico', 'Auditoria'];
     if (usr.perfil !== 'auditor') base.push('Dados');
     if (P.gereTudo(usr) || usr.perfil === 'auditor') base.push('Aprovacoes', 'Estado', 'Trilho');
     if (P.gereTudo(usr)) base.push('Atribuicao', 'Perimetro', 'Backoffice');
     return base;
   };
+  /* O botao da timeline so aparece a quem tem a pagina */
+  var botaoTl = function (t) { return paginasPermitidas(u()).indexOf('Timeline') > -1 ? '<a class="ps-btn peq ps-btn-tl" href="' + rota('Timeline') + '">' + svg(I.cal, 14) + e(t) + '</a>' : ''; };
   var ativaNav = function (pag) { return pag === 'Milestone' ? 'Milestones' : pag; };
   var pendentesDe = function (usr) { return P.msCiclo().filter(function (m) { return P.podeAgir(m, usr); }); };
   var pintarCabecalho = function () {
@@ -231,7 +235,7 @@
       todas.push(m);
     });
     var porPrazo = function (a, b) { return a.prazo < b.prazo ? -1 : 1; };
-    var dir = '<div class="ps-sp"><div class="ps-seg" role="group" aria-label="View"><button type="button" class="' + (U.entVista === 'board' ? 'on' : '') + '" data-a="entVista" data-v="board">Board</button><button type="button" class="' + (U.entVista === 'tabela' ? 'on' : '') + '" data-a="entVista" data-v="tabela">Table</button></div><a class="ps-btn peq ps-btn-tl" href="' + rota('Timeline') + '">' + svg(I.cal, 14) + 'Reporting timeline</a><a class="ps-btn liga" href="' + rota('Milestones') + '">View all milestones</a></div>';
+    var dir = '<div class="ps-sp"><div class="ps-seg" role="group" aria-label="View"><button type="button" class="' + (U.entVista === 'board' ? 'on' : '') + '" data-a="entVista" data-v="board">Board</button><button type="button" class="' + (U.entVista === 'tabela' ? 'on' : '') + '" data-a="entVista" data-v="tabela">Table</button></div>' + botaoTl('Reporting timeline') + '<a class="ps-btn liga" href="' + rota('Milestones') + '">View all milestones</a></div>';
     var corpo;
     if (U.entVista === 'tabela') {
       corpo = '<div class="ps-card-body">' + tabela(COLS_MS, todas.sort(porPrazo).map(linhaTabMs), 'No upcoming deliveries.') + '</div>';
@@ -387,7 +391,7 @@
       campo('f-es', 'Status', '<select id="f-es" class="ps-sel" data-c="msEstado">' + opt('todas', 'All', f.estado) + opt('curso', 'In progress', f.estado) + opt('atraso', 'Overdue', f.estado) + opt('concluidas', 'Completed', f.estado) + '</select>') +
       '<label class="ps-chk"><input id="f-minhas" type="checkbox" data-c="msMinhas"' + (f.minhas ? ' checked' : '') + '> Waiting on me</label>' +
       '<label class="ps-chk"><input id="f-esrs" type="checkbox" data-c="msEsrs"' + (f.esrs ? ' checked' : '') + '> Include ESRS track</label></div>';
-    var dir = '<div class="ps-sp"><div class="ps-seg" role="group" aria-label="View"><button type="button" class="' + (U.msVista === 'lista' ? 'on' : '') + '" data-a="msVista" data-v="lista">Table</button><button type="button" class="' + (U.msVista === 'board' ? 'on' : '') + '" data-a="msVista" data-v="board">Board</button></div><a class="ps-btn peq ps-btn-tl" href="' + rota('Timeline') + '">' + svg(I.cal, 14) + 'Timeline</a><button type="button" class="ps-btn peq" data-a="msExcel"' + (lista.length ? '' : ' disabled') + '>Export to Excel</button></div>';
+    var dir = '<div class="ps-sp"><div class="ps-seg" role="group" aria-label="View"><button type="button" class="' + (U.msVista === 'lista' ? 'on' : '') + '" data-a="msVista" data-v="lista">Table</button><button type="button" class="' + (U.msVista === 'board' ? 'on' : '') + '" data-a="msVista" data-v="board">Board</button></div>' + botaoTl('Timeline') + '<button type="button" class="ps-btn peq" data-a="msExcel"' + (lista.length ? '' : ' disabled') + '>Export to Excel</button></div>';
     var cab = cabCartao((f.empresa || 'All companies') + ' (' + lista.length + ')', 'tarefa', dir);
     if (!lista.length) return filtros + '<div class="ps-card">' + cab + vazio('No milestones match these filters.') + '</div>';
     if (U.msVista === 'board') {

@@ -238,6 +238,33 @@ Dentro da milestone o contribuidor vê apenas o que precisa para preencher e val
 - **ERP:** a plataforma deixou de usar o termo; passa a "Financial system" na interface e "Sistema financeiro" nas integrações.
 - **Onde fica o técnico:** o mapeamento dos campos continua no backoffice (Data types), só para quem gere a plataforma.
 
+## Menus por perfil
+
+- **Responsável de departamento:** vê só Home e Milestones, com a folha de cada pedido dentro da milestone e o chat no canto. No telemóvel a barra fica com Home e Milestones; o botão More sai porque não abriria nada de novo. O botão da timeline também deixa de aparecer.
+- **Equipa de sustentabilidade e administrador:** veem tudo, incluindo Monitoring, Data, Reporting, Control e Administration.
+- **Auditor:** vê Monitoring, Data (sem Data entry), Reporting e Control.
+
+## Ficha de definição por indicador
+
+- **Onde aparece:** na ficha de cada indicador, logo a seguir aos valores. Quem preenche lê-a antes de submeter.
+- **Conteúdo:** o que conta, o que não conta, a fonte, o responsável (departamento e pessoa da atribuição), o cálculo e as mudanças face aos anos anteriores.
+- **Mudança este ano:** aparece em destaque, com a tag "Changed in 2026".
+- **Quem altera:** só a equipa de sustentabilidade e o administrador. Cada gravação sobe a versão, fica no registo de configuração e deixa um aviso nas milestones abertas que têm o indicador.
+- **Demonstração:** 31 indicadores com definição; cinco com mudanças em 2026 (A01, A03, A11, E06, P01). Os restantes mostram "To define".
+- **Supabase:** tabela `esg_definicoes` (migração 008).
+
+## Saídas nos formatos de destino
+
+- **Página Outputs (Reporting):** um cartão por entrega do ano, com o destino, o prazo, o modelo, os formatos, os valores aprovados e o último ficheiro gerado. Há filtros por entidade.
+- **Entregas e formatos:**
+  - ERSAR (QA trimestral, PCQA, RQS) e APA (MIRR, gases fluorados): Excel com três folhas (Cover, Data, Checks). A folha Data leva o valor, o período anterior, a variação, o estado, a qualidade, as evidências, o que conta e a fonte.
+  - R&C: quadros com o modelo da Aquapor, em Excel e Word.
+  - Relatório de Sustentabilidade: documento com o modelo da Aquapor, em Word e Excel.
+- **Final ou rascunho:** quando nem todos os valores estão aprovados, o ficheiro sai como rascunho, com "_draft" no nome e na capa.
+- **Valores anuais sem consolidação:** vêm dos trimestres, com a indicação de quantos trimestres entraram.
+- **Registo:** cada ficheiro gerado fica registado, com a versão, quem o gerou e quantos valores estavam aprovados. Supabase: tabela `esg_saidas`, onde só se acrescenta.
+- **Em aberto:** confirmar o desenho com os formulários atuais do portal da ERSAR e do SILiAmb antes da primeira submissão real. Hoje a plataforma gera um desenho próprio, organizado como esses formulários.
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.

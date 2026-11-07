@@ -41,6 +41,7 @@
         <div class="ps-h-drop">
           <a class="ps-h-link" href="/calculos/" data-nav="Calculos">Calculations</a>
           <a class="ps-h-link" href="/relatorio/" data-nav="Relatorio">Report</a>
+          <a class="ps-h-link" href="/saidas/" data-nav="Saidas">Outputs</a>
           <a class="ps-h-link" href="/kpis/" data-nav="Kpis">KPI master</a>
           <a class="ps-h-link" href="/historico/" data-nav="Historico">History</a>
         </div>
@@ -328,6 +329,21 @@
   </div>
 </section>
 
+<!-- web page: Saidas -->
+<section class="ps-pagina" hidden data-pagina="Saidas">
+  <div class="ps-pag">
+    <!-- snippet: Saidas/Introducao -->
+<header class="ps-pag-head">
+  <h1>Outputs</h1>
+  <p>Every delivery of the year in the format of who receives it: the ERSAR and APA submissions, the Aquapor tables for the annual report and the sustainability report. Each file says whether it is final or a draft and stays on record.</p>
+</header>
+
+    <!-- template: bloco-dinamico -->
+<div data-bloco="saidas"></div>
+
+  </div>
+</section>
+
 <!-- web page: Kpis -->
 <section class="ps-pagina" hidden data-pagina="Kpis">
   <div class="ps-pag">
@@ -455,7 +471,7 @@
   <a href="/inicio/" data-nav="Inicio"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>Home</a>
   <a href="/milestones/" data-nav="Milestones"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Milestones</a>
   <a href="/consolidado/" data-nav="Consolidado"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 20V10M12 20V4M18 20v-7"/></svg>Overview</a>
-  <button type="button" data-a="maisNav"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>More</button>
+  <button type="button" data-a="maisNav" data-mais><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>More</button>
 </nav>
 
 <!-- template: paineis -->
@@ -478,5 +494,7 @@
 <script src="../1%20-%20C%C3%B3digo%20VSC/web-files/portal-chat.js"></script>
 <script src="../1%20-%20C%C3%B3digo%20VSC/web-files/portal-quadros.js"></script>
 <script src="../1%20-%20C%C3%B3digo%20VSC/web-files/portal-master.js"></script>
+<script src="../1%20-%20C%C3%B3digo%20VSC/web-files/portal-definicoes.js"></script>
+<script src="../1%20-%20C%C3%B3digo%20VSC/web-files/portal-saidas.js"></script>
 </body>
 </html>

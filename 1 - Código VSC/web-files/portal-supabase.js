@@ -79,7 +79,7 @@
     { t: 'esg_milestone_indicadores', pk: ['milestone_id', 'indicador_id'] }, { t: 'esg_passos_workflow', pk: ['id'] }, { t: 'esg_valores', pk: ['indicador_id', 'ano', 'periodo'] },
     { t: 'esg_valor_versoes', so: true }, { t: 'esg_evidencias', pk: ['id'] }, { t: 'esg_pedidos_externos', pk: ['id'] }, { t: 'esg_pedidos_auditor', pk: ['id'] },
     { t: 'esg_atribuicao', pk: ['indicador_id'] }, { t: 'esg_regras_entrada', pk: ['entidade_id', 'indicador_id'] }, { t: 'esg_fatores', pk: ['id'] }, { t: 'esg_ligacoes', pk: ['id'] },
-    { t: 'esg_kpi_master', pk: ['indicador_id'] }, { t: 'esg_dp_decisoes', pk: ['datapoint_id'] }, { t: 'esg_glossario_empresa', pk: ['termo_n'] },
+    { t: 'esg_kpi_master', pk: ['indicador_id'] }, { t: 'esg_definicoes', pk: ['indicador_id'] }, { t: 'esg_saidas', so: true }, { t: 'esg_dp_decisoes', pk: ['datapoint_id'] }, { t: 'esg_glossario_empresa', pk: ['termo_n'] },
     { t: 'esg_report_valores', pk: ['linha_id'] }, { t: 'esg_report_documento', pk: ['id'] }, { t: 'esg_fontes_puxadas', pk: ['milestone_id'] },
     { t: 'esg_comentarios', so: true }, { t: 'esg_eventos', so: true }, { t: 'esg_registo_config', so: true }, { t: 'esg_selos', so: true }
   ];
@@ -133,6 +133,8 @@
     (S.fatores || []).forEach(function (f) { por('esg_fatores', f.id, { id: f.id, nome: f.nome, unidade: nulo(f.unidade), fator: f.fator, unidade_fator: nulo(f.unidade_fator), versao: f.versao, qtd: f.qtd, origem: nulo(f.origem), historico: f.historico || [] }); });
     (S.apis || []).forEach(function (a) { por('esg_ligacoes', a.id, { id: a.id, nome: a.nome, ambito: nulo(a.ambito), frequencia: nulo(a.frequencia), estado: a.estado || 'pendente' }); });
     Object.keys(S.kpim || {}).forEach(function (id) { var r = S.kpim[id]; por('esg_kpi_master', id, { indicador_id: id, recolha: nulo(r.recolha), disponivel: r.disponivel || '', fonte: nulo(r.fonte), controlos: r.controlos || '', controlo_txt: nulo(r.controlo_txt), divulga: r.divulga || '', motivo: nulo(r.motivo) }); });
+    Object.keys(S.defs || {}).forEach(function (id) { var r = S.defs[id]; por('esg_definicoes', id, { indicador_id: id, inclui: r.inclui || '', exclui: nulo(r.exclui), fonte: nulo(r.fonte), dono: nulo(r.dono), alteracoes: r.alteracoes || [], versao: r.versao || 1, alterado_em: r.em || null, alterado_por: nulo(r.por) }); });
+    (S.saidas || []).forEach(function (g) { por('esg_saidas', g.id, { id: g.id, relatorio_id: g.rel, versao: g.versao, formato: g.formato, ficheiro: g.ficheiro, final: !!g.final, gerado_em: g.em, gerado_por: g.por, aprovados: g.ok, total: g.total }); });
     Object.keys(S.dpdec || {}).forEach(function (id) { var r = S.dpdec[id]; por('esg_dp_decisoes', id, { datapoint_id: id, divulga: r.divulga || '', motivo: nulo(r.motivo) }); });
     Object.keys(S.gloss || {}).forEach(function (n) { por('esg_glossario_empresa', n, { termo_n: Number(n), definicao: S.gloss[n] }); });
     Object.keys(S.rq || {}).forEach(function (k) { var r = S.rq[k]; por('esg_report_valores', k, { linha_id: k, ant: r.ant === undefined ? null : r.ant, val: r.val === undefined ? null : r.val }); });
@@ -201,6 +203,8 @@
     S.fatores = d.esg_fatores.map(function (f) { return { id: f.id, nome: f.nome, unidade: f.unidade || '', fator: Number(f.fator), unidade_fator: f.unidade_fator || '', versao: f.versao, qtd: f.qtd === null ? null : Number(f.qtd), origem: f.origem || '', historico: f.historico || [] }; });
     S.apis = d.esg_ligacoes.map(function (a) { return { id: a.id, nome: a.nome, ambito: a.ambito || '', frequencia: a.frequencia || '', estado: a.estado }; });
     S.kpim = {}; d.esg_kpi_master.forEach(function (r) { var o = Object.assign({}, r); delete o.indicador_id; S.kpim[r.indicador_id] = o; });
+    S.defs = {}; (d.esg_definicoes || []).forEach(function (r) { S.defs[r.indicador_id] = { inclui: r.inclui, exclui: r.exclui || '', fonte: r.fonte || '', dono: r.dono || '', alteracoes: r.alteracoes || [], versao: r.versao, em: r.alterado_em, por: r.alterado_por || '' }; });
+    S.saidas = (d.esg_saidas || []).map(function (g) { return { id: g.id, rel: g.relatorio_id, versao: g.versao, formato: g.formato, ficheiro: g.ficheiro, final: g.final, em: g.gerado_em, por: g.gerado_por, ok: g.aprovados, total: g.total }; }).sort(function (a, b) { return a.em < b.em ? -1 : 1; });
     S.dpdec = {}; d.esg_dp_decisoes.forEach(function (r) { S.dpdec[r.datapoint_id] = { divulga: r.divulga || '', motivo: r.motivo || '' }; });
     S.gloss = {}; d.esg_glossario_empresa.forEach(function (r) { S.gloss[r.termo_n] = r.definicao; });
     S.rq = {}; d.esg_report_valores.forEach(function (r) { S.rq[r.linha_id] = { ant: r.ant === null ? null : Number(r.ant), val: r.val === null ? null : Number(r.val) }; });
