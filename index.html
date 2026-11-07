@@ -14,29 +14,49 @@
   <div class="ps-h-row">
     <a class="ps-marca" href="/inicio/" data-nav-marca data-marca-c="cabecalho" aria-label="Home"></a>
     <nav class="ps-h-nav" aria-label="Main navigation">
-      <span class="ps-h-grp" data-nav-grp>Monitoring</span>
       <a class="ps-h-link" href="/inicio/" data-nav="Inicio">Home</a>
-      <a class="ps-h-link" href="/consolidado/" data-nav="Consolidado">Overview</a>
-      <a class="ps-h-link" href="/estado/" data-nav="Estado">Reporting status</a>
-      <span class="ps-h-grp" data-nav-grp>Data</span>
       <a class="ps-h-link" href="/milestones/" data-nav="Milestones">Milestones <span class="n" data-campo="nav-pend" hidden></span></a>
-      <a class="ps-h-link" href="/dados/" data-nav="Dados">Data entry</a>
-      <a class="ps-h-link" href="/aprovacoes/" data-nav="Aprovacoes">Approvals <span class="n" data-campo="nav-aprov" hidden></span></a>
-      <a class="ps-h-link" href="/documentos/" data-nav="Documentos">Documents</a>
-      <a class="ps-h-link" href="/evidencias/" data-nav="Evidencias">Evidence</a>
-      <a class="ps-h-link" href="/pedidos/" data-nav="Pedidos">Data requests</a>
-      <span class="ps-h-grp" data-nav-grp>Reporting</span>
-      <a class="ps-h-link" href="/calculos/" data-nav="Calculos">Calculations</a>
-      <a class="ps-h-link" href="/relatorio/" data-nav="Relatorio">Report</a>
-      <a class="ps-h-link" href="/kpis/" data-nav="Kpis">KPI master</a>
-      <a class="ps-h-link" href="/historico/" data-nav="Historico">History</a>
-      <span class="ps-h-grp" data-nav-grp>Control</span>
-      <a class="ps-h-link" href="/auditoria/" data-nav="Auditoria">Audit</a>
-      <a class="ps-h-link" href="/trilho/" data-nav="Trilho">Audit trail</a>
-      <span class="ps-h-grp" data-nav-grp>Administration</span>
-      <a class="ps-h-link" href="/atribuicao/" data-nav="Atribuicao">KPI assignment</a>
-      <a class="ps-h-link" href="/perimetro/" data-nav="Perimetro">Companies and perimeter</a>
-      <a class="ps-h-link admin" href="/backoffice/" data-nav="Backoffice">Backoffice</a>
+      <div class="ps-h-grp" data-nav-grp>
+        <button type="button" class="ps-h-mbtn" aria-haspopup="true">Monitoring<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+        <div class="ps-h-drop">
+          <a class="ps-h-link" href="/consolidado/" data-nav="Consolidado">Overview</a>
+          <a class="ps-h-link" href="/estado/" data-nav="Estado">Reporting status</a>
+        </div>
+      </div>
+      <div class="ps-h-grp" data-nav-grp>
+        <button type="button" class="ps-h-mbtn" aria-haspopup="true">Data<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+        <div class="ps-h-drop">
+          <a class="ps-h-link" href="/dados/" data-nav="Dados">Data entry</a>
+          <a class="ps-h-link" href="/aprovacoes/" data-nav="Aprovacoes">Approvals <span class="n" data-campo="nav-aprov" hidden></span></a>
+          <a class="ps-h-link" href="/documentos/" data-nav="Documentos">Documents</a>
+          <a class="ps-h-link" href="/evidencias/" data-nav="Evidencias">Evidence</a>
+          <a class="ps-h-link" href="/pedidos/" data-nav="Pedidos">Data requests</a>
+        </div>
+      </div>
+      <div class="ps-h-grp" data-nav-grp>
+        <button type="button" class="ps-h-mbtn" aria-haspopup="true">Reporting<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+        <div class="ps-h-drop">
+          <a class="ps-h-link" href="/calculos/" data-nav="Calculos">Calculations</a>
+          <a class="ps-h-link" href="/relatorio/" data-nav="Relatorio">Report</a>
+          <a class="ps-h-link" href="/kpis/" data-nav="Kpis">KPI master</a>
+          <a class="ps-h-link" href="/historico/" data-nav="Historico">History</a>
+        </div>
+      </div>
+      <div class="ps-h-grp" data-nav-grp>
+        <button type="button" class="ps-h-mbtn" aria-haspopup="true">Control<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+        <div class="ps-h-drop">
+          <a class="ps-h-link" href="/auditoria/" data-nav="Auditoria">Audit</a>
+          <a class="ps-h-link" href="/trilho/" data-nav="Trilho">Audit trail</a>
+        </div>
+      </div>
+      <div class="ps-h-grp" data-nav-grp>
+        <button type="button" class="ps-h-mbtn" aria-haspopup="true">Administration<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+        <div class="ps-h-drop">
+          <a class="ps-h-link" href="/atribuicao/" data-nav="Atribuicao">KPI assignment</a>
+          <a class="ps-h-link" href="/perimetro/" data-nav="Perimetro">Companies and perimeter</a>
+          <a class="ps-h-link admin" href="/backoffice/" data-nav="Backoffice">Backoffice</a>
+        </div>
+      </div>
     </nav>
     <div class="ps-h-acts">
       <button type="button" class="ps-h-ico" data-a="menuNotif" aria-label="Notifications">
@@ -105,6 +125,8 @@
 </section>
 
   <div class="ps-wrap">
+    <div data-bloco="timeline"></div>
+
     <div class="ps-ini">
       <div class="ps-ini-esq">
         <div data-bloco="inicio-pendentes"></div>
@@ -124,6 +146,8 @@
   <h1>Milestones</h1>
   <p>Choose a company to see its deliveries.</p>
 </header>
+
+    <div data-bloco="timeline"></div>
 
     <div class="ps-ini ps-ini-ms">
       <div class="ps-ini-esq">

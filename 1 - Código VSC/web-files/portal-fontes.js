@@ -110,6 +110,8 @@
       else v = i === n - 1 ? tot : Math.round(tot * (0.96 + i * 0.01) * 10000) / 10000;
       l.push({ periodo: per, empresa: m.empresa, valor: v, ref: f.tab.toUpperCase().slice(0, 3) + '-' + m.ano + '-' + String(1 + Math.floor(hash(k + 'r' + i) * 8999)).padStart(4, '0') });
     }
+    /* Milestone trimestral: so os meses (ou o fecho) do trimestre */
+    if (P.trimestral && P.trimestral(m)) { var t = P.periodo(m.periodo).t; l = l.filter(function (x, i) { return n === 4 ? i === t - 1 : Math.floor(i / 3) === t - 1; }); }
     return l;
   };
   var agregarRegistos = function (k, l) { var f = CAMPOS[k]; if (!l.length) return null; if (f.agreg === 'ultimo') return l[l.length - 1].valor; var s = l.reduce(function (a, r) { return a + r.valor; }, 0); return f.agreg === 'media' ? s / l.length : s; };
@@ -174,7 +176,7 @@
     var n = 0;
     P.calculosMilestone(m).forEach(function (r) {
       if (r.valor === null || (ids && ids.indexOf(r.id) < 0)) return;
-      var it = P.item(r.id, m.ano);
+      var it = P.item(r.id, P.chave(m));
       P.gravarValor(m, r.id, String(r.valor).replace('.', ','), usr, DERIV[r.id] ? 'calculated from data sources' : 'data source');
       it.qualidade = DERIV[r.id] ? 'calculado' : 'medido'; it.metodo = '';
       n++;
@@ -208,7 +210,7 @@
     }).join('');
     var calc = P.calculosMilestone(m), prontos = calc.filter(function (r) { return r.valor !== null; }).length;
     var linhasC = calc.map(function (r) {
-      var c = P.cat(r.id), it = P.item(r.id, m.ano), igual = r.valor !== null && it.valor === r.valor;
+      var c = P.cat(r.id), it = P.item(r.id, P.chave(m)), igual = r.valor !== null && it.valor === r.valor;
       return [e(c.nome) + '<br><small class="ps-mut">' + e(r.id) + ' · ' + e(c.unidade_medida) + '</small>', '<span class="fd-f">' + e(P.formulaTxt(r.id)) + '</span>' + (r.x && DERIV[r.id] ? '<br><small class="ps-mono ps-mut">' + e(r.x) + '</small>' : ''),
         r.x ? '<span class="ps-mono ps-small">' + e(r.subst) + '</span>' : '-', r.valor === null ? '<span class="ps-mut">' + (r.erro ? e(r.erro) : r.x ? 'Pull the data' : '-') + '</span>' : '<b class="ps-num">' + e(fmtV(r.id, r.valor)) + '</b>',
         it.valor === null ? '<span class="ps-mut">-</span>' : '<span class="ps-num">' + e(fmtV(r.id, it.valor)) + '</span>',

@@ -36,7 +36,15 @@
   var rotaEmp = function (nome) { var x = S.ent.filter(function (y) { return y.nome === nome; })[0]; return rota('Milestones' + (x ? '?empresa=' + encodeURIComponent(x.id) : '')); };
   /* A mesma regra em todas as tabelas de milestones: empresa e a quem esta atribuida */
   var COLS_MS = [{ t: 'Milestone' }, { t: 'Company' }, { t: 'Assigned to' }, { t: 'Due' }, { t: 'Status' }];
-  var linhaTabMs = function (m) { return ['<a href="' + rota('Milestone/' + m.id) + '">' + e(m.nome) + '</a>', e(m.empresa), atribHtml(m), '<span class="ps-nowrap">' + e(prazoTxt(m)) + '</span>', estChip(m)]; };
+  /* Periodo de reporte e relatorios que a milestone alimenta */
+  var tagPer = function (m) { var p = P.periodo(m.periodo); return p ? '<span class="ps-per' + (p.tipo === 'ano' ? ' ano' : '') + '" title="Reporting period ' + e(P.fmtData(p.ini)) + ' to ' + e(P.fmtData(p.fim)) + '">' + e(p.nome) + '</span>' : ''; };
+  var tagsRel = function (m, max) {
+    var l = P.relatoriosDe(m), mostrar = max ? l.slice(0, max) : l;
+    return mostrar.map(function (r) { return '<span class="ps-rel-t" title="' + e(r.nome + ' · ' + r.entidade + ' · due ' + P.fmtDataAno(r.data)) + '">' + e(r.sigla) + '</span>'; }).join('') + (max && l.length > max ? '<span class="ps-rel-t mais">+' + (l.length - max) + '</span>' : '');
+  };
+  var tagsMs = function (m, max) { return '<span class="ps-per-l">' + tagPer(m) + tagsRel(m, max) + '</span>'; };
+  P.tagPer = tagPer; P.tagsMs = tagsMs;
+  var linhaTabMs = function (m) { return ['<a href="' + rota('Milestone/' + m.id) + '">' + e(m.nome) + '</a>' + tagsMs(m, 3), e(m.empresa), atribHtml(m), '<span class="ps-nowrap">' + e(prazoTxt(m)) + '</span>', estChip(m)]; };
   var chip = function (txt, cls) { return '<span class="ps-chip ' + (cls || '') + '">' + e(txt) + '</span>'; };
   var estChip = function (m) { var s = P.estadoMs(m); return chip(s.txt, s.cls); };
   var iniciais = function (n) { return String(n).replace(/^Resp\.\s*/, '').split(/\s+/).filter(function (x) { return x.length > 2 || x === x.toUpperCase(); }).slice(0, 2).map(function (x) { return x[0]; }).join('') || '?'; };
@@ -137,7 +145,9 @@
     document.querySelectorAll('[data-campo="nav-pend"]').forEach(function (el) { el.textContent = nPend || ''; el.hidden = !nPend; });
     var nAprov = pendentesDe(usr).filter(function (m) { return P.passoAtual(m).tipo !== 'recolha'; }).length;
     document.querySelectorAll('[data-campo="nav-aprov"]').forEach(function (el) { el.textContent = nAprov || ''; el.hidden = !nAprov; });
-    document.querySelectorAll('[data-nav-grp]').forEach(function (g) { var v = false, n = g.nextElementSibling; while (n && !n.hasAttribute('data-nav-grp')) { if (!n.hidden) v = true; n = n.nextElementSibling; } g.hidden = !v; });
+    /* Cada grupo do cabecalho e um menu: esconde-se sem paginas visiveis e fica marcado quando tem a pagina atual */
+    document.querySelectorAll('[data-nav-grp]').forEach(function (g) { var ls = [].slice.call(g.querySelectorAll('[data-nav]')); g.hidden = !ls.some(function (a) { return !a.hidden; }); g.classList.toggle('on', ls.some(function (a) { return a.classList.contains('on'); })); });
+    if (document.activeElement && document.activeElement.closest && document.activeElement.closest('.ps-h-drop')) document.activeElement.blur();
     var notifs = P.notificacoes(usr);
     var badge = document.querySelector('[data-campo="sino-n"]');
     if (badge) { badge.textContent = notifs.length; badge.hidden = !notifs.length; }
@@ -191,7 +201,7 @@
   };
   var linhaMs = function (m, cta) {
     var ico = P.estadoMs(m).cls === 'err' ? 'err' : '';
-    return '<li><a class="ps-row" href="' + rota('Milestone/' + m.id) + '"><span class="ps-row-ico ' + ico + '">' + svg(I.doc, 18) + '</span><span class="ps-row-txt"><b>' + e(m.nome) + '</b><span>' + e(m.empresa) + ' · ' + e(passoTxt(m)) + ' · due ' + e(prazoTxt(m)) + '</span></span>' + estChip(m) + (cta ? '<span class="ps-row-cta">' + e(cta) + '</span>' : '') + '</a></li>';
+    return '<li><a class="ps-row" href="' + rota('Milestone/' + m.id) + '"><span class="ps-row-ico ' + ico + '">' + svg(I.doc, 18) + '</span><span class="ps-row-txt"><b>' + e(m.nome) + '</b><span>' + tagPer(m) + ' ' + e(m.empresa) + ' · ' + e(passoTxt(m)) + ' · due ' + e(prazoTxt(m)) + '</span></span>' + estChip(m) + (cta ? '<span class="ps-row-cta">' + e(cta) + '</span>' : '') + '</a></li>';
   };
   var ctaPasso = function (m) { var p = P.passoAtual(m); return !p ? '' : p.tipo === 'recolha' ? 'Fill in' : p.tipo === 'parecer' ? 'Give opinion' : p.tipo === 'aprovacao' ? 'Approve' : 'Review'; };
   var pintarHero = function () {
@@ -224,7 +234,7 @@
       corpo = '<div class="ps-tl">' + cols.map(function (c) {
         c[1].sort(porPrazo);
         return '<div class="ps-tl-col ' + c[2] + '"><h4>' + e(c[0]) + ' <span class="ps-n">' + c[1].length + '</span></h4>' + (c[1].length ? c[1].slice(0, 6).map(function (m) {
-          return '<a class="ps-tl-it" href="' + rota('Milestone/' + m.id) + '"><b>' + e(m.nome) + '</b><small>' + e(m.empresa) + ' · ' + e(P.fmtData(m.prazo)) + '</small>' + (P.podeAgir(m, usr) ? '<span class="ps-tl-tag">with you</span>' : '') + '</a>';
+          return '<a class="ps-tl-it" href="' + rota('Milestone/' + m.id) + '"><b>' + e(m.nome) + '</b><small>' + tagPer(m) + ' ' + e(m.empresa) + ' · ' + e(P.fmtData(m.prazo)) + '</small>' + (P.podeAgir(m, usr) ? '<span class="ps-tl-tag">with you</span>' : '') + '</a>';
         }).join('') + (c[1].length > 6 ? '<a class="ps-btn liga" href="' + rota('Milestones') + '">' + (c[1].length - 6) + ' more</a>' : '') : '<div class="ps-mut ps-small">Nothing here.</div>') + '</div>';
       }).join('') + '</div>';
     }
@@ -259,6 +269,50 @@
   };
   Blocos['inicio-calendario'] = function () { return calendario(P.msCiclo(), 'cal-'); };
 
+  /* --- Timeline dos periodos de reporte ----------------------------------- */
+  var timeline = function () {
+    var ano = S.ciclo.ano, ini = new Date(ano + '-01-01T12:00:00'), fim = new Date((ano + 1) + '-08-01T12:00:00'), tot = fim - ini;
+    var x = function (iso) { return Math.max(0, Math.min(100, ((new Date(iso + 'T12:00:00') - ini) / tot) * 100)); };
+    var pers = (S.periodos || []).filter(function (p) { return p.ano === ano; }), rels = (S.relatorios || []).filter(function (r) { return r.periodo.indexOf(String(ano)) === 0; });
+    var hoje = P.hojeISO(), f = U.msFiltro || {};
+    var estado = function (p) {
+      var l = P.msPeriodo(p.id), conc = l.filter(P.concluida).length, atr = l.filter(function (m) { return P.estadoMs(m).cod === 'atraso'; }).length;
+      var cls = l.length && conc === l.length ? 'ok' : hoje > p.fecho ? 'err' : hoje >= p.ini ? 'at' : '';
+      return { cls: atr && cls !== 'ok' ? 'err' : cls, txt: !l.length ? 'No milestones' : conc === l.length ? 'Approved' : conc + ' of ' + l.length + ' approved' + (atr ? ' · ' + atr + ' overdue' : ''), n: l.length };
+    };
+    var meses = '';
+    for (var k = 0; k < 19; k++) { var d = new Date(ano, k, 1), iso = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-01'; meses += '<span style="--x:' + x(iso).toFixed(2) + '">' + e(MESES_C[d.getMonth()]) + (d.getMonth() === 0 ? ' ' + d.getFullYear() : '') + '</span>'; }
+    var barra = function (p, rot) {
+      var s = estado(p), on = f.periodo === p.id;
+      return '<a class="tlr-b ' + s.cls + (on ? ' on' : '') + '" href="' + rota('Milestones?periodo=' + encodeURIComponent(p.id)) + '" style="--x:' + x(p.ini).toFixed(2) + ';--w:' + (x(p.fim) - x(p.ini)).toFixed(2) + '" title="' + e(p.nome + ': data ' + P.fmtData(p.ini) + ' to ' + P.fmtData(p.fim) + ', internal close ' + P.fmtDataAno(p.fecho)) + '"><b>' + e(rot || p.nome) + '</b><small>' + e(s.txt) + '</small></a>' +
+        '<span class="tlr-f ' + s.cls + '" style="--x:' + x(p.fecho).toFixed(2) + '" title="' + e('Internal close of ' + p.nome + ': ' + P.fmtDataAno(p.fecho)) + '"><i></i><small>Close ' + e(P.fmtData(p.fecho)) + '</small></span>';
+    };
+    /* Entregas a menos de 10 dias umas das outras ficam no mesmo marco, para nao se sobreporem */
+    var grupos = [];
+    rels.slice().sort(function (a, b) { return a.data < b.data ? -1 : 1; }).forEach(function (r) {
+      var g = grupos[grupos.length - 1];
+      if (g && P.diasAte(r.data) - P.diasAte(g.dt) < 10) g.l.push(r); else grupos.push({ dt: r.data, l: [r] });
+    });
+    var porData = {};
+    grupos.forEach(function (g) { porData[g.dt] = g.l; });
+    var marcos = Object.keys(porData).sort().map(function (dt, i) {
+      var l = porData[dt], feito = l[l.length - 1].data < hoje;
+      return '<span class="tlr-r' + (feito ? ' feito' : '') + (i % 2 ? ' baixo' : '') + '" style="--x:' + x(dt).toFixed(2) + '" title="' + e(l.map(function (r) { return r.nome + ' (' + r.entidade + '), ' + P.fmtDataAno(r.data) + '. ' + r.base; }).join('\n')) + '"><i></i><b>' + e(l.map(function (r) { return r.sigla; }).join(' · ')) + '</b><small>' + e(l.length > 1 && l[l.length - 1].data !== dt ? P.fmtData(dt) + '–' + P.fmtData(l[l.length - 1].data) : P.fmtData(dt)) + '</small></span>';
+    }).join('');
+    var anoP = pers.filter(function (p) { return p.tipo === 'ano'; })[0];
+    var lista = rels.slice().sort(function (a, b) { return a.data < b.data ? -1 : 1; }).filter(function (r) { return r.data >= hoje; }).slice(0, 4);
+    return '<div class="ps-card ps-tlr">' + cabCartao('Reporting timeline ' + ano, 'cal', '<div class="ps-leg"><span><i class="ok"></i>Approved</span><span><i class="at"></i>Open</span><span><i class="err"></i>Overdue</span><span><i></i>Upcoming</span></div>') +
+      '<div class="ps-card-body"><div class="tlr-sc" tabindex="0" aria-label="Reporting timeline, scroll sideways"><div class="tlr" role="img" aria-label="' + e(pers.map(function (p) { return p.nome + ', ' + estado(p).txt; }).join('; ')) + '">' +
+      '<div class="tlr-m" aria-hidden="true">' + meses + '</div>' +
+      '<div class="tlr-l"><span class="tlr-lt">Quarters</span>' + pers.filter(function (p) { return p.tipo === 'trimestre'; }).map(function (p) { return barra(p); }).join('') + '</div>' +
+      (anoP ? '<div class="tlr-l"><span class="tlr-lt">Year</span>' + barra(anoP) + '<span class="tlr-cons" style="--x:' + x(anoP.fim).toFixed(2) + ';--w:' + (x(anoP.fecho) - x(anoP.fim)).toFixed(2) + '">Consolidation</span></div>' : '') +
+      '<div class="tlr-l rel"><span class="tlr-lt">External</span>' + marcos + '</div>' +
+      '<span class="tlr-hoje" style="--x:' + x(hoje).toFixed(2) + '"><small>Today</small></span></div></div>' +
+      (lista.length && U.rota.pag === 'Inicio' ? '<ul class="tlr-prox">' + lista.map(function (r) { var d = P.diasAte(r.data); return '<li><b>' + e(r.sigla) + '</b><span>' + e(r.nome) + '<small>' + e(r.entidade + ' · ' + r.base) + '</small></span><em>' + e(P.fmtDataAno(r.data)) + '<small>in ' + d + ' days</small></em></li>'; }).join('') + '</ul>' : '') + '</div></div>';
+  };
+  var MESES_C = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  Blocos['timeline'] = function () { return timeline(); };
+
   /* --- Milestones -------------------------------------------------------- */
   var msFiltradas = function () {
     var f = U.msFiltro, usr = u();
@@ -266,6 +320,7 @@
       var c = P.estadoMs(m).cod;
       if (f.empresa && m.empresa !== f.empresa) return false;
       if (f.dep && m.departamentos.indexOf(f.dep) < 0) return false;
+      if (f.periodo && m.periodo !== f.periodo) return false;
       if (f.minhas && !P.podeAgir(m, usr)) return false;
       if (f.estado === 'curso' && c === 'concluida') return false;
       if (f.estado === 'atraso' && c !== 'atraso') return false;
@@ -305,7 +360,7 @@
   };
   Blocos['milestones'] = function () {
     var f = U.msFiltro, lista = msFiltradas();
-    var filtros = '<div class="ps-filtros">' + campo('f-dep', 'Department', '<select id="f-dep" class="ps-sel" data-c="msDepF">' + opt('', 'All', f.dep) + P.UNIDADES.map(function (x) { return opt(x, x, f.dep); }).join('') + '</select>') +
+    var filtros = '<div class="ps-filtros">' + campo('f-per', 'Reporting period', '<select id="f-per" class="ps-sel" data-c="msPerF">' + opt('', 'All', f.periodo) + (S.periodos || []).filter(function (p) { return p.ano === S.ciclo.ano; }).map(function (p) { return opt(p.id, p.nome, f.periodo); }).join('') + '</select>') + campo('f-dep', 'Department', '<select id="f-dep" class="ps-sel" data-c="msDepF">' + opt('', 'All', f.dep) + P.UNIDADES.map(function (x) { return opt(x, x, f.dep); }).join('') + '</select>') +
       campo('f-es', 'Status', '<select id="f-es" class="ps-sel" data-c="msEstado">' + opt('todas', 'All', f.estado) + opt('curso', 'In progress', f.estado) + opt('atraso', 'Overdue', f.estado) + opt('concluidas', 'Completed', f.estado) + '</select>') +
       '<label class="ps-chk"><input id="f-minhas" type="checkbox" data-c="msMinhas"' + (f.minhas ? ' checked' : '') + '> Waiting on me</label>' +
       '<label class="ps-chk"><input id="f-esrs" type="checkbox" data-c="msEsrs"' + (f.esrs ? ' checked' : '') + '> Include ESRS track</label></div>';
@@ -317,7 +372,7 @@
       return filtros + '<div class="ps-card">' + cab + '<div class="ps-card-body"><div class="ps-board">' + cols.map(function (c) {
         var it = lista.filter(function (m) { return c[1].indexOf(P.estadoMs(m).cod) > -1; });
         return '<div class="ps-board-col"><h3>' + e(c[0]) + '<span class="ps-n">' + it.length + '</span></h3>' + it.map(function (m) {
-          return '<a class="ps-board-it" href="' + rota('Milestone/' + m.id) + '"><b>' + e(m.nome) + '</b><small class="ps-mut">' + e(m.empresa) + '</small><div>' + atribHtml(m) + '</div><div class="ps-sp-b ps-mt">' + estChip(m) + '<span class="ps-mut ps-small">' + e(P.fmtData(m.prazo)) + '</span></div></a>';
+          return '<a class="ps-board-it" href="' + rota('Milestone/' + m.id) + '"><b>' + e(m.nome) + '</b>' + tagsMs(m, 2) + '<small class="ps-mut">' + e(m.empresa) + '</small><div>' + atribHtml(m) + '</div><div class="ps-sp-b ps-mt">' + estChip(m) + '<span class="ps-mut ps-small">' + e(P.fmtData(m.prazo)) + '</span></div></a>';
         }).join('') + '</div>';
       }).join('') + '</div></div></div>';
     }
@@ -327,16 +382,16 @@
   /* --- Milestone --------------------------------------------------------- */
   var PERIODO_TXT = { Mensal: 'Monthly', Trimestral: 'Quarterly', Anual: 'Annual', 'Novos dados ESRS': 'New ESRS data' };
   var msAtual = function () { return P.ms(U.rota.arg); };
-  var preenchidos = function (m) { return m.indicadores.filter(function (id) { return P.item(id, m.ano).valor !== null; }).length; };
+  var preenchidos = function (m) { return m.indicadores.filter(function (id) { return P.item(id, P.chave(m)).valor !== null; }).length; };
   var usados = function (m) { var o = {}; m.indicadores.forEach(function (id) { P.cat(id).utilizado_por.forEach(function (x) { o[x] = 1; }); }); return Object.keys(o); };
   Blocos['milestone-cabecalho'] = function () {
     var m = msAtual(), d = P.diasAte(m.prazo);
     var ext = S.ext.filter(function (x) { return x.milestone_id === m.id; }).length;
     return '<nav class="ps-mig" aria-label="Breadcrumb"><a href="' + rota('Inicio') + '">Home</a><span>/</span><a href="' + rota('Milestones') + '">Milestones</a><span>/</span><a href="' + rotaEmp(m.empresa) + '">' + e(m.empresa) + '</a><span>/</span><b>' + e(m.nome) + '</b></nav>' +
-      '<div class="ps-ban"><div class="ps-ban-top"><div><div class="ps-ban-tags"><span class="ps-ban-tag">' + e(m.empresa) + '</span><span class="ps-ban-tag">' + e(m.ano) + '</span><span class="ps-ban-tag">' + e(PERIODO_TXT[m.periodicidade] || m.periodicidade) + '</span>' + (m.periodicidade === 'Novos dados ESRS' ? '<span class="ps-ban-tag">ESRS track</span>' : '') + (m.workflow_ajustado ? '<span class="ps-ban-tag">Adjusted workflow</span>' : '') + '</div>' +
-      '<h1>' + e(m.nome) + '</h1><div class="ps-ban-sub">Reporting year ' + e(m.ano) + ' · ' + e(m.unidade) + ' · data users: ' + e(usados(m).join(', ')) + '</div></div>' +
+      '<div class="ps-ban"><div class="ps-ban-top"><div><div class="ps-ban-tags"><span class="ps-ban-tag">' + e(m.empresa) + '</span><span class="ps-ban-tag forte">' + e(P.rotPeriodo(m)) + '</span><span class="ps-ban-tag">' + e(m.consolida ? 'Annual consolidation' : PERIODO_TXT[m.periodicidade] || m.periodicidade) + '</span>' + (m.periodicidade === 'Novos dados ESRS' ? '<span class="ps-ban-tag">ESRS track</span>' : '') + (m.workflow_ajustado ? '<span class="ps-ban-tag">Adjusted workflow</span>' : '') + '</div>' +
+      '<h1>' + e(m.nome) + '</h1><div class="ps-ban-sub">' + (function () { var p = P.periodo(m.periodo); return p ? 'Data from ' + e(P.fmtDataAno(p.ini)) + ' to ' + e(P.fmtDataAno(p.fim)) : 'Reporting year ' + e(m.ano); })() + ' · ' + e(m.unidade) + '</div>' + (P.relatoriosDe(m).length ? '<div class="ps-ban-rel"><span>Feeds</span>' + P.relatoriosDe(m).map(function (r) { return '<span class="ps-ban-tag" title="' + e(r.base) + '">' + e(r.sigla + ' · ' + r.entidade + ' · ' + P.fmtDataAno(r.data)) + '</span>'; }).join('') + '</div>' : '') + '</div>' +
       '<div class="ps-ban-dir"><div class="ps-ban-pill"><small>Due</small>' + e(P.fmtDataAno(m.prazo)) + '</div>' + estChip(m) + '</div></div>' +
-      '<div class="ps-ban-stats"><div class="ps-ban-stat"><b>' + preenchidos(m) + '/' + m.indicadores.length + '</b><span>Indicators filled in</span></div><div class="ps-ban-stat"><b>' + m.indicadores.filter(function (id) { return P.item(id, m.ano).evidencias.length; }).length + '</b><span>With evidence</span></div><div class="ps-ban-stat"><b>' + ext + '</b><span>External requests</span></div><div class="ps-ban-stat"><b>' + (P.concluida(m) ? '-' : d + 'd') + '</b><span>Until due</span></div></div></div>';
+      '<div class="ps-ban-stats"><div class="ps-ban-stat"><b>' + preenchidos(m) + '/' + m.indicadores.length + '</b><span>Indicators filled in</span></div><div class="ps-ban-stat"><b>' + m.indicadores.filter(function (id) { return P.item(id, P.chave(m)).evidencias.length; }).length + '</b><span>With evidence</span></div><div class="ps-ban-stat"><b>' + ext + '</b><span>External requests</span></div><div class="ps-ban-stat"><b>' + (P.concluida(m) ? '-' : d + 'd') + '</b><span>Until due</span></div></div></div>';
   };
   Blocos['milestone-workflow'] = function () {
     var m = msAtual(), feitos = Math.min(m.passo_atual, m.passos.length), pct = Math.round((feitos / m.passos.length) * 100);
@@ -351,7 +406,7 @@
     var nAud = S.aud.filter(function (a) { var x = P.msDoIndicador(a.indicador_id, m.ano); return x && x.id === m.id && a.estado !== 'resolvido'; }).length;
     var nExt = S.ext.filter(function (x) { return x.milestone_id === m.id && x.estado !== 'aplicado'; }).length;
     /* Uma so pagina, pela ordem do trabalho: pedido, fontes e calculos, dados, ficheiros, exploracao, qualidade, terceiros, auditoria e conversa */
-    var secs = [['dados', decide ? 'Review' : 'Data request', 0, pedidoTopo(m) + (P.fontesHtml ? '<div id="sec-fontes" class="ps-sec">' + P.fontesHtml(m) + '</div>' : '') + (decide ? sepRevisao(m) : P.podePreencher(m, usr) ? sepRecolha(m) : sepLeitura(m)) + cartaoFicheiros(m)],
+    var secs = [['dados', decide ? 'Review' : 'Data request', 0, pedidoTopo(m) + cartaoTrimestres(m) + (P.fontesHtml ? '<div id="sec-fontes" class="ps-sec">' + P.fontesHtml(m) + '</div>' : '') + (decide ? sepRevisao(m) : P.podePreencher(m, usr) ? sepRecolha(m) : sepLeitura(m)) + cartaoFicheiros(m)],
       ['explorar', 'Data explorer', 0, sepExplorar(m)], ['evidencias', 'Evidence and quality', 0, sepEvidencias(m)], ['externos', 'External contributions', nExt, sepExternos(m)], ['auditoria', 'Audit', nAud, sepAuditoria(m)], ['conversa', 'Conversation and history', m.comentarios.length, sepConversa(m)]];
     var indice = [['dados', secs[0][1]], ['fontes', 'Data sources and calculations']].concat(secs.slice(1).map(function (s) { return [s[0], s[1], s[2]]; }));
     return '<div class="ps-grid-side ps-ms-corrida"><div class="ps-col">' + secs.map(function (s) { return '<section id="sec-' + s[0] + '" class="ps-sec ps-col" aria-label="' + e(s[1]) + '">' + s[3] + '</section>'; }).join('') + '</div>' +
@@ -369,21 +424,21 @@
     return '<span class="ps-tags">' + m.departamentos.map(function (d) { return '<span class="ps-tag">' + e(d) + '<button type="button" data-a="msTagDel" data-v="' + e(d) + '" aria-label="Remove ' + e(d) + '">×</button></span>'; }).join('') + '</span>' +
       (livres.length ? '<select id="ms-tag" class="ps-sel ps-mt" aria-label="Add department" data-c="msTagAdd">' + opt('', 'Add department') + livres.map(function (d) { return opt(d); }).join('') + '</select>' : '');
   };
-  var celValor = function (m, id) { var it = P.item(id, m.ano); return it.valor === null ? '-' : fmtV(id, it.valor); };
+  var celValor = function (m, id) { var it = P.item(id, P.chave(m)); return it.valor === null ? '-' : fmtV(id, it.valor); };
   var linkFicha = function (id, txt) { return '<button type="button" class="ps-btn liga" data-a="ficha" data-v="' + e(id) + '">' + e(txt || P.cat(id).nome) + '</button>'; };
   var marcaAmostra = function (id) { return S.amostra.indexOf(id) > -1 ? ' ' + chip('Sample', 'rev') : ''; };
 
   var sepRecolha = function (m) {
     var usr = u(), rel = U.imp[m.id], feitos = preenchidos(m);
     var linhas = m.indicadores.map(function (id) {
-      var c = P.cat(id), it = P.item(id, m.ano), v = P.validarItem(it), ant = P.valorAnterior(id, m.ano);
+      var c = P.cat(id), it = P.item(id, P.chave(m)), v = P.validarItem(it), ant = P.valorAnterior(id, P.chave(m));
       var txtBruto = it.rascunho || (it.valor === null ? '' : String(it.valor).replace('.', ','));
       var cls = v.erros.length ? 'erro' : v.alertas.length ? 'alerta' : '';
       var res = v.erros.length ? chip('Error', 'err') : v.alertas.length ? chip(v.alertas.length + ' alert(s)', 'warn') : it.valor !== null ? chip('Valid', 'ok') : chip('To fill in');
       var recebido = S.ext.filter(function (x) { return x.indicador_id === id && x.milestone_id === m.id && x.estado === 'recebido'; })[0];
       return '<div class="ps-ind" id="ind-' + e(id) + '"><div class="ps-ind-top"><div class="ps-ind-nome"><button type="button" data-a="ficha" data-v="' + e(id) + '">' + e(c.nome) + '</button><small>' + e(c.unidade_medida) + ' · ' + (c.tipo === 'derivado' ? 'Derived' : 'Base data') + ' · ' + e(c.perimetro) + (P.esrsDe(id).dps.length ? ' · ' + e(P.esrsDe(id).dps[0]) : '') + '</small><span class="ps-ind-desc">' + e(P.esrsDe(id).desc) + '</span>' + (P.formulaTxt ? '<span class="ps-ind-form">ƒ ' + e(P.formulaTxt(id)) + '</span>' : '') + '</div>' +
-        '<div><span class="ps-ind-k">' + (m.ano - 1) + '</span><span class="ps-num">' + (ant === null || ant === undefined ? '-' : fmtV(id, ant)) + '</span></div>' +
-        '<div class="ps-ind-campo"><label class="ps-ind-k" for="v-' + e(id) + '">Value ' + e(m.ano) + '</label><input id="v-' + e(id) + '" class="ps-in ps-num ' + cls + '" inputmode="decimal" autocomplete="off" value="' + e(txtBruto) + '" data-c="valor" data-id="' + e(id) + '"' + (v.erros.length ? ' aria-invalid="true" aria-describedby="err-' + e(id) + '"' : '') + '></div>' +
+        '<div><span class="ps-ind-k">' + e(P.rotAnterior(P.chave(m))) + '</span><span class="ps-num">' + (ant === null || ant === undefined ? '-' : fmtV(id, ant)) + '</span></div>' +
+        '<div class="ps-ind-campo"><label class="ps-ind-k" for="v-' + e(id) + '">Value ' + e(P.rotPeriodo(m)) + '</label><input id="v-' + e(id) + '" class="ps-in ps-num ' + cls + '" inputmode="decimal" autocomplete="off" value="' + e(txtBruto) + '" data-c="valor" data-id="' + e(id) + '"' + (v.erros.length ? ' aria-invalid="true" aria-describedby="err-' + e(id) + '"' : '') + '></div>' +
         '<div><span class="ps-ind-k">Change</span><span class="ps-num">' + (v.variacao === null ? '-' : (v.variacao > 0 ? '+' : '') + P.fmtNum(v.variacao, 1) + '%') + '</span></div><div>' + res + '</div></div>' +
         (v.erros.length ? '<div id="err-' + e(id) + '" class="ps-ind-msg ps-mt" role="alert">' + e(v.erros[0]) + '</div>' : '') +
         (v.alertas.length ? '<div class="ps-ind-just"><ul>' + v.alertas.map(function (a) { return '<li>' + e(a) + '</li>'; }).join('') + '</ul><label class="ps-lab" for="j-' + e(id) + '">Justification (required)</label><textarea id="j-' + e(id) + '" class="ps-ta" data-c="just" data-id="' + e(id) + '">' + e(it.justificacao) + '</textarea></div>' : '') +
@@ -398,12 +453,33 @@
       '<div class="ps-card ps-com-acao">' + cabCartao('Requested data', 'tarefa', ferrDados(m)) + (U.dadosVista === 'grid' ? corpoGrelha(m) : linhas) +
       '<div class="ps-sticky"><span class="ps-small ps-mut" aria-live="polite">' + feitos + ' of ' + m.indicadores.length + ' indicators with a value</span><button type="button" id="btn-submeter" class="ps-btn pri" data-a="submeter">Submit milestone</button></div></div>';
   };
+  /* --- Na milestone do ano: o que ja foi reportado nos trimestres ------------ */
+  var cartaoTrimestres = function (m) {
+    if (P.trimestral(m)) return '';
+    var ids = m.indicadores.filter(function (id) { return P.trimestresDe(m, id).some(function (x) { return x.it; }); });
+    if (!ids.length) return '';
+    var usr = u(), pode = P.podePreencher(m, usr), prontos = 0;
+    var per = (S.periodos || []).filter(function (p) { return p.tipo === 'trimestre' && p.ano === m.ano; });
+    var linhas = ids.map(function (id) {
+      var c = P.cat(id), r = P.anualDosTrimestres(m, id), it = P.item(id, P.chave(m)), usado = r && it.valor === r.valor;
+      if (r && !usado) prontos++;
+      return [e(c.nome) + '<br><small class="ps-mut">' + e(id) + ' · ' + e(c.unidade_medida) + '</small>'].concat(P.trimestresDe(m, id).map(function (x) {
+        return x.valor === null ? '<span class="ps-mut" title="' + e(x.m ? P.estadoMs(x.m).txt : 'Not requested') + '">-</span>' : (x.m ? '<a class="ps-num" href="' + rota('Milestone/' + x.m.id) + '" title="' + e(x.m.nome + ' · ' + P.estadoMs(x.m).txt) + '">' : '<span class="ps-num">') + e(fmtV(id, x.valor)) + (x.m ? '</a>' : '</span>') + (x.aprovado ? '' : '<br><small class="ps-mut">' + e(x.m ? P.estadoMs(x.m).txt : '') + '</small>');
+      })).concat([e(P.AGREG_TXT[P.agregacao(id)]), r ? '<b class="ps-num">' + e(fmtV(id, r.valor)) + '</b>' + (r.n < r.total ? '<br><small class="ps-tri-parc">' + r.trimestres.join('+') + ' only</small>' : '') : '<span class="ps-mut">-</span>',
+        it.valor === null ? '<span class="ps-mut">-</span>' : '<span class="ps-num">' + e(fmtV(id, it.valor)) + '</span>', !r ? '' : usado ? chip('In use', 'ok') : pode ? '<button type="button" class="ps-btn peq" data-a="triUsar" data-v="' + e(id) + '">Use</button>' : '']);
+    });
+    var faltaT = per.filter(function (p) { return !P.msPeriodo(p.id).filter(function (x) { return x.unidade === m.unidade; }).every(P.concluida); }).map(function (p) { return p.nome; });
+    return '<div class="ps-card ps-tri">' + cabCartao('Reported in the quarters', 'cal', pode && prontos ? '<button type="button" class="ps-btn pri peq" data-a="triUsar">Use the quarters (' + prontos + ')</button>' : '') + '<div class="ps-card-body">' +
+      '<p class="ps-small ps-mut">The year reuses what ' + e(m.unidade) + ' already reported each quarter. Volumes and hours are summed, headcount and assets take the last quarter, and rates are averaged. Every value links to the quarter it came from.</p>' +
+      (faltaT.length ? '<div class="ps-aviso warn">Not yet approved: ' + e(faltaT.join(', ')) + '. Until then, the annual value is year to date.</div>' : '') +
+      tabela([{ t: 'Indicator' }].concat(per.map(function (p) { return { t: 'T' + p.t, dir: 1 }; })).concat([{ t: 'Rule' }, { t: 'Year from quarters', dir: 1 }, { t: 'Current', dir: 1 }, { t: '' }]), linhas) + '</div></div>';
+  };
   /* --- Pedido de dados ---------------------------------------------------- */
   var pedidoTopo = function (m) {
     var p = P.passoAtual(m), recolha = !!p && p.tipo === 'recolha', fics = P.ficheirosPedidos(m), obrig = fics.filter(function (f) { return f.obrigatorio; }), fOk = obrig.filter(function (f) { return f.entregues.length; }).length;
     var faltas = recolha ? P.faltasSubmissao(m) : [], comFalta = {}, erros = 0, alertas = 0;
     faltas.forEach(function (f) { if (f.campo === 'val' || f.campo === 'just' || f.campo === 'met') comFalta[f.id] = 1; });
-    m.indicadores.forEach(function (id) { var it = P.item(id, m.ano), v = P.validarItem(it); if (v.erros.length) erros++; if (v.alertas.length && !String(it.justificacao || '').trim()) alertas++; });
+    m.indicadores.forEach(function (id) { var it = P.item(id, P.chave(m)), v = P.validarItem(it); if (v.erros.length) erros++; if (v.alertas.length && !String(it.justificacao || '').trim()) alertas++; });
     var dOk = recolha ? m.indicadores.filter(function (id) { return !comFalta[id]; }).length : preenchidos(m), tot = m.indicadores.length + obrig.length, pct = tot ? Math.round(((dOk + fOk) / tot) * 100) : 100, C2 = 2 * Math.PI * 36;
     var titulo = !p ? 'Delivered and approved' : !recolha ? 'Delivered, now with ' + P.nomeResp(m, p.responsavel) : faltas.length ? faltas.length + (faltas.length === 1 ? ' item still needed' : ' items still needed') : 'Everything is ready to submit';
     var txt = !recolha ? 'This is what was requested and what was delivered.' : 'Provide the data and the files below by ' + P.fmtDataAno(m.prazo) + '. Every value is checked against the prior year and the rules of its indicator.';
@@ -432,9 +508,9 @@
     return {
       id: 'gr-' + m.id, titulo: 'Requested data', vazio: 'No data requested.',
       dica: pode ? 'Copy from Excel and paste here with Ctrl+V. Double-click or type to edit. Ctrl+Z undoes.' : 'Read only. Select cells and copy them to Excel with Ctrl+C.',
-      cols: [{ k: 'id', t: 'ID' }, { k: 'nome', t: 'Indicator', larg: 280 }, { k: 'un', t: 'Unit' }, { k: 'ant', t: String(m.ano - 1), dir: 1 }, { k: 'valor', t: m.ano + ' value', dir: 1, edita: pode, larg: 110 }, { k: 'var', t: 'Change %', dir: 1 }, { k: 'qual', t: 'Data quality', edita: pode, larg: 110 }, { k: 'metodo', t: 'Estimation method', edita: pode, larg: 170 }, { k: 'just', t: 'Justification', edita: pode, larg: 220 }, { k: 'evid', t: 'Evidence', larg: 130 }, { k: 'res', t: 'Validation', larg: 130 }],
+      cols: [{ k: 'id', t: 'ID' }, { k: 'nome', t: 'Indicator', larg: 280 }, { k: 'un', t: 'Unit' }, { k: 'ant', t: P.rotAnterior(P.chave(m)), dir: 1 }, { k: 'valor', t: P.rotPeriodo(m) + ' value', dir: 1, edita: pode, larg: 110 }, { k: 'var', t: 'Change %', dir: 1 }, { k: 'qual', t: 'Data quality', edita: pode, larg: 110 }, { k: 'metodo', t: 'Estimation method', edita: pode, larg: 170 }, { k: 'just', t: 'Justification', edita: pode, larg: 220 }, { k: 'evid', t: 'Evidence', larg: 130 }, { k: 'res', t: 'Validation', larg: 130 }],
       linhas: m.indicadores.map(function (id) {
-        var c = P.cat(id), it = P.item(id, m.ano), v = P.validarItem(it), ant = P.valorAnterior(id, m.ano), tem = it.valor !== null, msg = v.erros.concat(v.alertas).join(' ');
+        var c = P.cat(id), it = P.item(id, P.chave(m)), v = P.validarItem(it), ant = P.valorAnterior(id, P.chave(m)), tem = it.valor !== null, msg = v.erros.concat(v.alertas).join(' ');
         var evid = it.evidencias.map(function (x) { return x.ficheiro; }).join(', ');
         return { id: id, c: {
           id: { t: id }, nome: { t: c.nome }, un: { t: c.unidade_medida },
@@ -467,7 +543,7 @@
     var usr = u(), n = 0, rec = [];
     if (!P.podePreencher(m, usr)) return { aplicados: 0, recusados: ['This milestone is read only for you right now.'], semAlteracao: true };
     lista.forEach(function (a) {
-      var c = P.cat(a.id), it = P.item(a.id, m.ano);
+      var c = P.cat(a.id), it = P.item(a.id, P.chave(m));
       if (a.k === 'valor') {
         var s = P.limparColado(a.valor), num = s === '' ? null : P.lerNumero(s);
         if (s === '' ? (it.valor === null && !it.rascunho) : num === null ? it.rascunho === s : (num === it.valor && !it.rascunho)) return;
@@ -620,22 +696,22 @@
   var sepRevisao = function (m) {
     var p = P.passoAtual(m), rot = p.tipo === 'parecer' ? 'Give favourable opinion' : p.tipo === 'aprovacao' ? 'Approve and lock' : 'Complete review';
     return '<div class="ps-card ps-com-acao">' + cabCartao(p.nome, 'tarefa', ferrDados(m)) + '<div class="ps-card-body">' + (U.dadosVista === 'grid' ? corpoGrelha(m) : tabela([{ t: 'Indicator' }, { t: 'Value', dir: 1 }, { t: String(m.ano - 1), dir: 1 }, { t: 'Change', dir: 1 }, { t: 'Alerts and justification' }, { t: 'Quality' }], m.indicadores.map(function (id) {
-      var it = P.item(id, m.ano), v = P.validarItem(it), ant = P.valorAnterior(id, m.ano);
+      var it = P.item(id, P.chave(m)), v = P.validarItem(it), ant = P.valorAnterior(id, P.chave(m));
       return [linkFicha(id) + (P.formulaTxt ? '<span class="ps-ind-form">ƒ ' + e(P.formulaTxt(id)) + '</span>' : ''), celValor(m, id) + ' ' + e(P.cat(id).unidade_medida), ant === null || ant === undefined ? '-' : fmtV(id, ant), v.variacao === null ? '-' : (v.variacao > 0 ? '+' : '') + P.fmtNum(v.variacao, 1) + '%', v.alertas.length ? '<span class="ps-small">' + e(v.alertas.join(' ')) + '<br><b>Justification:</b> ' + e(it.justificacao || '-') + '</span>' : chip('No alerts', 'ok'), e(P.QUALIDADE_TXT[it.qualidade])];
     }))) + '<div class="ps-mt">' + campo('rev-com', 'Comment (required to return)', '<textarea id="rev-com" class="ps-ta"></textarea>') + '</div></div><div class="ps-sticky"><button type="button" class="ps-btn err" data-a="devolver">Return to the unit</button><button type="button" class="ps-btn pri" data-a="concluirPasso">' + e(rot) + '</button></div></div>';
   };
   var sepLeitura = function (m) {
     var msg = P.concluida(m) ? 'Milestone completed. Approved values only change by restatement.' : 'The current step is with ' + P.nomeResp(m, P.passoAtual(m).responsavel) + '. You can view the values.';
     return '<div class="ps-card">' + cabCartao('Requested data', 'doc', ferrDados(m)) + '<div class="ps-card-body"><div class="ps-aviso">' + e(msg) + '</div>' + (U.dadosVista === 'grid' ? corpoGrelha(m) : tabela([{ t: 'Indicator' }, { t: 'Value', dir: 1 }, { t: String(m.ano - 1), dir: 1 }, { t: 'Status' }, { t: 'Quality' }], m.indicadores.map(function (id) {
-      var est = P.estadoIndicador(m, id), it = P.item(id, m.ano), ant = P.valorAnterior(id, m.ano);
+      var est = P.estadoIndicador(m, id), it = P.item(id, P.chave(m)), ant = P.valorAnterior(id, P.chave(m));
       return [linkFicha(id) + marcaAmostra(id) + (it.reexpresso ? ' ' + chip('Restated', 'warn') : '') + (P.formulaTxt ? '<span class="ps-ind-form">ƒ ' + e(P.formulaTxt(id)) + '</span>' : ''), celValor(m, id) + ' ' + e(P.cat(id).unidade_medida), ant === null || ant === undefined ? '-' : fmtV(id, ant), chip(est.txt, est.cls), e(P.QUALIDADE_TXT[it.qualidade])];
     }))) + '</div></div>';
   };
   var sepEvidencias = function (m) {
-    var obrig = m.indicadores.filter(function (id) { return P.cat(id).evidencia_obrigatoria; }), comEv = obrig.filter(function (id) { return P.item(id, m.ano).evidencias.length; }).length, usr = u();
+    var obrig = m.indicadores.filter(function (id) { return P.cat(id).evidencia_obrigatoria; }), comEv = obrig.filter(function (id) { return P.item(id, P.chave(m)).evidencias.length; }).length, usr = u();
     return '<div class="ps-card">' + cabCartao('Evidence and quality', 'doc', chip(comEv + ' of ' + obrig.length + ' required evidence items attached', comEv === obrig.length ? 'ok' : 'warn')) + '<div class="ps-card-body">' +
       tabela([{ t: 'Indicator' }, { t: 'Quality' }, { t: 'Method' }, { t: 'Evidence' }], m.indicadores.map(function (id) {
-        var it = P.item(id, m.ano), c = P.cat(id);
+        var it = P.item(id, P.chave(m)), c = P.cat(id);
         return [linkFicha(id), e(P.QUALIDADE_TXT[it.qualidade]), e(it.metodo || '-'), (it.evidencias.length ? it.evidencias.map(function (x) { return e(x.ficheiro); }).join(', ') : c.evidencia_obrigatoria ? chip('Required, missing', 'warn') : '-')];
       })) + '<h3 class="ps-grupo-t">General milestone documents</h3>' + (m.documentos_gerais.length ? '<ul class="ps-list">' + m.documentos_gerais.map(function (d) { return '<li class="ps-row"><span class="ps-row-ico">' + svg(I.doc, 18) + '</span><span class="ps-row-txt"><b>' + e(d.ficheiro) + '</b><span>' + e(d.por) + ' · ' + e(P.fmtDataHora(d.em)) + '</span></span></li>'; }).join('') + '</ul>' : '<p class="ps-mut ps-small">No general documents yet.</p>') +
       (P.acompanha(m, usr) ? '<button type="button" class="ps-btn ps-mt" data-a="anexarGeral">Attach general document</button>' : '') + '</div></div>';
@@ -682,7 +758,7 @@
     lista.forEach(function (c) {
       var m = P.msDoIndicador(c.id);
       if (!m) { n.f++; return; }
-      var it = P.item(c.id, m.ano);
+      var it = P.item(c.id, P.chave(m));
       if (P.concluida(m)) n.a++;
       else if (P.passoAtual(m).tipo !== 'recolha') n.r++;
       else if (it.valor !== null) n.p++;
@@ -779,7 +855,7 @@
     if (c.ano_anterior !== null && c.ano_anterior !== undefined) pts.push({ ano: 2025, v: c.ano_anterior, nota: 'prior year' });
     Object.keys(S.items).forEach(function (k) {
       var it = S.items[k];
-      if (it.id !== id || it.valor === null) return;
+      if (it.id !== id || it.valor === null || typeof it.ano !== 'number') return;
       var m = P.ms(it.milestone_id);
       pts.push({ ano: it.ano, v: it.valor, nota: m && P.concluida(m) ? 'approved' : 'pending approval', corrente: true });
     });
@@ -820,8 +896,8 @@
       '<div class="ps-sp ps-mt">' + (podeAmostra ? '<button type="button" class="ps-btn pri" data-a="amostra">Select a sample of 5</button>' : '') + '<button type="button" class="ps-btn" data-a="dataRoom">Export data room (Excel)</button>' + (usr.perfil === 'auditor' || usr.perfil === 'admin' ? '<button type="button" class="ps-btn" data-a="novoPedAud">New information request</button>' : '') + '</div>' +
       (S.amostra.length ? '<div class="ps-card ps-mt">' + cabCartao('Sample', 'tarefa') + '<ul class="ps-list">' + S.amostra.map(function (id) { var m = P.msDoIndicador(id); return '<li class="ps-row"><span class="ps-row-txt">' + linkFicha(id) + '<span>' + e(m ? m.nome : '') + '</span></span></li>'; }).join('') + '</ul></div>' : '') +
       '<div class="ps-card ps-mt">' + cabCartao('Milestones', 'doc', '<div class="ps-seg" role="group" aria-label="Filter">' + [['todas', 'All'], ['concluidas', 'Completed'], ['abertos', 'With open requests'], ['amostra', 'In the sample']].map(function (x) { return '<button type="button" class="' + (f === x[0] ? 'on' : '') + '" data-a="audFiltro" data-v="' + x[0] + '">' + x[1] + '</button>'; }).join('') + '</div>') + '<div class="ps-card-body">' + tabela([{ t: 'Milestone' }, { t: 'Company' }, { t: 'Assigned to' }, { t: 'Status' }, { t: 'Approved', dir: 1 }, { t: 'Required evidence', dir: 1 }, { t: 'Estimated', dir: 1 }, { t: 'Restated', dir: 1 }, { t: 'Open requests', dir: 1 }], lista.map(function (m) {
-        var ob = m.indicadores.filter(function (id) { return P.cat(id).evidencia_obrigatoria; }), okEv = ob.filter(function (id) { return P.item(id, m.ano).evidencias.length; }).length;
-        return ['<a href="' + rota('Milestone/' + m.id + '?sep=auditoria') + '">' + e(m.nome) + '</a>', e(m.empresa), atribHtml(m), estChip(m), P.concluida(m) ? m.indicadores.length + '/' + m.indicadores.length : '0/' + m.indicadores.length, okEv + '/' + ob.length, m.indicadores.filter(function (id) { return P.item(id, m.ano).qualidade === 'estimado'; }).length, m.indicadores.filter(function (id) { return P.item(id, m.ano).reexpresso; }).length, pedidosDe(m)];
+        var ob = m.indicadores.filter(function (id) { return P.cat(id).evidencia_obrigatoria; }), okEv = ob.filter(function (id) { return P.item(id, P.chave(m)).evidencias.length; }).length;
+        return ['<a href="' + rota('Milestone/' + m.id + '?sep=auditoria') + '">' + e(m.nome) + '</a>', e(m.empresa), atribHtml(m), estChip(m), P.concluida(m) ? m.indicadores.length + '/' + m.indicadores.length : '0/' + m.indicadores.length, okEv + '/' + ob.length, m.indicadores.filter(function (id) { return P.item(id, P.chave(m)).qualidade === 'estimado'; }).length, m.indicadores.filter(function (id) { return P.item(id, P.chave(m)).reexpresso; }).length, pedidosDe(m)];
       }), 'No milestones match this filter.') + '</div></div>' +
       '<div class="ps-card ps-mt">' + cabCartao('Information requests', 'ativ') + (S.aud.length ? cartaoPedidos(S.aud) : vazio('No requests yet.')) + '</div>';
   };
@@ -844,7 +920,7 @@
   };
 
   /* --- Backoffice -------------------------------------------------------- */
-  var BO = [['indicadores', 'Indicators and milestones'], ['ciclo', 'Reporting cycle'], ['materialidade', 'Materiality and frameworks'], ['utilizadores', 'Users and profiles'], ['externas', 'External entities'], ['wfbase', 'Base workflow'], ['calendario', 'Calendar'], ['regras', 'Validation rules'], ['marca', 'Brand'], ['areas', 'Data consumer areas'], ['entidades', 'Companies'], ['departamentos', 'Departments'], ['dados', 'Data and storage']];
+  var BO = [['indicadores', 'Indicators and milestones'], ['ciclo', 'Reporting cycle'], ['periodos', 'Reporting periods'], ['materialidade', 'Materiality and frameworks'], ['utilizadores', 'Users and profiles'], ['externas', 'External entities'], ['wfbase', 'Base workflow'], ['calendario', 'Calendar'], ['regras', 'Validation rules'], ['marca', 'Brand'], ['areas', 'Data consumer areas'], ['entidades', 'Companies'], ['departamentos', 'Departments'], ['dados', 'Data and storage']];
   var B = {};
   Blocos['backoffice'] = function () {
     return '<div class="ps-bo"><nav class="ps-bo-tabs" aria-label="Backoffice sections">' + BO.map(function (t) { return '<button type="button" class="ps-bo-tab ' + (U.boTab === t[0] ? 'on' : '') + '" data-a="boTab" data-v="' + t[0] + '"' + (U.boTab === t[0] ? ' aria-current="true"' : '') + '>' + e(t[1]) + '</button>'; }).join('') + '</nav><div class="ps-col">' + B[U.boTab]() + '</div></div>';
@@ -891,6 +967,14 @@
     return '<div class="ps-card">' + cabCartao('Reporting windows', 'cal', '<button type="button" class="ps-btn peq" data-a="janNova">New window</button>') + '<div class="ps-card-body">' + tabela([{ t: 'Window' }, { t: 'Topic' }, { t: 'Months' }, { t: 'First day' }, { t: 'Last day' }, { t: 'Actions' }], S.janelas.map(function (j, i) {
       return ['<input id="jn-' + i + '" class="ps-in" aria-label="Window name" value="' + e(j.nome) + '" data-c="janNome" data-id="' + i + '">', '<select id="jt-' + i + '" class="ps-sel" aria-label="Topic" data-c="janTema" data-id="' + i + '">' + Object.keys(P.TEMAS).map(function (t) { return opt(t, t, j.tema); }).join('') + '</select>', '<input id="jm-' + i + '" class="ps-in" aria-label="Months, 1 to 12, comma separated" value="' + e(j.meses.join(', ')) + '" data-c="janMeses" data-id="' + i + '"><small class="ps-mut">' + (j.meses.length === 12 ? 'All' : j.meses.map(function (x) { return MESES[x - 1]; }).join(', ')) + '</small>', '<input id="ji-' + i + '" class="ps-in" type="number" min="1" max="31" aria-label="First day" value="' + j.dia_inicio + '" data-c="janIni" data-id="' + i + '">', '<input id="jf-' + i + '" class="ps-in" type="number" min="1" max="31" aria-label="Last day" value="' + j.dia_fim + '" data-c="janFim" data-id="' + i + '">', '<button type="button" class="ps-btn peq err" data-a="janApagar" data-v="' + i + '">Remove</button>'];
     }), 'No windows yet.') + '<p class="ps-mut ps-small ps-mt">Windows set when data is collected. Each milestone due date sets when it is delivered.</p></div></div>';
+  };
+  B.periodos = function () {
+    var ano = S.ciclo.ano;
+    return '<div class="ps-card">' + cabCartao('Reporting periods', 'cal') + '<div class="ps-card-body">' + tabela([{ t: 'Period' }, { t: 'Data from' }, { t: 'Data to' }, { t: 'Internal close' }, { t: 'Milestones', dir: 1 }], (S.periodos || []).filter(function (p) { return p.ano === ano; }).map(function (p) {
+      return [e(p.nome), e(P.fmtDataAno(p.ini)), e(P.fmtDataAno(p.fim)), '<input id="pf-' + e(p.id) + '" class="ps-in" type="date" aria-label="Internal close of ' + e(p.nome) + '" value="' + e(p.fecho) + '" data-c="perFecho" data-id="' + e(p.id) + '">', String(P.msPeriodo(p.id).length)];
+    })) + '<h3 class="ps-grupo-t">External deliveries</h3>' + tabela([{ t: 'Delivery' }, { t: 'Entity' }, { t: 'Period' }, { t: 'Due' }, { t: 'Legal basis' }], (S.relatorios || []).filter(function (r) { return r.periodo.indexOf(String(ano)) === 0; }).map(function (r) {
+      return ['<b>' + e(r.sigla) + '</b> ' + e(r.nome), e(r.entidade), e((P.periodo(r.periodo) || {}).nome || r.periodo), '<input id="rd-' + e(r.id) + '" class="ps-in" type="date" aria-label="Due date of ' + e(r.nome) + '" value="' + e(r.data) + '" data-c="relData" data-id="' + e(r.id) + '">', '<span class="ps-small">' + e(r.base) + '</span>'];
+    })) + '<p class="ps-mut ps-small ps-mt">Quarterly milestones belong to a quarter; annual ones to the year, which reuses the quarters. The legal bases are a starting point to confirm with the legal team.</p></div></div>';
   };
   B.regras = function () {
     var q = U.regraBusca.toLowerCase(), l = S.cat.filter(function (c) { return !q || (c.nome + ' ' + c.id).toLowerCase().indexOf(q) > -1; });
@@ -940,7 +1024,7 @@
   Pn.ficha = function (a) {
     var id = a.id, c = P.cat(id), m = P.msDoIndicador(id), it = P.item(id), usr = u();
     if (!m || !it) return { t: c.nome, b: vazio('This indicator has no milestone in this cycle.') };
-    var v = P.validarItem(it), ant = P.valorAnterior(id, m.ano), est = P.estadoIndicador(m, id);
+    var v = P.validarItem(it), ant = P.valorAnterior(id, P.chave(m)), est = P.estadoIndicador(m, id);
     var refs = (S.mat.filter(function (x) { return x.norma === c.esrs; })[0] || {}).avaliacao;
     var b = '<div class="ps-sp">' + chip(est.txt, est.cls) + marcaAmostra(id) + (it.reexpresso ? chip('Restated', 'warn') : '') + '</div><div class="ps-kpis"><div class="ps-kpi"><span>' + (m.ano - 1) + '</span><b>' + (ant === null || ant === undefined ? '-' : e(fmtV(id, ant))) + '</b></div><div class="ps-kpi"><span>' + m.ano + '</span><b>' + (it.valor === null ? '-' : e(fmtV(id, it.valor))) + '</b></div><div class="ps-kpi"><span>Change</span><b>' + (v.variacao === null ? '-' : (v.variacao > 0 ? '+' : '') + P.fmtNum(v.variacao, 1) + '%') + '</b></div></div>' +
       (v.alertas.length ? '<div class="ps-aviso warn">' + v.alertas.map(e).join('<br>') + '</div>' : '') + (it.justificacao ? '<div><span class="ps-lab">Justification</span>' + e(it.justificacao) + '</div>' : '') +
@@ -1046,6 +1130,8 @@
     pintarMarca();
     pintarPainel();
     if (window.PortalGrelha) window.PortalGrelha.depois();
+    /* No telemovel a timeline abre centrada no dia de hoje */
+    document.querySelectorAll('.tlr-sc').forEach(function (sc) { var h = sc.querySelector('.tlr-hoje'); if (h && sc.scrollWidth > sc.clientWidth) sc.scrollLeft = Math.max(0, h.offsetLeft - sc.clientWidth / 2); });
     if (!U.painelFoco && idF && document.getElementById(idF) && ativo !== document.getElementById(idF)) {
       var n = document.getElementById(idF);
       n.focus({ preventScroll: true });
@@ -1058,6 +1144,7 @@
     U.rota = lerRota();
     var novo = U.rota.pag + '/' + U.rota.arg;
     U.msFiltro.minhas = U.rota.pag === 'Milestones' && !!U.rota.q.minhas;
+    if (U.rota.pag === 'Milestones' && U.rota.q.periodo !== undefined) U.msFiltro.periodo = U.rota.q.periodo;
     var empRota = U.rota.pag === 'Milestones' && U.rota.q.empresa ? S.ent.filter(function (x) { return x.id === U.rota.q.empresa; })[0] : null;
     U.msFiltro.empresa = empRota ? empRota.nome : '';
     if (U.rota.q.sep) U.sep = U.rota.q.sep;
@@ -1114,6 +1201,7 @@
     msExcel: function () { exportarMilestones(msFiltradas()); },
     dadosVista: function (d) { U.dadosVista = d.v; R(); },
     dadosExcel: function () { var m = msAtual(); exportarGrelha(cfgDados(m), 'data-request-' + m.id + '-' + m.ano + '.xlsx', 'Data', folhaFicheiros(m)); toast('Excel file exported.', 'ok'); },
+    triUsar: function (d) { var r = P.usarTrimestres(msAtual(), u(), d.v ? [d.v] : null); if (r.erro) return toast(r.erro, 'err'); toast(r.n + ' annual value(s) calculated from the quarters' + (r.parciais ? ', ' + r.parciais + ' still year to date.' : '.'), 'ok'); R(); },
     colRelFechar: function () { delete U.colRel[msAtual().id]; R(); },
     irFalta: function (d) {
       if (d.campo !== 'fic' && d.campo !== 'evi') U.dadosVista = 'form';
@@ -1142,7 +1230,7 @@
     importar: function () { var m = msAtual(); escolherFicheiro('.xlsx,.csv,.json,.xls', function (f) { P.importarFicheiroM(m, f); }); },
     impExemplo: function () { var m = msAtual(), rel = P.validarImportacao(m, P.exemploImportacao(m)); rel.nome = 'exemplo-com-erros.xlsx'; U.imp[m.id] = rel; R(); },
     impAplicar: function () { var m = msAtual(), rel = U.imp[m.id], n = P.aplicarImportacao(m, rel, rel.nome, u()); delete U.imp[m.id]; toast(n + ' rows applied.', 'ok'); R(); },
-    anexar: function (d) { var m = msAtual(), it = P.item(d.v, m.ano); escolherFicheiro('', function (f) { P.anexar(it, f.name, u()); P.evento(m, 'Evidence attached to ' + P.cat(d.v).nome + ': ' + f.name + '.', u().nome); P.guardar(); toast('Evidence attached.', 'ok'); R(); }); },
+    anexar: function (d) { var m = msAtual(), it = P.item(d.v, P.chave(m)); escolherFicheiro('', function (f) { P.anexar(it, f.name, u()); P.evento(m, 'Evidence attached to ' + P.cat(d.v).nome + ': ' + f.name + '.', u().nome); P.guardar(); toast('Evidence attached.', 'ok'); R(); }); },
     anexarGeral: function () { var m = msAtual(), usr = u(); escolherFicheiro('', function (f) { m.documentos_gerais.push({ ficheiro: f.name, por: usr.nome, em: new Date().toISOString() }); P.evento(m, 'General document attached: ' + f.name + '.', usr.nome); P.guardar(); toast('Document attached.', 'ok'); R(); }); },
     submeter: function () {
       var m = msAtual(), r = P.submeter(m, u());
@@ -1227,10 +1315,13 @@
   var mudouMarca = function () { P.aplicarMarca(U.marca); agendar(); };
   var C = {
     valor: function (el) { var m = msAtual(); P.gravarValor(m, el.dataset.id, el.value, u()); },
-    just: function (el) { P.item(el.dataset.id, msAtual().ano).justificacao = el.value; P.guardar(); },
-    qual: function (el) { var it = P.item(el.dataset.id, msAtual().ano); it.qualidade = el.value; if (el.value !== 'estimado') it.metodo = ''; P.guardar(); },
-    metodo: function (el) { P.item(el.dataset.id, msAtual().ano).metodo = el.value; P.guardar(); },
+    just: function (el) { P.item(el.dataset.id, P.chave(msAtual())).justificacao = el.value; P.guardar(); },
+    qual: function (el) { var it = P.item(el.dataset.id, P.chave(msAtual())); it.qualidade = el.value; if (el.value !== 'estimado') it.metodo = ''; P.guardar(); },
+    metodo: function (el) { P.item(el.dataset.id, P.chave(msAtual())).metodo = el.value; P.guardar(); },
+    perFecho: function (el) { var p = P.periodo(el.dataset.id); if (p && el.value) { p.fecho = el.value; P.guardar(); } },
+    relData: function (el) { var r = (S.relatorios || []).filter(function (x) { return x.id === el.dataset.id; })[0]; if (r && el.value) { r.data = el.value; P.guardar(); } },
     msDepF: function (el) { U.msFiltro.dep = el.value; },
+    msPerF: function (el) { U.msFiltro.periodo = el.value; },
     msMinhas: function (el) { U.msFiltro.minhas = el.checked; },
     msAtrib: function (el) { var m = el.dataset.id ? P.ms(el.dataset.id) : msAtual(), r = P.atribuir(m, el.value, u()); if (r.erro) toast(r.erro, 'err'); },
     expSel: function (el) { var x = estadoExp(msAtual()); if (el.checked) { if (x.sel.indexOf(el.dataset.id) < 0) x.sel.push(el.dataset.id); } else x.sel = x.sel.filter(function (i) { return i !== el.dataset.id; }); },

@@ -123,7 +123,7 @@
     return l;
   };
   var carregarDe = function (x) {
-    var d = U.de, it = P.item(x.id, x.m.ano);
+    var d = U.de, it = P.item(x.id, P.chave(x.m));
     d.id = x.id; d.valor = it.valor === null ? (it.rascunho || '') : String(it.valor).replace('.', ','); d.qual = it.qualidade; d.just = it.justificacao || ''; d.metodo = it.metodo || ''; d.conf = false; d.evid = '';
     d.linhas = (it.entradas || []).map(function (l) { return { local: l.local, doc: l.doc, valor: l.valor, peso: l.peso }; });
     d.multi = d.linhas.length > 0;
@@ -137,9 +137,9 @@
     var topo = '<div class="ps-form">' + campo('de-norma', 'ESRS standard', '<select id="de-norma" class="ps-sel" data-c="deNorma">' + opt('', 'All', d.norma) + normas.map(function (n) { return opt(n.norma, n.norma + ' ' + n.tema, d.norma); }).join('') + '</select>') +
       campo('de-id', 'Data point *', lista.length ? '<select id="de-id" class="ps-sel" data-c="deId">' + lista.map(function (y) { return opt(y.id, (y.c.esrs_requisito ? y.c.esrs_requisito + ' · ' : '') + y.c.nome, d.id); }).join('') + '</select>' : '<span class="ps-mut">None for this standard</span>');
     if (!x) return '<div class="ps-card"><div class="ps-card-body">' + topo + '</div></div></div>';
-    var c = x.c, m = x.m, ant = P.valorAnterior(c.id, m.ano), regra = P.regraEnt(m.empresa, c.id), media = regra.agreg === 'media';
+    var c = x.c, m = x.m, ant = P.valorAnterior(c.id, P.chave(m)), regra = P.regraEnt(m.empresa, c.id), media = regra.agreg === 'media';
     var total = d.multi ? P.agregar(d.linhas, regra.agreg) : P.lerNumero(d.valor), bruto = !d.multi && String(d.valor).trim() !== '' && total === null;
-    var v = total === null ? { erros: [], alertas: [], variacao: null } : P.validar(c, total, m.ano), temAlerta = v.alertas.length > 0, ic = function (ok, t, warn) { return '<div class="ps-regra"><span class="ps-chip ' + (ok ? 'ok' : warn ? 'warn' : 'err') + '">' + (ok ? 'OK' : warn ? 'Warning' : 'Error') + '</span><span>' + e(t) + '</span></div>'; };
+    var v = total === null ? { erros: [], alertas: [], variacao: null } : P.validar(c, total, P.chave(m)), temAlerta = v.alertas.length > 0, ic = function (ok, t, warn) { return '<div class="ps-regra"><span class="ps-chip ' + (ok ? 'ok' : warn ? 'warn' : 'err') + '">' + (ok ? 'OK' : warn ? 'Warning' : 'Error') + '</span><span>' + e(t) + '</span></div>'; };
     var cheio = total !== null || bruto;
     return '<div class="ps-card">' + cabCartao('Manual entry', 'doc', '<span class="ps-mut ps-small">Fields marked with * are required</span>') + '<div class="ps-card-body">' + topo + '</div><p class="ps-de-desc ps-mt">' + (P.esrsDe(c.id).dps.length ? '<span class="ps-mono">' + e(P.esrsDe(c.id).dps.join(', ')) + '</span> ' : '') + e(P.esrsDe(c.id).desc) + '</p><div class="ps-form">' +
       campo('de-emp', 'Company', '<input id="de-emp" class="ps-in" readonly value="' + e(m.empresa) + '">') + campo('de-per', 'Period', '<input id="de-per" class="ps-in" readonly value="' + e(m.ano) + '">') +
@@ -154,7 +154,7 @@
       '<div class="ps-de-regras ps-mt"><div class="ps-sp-b"><b>Validation rules for this data point</b><span class="ps-small ps-mut">Change threshold against the prior year: ±' + e(c.limiar_variacao_pct) + '%' + (P.gereTudo(usr) ? ' · <a href="#/Backoffice" data-a="deRegras">change</a>' : '') + '</span></div><div class="ps-de-regras-g ps-mt">' +
       ic(cheio, cheio ? 'Required fields filled in' : 'Value missing') + ic(!bruto && !v.erros.length, bruto ? 'The value is not numeric' : v.erros[0] || 'Numeric value within range') + ic(true, 'Unit set by the indicator: ' + c.unidade_medida) + ic(S.ciclo.estado === 'aberto', 'Period ' + m.ano + ' open') + ic(!temAlerta, temAlerta ? 'Change of ' + variacaoTxt(v.variacao) + ' or a consistency rule to confirm' : v.variacao === null ? 'No prior year to compare' : 'Change of ' + variacaoTxt(v.variacao) + ' within the threshold', true) + '</div></div>' +
       (temAlerta ? '<div class="ps-de-alerta ps-mt" role="alert"><p><b>Review the value before saving.</b> Confirm the unit, the period and the evidence. If the value is correct, justify it.</p><ul>' + v.alertas.map(function (a) { return '<li>' + e(a) + '</li>'; }).join('') + '</ul>' + campo('de-just', 'Justification *', '<textarea id="de-just" class="ps-ta" data-c="deJust">' + e(d.just) + '</textarea>') + '<label class="ps-chk ps-mt"><input id="de-conf" type="checkbox" data-c="deConf"' + (d.conf ? ' checked' : '') + '> I reviewed the value and the evidence and the value is correct</label><p class="ps-small ps-mt">The approver sees this alert and the justification, and the event stays in the audit trail.</p></div>' : '') +
-      '<div class="ps-sp ps-mt"><button type="button" id="de-evid" class="ps-btn" data-a="deEvid">' + (d.evid ? 'Evidence: ' + e(d.evid) : 'Attach evidence') + '</button>' + (c.evidencia_obrigatoria ? (P.item(c.id, m.ano).evidencias.length || d.evid ? chip('Evidence attached', 'ok') : chip('Evidence required', 'warn')) : '') + '</div>' +
+      '<div class="ps-sp ps-mt"><button type="button" id="de-evid" class="ps-btn" data-a="deEvid">' + (d.evid ? 'Evidence: ' + e(d.evid) : 'Attach evidence') + '</button>' + (c.evidencia_obrigatoria ? (P.item(c.id, P.chave(m)).evidencias.length || d.evid ? chip('Evidence attached', 'ok') : chip('Evidence required', 'warn')) : '') + '</div>' +
       '<div class="ps-sp-b ps-mt"><a class="ps-small" href="' + rota('Milestone/' + m.id) + '">Open ' + e(m.nome) + '</a><span class="ps-sp"><button type="button" class="ps-btn" data-a="deSubmeter">Submit the milestone</button><button type="button" class="ps-btn pri" data-a="deGuardar">Save value</button></span></div></div></div>';
   };
   var abaExcel = function (usr) {
@@ -198,10 +198,10 @@
   A.deGuardar = function () {
     var d = U.de, usr = u(), m = msDe(), id = d.id;
     if (!m || !P.podePreencher(m, usr)) return toast('This milestone is not with you right now.', 'err');
-    var c = P.cat(id), it = P.item(id, m.ano), regra = P.regraEnt(m.empresa, id);
+    var c = P.cat(id), it = P.item(id, P.chave(m)), regra = P.regraEnt(m.empresa, id);
     var total = d.multi ? P.agregar(d.linhas, regra.agreg) : P.lerNumero(d.valor);
     if (total === null) { toast(d.multi ? 'Enter at least one numeric value.' : 'The value must be numeric.', 'err'); var ve = document.getElementById(d.multi ? 'de-v-0' : 'de-val'); if (ve) ve.focus(); return; }
-    var v = P.validar(c, total, m.ano);
+    var v = P.validar(c, total, P.chave(m));
     if (v.erros.length) return toast(v.erros[0], 'err');
     if (v.alertas.length && !d.just.trim()) { toast('Write the justification.', 'err'); var j = document.getElementById('de-just'); if (j) j.focus(); return; }
     if (v.alertas.length && !d.conf) { toast('Confirm that you reviewed the value.', 'err'); var k = document.getElementById('de-conf'); if (k) k.focus(); return; }
@@ -256,7 +256,7 @@
 
   /* --- Aprovacoes ------------------------------------------------------------------- */
   U.apr = { filtro: 'todas', sel: '' };
-  var alertasMs = function (m) { return m.indicadores.filter(function (id) { return P.validarItem(P.item(id, m.ano)).alertas.length; }); };
+  var alertasMs = function (m) { return m.indicadores.filter(function (id) { return P.validarItem(P.item(id, P.chave(m))).alertas.length; }); };
   Blocos['approvals'] = function () {
     var usr = u(), todas = aprovaveis(), f = U.apr, minhas = todas.filter(function (m) { return P.podeAgir(m, usr); }), alerta = todas.filter(function (m) { return alertasMs(m).length; });
     if (U.rota.q.ms && !f.sel) f.sel = U.rota.q.ms;
@@ -267,12 +267,12 @@
       var al = alertasMs(m), podeA = P.podeAgir(m, usr), viola = P.violaSegregacao(m, usr), p = P.passoAtual(m), rec = m.passos.filter(function (x) { return x.tipo === 'recolha'; })[0];
       var verbo = p.tipo === 'aprovacao' ? 'Approve' : p.tipo === 'parecer' ? 'Give opinion' : 'Complete review';
       det = '<div class="ps-card ps-apr-det">' + cabCartao(m.nome, 'tarefa', estChip(m)) + '<div class="ps-card-body"><p class="ps-small ps-mut">' + e(m.empresa) + ' · ' + e(m.ano) + (rec && rec.concluido_por ? ' · submitted by ' + e(rec.concluido_por) : '') + '</p><p class="ps-small ps-mt"><b>Current step:</b> ' + e(p.nome) + ' · ' + e(P.nomeResp(m, p.responsavel)) + '</p>' +
-        '<div class="ps-tw ps-mt"><table class="ps-t ps-t-apr"><thead><tr><th>Indicator</th><th class="dir">Value</th><th class="dir">' + (m.ano - 1) + '</th><th class="dir">Change</th></tr></thead><tbody>' + m.indicadores.map(function (id) {
-          var c = P.cat(id), it = P.item(id, m.ano), v = P.validarItem(it), ant = P.valorAnterior(id, m.ano);
+        '<div class="ps-tw ps-mt"><table class="ps-t ps-t-apr"><thead><tr><th>Indicator</th><th class="dir">Value</th><th class="dir">' + e(P.rotAnterior(P.chave(m))) + '</th><th class="dir">Change</th></tr></thead><tbody>' + m.indicadores.map(function (id) {
+          var c = P.cat(id), it = P.item(id, P.chave(m)), v = P.validarItem(it), ant = P.valorAnterior(id, P.chave(m));
           return '<tr><td class="prim">' + e(c.nome) + '</td><td class="dir ps-num">' + (it.valor === null ? '-' : e(fmtV(id, it.valor) + ' ' + c.unidade_medida)) + '</td><td class="dir ps-num">' + (ant === null || ant === undefined ? '-' : e(fmtV(id, ant))) + '</td><td class="dir ps-num ' + (v.alertas.length ? 'ps-txt-err' : '') + '">' + e(variacaoTxt(v.variacao)) + '</td></tr>';
         }).join('') + '</tbody></table></div>' +
-        (al.length ? '<div class="ps-aviso err ps-mt">' + al.map(function (id) { var it = P.item(id, m.ano); return '<div><b>' + e(P.cat(id).nome) + '.</b> ' + e(P.validarItem(it).alertas[0]) + (it.justificacao ? ' Justification: "' + e(it.justificacao) + '"' : '') + '</div>'; }).join('') + '</div>' : '') +
-        '<h3 class="ps-grupo-t">Evidence</h3>' + (function () { var ev = []; m.indicadores.forEach(function (id) { P.item(id, m.ano).evidencias.forEach(function (x) { ev.push(x.ficheiro); }); }); (m.documentos_gerais || []).forEach(function (x) { ev.push(x.ficheiro); }); return ev.length ? '<ul class="ps-apr-ev">' + ev.map(function (n) { return '<li>' + e(n) + '</li>'; }).join('') + '</ul>' : '<p class="ps-mut ps-small">No evidence attached.</p>'; })() +
+        (al.length ? '<div class="ps-aviso err ps-mt">' + al.map(function (id) { var it = P.item(id, P.chave(m)); return '<div><b>' + e(P.cat(id).nome) + '.</b> ' + e(P.validarItem(it).alertas[0]) + (it.justificacao ? ' Justification: "' + e(it.justificacao) + '"' : '') + '</div>'; }).join('') + '</div>' : '') +
+        '<h3 class="ps-grupo-t">Evidence</h3>' + (function () { var ev = []; m.indicadores.forEach(function (id) { P.item(id, P.chave(m)).evidencias.forEach(function (x) { ev.push(x.ficheiro); }); }); (m.documentos_gerais || []).forEach(function (x) { ev.push(x.ficheiro); }); return ev.length ? '<ul class="ps-apr-ev">' + ev.map(function (n) { return '<li>' + e(n) + '</li>'; }).join('') + '</ul>' : '<p class="ps-mut ps-small">No evidence attached.</p>'; })() +
         (podeA ? (viola ? '<div class="ps-aviso warn ps-mt">You submitted this milestone, so someone else has to decide on it.</div>' : campo('apr-com', 'Comment (required to return)', '<textarea id="apr-com" class="ps-ta"></textarea>') + '<div class="ps-sp ps-mt ps-apr-acts"><button type="button" class="ps-btn" data-a="aprDevolver" data-v="' + e(m.id) + '">Return</button><button type="button" class="ps-btn pri" data-a="aprAprovar" data-v="' + e(m.id) + '">' + e(verbo) + '</button></div>') : '<p class="ps-small ps-mut ps-mt">This step is with ' + e(P.nomeResp(m, p.responsavel)) + '.</p>') +
         '<p class="ps-small ps-mt"><a href="' + rota('Milestone/' + m.id) + '">Open the milestone</a></p></div></div>';
     }

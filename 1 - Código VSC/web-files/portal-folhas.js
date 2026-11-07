@@ -22,7 +22,11 @@
 
   /* --- Modelo ---------------------------------------------------------------- */
   var unidade = function (f) { if (f.un) return f.un; var c = P.cat(f.ind); return c ? c.unidade_medida : ''; };
-  var periodos = function (m) { return MESES.map(function (n, i) { return { k: m.ano + '-' + (i < 9 ? '0' : '') + (i + 1), t: n + ' ' + m.ano, i: i }; }); };
+  var periodos = function (m) {
+    var l = MESES.map(function (n, i) { return { k: m.ano + '-' + (i < 9 ? '0' : '') + (i + 1), t: n + ' ' + m.ano, i: i }; });
+    if (P.trimestral(m)) { var t = P.periodo(m.periodo).t; l = l.filter(function (p) { return Math.floor(p.i / 3) === t - 1; }); }
+    return l;
+  };
   /* Meses obrigatorios: todos para somas e medias, o fim de cada trimestre para os ultimos valores */
   var obrigatorio = function (f, i) { return f.agreg === 'ultimo' ? i % 3 === 2 : true; };
   P.colunasFolha = function (m, pedido) {
@@ -105,7 +109,7 @@
       var l = P.registosCampo(c.k, m);
       bases[DBS[c.db] + ' (' + c.tab + ')'] = 1;
       l.forEach(function (x, i) {
-        var mes = l.length === 4 ? i * 3 + 2 : i, per = m.ano + '-' + (mes < 9 ? '0' : '') + (mes + 1), ch = per + '|' + c.k;
+        var mes = l.length === 4 ? i * 3 + 2 : P.trimestral(m) ? (P.periodo(m.periodo).t - 1) * 3 + (l.length === 1 ? 2 : i) : i, per = m.ano + '-' + (mes < 9 ? '0' : '') + (mes + 1), ch = per + '|' + c.k;
         regs++;
         /* Os registos de teste das medias podem passar de 100% no ultimo mes */
         if (c.un === '%') x = { valor: Math.min(x.valor, 100), ref: x.ref };
@@ -244,7 +248,7 @@
     var st = P.estadoFolha(m, ped), usa = [];
     st.cols.forEach(function (c) { c.usa.forEach(function (id) { if (usa.indexOf(id) < 0) usa.push(id); }); });
     return P.calculosMilestone(m, st.totais).filter(function (r) { return usa.indexOf(r.id) > -1; }).map(function (r) {
-      var c = P.cat(r.id), it = P.item(r.id, m.ano), ant = P.valorAnterior(r.id, m.ano), v = r.valor === null ? null : P.validar(c, r.valor, m.ano);
+      var c = P.cat(r.id), it = P.item(r.id, P.chave(m)), ant = P.valorAnterior(r.id, P.chave(m)), v = r.valor === null ? null : P.validar(c, r.valor, P.chave(m));
       return { id: r.id, c: c, r: r, atual: it.valor, ant: ant, novo: r.valor, val: v, falta: r.falta.filter(function (k) { return k.indexOf('fator.') !== 0; }) };
     });
   };
@@ -260,7 +264,7 @@
     });
     var prontos = l.filter(function (x) { return x.novo !== null; }).length, alertas = l.filter(function (x) { return x.val && (x.val.alertas.length || x.val.erros.length); }).length;
     return '<section class="fh-imp" aria-labelledby="fh-imp-t"><div class="fh-imp-h"><h3 id="fh-imp-t">Impact on the indicators</h3><span class="ps-small ps-mut" aria-live="polite">' + prontos + ' of ' + l.length + ' calculated with this sheet' + (alertas ? ' · ' + alertas + ' to check' : '') + '. Updates as you type.</span></div>' +
-      X.tabela([{ t: 'Indicator' }, { t: 'Formula with these values' }, { t: String(m.ano - 1), dir: 1 }, { t: 'Current', dir: 1 }, { t: 'With this sheet', dir: 1 }, { t: 'Change vs ' + (m.ano - 1), dir: 1 }, { t: 'Check' }], linhas) + '</section>';
+      X.tabela([{ t: 'Indicator' }, { t: 'Formula with these values' }, { t: P.rotAnterior(P.chave(m)), dir: 1 }, { t: 'Current', dir: 1 }, { t: 'With this sheet', dir: 1 }, { t: 'Change vs ' + P.rotAnterior(P.chave(m)), dir: 1 }, { t: 'Check' }], linhas) + '</section>';
   };
 
   /* --- Painel ------------------------------------------------------------------ */
@@ -287,7 +291,7 @@
     var usa = [];
     st.cols.forEach(function (c) { c.usa.forEach(function (id) { if (usa.indexOf(id) < 0) usa.push(id); }); });
     return {
-      t: ped.nome, s: m.nome + ' · ' + m.empresa + ' · ' + m.ano, cls: 'folha',
+      t: ped.nome, s: m.nome + ' · ' + m.empresa + ' · ' + P.rotPeriodo(m), cls: 'folha',
       b: estado + '<p class="ps-small ps-mut">' + e(ped.motivo || 'Fill in the columns this milestone needs.') + ' One row per month. Every cell keeps where it came from.</p>' + ferr + fontes + resumo + aviso + window.PortalGrelha.html(cfg) + impactoHtml(m, ped) + defs,
       p: '<span class="fh-motivo ' + (st.pronta ? 'ok' : '') + '" aria-live="polite">' + e(motivo) + (pode && usa.length ? '<small>Delivering updates ' + e(usa.join(', ')) + '</small>' : '') + '</span><button type="button" class="ps-btn" data-a="fecharPainel">' + (pode ? 'Save and close' : 'Close') + '</button>' +
         (pode ? '<button type="button" class="ps-btn pri" data-a="fhEntregar"' + (st.pronta ? '' : ' disabled') + '>' + (entregue ? 'Deliver new version' : 'Deliver data') + '</button>' : '') + (!pode && entregue ? '<button type="button" class="ps-btn" data-a="fhDescarregar">Download Excel</button>' : '')

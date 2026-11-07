@@ -161,7 +161,7 @@
     return v.reduce(function (a, x) { return a + x.n; }, 0);
   };
   P.gravarEntradas = function (m, id, linhas, regra, u) {
-    var it = P.item(id, m.ano), total = P.agregar(linhas, regra), c = P.cat(id);
+    var it = P.item(id, P.chave(m)), total = P.agregar(linhas, regra), c = P.cat(id);
     if (total === null) return { erro: regra === 'media' ? 'Enter at least one value with a weight.' : 'Enter at least one numeric value.' };
     it.entradas = linhas.map(function (l) { return { local: l.local, doc: l.doc, valor: l.valor, peso: l.peso }; });
     var arred = Number(total.toFixed(c.casas_decimais));
@@ -259,11 +259,11 @@
         r.push({ k: m.id + '|e|' + i, em: x.em, por: x.por, tipo: tipoEvento(x.texto), texto: x.texto, m: m, origem: x.por === 'System' ? 'Automatic' : 'Workflow', motivo: com ? com.texto : '' });
       });
       m.indicadores.forEach(function (id) {
-        var it = S.items[m.ano + ':' + id];
+        var it = S.items[P.chave(m) + ':' + id];
         if (!it) return;
         it.versoes.forEach(function (v, i) {
           var o = origemVersao(v.origem);
-          r.push({ k: m.ano + ':' + id + '|v|' + i, em: v.em, por: v.por, tipo: i ? 'Change' : o === 'Calculation' ? 'Calculation' : 'Creation', ind: id, m: m, antes: i ? it.versoes[i - 1].valor : null, depois: v.valor, origem: o, motivo: v.motivo || '', texto: v.origem || '' });
+          r.push({ k: P.chave(m) + ':' + id + '|v|' + i, em: v.em, por: v.por, tipo: i ? 'Change' : o === 'Calculation' ? 'Calculation' : 'Creation', ind: id, m: m, antes: i ? it.versoes[i - 1].valor : null, depois: v.valor, origem: o, motivo: v.motivo || '', texto: v.origem || '' });
         });
       });
     });

@@ -61,9 +61,9 @@
     docs: 'esg_docs', ent: 'esg_ent', janelas: 'esg_windows', marca: 'esg_brand', amostra: 'esg_sample', users: 'esg_users',
     areas: 'esg_areas', cat: 'esg_catalog', metas: 'esg_metas', deps: 'esg_deps',
     atrib: 'esg_assign', regrasEnt: 'esg_entity_rules', fatores: 'esg_factors', apis: 'esg_connections', evg: 'esg_config_log', selos: 'esg_seals',
-    kpim: 'esg_kpi_master', puxados: 'esg_source_pulls', dpdec: 'esg_dp_decisions', gloss: 'esg_glossary', rq: 'esg_report_tables', doc: 'esg_report_doc'
+    kpim: 'esg_kpi_master', puxados: 'esg_source_pulls', periodos: 'esg_periods', relatorios: 'esg_reports', dpdec: 'esg_dp_decisions', gloss: 'esg_glossary', rq: 'esg_report_tables', doc: 'esg_report_doc'
   };
-  var VERSAO_DADOS = 4;
+  var VERSAO_DADOS = 5;
   var S = (P.S = {});
   var memoria = {};
   var ler = function (k) {
@@ -83,7 +83,7 @@
   /* Online: o estado vem do Supabase depois do login. Ate la, fica vazio e com a marca publica. */
   var estadoVazio = function () {
     S.ciclo = { ano: new Date().getFullYear(), estado: 'aberto', data_abertura: null, fechados: [] };
-    S.ms = []; S.items = {}; S.wfbase = []; S.ext = []; S.aud = []; S.mat = []; S.docs = []; S.ent = []; S.deps = []; S.janelas = []; S.amostra = []; S.users = []; S.areas = []; S.cat = []; S.metas = []; S.atrib = {}; S.regrasEnt = {}; S.fatores = []; S.apis = []; S.evg = []; S.selos = [];
+    S.ms = []; S.items = {}; S.wfbase = []; S.ext = []; S.aud = []; S.mat = []; S.docs = []; S.ent = []; S.deps = []; S.janelas = []; S.periodos = []; S.relatorios = []; S.amostra = []; S.users = []; S.areas = []; S.cat = []; S.metas = []; S.atrib = {}; S.regrasEnt = {}; S.fatores = []; S.apis = []; S.evg = []; S.selos = [];
     S.marca = S.marca || clone(P.MARCA_BASE);
   };
   P.estadoVazio = estadoVazio;
@@ -145,8 +145,76 @@
     ['REL', 'Relatório de sustentabilidade', 'Quadros anuais do relatório e futura informação ESRS'], ['CONT', 'Contabilidade', 'Custos, acréscimos e centros de custo a partir das mesmas faturas'],
     ['ERSAR', 'ERSAR', 'Indicadores de qualidade de serviço reportados ao regulador'], ['APA', 'APA', 'Lamas, descargas e licenças ambientais'], ['OPS', 'Operações', 'Eficiência energética e gestão das instalações']
   ];
-  var nomeMs = function (per, ano, un) {
-    return per === 'Novos dados ESRS' ? 'Novos dados ESRS ' + ano + ' de ' + un : 'Entrega ' + per.toLowerCase() + ' ' + ano + ' de ' + un;
+  var nomeMs = function (per, ano, un, t) {
+    if (t) return 'Entrega T' + t + ' ' + ano + ' de ' + un;
+    return per === 'Novos dados ESRS' ? 'Novos dados ESRS ' + ano + ' de ' + un : 'Entrega ' + (per === 'Mensal' || per === 'Trimestral' ? 'anual' : per.toLowerCase()) + ' ' + ano + ' de ' + un;
+  };
+
+  /* --- Periodos de reporte -------------------------------------------------- */
+  /* Quatro trimestres e o ano. O fecho interno de cada trimestre e 45 dias depois do fim; o do ano, fim de fevereiro. */
+  var periodosAno = function (ano) {
+    var fim = ['03-31', '06-30', '09-30', '12-31'], ini = ['01-01', '04-01', '07-01', '10-01'], fecho = [ano + '-05-15', ano + '-08-14', ano + '-11-13', (ano + 1) + '-02-12'];
+    var l = [1, 2, 3, 4].map(function (t) { return { id: ano + '-T' + t, nome: 'T' + t + ' ' + ano, tipo: 'trimestre', ano: ano, t: t, ini: ano + '-' + ini[t - 1], fim: ano + '-' + fim[t - 1], fecho: fecho[t - 1] }; });
+    l.push({ id: ano + '-A', nome: 'Ano ' + ano, tipo: 'ano', ano: ano, t: 0, ini: ano + '-01-01', fim: ano + '-12-31', fecho: (ano + 1) + '-02-26' });
+    return l;
+  };
+  /* Entregas externas de uma entidade gestora de agua, com a base legal de cada prazo */
+  var relatoriosAno = function (ano) {
+    var n = ano + 1, qa = ['-06-29', '-09-22', '-12-29'];
+    var l = [1, 2, 3, 4].map(function (t) {
+      return { id: 'QA-' + ano + '-T' + t, sigla: 'QA T' + t, nome: 'Publicação trimestral da qualidade da água, T' + t + ' ' + ano, entidade: 'ERSAR', periodo: ano + '-T' + t, data: t < 4 ? ano + qa[t - 1] : n + '-03-29', base: 'DL 152/2017, art. 17.º: 60 dias úteis após o fim do trimestre (sistemas em baixa)' };
+    });
+    return l.concat([
+      { id: 'PCQA-' + ano, sigla: 'PCQA', nome: 'Resultados anuais do PCQA ' + ano, entidade: 'ERSAR', periodo: ano + '-A', data: n + '-03-31', base: 'DL 152/2017, art. 15.º, n.º 5: até 31 de março do ano seguinte' },
+      { id: 'RQS-' + ano, sigla: 'RQS', nome: 'Relatório de Qualidade do Serviço ' + ano, entidade: 'ERSAR', periodo: ano + '-A', data: n + '-03-31', base: 'Regulamento ERSAR n.º 446/2024: até ao fim de março' },
+      { id: 'MIRR-' + ano, sigla: 'MIRR', nome: 'Mapa Integrado de Registo de Resíduos ' + ano, entidade: 'APA', periodo: ano + '-A', data: n + '-03-31', base: 'SILiAmb: até 31 de março do ano seguinte' },
+      { id: 'GF-' + ano, sigla: 'GF', nome: 'Relatório de gases fluorados ' + ano, entidade: 'APA', periodo: ano + '-A', data: n + '-03-31', base: 'SILiAmb: até 31 de março do ano seguinte' },
+      { id: 'RC-' + ano, sigla: 'R&C', nome: 'Relatório e Contas consolidado ' + ano, entidade: 'Acionistas', periodo: ano + '-A', data: n + '-05-31', base: 'Código das Sociedades Comerciais, art. 65.º: contas consolidadas até 5 meses após o fim do exercício' },
+      { id: 'RS-' + ano, sigla: 'RS', nome: 'Relatório de Sustentabilidade ' + ano, entidade: 'Público', periodo: ano + '-A', data: n + '-06-30', base: 'Calendário interno, depois do Relatório e Contas' }
+    ]);
+  };
+  P.periodosAno = periodosAno; P.relatoriosAno = relatoriosAno;
+  P.periodo = function (id) { return (S.periodos || []).filter(function (p) { return p.id === id; })[0] || null; };
+  P.trimestral = function (m) { return !!m && /-T\d$/.test(m.periodo || ''); };
+  /* Chave dos valores: o trimestre para as milestones trimestrais, o ano para as anuais (o que vai para o relatorio) */
+  P.chave = function (m) { return P.trimestral(m) ? m.periodo : m.ano; };
+  P.rotPeriodo = function (m) { var p = P.periodo(m && m.periodo); return p ? p.nome : String(m ? m.ano : ''); };
+  P.rotAnterior = function (chave) { var x = /^(\d{4})-T(\d)$/.exec(String(chave)); return x ? 'T' + x[2] + ' ' + (x[1] - 1) : String(chave - 1); };
+  /* Como se junta um indicador ao longo do ano: soma (volumes, horas), ultimo valor (efetivos, ativos) ou media (taxas) */
+  P.agregacao = function (id) {
+    var c = P.cat(id);
+    if (!c) return 'soma';
+    if (c.agregacao) return c.agregacao;
+    if (c.unidade_medida === '%' || c.tipo === 'derivado' || /\//.test(c.unidade_medida)) return 'media';
+    if (/31\/12|extens|clientes|colaborador|força de trabalho|estagi|em operação|frota|instalações|cobertura|declaração|NPS|Net Promoter/i.test(c.nome) || ['km', 'milhares'].indexOf(c.unidade_medida) > -1) return 'ultimo';
+    return 'soma';
+  };
+  P.AGREG_TXT = { soma: 'Sum of the quarters', media: 'Average of the quarters', ultimo: 'Value of the last quarter' };
+  P.relatoriosDe = function (m) {
+    var per = P.periodo(m.periodo), ano = m.ano, l = [];
+    var add = function (id) { var r = (S.relatorios || []).filter(function (x) { return x.id === id; })[0]; if (r && l.indexOf(r) < 0) l.push(r); };
+    m.indicadores.forEach(function (id) {
+      var c = P.cat(id), us = (c && c.utilizado_por) || [];
+      if (/^A1[23]$/.test(id)) { if (per && per.tipo === 'trimestre') add('QA-' + per.id); add('PCQA-' + ano); }
+      else if (us.indexOf('ERSAR') > -1) add('RQS-' + ano);
+      if (us.indexOf('APA') > -1) add(id === 'N04' ? 'GF-' + ano : 'MIRR-' + ano);
+      if (us.indexOf('CONT') > -1) add('RC-' + ano);
+      if (us.indexOf('REL') > -1 || /^N/.test(id)) add('RS-' + ano);
+    });
+    return l.sort(function (a, b) { return a.data < b.data ? -1 : 1; });
+  };
+  /* Na milestone anual: o que ja foi reportado em cada trimestre */
+  P.trimestresDe = function (m, id) {
+    return (S.periodos || []).filter(function (p) { return p.tipo === 'trimestre' && p.ano === m.ano; }).map(function (p) {
+      var it = S.items[p.id + ':' + id], ms = it ? P.ms(it.milestone_id) : null;
+      return { p: p, it: it || null, m: ms, valor: it && it.valor !== null ? it.valor : null, aprovado: !!(ms && P.concluida(ms)) };
+    });
+  };
+  P.anualDosTrimestres = function (m, id) {
+    var l = P.trimestresDe(m, id), ag = P.agregacao(id), c = P.cat(id), com = l.filter(function (x) { return x.valor !== null; });
+    if (!com.length) return null;
+    var s = com.reduce(function (a, x) { return a + x.valor; }, 0), v = ag === 'ultimo' ? com[com.length - 1].valor : ag === 'media' ? s / com.length : s;
+    return { valor: Number(v.toFixed(c.casas_decimais)), n: com.length, total: l.length, aprovados: l.filter(function (x) { return x.aprovado; }).length, agreg: ag, trimestres: com.map(function (x) { return 'T' + x.p.t; }), l: l };
   };
   var passosDe = function (lista) {
     return lista.map(function (p, i) { return { id: 'p' + i + '_' + Math.random().toString(36).slice(2, 7), nome: p.nome, tipo: p.tipo, responsavel: p.responsavel, concluido_em: null, concluido_por: null }; });
@@ -163,6 +231,14 @@
   };
   var novoItem = function (id, ano, msId, tipo) {
     return { id: id, ano: ano, milestone_id: msId, valor: null, rascunho: null, qualidade: tipo === 'derivado' ? 'calculado' : 'medido', metodo: '', justificacao: '', evidencias: [], reexpresso: false, versoes: [], entidade: 'Consolidado', fonte: '' };
+  };
+  /* Valor de demonstracao de um trimestre, coerente com o valor anual */
+  var valorTrimestre = function (c, t) {
+    var v = valorDemo(c), ag = P.agregacao(c.id);
+    if (v === null || v === undefined) return v;
+    var q = ag === 'soma' ? v / 4 * (0.94 + 0.03 * t) : ag === 'ultimo' ? v * (0.985 + 0.005 * t) : v * (t % 2 ? 1.004 : 0.996);
+    if (c.unidade_medida === '%') q = Math.min(q, 100);
+    return Number(q.toFixed(c.casas_decimais));
   };
   /* Valor de demonstracao estavel: ano anterior com pequena variacao */
   var valorDemo = function (c) {
@@ -184,6 +260,7 @@
     S.mat = MATERIALIDADE.map(function (m) { return { norma: m[0], tema: m[1], avaliacao: m[2], justificacao: m[3] }; });
     S.ent = ENTIDADES.map(function (e) { return { id: e[0], nome: e[0], perimetro_grupo: !!e[1], perimetro_maioritario: !!e[2] }; });
     S.deps = DEPARTAMENTOS.map(function (n) { return { id: n, nome: n }; });
+    S.periodos = periodosAno(2026); S.relatorios = relatoriosAno(2026);
     S.janelas = JANELAS.map(function (j) { return { nome: j[0], tema: j[1], meses: j[2], dia_inicio: j[3], dia_fim: j[4] }; });
     S.areas = AREAS.map(function (a) { return { codigo: a[0], nome: a[1], uso: a[2] }; });
     S.marca = clone(P.MARCA_BASE);
@@ -211,43 +288,61 @@
     var EMPRESAS_DEMO = ['Sede do grupo', 'Concessão Vale', 'Concessão Rio', 'Serviços ambientais'];
     var pessoaDe = function (un) { var x = UTILIZADORES.filter(function (l) { return l[2] === 'resp' && l[3] === un; })[0]; return x || null; };
     var nomeDe = function (un) { var x = pessoaDe(un); return x ? x[1] : 'Equipa de sustentabilidade'; };
+    /* Uma milestone por trimestre para o que e mensal ou trimestral, uma para o ano para o resto,
+       e uma consolidacao anual por departamento que junta os trimestres */
+    var inst = [], trimPorUn = {};
     window.PORTAL_PLANO.forEach(function (pl, ixPlano) {
-      var cfg = estados[pl.id];
+      var trim = pl.periodicidade === 'Mensal' || pl.periodicidade === 'Trimestral';
+      if (trim) {
+        [1, 2, 3, 4].forEach(function (t) { inst.push({ pl: pl, ix: ixPlano, id: pl.id + '-T' + t, periodo: '2026-T' + t, t: t }); });
+        trimPorUn[pl.unidade] = (trimPorUn[pl.unidade] || []).concat(pl.indicadores.filter(function (id) { return (trimPorUn[pl.unidade] || []).indexOf(id) < 0; }));
+      } else inst.push({ pl: pl, ix: ixPlano, id: pl.id, periodo: '2026-A' });
+    });
+    Object.keys(trimPorUn).forEach(function (un, k) {
+      var id = 'M' + (26 + k);
+      inst.push({ pl: { id: id, periodicidade: 'Anual', unidade: un, indicadores: trimPorUn[un], workflow: [] }, ix: 25 + k, id: id, periodo: '2026-A', consolida: true });
+    });
+    var feito = function (lista) { return lista.length; };
+    inst.forEach(function (x) {
+      var pl = x.pl, ixPlano = x.ix, per = P.periodo(x.periodo);
       var lista = pl.workflow.length ? pl.workflow.map(function (n) { return passoDeNome(n, pl.unidade); }) : WF_BASE();
+      /* Q1 e Q2 aprovados, Q3 no estado de demonstracao, Q4 a recolher. A consolidacao espera pelo Q4. */
+      var cfg = x.t === 1 || x.t === 2 ? { i: feito(lista), d: P.diasAte(per.fecho) } : x.t === 4 || x.consolida ? { i: 0, d: P.diasAte(per.fecho) } : estados[pl.id];
       var m = {
-        id: pl.id, nome: nomeMs(pl.periodicidade, 2026, pl.unidade), ano: 2026, empresa: EMPRESAS_DEMO[ixPlano % EMPRESAS_DEMO.length], departamentos: [pl.unidade], atribuido_a: ixPlano % 2 === 0 && pessoaDe(pl.unidade) ? pessoaDe(pl.unidade)[0] : null, ficheiros_pedidos: [], unidade: pl.unidade, periodicidade: pl.periodicidade, prazo: diasDe(cfg.d),
+        id: x.id, nome: x.consolida ? 'Consolidação anual 2026 de ' + pl.unidade : nomeMs(pl.periodicidade, 2026, pl.unidade, x.t), ano: 2026, periodo: x.periodo, consolida: !!x.consolida,
+        empresa: EMPRESAS_DEMO[ixPlano % EMPRESAS_DEMO.length], departamentos: [pl.unidade], atribuido_a: ixPlano % 2 === 0 && pessoaDe(pl.unidade) ? pessoaDe(pl.unidade)[0] : null, ficheiros_pedidos: [], unidade: pl.unidade, periodicidade: pl.periodicidade, prazo: diasDe(cfg.d),
         indicadores: pl.indicadores.slice(), passos: passosDe(lista), passo_atual: 0, devolvida: !!cfg.dev, workflow_ajustado: pl.workflow.length > 0,
         documentos_gerais: [], comentarios: [], eventos: []
       };
-      m.eventos.push({ texto: 'Milestone created in the 2026 cycle.', em: new Date(Date.now() - 86400000 * 300).toISOString(), por: 'System' });
+      m.eventos.push({ texto: 'Milestone created in the 2026 cycle for ' + per.nome + '.', em: new Date(Date.now() - 86400000 * 300).toISOString(), por: 'System' });
       S.ms.push(m);
-      var preencher = cfg.i > 0 || cfg.dev;
+      var preencher = cfg.i > 0 || cfg.dev, chave = P.chave(m), quando = function (dias) { return new Date(new Date(m.prazo + 'T12:00:00').getTime() + 86400000 * dias).toISOString(); };
       pl.indicadores.forEach(function (id, ix) {
-        var c = P.cat(id), it = novoItem(id, 2026, m.id, c.tipo);
-        S.items['2026:' + id] = it;
-        var parcial = (pl.id === 'M10' && ix < 2) || (pl.id === 'M16' && ix < 3);
-        if (preencher || parcial) {
-          it.valor = valorDemo(c);
-          it.versoes.push({ valor: it.valor, em: new Date(Date.now() - 86400000 * 25).toISOString(), por: nomeDe(pl.unidade), origem: 'manual', motivo: '' });
-          if (preencher && c.evidencia_obrigatoria) it.evidencias.push({ id: 'ev-' + id, ficheiro: 'suporte-' + id.toLowerCase() + '-2026.pdf', por: nomeDe(pl.unidade), em: new Date(Date.now() - 86400000 * 25).toISOString() });
-          if (preencher && P.validar(c, it.valor, 2026).alertas.length) it.justificacao = 'Diferença confirmada pela unidade: perímetro e fórmula iguais aos do ano anterior.';
+        var c = P.cat(id), it = novoItem(id, chave, m.id, c.tipo);
+        S.items[chave + ':' + id] = it;
+        var parcial = (x.t === 3 && pl.id === 'M10' && ix < 2) || (pl.id === 'M16' && ix < 3);
+        if (!x.consolida && (preencher || parcial)) {
+          it.valor = x.t ? valorTrimestre(c, x.t) : valorDemo(c);
+          it.versoes.push({ valor: it.valor, em: quando(-8), por: nomeDe(pl.unidade), origem: 'manual', motivo: '' });
+          if (preencher && c.evidencia_obrigatoria) it.evidencias.push({ id: 'ev-' + id + '-' + chave, ficheiro: 'suporte-' + id.toLowerCase() + '-' + String(chave).toLowerCase() + '.pdf', por: nomeDe(pl.unidade), em: quando(-8) });
+          if (preencher && P.validar(c, it.valor, chave).alertas.length) it.justificacao = 'Diferença confirmada pela unidade: perímetro e fórmula iguais aos do ano anterior.';
         }
       });
-      if (pl.id === 'M01') {
-        var a = S.items['2026:A01'];
-        a.valor = 59.67; a.versoes.push({ valor: 59.67, em: new Date(Date.now() - 86400000 * 24).toISOString(), por: nomeDe('Operações'), origem: 'file import telemetria-setembro.xlsx', motivo: '' });
+      if (x.id === 'M01-T3') {
+        var a = S.items[chave + ':A01'];
+        a.valor = Number((a.valor * 1.11).toFixed(2)); a.versoes.push({ valor: a.valor, em: quando(-7), por: nomeDe('Operações'), origem: 'file import telemetria-setembro.xlsx', motivo: '' });
         a.justificacao = 'Nova ligação de adução em serviço desde março.';
-        var b = S.items['2026:A09']; b.qualidade = 'estimado'; b.metodo = 'Extrapolação a partir de nove meses de registos.';
+        var b = S.items[chave + ':A09']; b.qualidade = 'estimado'; b.metodo = 'Extrapolação a partir dos registos do trimestre.';
       }
       for (var k = 0; k < cfg.i; k++) {
-        var t = new Date(Date.now() - 86400000 * (Math.max(2, 30 - cfg.d / 3) - k * 2)).toISOString();
+        var t = x.t === 1 || x.t === 2 ? quando(-6 + k * 2) : new Date(Date.now() - 86400000 * (Math.max(2, 30 - cfg.d / 3) - k * 2)).toISOString();
         m.passos[k].concluido_em = t;
         m.passos[k].concluido_por = m.passos[k].responsavel === 'sistema' ? 'System' : m.passos[k].responsavel === 'unidade' ? nomeDe(m.unidade) : m.passos[k].responsavel.indexOf('area:') === 0 ? nomeDe(m.passos[k].responsavel.slice(5)) : 'Sustainability team';
         m.eventos.push({ texto: 'Step completed: ' + m.passos[k].nome + '.', em: t, por: m.passos[k].concluido_por });
       }
       m.passo_atual = cfg.i;
       /* O que ja passou da recolha entregou os ficheiros pedidos */
-      if (cfg.i > 0) (FICHEIROS_BASE[pl.unidade] || []).forEach(function (f, ixF) { m.documentos_gerais.push({ ficheiro: f[3] + '-' + pl.id.toLowerCase() + '-2026.' + f[2][0], por: nomeDe(pl.unidade), em: new Date(Date.now() - 86400000 * 25).toISOString(), pedido: 'base:' + ixF }); });
+      if (cfg.i > 0) (FICHEIROS_BASE[pl.unidade] || []).forEach(function (f, ixF) { m.documentos_gerais.push({ ficheiro: f[3] + '-' + x.id.toLowerCase() + '-2026.' + f[2][0], por: nomeDe(pl.unidade), em: quando(-8), pedido: 'base:' + ixF }); });
       if (cfg.dev) {
         m.comentarios.push({ autor: 'Equipa de sustentabilidade', texto: 'A percentagem de veículos verdes parece baixa. Confirmem com a gestora da frota, por favor.', em: new Date(Date.now() - 86400000).toISOString() });
         m.eventos.push({ texto: 'Returned to the unit.', em: new Date(Date.now() - 86400000).toISOString(), por: 'Sustainability team' });
@@ -255,7 +350,7 @@
     });
     S.ext = [
       { id: 'X1', indicador_id: 'E03', milestone_id: 'M17', entidade_externa: 'Comercializador de eletricidade', descricao: 'Percentagem de eletricidade com garantias de origem renovável no ano.', prazo: diasDe(9), estado: 'pendente', valor: null, evidencia: '', respondido_em: null },
-      { id: 'X2', indicador_id: 'E09', milestone_id: 'M12', entidade_externa: 'Gestora de frota em renting', descricao: 'Percentagem de viaturas elétricas ou híbridas plug-in na frota em renting a 31/12.', prazo: diasDe(2), estado: 'recebido', valor: 6.4, evidencia: 'frota-renting-dezembro.pdf', respondido_em: new Date(Date.now() - 3600000 * 5).toISOString() },
+      { id: 'X2', indicador_id: 'E09', milestone_id: 'M12-T3', entidade_externa: 'Gestora de frota em renting', descricao: 'Percentagem de viaturas elétricas ou híbridas plug-in na frota em renting a 31/12.', prazo: diasDe(2), estado: 'recebido', valor: 6.4, evidencia: 'frota-renting-dezembro.pdf', respondido_em: new Date(Date.now() - 3600000 * 5).toISOString() },
       { id: 'X3', indicador_id: 'N02', milestone_id: 'M20', entidade_externa: 'Fornecedor de reagentes químicos', descricao: 'Toneladas de reagentes fornecidos às ETA e ETAR do perímetro no ano.', prazo: diasDe(30), estado: 'pendente', valor: null, evidencia: '', respondido_em: null }
     ];
     if (P.semearControlo) P.semearControlo();
@@ -305,6 +400,15 @@
   P.sair = function () { try { sessionStorage.removeItem('esg_sess'); } catch (e) { delete memoria.sess; } };
 
   P.valorAnterior = function (id, ano) {
+    var tri = /^(\d{4})-T(\d)$/.exec(String(ano));
+    if (tri) {
+      /* Trimestre: o mesmo trimestre do ano anterior; sem ele, a quarta parte do ano anterior nas somas */
+      var itT = S.items[(tri[1] - 1) + '-T' + tri[2] + ':' + id];
+      if (itT) { var mT = P.ms(itT.milestone_id); return mT && P.concluida(mT) ? itT.valor : null; }
+      var cT = P.cat(id), anoAnt = cT ? cT.ano_anterior : null;
+      if (+tri[1] - 1 !== 2025 || anoAnt === null || anoAnt === undefined) return null;
+      return P.agregacao(id) === 'soma' ? anoAnt / 4 : anoAnt;
+    }
     var a = ano - 1, it = S.items[a + ':' + id];
     if (it) {
       var m = P.ms(it.milestone_id);
@@ -325,7 +429,7 @@
     if (ant !== null && ant !== undefined && ant !== 0) {
       r.variacao = ((valor - ant) / Math.abs(ant)) * 100;
       if (Math.abs(r.variacao) > c.limiar_variacao_pct) {
-        r.alertas.push('Change of ' + (r.variacao > 0 ? '+' : '') + P.fmtNum(r.variacao, 1) + '% against ' + (ano - 1) + ', above the ' + c.limiar_variacao_pct + '% threshold.');
+        r.alertas.push('Change of ' + (r.variacao > 0 ? '+' : '') + P.fmtNum(r.variacao, 1) + '% against ' + P.rotAnterior(ano) + ', above the ' + c.limiar_variacao_pct + '% threshold.');
       }
     }
     (c.regras_coerencia || []).forEach(function (t) { r.alertas.push(t); });
@@ -340,7 +444,7 @@
   P.faltasSubmissao = function (m) {
     var f = [];
     m.indicadores.forEach(function (id) {
-      var it = P.item(id, m.ano), c = P.cat(id), v = P.validarItem(it);
+      var it = P.item(id, P.chave(m)), c = P.cat(id), v = P.validarItem(it);
       if (it.valor === null && !it.rascunho) f.push({ id: id, campo: 'val', msg: c.nome + ': value missing.' });
       v.erros.forEach(function (e) { f.push({ id: id, campo: 'val', msg: c.nome + ': ' + e }); });
       if (v.alertas.length && !String(it.justificacao || '').trim()) f.push({ id: id, campo: 'just', msg: c.nome + ': alert justification missing.' });
@@ -373,7 +477,7 @@
     (m.ficheiros_pedidos || []).forEach(function (f) { l.push({ id: f.id, nome: f.nome, motivo: f.motivo || '', formatos: [], obrigatorio: !!f.obrigatorio, proprio: true, entregues: entregues(f.id) }); });
     m.indicadores.forEach(function (id) {
       var c = P.cat(id);
-      if (c.evidencia_obrigatoria) l.push({ id: 'ev:' + id, nome: 'Evidência de ' + c.nome, motivo: 'Obrigatória para este indicador.', formatos: [], obrigatorio: true, indicador: id, entregues: P.item(id, m.ano).evidencias });
+      if (c.evidencia_obrigatoria) l.push({ id: 'ev:' + id, nome: 'Evidência de ' + c.nome, motivo: 'Obrigatória para este indicador.', formatos: [], obrigatorio: true, indicador: id, entregues: P.item(id, P.chave(m)).evidencias });
     });
     return l;
   };
@@ -383,7 +487,7 @@
     if (!f) return { erro: 'That file is no longer requested.' };
     var ext = String(nome).split('.').pop().toLowerCase();
     if (f.formatos.length && f.formatos.indexOf(ext) < 0) return { erro: 'This request accepts ' + f.formatos.join(', ') + ' files.' };
-    if (f.indicador) P.anexar(P.item(f.indicador, m.ano), nome, u);
+    if (f.indicador) P.anexar(P.item(f.indicador, P.chave(m)), nome, u);
     else m.documentos_gerais.push({ ficheiro: nome, por: u.nome, em: agora(), pedido: pid });
     ev(m, 'File delivered for "' + f.nome + '": ' + nome + '.', u.nome);
     guardar();
@@ -447,7 +551,7 @@
     return { cod: 'revisao', txt: 'In review', cls: 'rev' };
   };
   P.estadoIndicador = function (m, id) {
-    var it = P.item(id, m.ano);
+    var it = P.item(id, P.chave(m));
     if (P.concluida(m)) return { txt: 'Approved', cls: 'ok' };
     if (P.passoAtual(m).tipo === 'recolha') {
       if (m.devolvida) return { txt: 'Returned', cls: 'err' };
@@ -484,7 +588,7 @@
       var p = P.passoAtual(m);
       p.concluido_em = agora(); p.concluido_por = 'System';
       if (p.tipo === 'validacao') {
-        var n = m.indicadores.filter(function (id) { return P.validarItem(P.item(id, m.ano)).alertas.length; }).length;
+        var n = m.indicadores.filter(function (id) { return P.validarItem(P.item(id, P.chave(m))).alertas.length; }).length;
         ev(m, 'Automatic validation completed: ' + n + ' indicator(s) with alerts.', 'System');
       } else if (p.tipo === 'publicacao') {
         ev(m, 'Values published to the report tables.', 'System');
@@ -576,7 +680,7 @@
     var n = 0;
     if (aplicar) {
       P.msCiclo().forEach(function (m) {
-        var porComecar = m.passo_atual === 0 && !m.workflow_ajustado && !m.devolvida && !m.indicadores.some(function (id) { return P.item(id, m.ano).valor !== null; });
+        var porComecar = m.passo_atual === 0 && !m.workflow_ajustado && !m.devolvida && !m.indicadores.some(function (id) { return P.item(id, P.chave(m)).valor !== null; });
         if (porComecar) { m.passos = passosDe(S.wfbase); n++; ev(m, 'Updated base workflow applied.', 'Backoffice'); }
       });
     }
@@ -586,7 +690,7 @@
 
   /* --- Valores ----------------------------------------------------------- */
   P.gravarValor = function (m, id, bruto, u, origem) {
-    var it = P.item(id, m.ano), s = String(bruto === null || bruto === undefined ? '' : bruto).trim();
+    var it = P.item(id, P.chave(m)), s = String(bruto === null || bruto === undefined ? '' : bruto).trim();
     if (s === '') { if (it.valor !== null || it.rascunho) { it.valor = null; it.rascunho = null; guardar(); } return; }
     var n = lerNumero(s);
     if (n === null) { it.rascunho = s; it.valor = null; guardar(); return; }
@@ -601,10 +705,10 @@
   P.reexpressar = function (m, id, bruto, motivo, u) {
     if (!P.podeReexpressar(u)) return { erro: 'Only the sustainability team and the administrator can restate.' };
     if (!P.concluida(m)) return { erro: 'Only approved values can be restated.' };
-    var n = lerNumero(bruto), c = P.cat(id), it = P.item(id, m.ano);
+    var n = lerNumero(bruto), c = P.cat(id), it = P.item(id, P.chave(m));
     if (n === null) return { erro: 'Enter a numeric value.' };
     if (!motivo || !motivo.trim()) return { erro: 'A reason is required to restate.' };
-    var v = P.validar(c, n, m.ano);
+    var v = P.validar(c, n, P.chave(m));
     if (v.erros.length) return { erro: v.erros[0] };
     var ant = it.valor;
     it.valor = n; it.reexpresso = true;
@@ -637,7 +741,7 @@
     if (x.entidade_externa !== u.nome) return { erro: 'This request is not for your organisation.' };
     var n = lerNumero(bruto), c = P.cat(x.indicador_id);
     if (n === null) return { erro: 'Enter a numeric value.' };
-    var m = P.ms(x.milestone_id), v = P.validar(c, n, m.ano);
+    var m = P.ms(x.milestone_id), v = P.validar(c, n, P.chave(m));
     if (v.erros.length) return { erro: v.erros[0] };
     x.valor = n; x.evidencia = evidencia || ''; x.estado = 'recebido'; x.respondido_em = agora();
     ev(m, 'Value received from ' + x.entidade_externa + ' for ' + c.nome + '.', x.entidade_externa);
@@ -645,7 +749,7 @@
     return { ok: true };
   };
   P.usarExterno = function (x, u) {
-    var m = P.ms(x.milestone_id), it = P.item(x.indicador_id, m.ano);
+    var m = P.ms(x.milestone_id), it = P.item(x.indicador_id, P.chave(m));
     if (!P.podePreencher(m, u)) return { erro: 'Only during collection, by whoever has it.' };
     it.valor = x.valor; it.rascunho = null; it.qualidade = 'medido'; it.metodo = '';
     it.versoes.push({ valor: x.valor, em: agora(), por: u.nome, origem: 'external: ' + x.entidade_externa, motivo: '' });
@@ -672,7 +776,20 @@
     guardar();
     return { ok: true };
   };
-  P.msDoIndicador = function (id, ano) { return P.msCiclo(ano).filter(function (m) { return m.indicadores.indexOf(id) > -1; })[0] || null; };
+  P.msDoIndicador = function (id, ano) { var l = P.msCiclo(ano).filter(function (m) { return m.indicadores.indexOf(id) > -1; }); return l.filter(function (m) { return !P.trimestral(m); })[0] || l[0] || null; };
+  P.msPeriodo = function (pid) { return S.ms.filter(function (m) { return m.periodo === pid; }); };
+  P.usarTrimestres = function (m, u, ids) {
+    if (!P.podePreencher(m, u)) return { erro: 'This milestone is read only for you right now.' };
+    var n = 0, parciais = 0;
+    (ids || m.indicadores).forEach(function (id) {
+      var r = P.anualDosTrimestres(m, id);
+      if (!r) return;
+      P.gravarValor(m, id, String(r.valor).replace('.', ','), u, 'from quarters ' + r.trimestres.join(', '));
+      n++; if (r.n < r.total) parciais++;
+    });
+    if (n) { ev(m, n + ' value(s) calculated from the quarters' + (parciais ? ', ' + parciais + ' still without all four quarters' : '') + '.', u.nome); guardar(); }
+    return { n: n, parciais: parciais };
+  };
   P.criarPedidoAuditor = function (indId, texto, u) {
     if (!texto || !texto.trim()) return { erro: 'Write the request.' };
     var m = P.msDoIndicador(indId);
@@ -783,9 +900,9 @@
       if (['measured', 'calculated', 'estimated'].indexOf(q) < 0) rej('data_quality must be measured, calculated or estimated.');
       if (r.estado === 'valida' && c) {
         /* 4. Intervalos e 5. regras de negocio */
-        var v = P.validar(c, n, m.ano);
+        var v = P.validar(c, n, P.chave(m));
         v.erros.forEach(rej);
-        var it = P.item(id, m.ano);
+        var it = P.item(id, P.chave(m));
         if (q === 'estimated' && !String(l.estimation_method || '').trim()) rej('estimation_method is required when data_quality is estimated.');
         if (c.evidencia_obrigatoria && !String(l.evidence_ref || '').trim() && !it.evidencias.length) rej('evidence_ref is required for this indicator.');
         if (r.estado === 'valida' && v.alertas.length) {
@@ -804,7 +921,7 @@
     var QUAL = { measured: 'medido', calculated: 'calculado', estimated: 'estimado' }, n = 0;
     rel.linhas.forEach(function (r) {
       if (r.estado !== 'valida' && r.estado !== 'alerta') return;
-      var l = r.dados, it = P.item(r.indicador, m.ano);
+      var l = r.dados, it = P.item(r.indicador, P.chave(m));
       P.gravarValor(m, r.indicador, l.value, u, 'file import ' + ficheiro);
       it.qualidade = QUAL[String(l.data_quality || '').trim() || 'measured'];
       it.metodo = String(l.estimation_method || '').trim();
@@ -861,7 +978,7 @@
     return {
       dados: linhasTemplate(m),
       instrucoes: m.indicadores.map(function (id) {
-        var c = P.cat(id), ant = P.valorAnterior(id, m.ano);
+        var c = P.cat(id), ant = P.valorAnterior(id, P.chave(m));
         return { indicador: id, nome: c.nome, unidade: c.unidade_medida, ano_anterior: ant === null || ant === undefined ? '' : ant, limiar_pct: c.limiar_variacao_pct, evidencia_obrigatoria: c.evidencia_obrigatoria ? 'Yes' : 'No', regra: 'period = ' + m.ano + '; unit as stated; numeric value; justification required when there is an alert; estimation_method required when data_quality is estimated.' };
       })
     };
@@ -898,7 +1015,7 @@
     P.msCiclo().forEach(function (m) {
       if (mFiltro && m.id !== mFiltro.id) return;
       m.indicadores.forEach(function (id) {
-        var c = P.cat(id), it = P.item(id, m.ano), s = submissao(m), a = aprovacao(m);
+        var c = P.cat(id), it = P.item(id, P.chave(m)), s = submissao(m), a = aprovacao(m);
         r.push({ indicador_id: id, indicador: c.nome, valor: it.valor, unidade_medida: c.unidade_medida, qualidade: QUALIDADE_TXT[it.qualidade], metodo: it.metodo, esrs: c.esrs_requisito, esrs_id: P.esrsDe ? P.esrsDe(id).dps.join(', ') : '', gri: c.gri, unidade: m.unidade, milestone: m.nome,
           submetido_por: s.concluido_por || '', submetido_em: s.concluido_em ? P.fmtDataHora(s.concluido_em) : '', aprovado_por: a.concluido_por || '', aprovado_em: a.concluido_em ? P.fmtDataHora(a.concluido_em) : '',
           evidencias: it.evidencias.map(function (e) { return e.ficheiro; }).join(', '), reexpresso: it.reexpresso ? 'Yes' : 'No', na_amostra: S.amostra.indexOf(id) > -1 ? 'Yes' : 'No', estado: P.estadoIndicador(m, id).txt });
@@ -909,7 +1026,7 @@
   P.folhasDataRoom = function () {
     var hist = [], wf = [];
     P.msCiclo().forEach(function (m) {
-      m.indicadores.forEach(function (id) { P.item(id, m.ano).versoes.forEach(function (v) { hist.push({ indicador_id: id, indicador: P.cat(id).nome, valor: v.valor, em: P.fmtDataHora(v.em), por: v.por, origem: v.origem, motivo: v.motivo || '' }); }); });
+      m.indicadores.forEach(function (id) { P.item(id, P.chave(m)).versoes.forEach(function (v) { hist.push({ indicador_id: id, indicador: P.cat(id).nome, valor: v.valor, em: P.fmtDataHora(v.em), por: v.por, origem: v.origem, motivo: v.motivo || '' }); }); });
       m.passos.forEach(function (p, i) { wf.push({ milestone_id: m.id, milestone: m.nome, ordem: i + 1, passo: p.nome, tipo: P.TIPOS_PASSO[p.tipo], responsavel: P.nomeResp(m, p.responsavel), concluido_por: p.concluido_por || '', concluido_em: p.concluido_em ? P.fmtDataHora(p.concluido_em) : '' }); });
     });
     return {
@@ -949,11 +1066,12 @@
     var offset = { Mensal: 30, Trimestral: 60, Anual: 90, 'Novos dados ESRS': 120 };
     P.msCiclo(antigo).forEach(function (a) {
       var id = a.id.split('_')[0] + sufixo;
-      var m = { id: id, nome: nomeMs(a.periodicidade, ano, a.unidade), ano: ano, empresa: a.empresa, departamentos: a.departamentos.slice(), atribuido_a: a.atribuido_a || null, ficheiros_pedidos: (a.ficheiros_pedidos || []).slice(), unidade: a.unidade, periodicidade: a.periodicidade, prazo: diasDe(offset[a.periodicidade] || 90), indicadores: a.indicadores.slice(), passos: passosDe(S.wfbase), passo_atual: 0, devolvida: false, workflow_ajustado: false, documentos_gerais: [], comentarios: [], eventos: [] };
+      var m = { id: id, nome: a.nome.split(String(antigo)).join(String(ano)), ano: ano, periodo: (a.periodo || antigo + '-A').replace(String(antigo), String(ano)), consolida: !!a.consolida, empresa: a.empresa, departamentos: a.departamentos.slice(), atribuido_a: a.atribuido_a || null, ficheiros_pedidos: (a.ficheiros_pedidos || []).slice(), unidade: a.unidade, periodicidade: a.periodicidade, prazo: diasDe(offset[a.periodicidade] || 90), indicadores: a.indicadores.slice(), passos: passosDe(S.wfbase), passo_atual: 0, devolvida: false, workflow_ajustado: false, documentos_gerais: [], comentarios: [], eventos: [] };
       ev(m, 'Milestone created in the ' + ano + ' cycle.', u.nome);
       S.ms.push(m);
-      m.indicadores.forEach(function (i) { S.items[ano + ':' + i] = novoItem(i, ano, id, P.cat(i).tipo); });
+      m.indicadores.forEach(function (i) { S.items[P.chave(m) + ':' + i] = novoItem(i, P.chave(m), id, P.cat(i).tipo); });
     });
+    if (!P.periodo(ano + '-A')) { S.periodos = (S.periodos || []).concat(periodosAno(ano)); S.relatorios = (S.relatorios || []).concat(relatoriosAno(ano)); }
     S.ciclo.fechados = (S.ciclo.fechados || []).concat([antigo]);
     S.ciclo.ano = ano; S.ciclo.data_abertura = hojeISO(); S.amostra = [];
     guardar();

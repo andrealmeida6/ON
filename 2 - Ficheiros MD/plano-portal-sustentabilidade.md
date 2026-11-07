@@ -100,7 +100,7 @@ Pedido do André a 5 de novembro de 2026, a partir dos 9 ecrãs de `ESG Data Lak
 | Evidências | Evidence (`Evidencias`) | O pacote é um índice em Excel, não um ZIP |
 | Empresas e perímetro | Companies and perimeter (`Perimetro`) | Detenção, método e regras de introdução por KPI |
 
-- **Navegação:** barra lateral em ecrã largo, como no HTML recebido, porque 15 páginas não cabem no cabeçalho. Abaixo de 1100 px mantém-se o menu no cabeçalho e a barra inferior.
+- **Navegação:** cabeçalho no topo com Home e Milestones à vista e cinco menus (Monitoring, Data, Reporting, Control, Administration). A barra lateral saiu a 7 de novembro de 2026, por indicação do André. Abaixo de 1100 px os menus abrem-se em lista e mantém-se a barra inferior.
 - **Segregação de funções:** passa a ser forçada. Quem submeteu uma milestone não conclui a revisão, o parecer nem a aprovação, mesmo sendo administrador. Pode devolver.
 - **Consolidação:** Integral conta a 100%, Proporcional pela detenção, Equivalência patrimonial e empresas excluídas não contam. Percentagens e rácios não se ponderam. Como cada indicador pertence a uma só milestone e a uma só empresa, o consolidado pondera o valor dessa empresa, não soma várias empresas para o mesmo indicador.
 - **Atribuição:** define o dono do KPI em Reporting status. Quem pode agir continua a ser quem pertence ao departamento do passo.
@@ -158,6 +158,30 @@ Pedido do André a 7 de novembro de 2026: em cada ficheiro pedido da milestone, 
 - **Impacto nos indicadores:** por baixo da folha, cada indicador que usa estas colunas mostra a fórmula com os valores, o ano anterior, o valor atual, o valor com esta folha, a variação e a validação do indicador (erro, alerta com o limiar, ou válido). Recalcula a cada célula. Os campos que não estão na folha vêm do último pull da milestone; se faltarem, diz quais. Usa `P.calculosMilestone(m, sobre)`, que aceita valores a sobrepor sem gravar nada.
 - **Gravação:** o rascunho grava-se a cada alteração em `m.folhas`. A versão entregue fica também em `documentos_gerais`, que já sincroniza com o Supabase.
 - **Limitações:** o rascunho ainda não sincroniza com o Supabase (falta a coluna `folhas` em `esg_milestones`). Os registos puxados continuam a ser de teste e, nas percentagens, são limitados a 100%. O ficheiro entregue guarda o nome e os dados, não gera o `.xlsx` no servidor.
+
+## Períodos de reporte, timeline e reutilização dos trimestres
+
+Pedido do André a 7 de novembro de 2026, com os prazos de uma entidade gestora de água como a Aquapor.
+
+- **Períodos:** T1 a T4 e o Ano, em `S.periodos` (`esg_periods`), editáveis no Backoffice, separador Reporting periods. Cada trimestre tem fecho interno 45 dias depois do fim (15 mai, 14 ago, 13 nov, 12 fev); o ano fecha a 26 de fevereiro.
+- **Entregas externas** (`S.relatorios`, `esg_reports`), com a base legal à vista e o prazo editável:
+
+| Entrega | Entidade | Prazo do ano N | Base |
+| --- | --- | --- | --- |
+| Publicação trimestral da qualidade da água | ERSAR | 60 dias úteis após cada trimestre | DL 152/2017, art. 17.º (sistemas em baixa) |
+| Resultados anuais do PCQA | ERSAR | 31 de março de N+1 | DL 152/2017, art. 15.º, n.º 5 |
+| Relatório de Qualidade do Serviço | ERSAR | fim de março de N+1 | Regulamento ERSAR n.º 446/2024 |
+| MIRR e gases fluorados | APA | 31 de março de N+1 | SILiAmb |
+| Relatório e Contas consolidado | Acionistas | 31 de maio de N+1 | CSC, art. 65.º |
+| Relatório de Sustentabilidade | Público | 30 de junho de N+1 | Calendário interno |
+
+- **Milestones:** o que é mensal ou trimestral passa a ter uma milestone por trimestre (`M01-T1` a `M01-T4`). Os dados mensais entram na milestone do trimestre, com uma linha por mês na folha do pedido, porque é a prática do mercado: recolha mensal na origem, entrega e aprovação trimestral, e só alguns temas (energia, água, emissões) com mais de uma recolha por trimestre. O que é anual fica no período Ano. Cada departamento com dados trimestrais tem uma "Consolidação anual" (`M26` a `M33`).
+- **Valores por período:** as milestones trimestrais guardam os valores em `2026-T3:<indicador>`; as anuais continuam em `2026:<indicador>`, que é o que vai para o relatório. `P.chave(m)` escolhe a chave. Num trimestre, a comparação é com o mesmo trimestre do ano anterior; sem ele, com a quarta parte do ano anterior nas somas.
+- **Reutilizar os trimestres:** a milestone anual mostra o cartão "Reported in the quarters" com T1 a T4, a regra (`P.agregacao`: soma para volumes e horas, último trimestre para efetivos e ativos, média para taxas), o valor do ano e o valor atual. "Use the quarters" grava o valor com a origem "from quarters T1, T2, T3". Enquanto faltar um trimestre aprovado, avisa que é year to date. A regra pode ser fixada por indicador no catálogo com `agregacao`.
+- **Tags:** cada milestone mostra o período (T3 2026, Ano 2026) e as entregas que alimenta (RS, RQS, PCQA, MIRR, GF, R&C, QA T3), nas tabelas, no board, nas listas da home e no cabeçalho da milestone.
+- **Timeline:** na Home e em Milestones, com os trimestres, o ano e a consolidação, os fechos internos, as entregas externas e o dia de hoje. Cada período abre a lista de Milestones filtrada (`?periodo=2026-T3`). Na Home lista as quatro entregas seguintes. No telemóvel abre centrada no dia de hoje.
+- **Demonstração:** T1 e T2 aprovados, T3 com os estados de demonstração anteriores, T4 em recolha e consolidações à espera do T4. São 69 milestones.
+- **Limitações:** `esg_valores.ano` no Supabase é um ano; os valores trimestrais precisam de uma coluna de período antes de voltar a ligar o login. `supabase/carregar-demonstracao.js` ainda usa os IDs antigos. Os prazos legais são um ponto de partida a confirmar com o jurídico.
 
 ## O que falta para produção
 
