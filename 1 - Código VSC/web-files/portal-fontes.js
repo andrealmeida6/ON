@@ -155,8 +155,10 @@
     P.guardar();
     return { campos: Object.keys(vals).length, registos: n };
   };
-  P.calculosMilestone = function (m) {
+  /* sobre: valores que se sobrepoem aos puxados, para simular o impacto antes de entregar */
+  P.calculosMilestone = function (m, sobre) {
     var px = (S.puxados || {})[m.id];
+    if (sobre) { var vs = {}; Object.keys((px && px.vals) || {}).forEach(function (k) { vs[k] = px.vals[k]; }); Object.keys(sobre).forEach(function (k) { if (sobre[k] !== null && sobre[k] !== undefined) vs[k] = sobre[k]; }); px = { vals: vs }; }
     return m.indicadores.map(function (id) {
       var x = P.expressaoDe(id), c = P.cat(id), r = { id: id, x: x, valor: null, falta: [], subst: '' };
       if (!x) return r;

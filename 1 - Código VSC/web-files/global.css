@@ -639,6 +639,8 @@ a.ps-row:hover{background:var(--bg)}
 .ps-gr-rod [data-gr-soma]{font-weight:700;color:var(--text)}
 /* Folha de um ficheiro pedido: preencher, puxar da base de dados e entregar */
 .ps-pan.folha{width:min(1180px,100vw)}
+.ps-pan.folha .ps-pan-b>*{flex-shrink:0}
+.ps-pan.folha .ps-gr-tw{max-height:min(470px,52vh)}
 .fh-ferr{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .fh-ferr .ps-btn svg{margin-right:6px;vertical-align:-3px}
 .fh-fontes{list-style:none;display:flex;gap:8px;flex-wrap:wrap;margin:0;padding:0}
@@ -660,6 +662,13 @@ a.ps-row:hover{background:var(--bg)}
 .ps-pan.folha .ps-gr-t tbody tr:last-child>*{position:sticky;bottom:0;z-index:2}
 .ps-pan.folha .ps-gr-t tbody tr:last-child>th{z-index:3}
 .ps-gr-t td.fh-tot{font-weight:700;color:var(--text);background:var(--primary-50);border-top:2px solid var(--line)}
+.fh-imp{border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:var(--surface)}
+.fh-imp-h{display:flex;justify-content:space-between;align-items:baseline;gap:6px 16px;flex-wrap:wrap;margin-bottom:8px}
+.fh-imp-h h3{font-size:14px;font-weight:700}
+.fh-novo{color:var(--text)}
+.fh-novo.muda{color:var(--primary)}
+.fh-var{font-variant-numeric:tabular-nums;font-weight:600}
+.fh-var.warn{color:var(--warn)}
 .fh-defs summary{cursor:pointer;font-weight:600;font-size:13px;color:var(--primary)}
 .fh-defs-t{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:8px}
 .fh-defs-t th,.fh-defs-t td{text-align:left;padding:7px 9px;border-bottom:1px solid var(--line-soft);vertical-align:top}
