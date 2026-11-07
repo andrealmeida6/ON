@@ -75,8 +75,8 @@
   var TABELAS = [
     { t: 'esg_ciclos', pk: ['ano'] }, { t: 'esg_utilizadores', pk: ['login'] }, { t: 'esg_indicadores', pk: ['id'] }, { t: 'esg_workflow_base', pk: ['ordem'] },
     { t: 'esg_entidades', pk: ['id'] }, { t: 'esg_departamentos', pk: ['id'] }, { t: 'esg_janelas', pk: ['id'] }, { t: 'esg_materialidade', pk: ['norma'] }, { t: 'esg_areas', pk: ['codigo'] }, { t: 'esg_marca', pk: ['id'] },
-    { t: 'esg_metas', pk: ['indicador_id'] }, { t: 'esg_amostra', pk: ['ano', 'indicador_id'] }, { t: 'esg_documentos', pk: ['id'] }, { t: 'esg_milestones', pk: ['id'] },
-    { t: 'esg_milestone_indicadores', pk: ['milestone_id', 'indicador_id'] }, { t: 'esg_passos_workflow', pk: ['id'] }, { t: 'esg_valores', pk: ['indicador_id', 'ano'] },
+    { t: 'esg_periodos', pk: ['id'] }, { t: 'esg_relatorios', pk: ['id'] }, { t: 'esg_tipos_dados', pk: ['id'] }, { t: 'esg_metas', pk: ['indicador_id'] }, { t: 'esg_amostra', pk: ['ano', 'indicador_id'] }, { t: 'esg_documentos', pk: ['id'] }, { t: 'esg_milestones', pk: ['id'] },
+    { t: 'esg_milestone_indicadores', pk: ['milestone_id', 'indicador_id'] }, { t: 'esg_passos_workflow', pk: ['id'] }, { t: 'esg_valores', pk: ['indicador_id', 'ano', 'periodo'] },
     { t: 'esg_valor_versoes', so: true }, { t: 'esg_evidencias', pk: ['id'] }, { t: 'esg_pedidos_externos', pk: ['id'] }, { t: 'esg_pedidos_auditor', pk: ['id'] },
     { t: 'esg_atribuicao', pk: ['indicador_id'] }, { t: 'esg_regras_entrada', pk: ['entidade_id', 'indicador_id'] }, { t: 'esg_fatores', pk: ['id'] }, { t: 'esg_ligacoes', pk: ['id'] },
     { t: 'esg_kpi_master', pk: ['indicador_id'] }, { t: 'esg_dp_decisoes', pk: ['datapoint_id'] }, { t: 'esg_glossario_empresa', pk: ['termo_n'] },
@@ -111,18 +111,21 @@
     S.amostra.forEach(function (id) { por('esg_amostra', S.ciclo.ano + '|' + id, { ano: S.ciclo.ano, indicador_id: id }); });
     S.docs.forEach(function (x) { por('esg_documentos', x.id, { id: x.id, tipo: x.tipo, fornecedor: x.fornecedor, periodo: x.periodo, instalacao: x.instalacao, entidade: nulo(x.entidade), consumo: x.consumo, valor_sem_iva: x.valor_sem_iva, iva: x.iva, percentagem_renovavel: x.percentagem_renovavel, centro_custo: nulo(x.centro_custo), leitura_telemetria: x.leitura_telemetria, estado: x.estado }); });
 
+    (S.periodos || []).forEach(function (x) { por('esg_periodos', x.id, { id: x.id, nome: x.nome, tipo: x.tipo, ano: x.ano, t: x.t || 0, ini: x.ini, fim: x.fim, fecho: x.fecho }); });
+    (S.relatorios || []).forEach(function (x) { por('esg_relatorios', x.id, { id: x.id, sigla: x.sigla, nome: x.nome, entidade: x.entidade, periodo: x.periodo, data: x.data, base: nulo(x.base) }); });
+    (S.tipos || []).forEach(function (x) { por('esg_tipos_dados', x.id, { id: x.id, nome: x.nome, motivo: nulo(x.motivo), formatos: x.formatos || [], prefixo: x.prefixo, unidade: x.unidade, colunas: x.colunas && x.colunas.length ? x.colunas : null, granularidade: x.granularidade || 'mensal', obrigatorio: x.obrigatorio !== false, instrucoes: nulo(x.instrucoes), ativo: x.ativo !== false, versao: x.versao || 1, alterado_em: x.alterado_em || null, alterado_por: nulo(x.alterado_por) }); });
     S.ms.forEach(function (m) {
-      por('esg_milestones', m.id, { id: m.id, nome: m.nome, ano: m.ano, empresa: m.empresa, departamentos: m.departamentos || [], atribuido_a: m.atribuido_a || null, ficheiros_pedidos: m.ficheiros_pedidos || [], unidade: m.unidade, periodicidade: m.periodicidade, prazo: m.prazo, passo_atual: m.passo_atual, devolvida: !!m.devolvida, workflow_ajustado: !!m.workflow_ajustado, documentos_gerais: m.documentos_gerais || [] });
+      por('esg_milestones', m.id, { id: m.id, nome: m.nome, ano: m.ano, empresa: m.empresa, departamentos: m.departamentos || [], atribuido_a: m.atribuido_a || null, ficheiros_pedidos: m.ficheiros_pedidos || [], unidade: m.unidade, periodicidade: m.periodicidade, prazo: m.prazo, passo_atual: m.passo_atual, devolvida: !!m.devolvida, workflow_ajustado: !!m.workflow_ajustado, documentos_gerais: m.documentos_gerais || [], periodo: m.periodo || null, consolida: !!m.consolida, tipos: m.tipos || null, folhas: m.folhas || {} });
       m.indicadores.forEach(function (id, i) { por('esg_milestone_indicadores', m.id + '|' + id, { milestone_id: m.id, indicador_id: id, ordem: i }); });
       m.passos.forEach(function (p, i) { por('esg_passos_workflow', p.id, { id: p.id, milestone_id: m.id, ordem: i, nome: p.nome, tipo: p.tipo, responsavel: p.responsavel, concluido_em: p.concluido_em || null, concluido_por: p.concluido_por || null }); });
       m.comentarios.forEach(function (x, i) { por('esg_comentarios', m.id + '|' + i, { milestone_id: m.id, autor: x.autor, texto: x.texto, em: x.em, sistema: !!x.sistema }); });
-      m.eventos.forEach(function (x, i) { por('esg_eventos', m.id + '|' + i, { milestone_id: m.id, texto: x.texto, em: x.em, por: x.por }); });
+      m.eventos.forEach(function (x, i) { por('esg_eventos', m.id + '|' + i, { milestone_id: m.id, texto: x.texto, em: x.em, por: x.por, wf: x.wf || null, passo: x.passo || null }); });
     });
     Object.keys(S.items).forEach(function (k) {
-      var it = S.items[k];
-      por('esg_valores', it.id + '|' + it.ano, { indicador_id: it.id, ano: it.ano, milestone_id: it.milestone_id, valor: it.valor, rascunho: nulo(it.rascunho), qualidade: it.qualidade, metodo_estimativa: nulo(it.metodo), justificacao: nulo(it.justificacao), reexpresso: !!it.reexpresso, entidade: it.entidade || 'Consolidado', fonte: nulo(it.fonte) });
-      it.versoes.forEach(function (v, i) { por('esg_valor_versoes', it.id + '|' + it.ano + '|' + i, { indicador_id: it.id, ano: it.ano, valor: v.valor, em: v.em, por: v.por, origem: v.origem, motivo: nulo(v.motivo) }); });
-      it.evidencias.forEach(function (x) { por('esg_evidencias', x.id, { id: x.id, ficheiro: x.ficheiro, indicador_id: it.id, ano: it.ano, milestone_id: it.milestone_id, carregado_por: x.por, carregado_em: x.em }); });
+      var it = S.items[k], ano = parseInt(it.ano, 10), per = typeof it.ano === 'string' ? it.ano : '';
+      por('esg_valores', it.id + '|' + it.ano, { indicador_id: it.id, ano: ano, periodo: per, milestone_id: it.milestone_id, valor: it.valor, rascunho: nulo(it.rascunho), qualidade: it.qualidade, metodo_estimativa: nulo(it.metodo), justificacao: nulo(it.justificacao), reexpresso: !!it.reexpresso, entidade: it.entidade || 'Consolidado', fonte: nulo(it.fonte) });
+      it.versoes.forEach(function (v, i) { por('esg_valor_versoes', it.id + '|' + it.ano + '|' + i, { indicador_id: it.id, ano: ano, periodo: per, valor: v.valor, em: v.em, por: v.por, origem: v.origem, motivo: nulo(v.motivo) }); });
+      it.evidencias.forEach(function (x) { por('esg_evidencias', x.id, { id: x.id, ficheiro: x.ficheiro, indicador_id: it.id, ano: ano, periodo: per, milestone_id: it.milestone_id, carregado_por: x.por, carregado_em: x.em }); });
     });
     S.ext.forEach(function (x) { por('esg_pedidos_externos', x.id, { id: x.id, indicador_id: x.indicador_id, milestone_id: x.milestone_id, entidade_externa: x.entidade_externa, descricao: x.descricao, prazo: x.prazo, estado: x.estado, valor: x.valor, evidencia: nulo(x.evidencia), respondido_em: x.respondido_em || null }); });
     Object.keys(S.atrib || {}).forEach(function (id) { var a = S.atrib[id]; por('esg_atribuicao', id, { indicador_id: id, submete: nulo(a.submete), reve: nulo(a.reve), valida: nulo(a.valida) }); });
@@ -163,6 +166,9 @@
     S.amostra = d.esg_amostra.filter(function (a) { return a.ano === S.ciclo.ano; }).map(function (a) { return a.indicador_id; });
     S.docs = d.esg_documentos.map(function (x) { var o = Object.assign({}, x); o.entidade = x.entidade || ''; o.centro_custo = x.centro_custo || ''; return o; });
 
+    S.periodos = (d.esg_periodos || []).map(function (x) { return { id: x.id, nome: x.nome, tipo: x.tipo, ano: x.ano, t: x.t, ini: x.ini, fim: x.fim, fecho: x.fecho }; });
+    S.relatorios = (d.esg_relatorios || []).map(function (x) { return { id: x.id, sigla: x.sigla, nome: x.nome, entidade: x.entidade, periodo: x.periodo, data: x.data, base: x.base || '' }; });
+    S.tipos = (d.esg_tipos_dados || []).map(function (x) { var o = Object.assign({}, x); o.motivo = x.motivo || ''; o.instrucoes = x.instrucoes || ''; return o; });
     var doMs = function (l, id) { return l.filter(function (x) { return x.milestone_id === id; }); };
     S.ms = d.esg_milestones.map(function (m) {
       return {
@@ -170,14 +176,21 @@
         indicadores: doMs(d.esg_milestone_indicadores, m.id).map(function (x) { return x.indicador_id; }),
         passos: doMs(d.esg_passos_workflow, m.id).map(function (p) { return { id: p.id, nome: p.nome, tipo: p.tipo, responsavel: p.responsavel, concluido_em: p.concluido_em, concluido_por: p.concluido_por }; }),
         comentarios: doMs(d.esg_comentarios, m.id).map(function (x) { var o = { autor: x.autor, texto: x.texto, em: x.em }; if (x.sistema) o.sistema = true; return o; }),
-        eventos: doMs(d.esg_eventos, m.id).map(function (x) { return { texto: x.texto, em: x.em, por: x.por }; })
+        eventos: doMs(d.esg_eventos, m.id).map(function (x) { var o = { texto: x.texto, em: x.em, por: x.por }; if (x.wf) { o.wf = x.wf; o.passo = x.passo || ''; } return o; })
       };
+    });
+    /* Campos acrescentados no 007 */
+    d.esg_milestones.forEach(function (r) {
+      var m = S.ms.filter(function (x) { return x.id === r.id; })[0];
+      if (!m) return;
+      m.periodo = r.periodo || r.ano + '-A'; m.consolida = !!r.consolida; m.folhas = r.folhas || {};
+      if (r.tipos) m.tipos = r.tipos;
     });
     S.items = {};
     d.esg_valores.forEach(function (v) {
-      var doItem = function (x) { return x.indicador_id === v.indicador_id && x.ano === v.ano; };
-      S.items[v.ano + ':' + v.indicador_id] = {
-        id: v.indicador_id, ano: v.ano, milestone_id: v.milestone_id, valor: v.valor, rascunho: v.rascunho, qualidade: v.qualidade, metodo: v.metodo_estimativa || '', justificacao: v.justificacao || '', reexpresso: v.reexpresso, entidade: v.entidade, fonte: v.fonte || '',
+      var per = v.periodo || '', doItem = function (x) { return x.indicador_id === v.indicador_id && x.ano === v.ano && (x.periodo || '') === per; };
+      S.items[(per || v.ano) + ':' + v.indicador_id] = {
+        id: v.indicador_id, ano: per || v.ano, milestone_id: v.milestone_id, valor: v.valor, rascunho: v.rascunho, qualidade: v.qualidade, metodo: v.metodo_estimativa || '', justificacao: v.justificacao || '', reexpresso: v.reexpresso, entidade: v.entidade, fonte: v.fonte || '',
         versoes: d.esg_valor_versoes.filter(doItem).map(function (x) { return { valor: x.valor, em: x.em, por: x.por, origem: x.origem, motivo: x.motivo || '' }; }),
         evidencias: d.esg_evidencias.filter(doItem).map(function (x) { return { id: x.id, ficheiro: x.ficheiro, por: x.carregado_por, em: x.carregado_em }; })
       };
@@ -204,7 +217,7 @@
   };
 
   /* --- Carregar ---------------------------------------------------------- */
-  var ORDEM = { esg_entidades: 'nome', esg_departamentos: 'nome', esg_ciclos: 'ano', esg_janelas: 'id', esg_workflow_base: 'ordem', esg_milestones: 'id', esg_milestone_indicadores: 'milestone_id,ordem', esg_passos_workflow: 'milestone_id,ordem', esg_valor_versoes: 'id', esg_comentarios: 'id', esg_eventos: 'id', esg_indicadores: 'id', esg_utilizadores: 'login', esg_documentos: 'id.desc', esg_pedidos_auditor: 'em', esg_evidencias: 'carregado_em', esg_registo_config: 'id', esg_selos: 'ordem', esg_regras_entrada: 'entidade_id,indicador_id' };
+  var ORDEM = { esg_periodos: 'ini', esg_relatorios: 'data', esg_tipos_dados: 'id', esg_entidades: 'nome', esg_departamentos: 'nome', esg_ciclos: 'ano', esg_janelas: 'id', esg_workflow_base: 'ordem', esg_milestones: 'id', esg_milestone_indicadores: 'milestone_id,ordem', esg_passos_workflow: 'milestone_id,ordem', esg_valor_versoes: 'id', esg_comentarios: 'id', esg_eventos: 'id', esg_indicadores: 'id', esg_utilizadores: 'login', esg_documentos: 'id.desc', esg_pedidos_auditor: 'em', esg_evidencias: 'carregado_em', esg_registo_config: 'id', esg_selos: 'ordem', esg_regras_entrada: 'entidade_id,indicador_id' };
   var snapshot = {};
   B.carregarMarca = function () {
     return pedir('esg_marca?select=*').then(function (l) { return marcaDe(l[0]); }).catch(function () { return null; });

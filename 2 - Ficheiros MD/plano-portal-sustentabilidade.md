@@ -213,7 +213,8 @@ Pedido do André a 7 de novembro de 2026, tendo o Workiva como referência de me
 - **Backoffice, Data types** (`S.tipos`, `esg_data_types`): o que cada departamento entrega. Cada tipo tem nome, motivo, departamento, formatos aceites, linhas da folha (mensal, trimestral ou anual), se é obrigatório, instruções e colunas (as que os indicadores da milestone usam, ou uma lista fixa escolhida por base de dados, com os campos usados marcados). Mostra a pré-visualização da folha, as milestones que o usam e grava versões. Pode arquivar-se.
 - **Backoffice, Launch milestones:** mapa de cobertura departamento por período, com o estado de cada milestone e as células por lançar ("+ Launch"). O assistente escolhe períodos, departamentos, tipos de dados e indicadores de cada um (pré-preenchidos a partir do plano), empresa e prazo (o fecho do período ou uma data), mostra o que vai ser criado e o que já existe, e lança. Na demonstração, o T4 de Frota e Compras fica por lançar.
 - **Folha do pedido:** usa as colunas e a granularidade do tipo de dados; o pull junta os registos de cada linha com a regra do campo. As instruções aparecem no topo da folha.
-- **Limitações:** os tipos de dados ainda não sincronizam com o Supabase (falta a tabela `esg_data_types`). O lançamento usa o workflow base.
+- **Supabase:** `007_esg_periodos_tipos.sql` (aplicado a 7 de novembro de 2026) cria `esg_periodos`, `esg_relatorios` e `esg_tipos_dados`, acrescenta `periodo` aos valores, versões e evidências (chave `indicador_id, ano, periodo`), e `periodo`, `consolida`, `tipos` e `folhas` às milestones e `wf` e `passo` aos eventos. `portal-supabase.js` sincroniza tudo isto. `gerar-007-dados.js` gera `007_esg_dados_demonstracao.sql`, que apaga e volta a carregar os dados de demonstração.
+- **Limitações:** o lançamento usa o workflow base.
 
 ## O que falta para produção
 
