@@ -78,7 +78,7 @@ Pedido do André a 5 de novembro de 2026.
 
 - **Tabelas de milestones:** as colunas são Milestone, Company, Assigned to, Due e Status, sem Departments nem Workflow. O Assigned to mostra a pessoa escolhida ou a tag de quem tem o passo atual. A atribuição faz-se nos Details da milestone e no Backoffice, e não muda quem pode agir. A Auditoria e o Backoffice seguem a mesma regra e mantêm as colunas próprias. A coluna Department do catálogo de indicadores fica, porque é o dono do indicador.
 - **Página Milestones:** cards por empresa à esquerda, calendário à direita. A empresa só se filtra ao entrar no card (`?empresa=`), e o calendário acompanha. Exporta para Excel. Os lembretes foram retirados.
-- **Data request:** cada milestone diz que dados e que ficheiros são pedidos e o que falta. Os ficheiros obrigatórios passam a impedir a submissão. Os ficheiros por departamento estão em `FICHEIROS_BASE`, em `portal-nucleo.js`, e são exemplos a confirmar. A equipa pode acrescentar outros em cada milestone.
+- **Data request:** cada milestone diz que dados e que ficheiros são pedidos (o cartão de resumo do topo saiu a 7 de novembro de 2026). Os ficheiros obrigatórios passam a impedir a submissão. Os ficheiros por departamento estão em `FICHEIROS_BASE`, em `portal-nucleo.js`, e são exemplos a confirmar. A equipa pode acrescentar outros em cada milestone.
 - **Data explorer:** cilindro com uma camada por tema. `P.podeVerIndicador` define os acessos: admin, equipa e auditor veem tudo, um responsável vê os indicadores do seu departamento e das suas milestones. O relatório vive só na sessão, não fica guardado.
 - **Grelha:** `portal-grelha.js`. Colar procura primeiro cabeçalhos e indicadores, por ID ou nome e em qualquer ordem, e só depois cola por posição a partir da célula ativa. Recusa unidades erradas e explica o que não aplicou.
 - **Ao voltar a ligar o login:** aplicar `supabase/004_esg_atribuicao_ficheiros.sql` e recarregar os dados, porque os nomes das pessoas mudaram. Esta parte ainda não foi testada online.
@@ -182,6 +182,15 @@ Pedido do André a 7 de novembro de 2026, com os prazos de uma entidade gestora 
 - **Timeline:** na Home e em Milestones, com os trimestres, o ano e a consolidação, os fechos internos, as entregas externas e o dia de hoje. Cada período abre a lista de Milestones filtrada (`?periodo=2026-T3`). Na Home lista as quatro entregas seguintes. No telemóvel abre centrada no dia de hoje.
 - **Demonstração:** T1 e T2 aprovados, T3 com os estados de demonstração anteriores, T4 em recolha e consolidações à espera do T4. São 69 milestones.
 - **Limitações:** `esg_valores.ano` no Supabase é um ano; os valores trimestrais precisam de uma coluna de período antes de voltar a ligar o login. `supabase/carregar-demonstracao.js` ainda usa os IDs antigos. Os prazos legais são um ponto de partida a confirmar com o jurídico.
+
+## Linha do tempo do workflow na milestone
+
+Pedido do André a 7 de novembro de 2026.
+
+- **Saiu** o cartão "Data request" do topo da milestone (anel de percentagem, os três passos e "See what is missing"). O breadcrumb do workflow já mostra onde está a milestone, porque só avança com tudo entregue; o que falta continua a aparecer ao submeter.
+- **Botão Timeline** (relógio) ao lado do workflow. Abre por baixo uma linha do tempo e volta a esconder-se no mesmo botão (`U.wfHist`).
+- **O que mostra:** abertura da recolha, cada passo concluído, as validações automáticas e as devoluções (a vermelho, com o comentário), o passo atual (a pulsar, com o tempo decorrido), os passos que faltam e o prazo. Entre cada etapa aparece o tempo que passou, e o comprimento da ligação acompanha esse tempo. Em cima: tempo decorrido, passos feitos, passo mais longo e número de devoluções. No telemóvel fica na vertical.
+- **Dados:** `P.historicoWf(m)` lê os eventos da milestone. Os eventos do workflow passaram a guardar `wf` (criada, avanco, auto, devolucao) e `passo`; os antigos reconhecem-se pelo texto. A recolha de um trimestre abre no fim do trimestre e a do ano a 1 de janeiro.
 
 ## O que falta para produção
 

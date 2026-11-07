@@ -63,7 +63,7 @@
     atrib: 'esg_assign', regrasEnt: 'esg_entity_rules', fatores: 'esg_factors', apis: 'esg_connections', evg: 'esg_config_log', selos: 'esg_seals',
     kpim: 'esg_kpi_master', puxados: 'esg_source_pulls', periodos: 'esg_periods', relatorios: 'esg_reports', dpdec: 'esg_dp_decisions', gloss: 'esg_glossary', rq: 'esg_report_tables', doc: 'esg_report_doc'
   };
-  var VERSAO_DADOS = 5;
+  var VERSAO_DADOS = 6;
   var S = (P.S = {});
   var memoria = {};
   var ler = function (k) {
@@ -314,7 +314,9 @@
         indicadores: pl.indicadores.slice(), passos: passosDe(lista), passo_atual: 0, devolvida: !!cfg.dev, workflow_ajustado: pl.workflow.length > 0,
         documentos_gerais: [], comentarios: [], eventos: []
       };
-      m.eventos.push({ texto: 'Milestone created in the 2026 cycle for ' + per.nome + '.', em: new Date(Date.now() - 86400000 * 300).toISOString(), por: 'System' });
+      /* A recolha de um trimestre abre no fim do trimestre (ou no inicio, se ainda esta a decorrer); a do ano, a 1 de janeiro */
+      var abre = per.tipo === 'trimestre' && P.diasAte(per.fim) < 0 ? diasDe(P.diasAte(per.fim) + 1) : per.ini;
+      m.eventos.push({ texto: 'Milestone created in the 2026 cycle for ' + per.nome + '.', em: new Date(abre + 'T09:00:00').toISOString(), por: 'System', wf: 'criada' });
       S.ms.push(m);
       var preencher = cfg.i > 0 || cfg.dev, chave = P.chave(m), quando = function (dias) { return new Date(new Date(m.prazo + 'T12:00:00').getTime() + 86400000 * dias).toISOString(); };
       pl.indicadores.forEach(function (id, ix) {
@@ -338,14 +340,15 @@
         var t = x.t === 1 || x.t === 2 ? quando(-6 + k * 2) : new Date(Date.now() - 86400000 * (Math.max(2, 30 - cfg.d / 3) - k * 2)).toISOString();
         m.passos[k].concluido_em = t;
         m.passos[k].concluido_por = m.passos[k].responsavel === 'sistema' ? 'System' : m.passos[k].responsavel === 'unidade' ? nomeDe(m.unidade) : m.passos[k].responsavel.indexOf('area:') === 0 ? nomeDe(m.passos[k].responsavel.slice(5)) : 'Sustainability team';
-        m.eventos.push({ texto: 'Step completed: ' + m.passos[k].nome + '.', em: t, por: m.passos[k].concluido_por });
+        m.eventos.push({ texto: (k === 0 ? 'Milestone submitted' : 'Step completed: ' + m.passos[k].nome) + '.', em: t, por: m.passos[k].concluido_por, wf: m.passos[k].responsavel === 'sistema' ? 'auto' : 'avanco', passo: m.passos[k].nome });
       }
       m.passo_atual = cfg.i;
       /* O que ja passou da recolha entregou os ficheiros pedidos */
       if (cfg.i > 0) (FICHEIROS_BASE[pl.unidade] || []).forEach(function (f, ixF) { m.documentos_gerais.push({ ficheiro: f[3] + '-' + x.id.toLowerCase() + '-2026.' + f[2][0], por: nomeDe(pl.unidade), em: quando(-8), pedido: 'base:' + ixF }); });
       if (cfg.dev) {
         m.comentarios.push({ autor: 'Equipa de sustentabilidade', texto: 'A percentagem de veículos verdes parece baixa. Confirmem com a gestora da frota, por favor.', em: new Date(Date.now() - 86400000).toISOString() });
-        m.eventos.push({ texto: 'Returned to the unit.', em: new Date(Date.now() - 86400000).toISOString(), por: 'Sustainability team' });
+        m.eventos.splice(1, 0, { texto: 'Milestone submitted.', em: new Date(Date.now() - 86400000 * 6).toISOString(), por: nomeDe(m.unidade), wf: 'avanco', passo: m.passos[0].nome }, { texto: 'Automatic validation completed: 1 indicator(s) with alerts.', em: new Date(Date.now() - 86400000 * 6 + 60000).toISOString(), por: 'System', wf: 'auto', passo: m.passos[1].nome });
+        m.eventos.push({ texto: 'Returned to the unit.', em: new Date(Date.now() - 86400000).toISOString(), por: 'Sustainability team', wf: 'devolucao', passo: m.passos[2].nome });
       }
     });
     S.ext = [
@@ -582,18 +585,19 @@
   P.podeReexpressar = function (u) { return P.gereTudo(u); };
 
   /* --- Workflow (secao 6) ------------------------------------------------ */
-  var ev = (P.evento = function (m, texto, por) { m.eventos.push({ texto: texto, em: agora(), por: por }); });
+  /* wf marca os eventos do workflow (criada, avanco, auto, devolucao) e passo o nome do passo, para o historico */
+  var ev = (P.evento = function (m, texto, por, wf, passo) { var x = { texto: texto, em: agora(), por: por }; if (wf) { x.wf = wf; x.passo = passo; } m.eventos.push(x); });
   var correrAutomaticos = function (m) {
     while (!P.concluida(m) && P.passoAtual(m).responsavel === 'sistema') {
       var p = P.passoAtual(m);
       p.concluido_em = agora(); p.concluido_por = 'System';
       if (p.tipo === 'validacao') {
         var n = m.indicadores.filter(function (id) { return P.validarItem(P.item(id, P.chave(m))).alertas.length; }).length;
-        ev(m, 'Automatic validation completed: ' + n + ' indicator(s) with alerts.', 'System');
+        ev(m, 'Automatic validation completed: ' + n + ' indicator(s) with alerts.', 'System', 'auto', p.nome);
       } else if (p.tipo === 'publicacao') {
-        ev(m, 'Values published to the report tables.', 'System');
+        ev(m, 'Values published to the report tables.', 'System', 'auto', p.nome);
       } else {
-        ev(m, 'Automatic step completed: ' + p.nome + '.', 'System');
+        ev(m, 'Automatic step completed: ' + p.nome + '.', 'System', 'auto', p.nome);
       }
       m.passo_atual++;
     }
@@ -605,7 +609,7 @@
     var p = P.passoAtual(m);
     p.concluido_em = agora(); p.concluido_por = u.nome;
     m.devolvida = false;
-    ev(m, 'Milestone submitted.', u.nome);
+    ev(m, 'Milestone submitted.', u.nome, 'avanco', p.nome);
     m.passo_atual++;
     correrAutomaticos(m);
     guardar();
@@ -618,7 +622,7 @@
     if (P.violaSegregacao && P.violaSegregacao(m, u)) return { erro: 'Segregation of duties: you submitted this milestone, so someone else has to decide on it.' };
     p.concluido_em = agora(); p.concluido_por = u.nome;
     var verbo = p.tipo === 'parecer' ? 'Favourable opinion given' : p.tipo === 'aprovacao' ? 'Values approved and locked' : 'Review completed';
-    ev(m, verbo + ': ' + p.nome + '.', u.nome);
+    ev(m, verbo + ': ' + p.nome + '.', u.nome, 'avanco', p.nome);
     if (comentario && comentario.trim()) m.comentarios.push({ autor: u.nome, texto: comentario.trim(), em: agora() });
     m.passo_atual++;
     correrAutomaticos(m);
@@ -628,12 +632,13 @@
   P.devolver = function (m, u, comentario) {
     if (!P.podeAgir(m, u) || P.passoAtual(m).tipo === 'recolha') return { erro: 'This step is not with you.' };
     if (!comentario || !comentario.trim()) return { erro: 'Write a comment to return the milestone.' };
+    var deOnde = P.passoAtual(m).nome;
     m.passos.forEach(function (p) { p.concluido_em = null; p.concluido_por = null; });
     m.passo_atual = 0;
     m.devolvida = true;
     if (P.diasAte(m.prazo) < 3) m.prazo = diasDe(3);
     m.comentarios.push({ autor: u.nome, texto: comentario.trim(), em: agora() });
-    ev(m, 'Returned to the unit. Due: ' + P.fmtData(m.prazo) + '.', u.nome);
+    ev(m, 'Returned to the unit. Due: ' + P.fmtData(m.prazo) + '.', u.nome, 'devolucao', deOnde);
     guardar();
     return { ok: true };
   };
@@ -777,6 +782,37 @@
     return { ok: true };
   };
   P.msDoIndicador = function (id, ano) { var l = P.msCiclo(ano).filter(function (m) { return m.indicadores.indexOf(id) > -1; }); return l.filter(function (m) { return !P.trimestral(m); })[0] || l[0] || null; };
+  /* Historico do workflow: o que ja aconteceu (incluindo devolucoes), onde esta agora e o que falta, com os tempos entre etapas */
+  var WF_RE = [[/^Milestone created/, 'criada'], [/^Milestone submitted/, 'avanco'], [/^(Step completed|Review completed|Favourable opinion given|Values approved and locked): (.+)\.$/, 'avanco'], [/^(Automatic validation completed|Values published|Automatic step completed)/, 'auto'], [/^Returned to the unit/, 'devolucao']];
+  P.historicoWf = function (m) {
+    var agoraMs = Date.now(), l = [];
+    m.eventos.forEach(function (x) {
+      var wf = x.wf, passo = x.passo;
+      if (!wf) WF_RE.forEach(function (r) { var mt = !wf && r[0].exec(x.texto); if (mt) { wf = r[1]; passo = mt[2] || ''; } });
+      if (wf) l.push({ wf: wf, passo: passo || '', por: x.por, em: x.em, texto: x.texto });
+    });
+    l.sort(function (a, b) { return a.em < b.em ? -1 : a.em > b.em ? 1 : 0; });
+    l.forEach(function (x, i) { x.dur = i ? new Date(x.em) - new Date(l[i - 1].em) : null; });
+    l.forEach(function (x) { if (x.wf !== 'devolucao') return; var c = (m.comentarios || []).filter(function (y) { return Math.abs(new Date(y.em) - new Date(x.em)) < 5000 || (y.em <= x.em && new Date(x.em) - new Date(y.em) < 86400000 * 2); }).pop(); x.motivo = c ? c.texto : ''; });
+    var ult = l.length ? l[l.length - 1] : null, atual = P.passoAtual(m);
+    var r = { feito: l, atual: null, futuro: [], prazo: m.prazo, devolucoes: l.filter(function (x) { return x.wf === 'devolucao'; }).length };
+    if (atual) {
+      r.atual = { passo: atual.nome, tipo: atual.tipo, resp: P.nomeResp(m, atual.responsavel), desde: ult ? ult.em : null, dur: ult ? agoraMs - new Date(ult.em) : null, devolvida: !!m.devolvida };
+      r.futuro = m.passos.slice(m.passo_atual + 1).map(function (p) { return { passo: p.nome, resp: P.nomeResp(m, p.responsavel), auto: p.responsavel === 'sistema' }; });
+    }
+    var etapas = l.filter(function (x) { return (x.wf === 'avanco' || x.wf === 'auto') && x.dur !== null; });
+    r.total = l.length ? (atual ? agoraMs : new Date(ult.em)) - new Date(l[0].em) : 0;
+    r.maisLonga = etapas.filter(function (x) { return x.wf === 'avanco'; }).sort(function (a, b) { return b.dur - a.dur; })[0] || null;
+    return r;
+  };
+  P.fmtDur = function (ms) {
+    if (ms === null || ms === undefined) return '';
+    var h = ms / 3600000;
+    if (h < 1) return 'under 1 h';
+    if (h < 24) return Math.round(h) + ' h';
+    var d = Math.round(h / 24);
+    return d + (d === 1 ? ' day' : ' days');
+  };
   P.msPeriodo = function (pid) { return S.ms.filter(function (m) { return m.periodo === pid; }); };
   P.usarTrimestres = function (m, u, ids) {
     if (!P.podePreencher(m, u)) return { erro: 'This milestone is read only for you right now.' };

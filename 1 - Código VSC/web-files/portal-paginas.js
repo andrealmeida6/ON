@@ -11,14 +11,14 @@
   var e = function (v) {
     return String(v === null || v === undefined ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; });
   };
-  var U = { rota: { pag: '', arg: '', q: {} }, sep: 'dados', msFiltro: { empresa: '', dep: '', estado: 'todas', esrs: true, minhas: false }, msEmpTodas: false, dadosVista: 'form', colRel: {}, exp: {}, msVista: 'lista', entVista: 'board', imp: {}, cal: null, consEsrs: false, histInd: 'A03', audFiltro: 'todas', boTab: 'ciclo', painel: null, menu: null, docNova: false, indBusca: '', marca: null, regraBusca: '', logoEstado: '' };
+  var U = { rota: { pag: '', arg: '', q: {} }, sep: 'dados', msFiltro: { empresa: '', dep: '', estado: 'todas', esrs: true, minhas: false }, msEmpTodas: false, dadosVista: 'form', colRel: {}, wfHist: {}, exp: {}, msVista: 'lista', entVista: 'board', imp: {}, cal: null, consEsrs: false, histInd: 'A03', audFiltro: 'todas', boTab: 'ciclo', painel: null, menu: null, docNova: false, indBusca: '', marca: null, regraBusca: '', logoEstado: '' };
 
   /* --- Icones ------------------------------------------------------------ */
   var svg = function (d, t) { return '<svg width="' + (t || 16) + '" height="' + (t || 16) + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + d + '</svg>'; };
   var I = {
     tick: '<path d="M20 6L9 17l-5-5"/>', doc: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>',
     tarefa: '<path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"/>', cal: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
-    ativ: '<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>', voltar: '<path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/>', cima: '<polyline points="18 15 12 9 6 15"/>', baixo: '<polyline points="6 9 12 15 18 9"/>', lixo: '<path d="M3 6h18M8 6V4h8v2M6 6l1 15h10l1-15"/>'
+    ativ: '<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>', relogio: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 2"/>', voltar: '<path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/>', cima: '<polyline points="18 15 12 9 6 15"/>', baixo: '<polyline points="6 9 12 15 18 9"/>', lixo: '<path d="M3 6h18M8 6V4h8v2M6 6l1 15h10l1-15"/>'
   };
 
   /* --- Componentes ------------------------------------------------------- */
@@ -394,19 +394,43 @@
       '<div class="ps-ban-stats"><div class="ps-ban-stat"><b>' + preenchidos(m) + '/' + m.indicadores.length + '</b><span>Indicators filled in</span></div><div class="ps-ban-stat"><b>' + m.indicadores.filter(function (id) { return P.item(id, P.chave(m)).evidencias.length; }).length + '</b><span>With evidence</span></div><div class="ps-ban-stat"><b>' + ext + '</b><span>External requests</span></div><div class="ps-ban-stat"><b>' + (P.concluida(m) ? '-' : d + 'd') + '</b><span>Until due</span></div></div></div>';
   };
   Blocos['milestone-workflow'] = function () {
-    var m = msAtual(), feitos = Math.min(m.passo_atual, m.passos.length), pct = Math.round((feitos / m.passos.length) * 100);
-    return '<div class="ps-card ps-mt">' + cabCartao('Milestone workflow', 'ativ', '<div class="ps-sp"><div class="ps-leg"><span><i class="ok"></i>Completed</span><span><i class="at"></i>Current</span><span><i></i>To do</span></div>' + (P.podeAlterarWorkflow(m, u()) ? '<button type="button" class="ps-btn peq" data-a="abrirWf">Change workflow</button>' : '') + '</div>') +
+    var m = msAtual(), feitos = Math.min(m.passo_atual, m.passos.length), pct = Math.round((feitos / m.passos.length) * 100), abertoH = !!U.wfHist[m.id];
+    return '<div class="ps-card ps-mt">' + cabCartao('Milestone workflow', 'ativ', '<div class="ps-sp"><div class="ps-leg"><span><i class="ok"></i>Completed</span><span><i class="at"></i>Current</span><span><i></i>To do</span></div>' + '<button type="button" class="ps-wfh-btn' + (abertoH ? ' on' : '') + '" data-a="wfHist" aria-expanded="' + abertoH + '" aria-controls="wf-hist" title="' + (abertoH ? 'Hide the timeline' : 'Show the timeline of this workflow') + '"><span class="ps-wfh-ico">' + svg(I.relogio, 18) + '</span><span class="ps-wfh-txt">' + (abertoH ? 'Hide timeline' : 'Timeline') + '</span></button>' + (P.podeAlterarWorkflow(m, u()) ? '<button type="button" class="ps-btn peq" data-a="abrirWf">Change workflow</button>' : '') + '</div>') +
       '<div class="ps-wf-barra ps-mt" role="img" aria-label="' + pct + '% of steps completed"><i style="width:' + pct + '%"></i></div><div class="ps-wf">' + m.passos.map(function (p, i) {
         var c = i < m.passo_atual ? 'ok' : i === m.passo_atual ? (m.devolvida ? 'at dev' : 'at') : '';
         return '<div class="ps-wf-p ' + c + '"' + (i === m.passo_atual ? ' aria-current="step"' : '') + '><div class="ps-wf-n">' + e(p.nome) + '</div><div class="ps-wf-c">' + (i < m.passo_atual ? svg(I.tick, 18) : m.devolvida && i === m.passo_atual ? svg(I.voltar, 18) : i + 1) + '</div><div class="ps-wf-r">' + (p.concluido_em ? '<b>' + e(P.fmtData(p.concluido_em)) + '</b><br>' + e(p.concluido_por) : i === m.passo_atual ? '<b>Current</b><br>' + e(P.nomeResp(m, p.responsavel)) : e(P.nomeResp(m, p.responsavel))) + '</div></div>';
-      }).join('') + '</div></div>';
+      }).join('') + '</div>' + (abertoH ? historicoHtml(m) : '') + '</div>';
+  };
+  /* Linha do tempo do workflow: para tras (com devolucoes), o passo atual e o que falta, com o tempo entre etapas */
+  var historicoHtml = function (m) {
+    var h = P.historicoWf(m), ICO = { criada: I.doc, avanco: I.tick, auto: I.ativ, devolucao: I.voltar };
+    var NOME = { criada: 'Opened for collection', avanco: '', auto: '', devolucao: 'Returned' };
+    var maxD = Math.max.apply(null, h.feito.map(function (x) { return x.dur || 0; }).concat([h.atual && h.atual.dur || 0, 1]));
+    var lig = function (dur, cls, txt) { var w = dur ? Math.round(128 + 96 * Math.sqrt(dur / maxD)) : 120; return '<div class="ps-wfh-lig ' + (cls || '') + '" style="--w:' + w + 'px"><span>' + e(txt || P.fmtDur(dur)) + '</span></div>'; };
+    var no = function (cls, ico, tit, sub, quando, extra) { return '<div class="ps-wfh-no ' + cls + '"><span class="ps-wfh-c" aria-hidden="true">' + svg(ico, 16) + '</span><b>' + e(tit) + '</b>' + (sub ? '<small>' + e(sub) + '</small>' : '') + (quando ? '<time>' + e(quando) + '</time>' : '') + (extra || '') + '</div>'; };
+    var partes = [];
+    h.feito.forEach(function (x, i) {
+      if (i) partes.push(lig(x.dur, x.wf === 'devolucao' ? 'dev' : x.wf === 'auto' ? 'auto' : ''));
+      var tit = x.wf === 'criada' ? NOME.criada : x.wf === 'devolucao' ? 'Returned from ' + x.passo : x.passo || x.texto;
+      partes.push(no(x.wf, ICO[x.wf], tit, x.wf === 'criada' ? '' : x.por, P.fmtDataHora(x.em), x.motivo ? '<q>' + e(x.motivo.length > 90 ? x.motivo.slice(0, 88) + '…' : x.motivo) + '</q>' : ''));
+    });
+    if (h.atual) {
+      if (partes.length) partes.push(lig(h.atual.dur, 'agora', P.fmtDur(h.atual.dur) + ' so far'));
+      partes.push(no('atual' + (h.atual.devolvida ? ' dev' : ''), I.relogio, h.atual.passo, 'With ' + h.atual.resp, 'Now'));
+      h.futuro.forEach(function (f) { partes.push(lig(null, 'fut', '')); partes.push(no('fut', f.auto ? I.ativ : I.tick, f.passo, f.auto ? 'Automatic' : f.resp, '')); });
+      var d = P.diasAte(h.prazo);
+      partes.push(lig(null, 'fut', '')); partes.push(no('prazo' + (d < 0 ? ' atr' : ''), I.cal, 'Due', d < 0 ? Math.abs(d) + ' days overdue' : d === 0 ? 'Today' : 'in ' + d + ' days', P.fmtDataAno(h.prazo)));
+    } else partes.push(lig(null, 'fim', '')), partes.push(no('fim', I.tick, 'Completed', 'All steps done', ''));
+    var stats = [['Elapsed', P.fmtDur(h.total) || '-'], ['Steps done', h.feito.filter(function (x) { return x.wf === 'avanco' || x.wf === 'auto'; }).length + ' of ' + m.passos.length], ['Longest step', h.maisLonga ? h.maisLonga.passo + ' · ' + P.fmtDur(h.maisLonga.dur) : '-'], ['Returns', String(h.devolucoes)]];
+    return '<div class="ps-wfh" id="wf-hist" role="region" aria-label="Workflow timeline"><dl class="ps-wfh-stats">' + stats.map(function (x) { return '<div><dt>' + e(x[0]) + '</dt><dd>' + e(x[1]) + '</dd></div>'; }).join('') + '</dl>' +
+      '<div class="ps-wfh-sc" tabindex="0" aria-label="Steps, scroll sideways"><div class="ps-wfh-trilho">' + partes.join('') + '</div></div></div>';
   };
   Blocos['milestone-corpo'] = function () {
     var m = msAtual(), usr = u(), decide = P.podeAgir(m, usr) && P.passoAtual(m).tipo !== 'recolha';
     var nAud = S.aud.filter(function (a) { var x = P.msDoIndicador(a.indicador_id, m.ano); return x && x.id === m.id && a.estado !== 'resolvido'; }).length;
     var nExt = S.ext.filter(function (x) { return x.milestone_id === m.id && x.estado !== 'aplicado'; }).length;
     /* Uma so pagina, pela ordem do trabalho: pedido, fontes e calculos, dados, ficheiros, exploracao, qualidade, terceiros, auditoria e conversa */
-    var secs = [['dados', decide ? 'Review' : 'Data request', 0, pedidoTopo(m) + cartaoTrimestres(m) + (P.fontesHtml ? '<div id="sec-fontes" class="ps-sec">' + P.fontesHtml(m) + '</div>' : '') + (decide ? sepRevisao(m) : P.podePreencher(m, usr) ? sepRecolha(m) : sepLeitura(m)) + cartaoFicheiros(m)],
+    var secs = [['dados', decide ? 'Review' : 'Data request', 0, cartaoTrimestres(m) + (P.fontesHtml ? '<div id="sec-fontes" class="ps-sec">' + P.fontesHtml(m) + '</div>' : '') + (decide ? sepRevisao(m) : P.podePreencher(m, usr) ? sepRecolha(m) : sepLeitura(m)) + cartaoFicheiros(m)],
       ['explorar', 'Data explorer', 0, sepExplorar(m)], ['evidencias', 'Evidence and quality', 0, sepEvidencias(m)], ['externos', 'External contributions', nExt, sepExternos(m)], ['auditoria', 'Audit', nAud, sepAuditoria(m)], ['conversa', 'Conversation and history', m.comentarios.length, sepConversa(m)]];
     var indice = [['dados', secs[0][1]], ['fontes', 'Data sources and calculations']].concat(secs.slice(1).map(function (s) { return [s[0], s[1], s[2]]; }));
     return '<div class="ps-grid-side ps-ms-corrida"><div class="ps-col">' + secs.map(function (s) { return '<section id="sec-' + s[0] + '" class="ps-sec ps-col" aria-label="' + e(s[1]) + '">' + s[3] + '</section>'; }).join('') + '</div>' +
@@ -475,20 +499,6 @@
       tabela([{ t: 'Indicator' }].concat(per.map(function (p) { return { t: 'T' + p.t, dir: 1 }; })).concat([{ t: 'Rule' }, { t: 'Year from quarters', dir: 1 }, { t: 'Current', dir: 1 }, { t: '' }]), linhas) + '</div></div>';
   };
   /* --- Pedido de dados ---------------------------------------------------- */
-  var pedidoTopo = function (m) {
-    var p = P.passoAtual(m), recolha = !!p && p.tipo === 'recolha', fics = P.ficheirosPedidos(m), obrig = fics.filter(function (f) { return f.obrigatorio; }), fOk = obrig.filter(function (f) { return f.entregues.length; }).length;
-    var faltas = recolha ? P.faltasSubmissao(m) : [], comFalta = {}, erros = 0, alertas = 0;
-    faltas.forEach(function (f) { if (f.campo === 'val' || f.campo === 'just' || f.campo === 'met') comFalta[f.id] = 1; });
-    m.indicadores.forEach(function (id) { var it = P.item(id, P.chave(m)), v = P.validarItem(it); if (v.erros.length) erros++; if (v.alertas.length && !String(it.justificacao || '').trim()) alertas++; });
-    var dOk = recolha ? m.indicadores.filter(function (id) { return !comFalta[id]; }).length : preenchidos(m), tot = m.indicadores.length + obrig.length, pct = tot ? Math.round(((dOk + fOk) / tot) * 100) : 100, C2 = 2 * Math.PI * 36;
-    var titulo = !p ? 'Delivered and approved' : !recolha ? 'Delivered, now with ' + P.nomeResp(m, p.responsavel) : faltas.length ? faltas.length + (faltas.length === 1 ? ' item still needed' : ' items still needed') : 'Everything is ready to submit';
-    var txt = !recolha ? 'This is what was requested and what was delivered.' : 'Provide the data and the files below by ' + P.fmtDataAno(m.prazo) + '. Every value is checked against the prior year and the rules of its indicator.';
-    var passo = function (n, nome, det, ok) { return '<li class="' + (ok ? 'ok' : '') + '"><span class="n" aria-hidden="true">' + (ok ? svg(I.tick, 14) : n) + '</span><b>' + e(nome) + '</b><small>' + e(det) + '</small></li>'; };
-    return '<div class="ps-card ps-ped"><div class="ps-ped-top"><div class="ps-ped-anel" role="img" aria-label="' + pct + '% ready"><svg viewBox="0 0 88 88" aria-hidden="true"><circle cx="44" cy="44" r="36"/><circle class="v" cx="44" cy="44" r="36" stroke-dasharray="' + (C2 * pct / 100).toFixed(1) + ' ' + C2.toFixed(1) + '" transform="rotate(-90 44 44)"/></svg><b>' + pct + '%</b></div>' +
-      '<div class="ps-ped-txt"><span class="ps-ped-k">Data request</span><h2>' + e(titulo) + '</h2><p>' + e(txt) + '</p></div></div>' +
-      '<ol class="ps-ped-passos">' + passo(1, 'Provide the data', dOk + ' of ' + m.indicadores.length + ' data points', dOk === m.indicadores.length) + passo(2, 'Attach the files', fOk + ' of ' + obrig.length + ' required files', fOk === obrig.length) + passo(3, 'Validate', erros ? erros + ' with errors' : alertas ? alertas + ' alerts to justify' : 'No open issues', !erros && !alertas && preenchidos(m) === m.indicadores.length) + '</ol>' +
-      (faltas.length ? '<details class="ps-ped-faltas" id="ped-faltas"><summary>See what is missing (' + faltas.length + ')</summary><ul>' + faltas.slice(0, 12).map(function (f) { return '<li><button type="button" class="ps-btn liga" data-a="irFalta" data-campo="' + e(f.campo) + '" data-id="' + e(f.id) + '">' + e(f.msg) + '</button></li>'; }).join('') + (faltas.length > 12 ? '<li class="ps-mut ps-small">And ' + (faltas.length - 12) + ' more.</li>' : '') + '</ul></details>' : '') + '</div>';
-  };
   var cartaoFicheiros = function (m) {
     var usr = u(), pode = P.podePreencher(m, usr), gere = P.gereTudo(usr) && !P.concluida(m), fics = P.ficheirosPedidos(m);
     return '<div class="ps-card">' + cabCartao('Requested files', 'doc') + '<div class="ps-card-body">' + tabela([{ t: 'File' }, { t: 'Why it is requested' }, { t: 'Format' }, { t: 'Delivered' }, { t: 'Status' }], fics.map(function (f) {
@@ -1202,6 +1212,7 @@
     dadosVista: function (d) { U.dadosVista = d.v; R(); },
     dadosExcel: function () { var m = msAtual(); exportarGrelha(cfgDados(m), 'data-request-' + m.id + '-' + m.ano + '.xlsx', 'Data', folhaFicheiros(m)); toast('Excel file exported.', 'ok'); },
     triUsar: function (d) { var r = P.usarTrimestres(msAtual(), u(), d.v ? [d.v] : null); if (r.erro) return toast(r.erro, 'err'); toast(r.n + ' annual value(s) calculated from the quarters' + (r.parciais ? ', ' + r.parciais + ' still year to date.' : '.'), 'ok'); R(); },
+    wfHist: function () { var m = msAtual(); U.wfHist[m.id] = !U.wfHist[m.id]; R(); },
     colRelFechar: function () { delete U.colRel[msAtual().id]; R(); },
     irFalta: function (d) {
       if (d.campo !== 'fic' && d.campo !== 'evi') U.dadosVista = 'form';
