@@ -198,7 +198,6 @@
     var usr = u(), n = contagens(usr), set = function (k, v) { var el = document.querySelector('[data-campo="' + k + '"]'); if (el) el.textContent = v; };
     var h = new Date().getHours();
     set('hero-ola', (h < 13 ? 'Good morning' : h < 20 ? 'Good afternoon' : 'Good evening') + ', ' + usr.nome);
-    set('hero-frase', n.pend ? 'You have ' + n.pend + (n.pend === 1 ? ' milestone waiting.' : ' milestones waiting.') : 'No milestones are waiting on you right now.');
     set('kpi-pend', n.pend); set('kpi-atraso', n.atraso); set('kpi-rev', n.rev); set('kpi-conc', n.conc);
     document.querySelectorAll('[data-kpi-rota]').forEach(function (a) { a.setAttribute('href', rota(a.getAttribute('data-kpi-rota'))); });
   };
@@ -417,8 +416,8 @@
   var cartaoFicheiros = function (m) {
     var usr = u(), pode = P.podePreencher(m, usr), gere = P.gereTudo(usr) && !P.concluida(m), fics = P.ficheirosPedidos(m);
     return '<div class="ps-card">' + cabCartao('Requested files', 'doc') + '<div class="ps-card-body">' + tabela([{ t: 'File' }, { t: 'Why it is requested' }, { t: 'Format' }, { t: 'Delivered' }, { t: 'Status' }], fics.map(function (f) {
-      var ent = f.entregues, acao = (pode ? '<button type="button" id="fp-' + e(f.id) + '" class="ps-btn peq' + (ent.length ? '' : ' pri') + '" data-a="ficEntregar" data-v="' + e(f.id) + '">' + (ent.length ? 'Add another' : 'Upload') + '</button>' : '') + (gere && f.proprio ? ' <button type="button" class="ps-btn peq err" data-a="ficRetirar" data-v="' + e(f.id) + '">Remove</button>' : '');
-      return [e(f.nome) + (f.obrigatorio ? '' : ' <span class="ps-mut ps-small">(optional)</span>'), e(f.motivo || '-'), e(f.formatos.length ? f.formatos.join(', ') : 'Any'), ent.length ? ent.map(function (x) { return '<span class="ps-small">' + e(x.ficheiro) + '<br><span class="ps-mut">' + e(x.por) + '</span></span>'; }).join('<br>') : '<span class="ps-mut">-</span>', '<span class="ps-sp">' + (ent.length ? chip('Delivered', 'ok') : f.obrigatorio ? chip('Missing', 'warn') : chip('Optional')) + acao + '</span>'];
+      var ent = f.entregues, acao = (P.folhaAcoes ? P.folhaAcoes(m, f, pode) + ' ' : '') + (pode ? '<button type="button" id="fp-' + e(f.id) + '" class="ps-btn peq' + (ent.length ? '' : ' pri') + '" data-a="ficEntregar" data-v="' + e(f.id) + '">' + (ent.length ? 'Add another' : 'Upload') + '</button>' : '') + (gere && f.proprio ? ' <button type="button" class="ps-btn peq err" data-a="ficRetirar" data-v="' + e(f.id) + '">Remove</button>' : '');
+      return [e(f.nome) + (f.obrigatorio ? '' : ' <span class="ps-mut ps-small">(optional)</span>'), e(f.motivo || '-'), e(f.formatos.length ? f.formatos.join(', ') : 'Any'), (ent.length ? ent.map(function (x) { return '<span class="ps-small">' + e(x.ficheiro) + '<br><span class="ps-mut">' + e(x.por) + (x.origem === 'grid' ? ' · filled in on the platform' : '') + '</span></span>'; }).join('<br>') : '<span class="ps-mut">-</span>') + (P.folhaEstado ? P.folhaEstado(m, f) : ''), '<span class="ps-sp">' + (ent.length ? chip('Delivered', 'ok') : f.obrigatorio ? chip('Missing', 'warn') : chip('Optional')) + acao + '</span>'];
     }), 'No files requested for this milestone.') +
       (gere ? '<div class="ps-form ps-mt ps-fic-novo">' + campo('fp-nome', 'Request another file', '<input id="fp-nome" class="ps-in" placeholder="Nome do ficheiro pedido">') + '<label class="ps-chk"><input id="fp-obr" type="checkbox" checked> Required</label><button type="button" class="ps-btn" data-a="ficPedir">Add to the request</button></div>' : '') + '</div></div>';
   };
@@ -1001,7 +1000,10 @@
     var r = Pn[U.painel.tipo](U.painel.args);
     h.hidden = false;
     document.body.style.overflow = 'hidden';
-    h.innerHTML = '<div class="ps-pan-f" data-a="fecharPainel"></div><div class="ps-pan ' + (r.largo ? 'largo' : '') + '" role="dialog" aria-modal="true" aria-labelledby="pan-t"><div class="ps-pan-h"><div><h2 id="pan-t" tabindex="-1">' + e(r.t) + '</h2>' + (r.s ? '<div class="ps-mut ps-small">' + e(r.s) + '</div>' : '') + '</div><button type="button" class="ps-x" data-a="fecharPainel" aria-label="Close">×</button></div><div class="ps-pan-b">' + r.b + '</div>' + (r.p ? '<div class="ps-pan-p">' + r.p + '</div>' : '') + '</div>';
+    var corpo = h.querySelector('.ps-pan-b'), sy = corpo && h.getAttribute('data-painel-tipo') === U.painel.tipo ? corpo.scrollTop : 0;
+    h.setAttribute('data-painel-tipo', U.painel.tipo);
+    h.innerHTML = '<div class="ps-pan-f" data-a="fecharPainel"></div><div class="ps-pan ' + (r.largo ? 'largo' : '') + (r.cls ? ' ' + r.cls : '') + '" role="dialog" aria-modal="true" aria-labelledby="pan-t"><div class="ps-pan-h"><div><h2 id="pan-t" tabindex="-1">' + e(r.t) + '</h2>' + (r.s ? '<div class="ps-mut ps-small">' + e(r.s) + '</div>' : '') + '</div><button type="button" class="ps-x" data-a="fecharPainel" aria-label="Close">×</button></div><div class="ps-pan-b">' + r.b + '</div>' + (r.p ? '<div class="ps-pan-p">' + r.p + '</div>' : '') + '</div>';
+    if (sy) { var nb = h.querySelector('.ps-pan-b'); if (nb) nb.scrollTop = sy; }
     if (U.painelFoco) { U.painelFoco = false; var t = document.getElementById('pan-t'); if (t) t.focus(); }
   };
 
@@ -1397,6 +1399,6 @@
     }
   };
   /* As paginas de controlo (portal-gestao.js) acrescentam-se aqui */
-  P.ext = { msAtual: function () { return msAtual(); }, Blocos: Blocos, A: A, C: C, U: U, e: e, svg: svg, I: I, rota: rota, chip: chip, estChip: estChip, cabCartao: cabCartao, vazio: vazio, opt: opt, campo: campo, tabela: tabela, toast: toast, R: R, val: val, res: res, escolherFicheiro: escolherFicheiro, atribHtml: atribHtml, iniciais: iniciais, u: u, fmtV: fmtV, prazoTxt: prazoTxt };
+  P.ext = { msAtual: function () { return msAtual(); }, Pn: Pn, abrePainel: function (t, a) { abrePainel(t, a); }, Blocos: Blocos, A: A, C: C, U: U, e: e, svg: svg, I: I, rota: rota, chip: chip, estChip: estChip, cabCartao: cabCartao, vazio: vazio, opt: opt, campo: campo, tabela: tabela, toast: toast, R: R, val: val, res: res, escolherFicheiro: escolherFicheiro, atribHtml: atribHtml, iniciais: iniciais, u: u, fmtV: fmtV, prazoTxt: prazoTxt };
   document.addEventListener('DOMContentLoaded', P.iniciar);
 })();

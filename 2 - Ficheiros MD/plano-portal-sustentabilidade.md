@@ -1,6 +1,6 @@
 # Plano do Portal de Sustentabilidade
 
-Estado a 3 de novembro de 2026. A especificação funcional está em `especificacao-portal-sustentabilidade.md`.
+Estado a 7 de novembro de 2026. A especificação funcional está em `especificacao-portal-sustentabilidade.md`.
 
 ## Como ver e alterar
 
@@ -27,6 +27,7 @@ Estado a 3 de novembro de 2026. A especificação funcional está em `especifica
 | Pendentes | Deixa de ser separador. O separador Milestones tem o contador e o filtro "Waiting on me" | Indicação do André |
 | Empresas | Cada milestone pertence a uma empresa. As empresas são a tabela `esg_entidades`, geridas no backoffice | Indicação do André. Evita duas listas de entidades |
 | Departamentos | São as tags das milestones e as unidades de utilizadores e indicadores, geridos no backoffice. Mudar o nome propaga a todos | Indicação do André. Evita duas listas de unidades |
+| Hero da home | Só a saudação e os KPIs. A frase "You have N milestones waiting" saiu, porque o KPI Waiting on you já o diz | Indicação do André, 7 de novembro de 2026 |
 
 ## Marca (backoffice, separador Marca)
 
@@ -48,6 +49,7 @@ Estado a 3 de novembro de 2026. A especificação funcional está em `especifica
 | `portal-catalogo.js` | 70 indicadores e 25 milestones, gerados dos anexos A e B |
 | `portal-nucleo.js` | Regras: estado, permissões, workflow, validação, importação, exportações, marca |
 | `portal-paginas.js` | Desenho das páginas e ações |
+| `portal-folhas.js` | Folha de cada ficheiro pedido: preencher, puxar da base de dados, importar e entregar |
 | `xlsx.full.min.js` | SheetJS Community Edition 0.18.5, Apache-2.0 |
 
 ## GitHub Pages e Supabase
@@ -140,6 +142,20 @@ Pedido do André a 5 de novembro de 2026. A milestone deixou de ter separadores:
 - **Fórmulas:** aparecem em cada indicador do formulário, da revisão e da leitura. P09, P10 e P13 não tinham fórmula no catálogo e ganharam uma.
 - **Limitação:** nenhuma base está ligada. Os registos são de teste, gerados em `portal-fontes.js`, e aparecem como "Test data". O endpoint da API está como planeado.
 - **Exemplos alterados:** as quantidades da biblioteca de fatores passaram a dar as emissões de Âmbito 1 do ano anterior (eram 5 vezes menores).
+
+## Preencher os ficheiros pedidos na plataforma
+
+Pedido do André a 7 de novembro de 2026: em cada ficheiro pedido da milestone, colocar os dados diretamente nas colunas necessárias e puxá-los da base de dados no mesmo momento.
+
+- **Onde:** na tabela Requested files, cada pedido tem o botão "Fill in here" ao lado de "Upload". Abre um painel largo com uma folha. Depois de entregue, o botão passa a "Edit data", e quem só lê vê "View data". Um rascunho mostra quantas células já estão preenchidas.
+- **Colunas:** uma linha por mês do ano da milestone, uma coluna por campo das fontes de que os indicadores precisam e uma coluna Source reference. Os campos vêm de `P.camposMilestone`, filtrados pelas bases que cada departamento costuma extrair (`BASES_UNIDADE`). Se o filtro não deixar nenhum campo, ficam todos os campos da milestone. "Columns of this request" mostra o campo, a unidade, a origem, a agregação e os indicadores que o usam.
+- **Obrigatório:** todos os meses nas somas e nas médias. Nos últimos valores bastam os meses de fim de trimestre. A linha Total aplica a agregação do campo e fica fixa no fundo.
+- **Pull from the database:** preenche as células vazias e as que já vinham da base. As que a pessoa editou ficam, e a plataforma diz quantas diferem, com as opções "Use the database values" e "Keep mine". A referência do registo vai para Source reference.
+- **Outras entradas:** escrever na célula, colar um bloco do Excel (reconhece os cabeçalhos e os meses, ou cola por posição), importar um `.xlsx`, `.csv` ou `.json`, e descarregar um template com as colunas certas.
+- **Origem de cada célula:** azul claro vem da base de dados, branco foi escrito ou colado, amarelo difere da base (a barra de fórmula mostra o valor da base), vermelho é erro (valor negativo, texto, percentagem acima de 100).
+- **Deliver data:** só fica ativo sem erros e sem células obrigatórias vazias. Gera o ficheiro do pedido (`<prefixo>-<milestone>-<ano>.xlsx`, com `-v2` nas versões seguintes), guarda os dados com ele em `documentos_gerais`, regista o evento com quantas células vieram da base e quantas foram escritas, envia os totais para os campos das fontes e preenche os indicadores que já se conseguem calcular. O rodapé do painel diz que indicadores vão ser atualizados.
+- **Gravação:** o rascunho grava-se a cada alteração em `m.folhas`. A versão entregue fica também em `documentos_gerais`, que já sincroniza com o Supabase.
+- **Limitações:** o rascunho ainda não sincroniza com o Supabase (falta a coluna `folhas` em `esg_milestones`). Os registos puxados continuam a ser de teste e, nas percentagens, são limitados a 100%. O ficheiro entregue guarda o nome e os dados, não gera o `.xlsx` no servidor.
 
 ## O que falta para produção
 

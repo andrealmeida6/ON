@@ -369,7 +369,7 @@
   P.ficheirosPedidos = function (m) {
     var docs = m.documentos_gerais || [], l = [];
     var entregues = function (pid) { return docs.filter(function (d) { return d.pedido === pid; }); };
-    (FICHEIROS_BASE[m.unidade] || []).forEach(function (f, i) { l.push({ id: 'base:' + i, nome: f[0], motivo: f[1], formatos: f[2], obrigatorio: true, entregues: entregues('base:' + i) }); });
+    (FICHEIROS_BASE[m.unidade] || []).forEach(function (f, i) { l.push({ id: 'base:' + i, nome: f[0], motivo: f[1], formatos: f[2], prefixo: f[3], obrigatorio: true, entregues: entregues('base:' + i) }); });
     (m.ficheiros_pedidos || []).forEach(function (f) { l.push({ id: f.id, nome: f.nome, motivo: f.motivo || '', formatos: [], obrigatorio: !!f.obrigatorio, proprio: true, entregues: entregues(f.id) }); });
     m.indicadores.forEach(function (id) {
       var c = P.cat(id);

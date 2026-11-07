@@ -179,7 +179,6 @@ button,input,select,textarea{font:inherit;color:inherit}
 .ps-hero-ciclo{display:inline-flex;margin-top:18px;font-size:12px;font-weight:600;padding:5px 11px;border-radius:999px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.22)}
 .ps-hero-ola{margin-top:14px;font-size:21px;font-weight:600;letter-spacing:-.3px}
 .ps-hero-ola small{display:block;font-size:13px;font-weight:500;color:color-mix(in srgb,#fff 75%,var(--primary));margin-bottom:4px}
-.ps-hero-frase{margin-top:8px;color:color-mix(in srgb,#fff 84%,var(--primary));max-width:520px}
 .ps-glass{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 .ps-gk{position:relative;display:block;padding:16px 18px;border-radius:16px;border:1px solid rgba(255,255,255,.18);color:#fff;text-decoration:none;overflow:hidden;
   background:linear-gradient(160deg,rgba(255,255,255,.14),rgba(255,255,255,.04));transition:transform .18s,border-color .18s}
@@ -638,6 +637,38 @@ a.ps-row:hover{background:var(--bg)}
 .ps-gr-ed{width:100%;height:32px;border:0;padding:6px 9px;font:inherit;background:var(--surface);color:var(--text);outline:none}
 .ps-gr-rod{display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;padding:6px 11px;background:var(--neutro-50);border-top:1px solid var(--line);font-size:11.5px;color:var(--muted);min-height:30px}
 .ps-gr-rod [data-gr-soma]{font-weight:700;color:var(--text)}
+/* Folha de um ficheiro pedido: preencher, puxar da base de dados e entregar */
+.ps-pan.folha{width:min(1180px,100vw)}
+.fh-ferr{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.fh-ferr .ps-btn svg{margin-right:6px;vertical-align:-3px}
+.fh-fontes{list-style:none;display:flex;gap:8px;flex-wrap:wrap;margin:0;padding:0}
+.fh-fontes li{display:flex;align-items:center;gap:8px;padding:6px 10px;border:1px solid var(--line);border-radius:999px;font-size:12.5px;background:var(--surface)}
+.fh-fontes small{color:var(--muted)}
+.fh-resumo{display:flex;justify-content:space-between;align-items:center;gap:12px 24px;flex-wrap:wrap;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--neutro-50)}
+.fh-prog{flex:1;min-width:220px;display:flex;flex-direction:column;gap:6px;font-size:13px}
+.fh-barra{height:8px;border-radius:999px;background:var(--line);overflow:hidden}
+.fh-barra i{display:block;height:100%;background:var(--secondary);border-radius:inherit;transition:width .3s}
+.fh-leg{list-style:none;display:flex;gap:14px;flex-wrap:wrap;margin:0;padding:0;font-size:12.5px;color:var(--muted)}
+.fh-leg li{display:flex;align-items:center;gap:6px}
+.fh-leg i{width:12px;height:12px;border-radius:3px;border:1px solid var(--line)}
+.fh-leg i.db,.ps-gr-t td.fh-db{background:var(--info-50)}
+.fh-leg i.man{background:var(--surface)}
+.fh-leg i.dif{background:var(--warn-50)}
+.fh-leg i.err{background:var(--err-50)}
+.ps-gr-t td.fh-db{color:var(--text)}
+.ps-gr-t td.fh-db.sel{background:color-mix(in srgb,var(--secondary) 16%,#fff)}
+.ps-pan.folha .ps-gr-t tbody tr:last-child>*{position:sticky;bottom:0;z-index:2}
+.ps-pan.folha .ps-gr-t tbody tr:last-child>th{z-index:3}
+.ps-gr-t td.fh-tot{font-weight:700;color:var(--text);background:var(--primary-50);border-top:2px solid var(--line)}
+.fh-defs summary{cursor:pointer;font-weight:600;font-size:13px;color:var(--primary)}
+.fh-defs-t{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:8px}
+.fh-defs-t th,.fh-defs-t td{text-align:left;padding:7px 9px;border-bottom:1px solid var(--line-soft);vertical-align:top}
+.fh-defs-t th{color:var(--muted);font-size:11.5px}
+.fh-motivo{margin-right:auto;display:flex;flex-direction:column;font-size:13px;font-weight:600;color:var(--warn);align-self:center}
+.fh-motivo.ok{color:var(--ok)}
+.fh-motivo small{font-weight:400;color:var(--muted)}
+.ps-pan-p .ps-btn[disabled]{opacity:.5;cursor:not-allowed}
+@media(max-width:520px){.fh-defs-t{display:block;overflow-x:auto}.fh-motivo{width:100%}}
 .ps-faisca{display:block}
 .ps-faisca polyline{fill:none;stroke:var(--primary);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .ps-faisca circle{fill:var(--primary);stroke:var(--surface);stroke-width:1.5}
