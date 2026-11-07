@@ -116,7 +116,7 @@
     var linhasF = periodos(m, ped);
     cols.forEach(function (c) {
       var reg = P.registosCampo(c.k, m), porMes = {};
-      bases[DBS[c.db] + ' (' + c.tab + ')'] = 1;
+      bases[DBS[c.db]] = 1;
       reg.forEach(function (x) { var q = /-Q(\d)$/.exec(x.periodo), mes = q ? q[1] * 3 - 1 : parseInt(x.periodo.slice(5), 10) - 1; porMes[mes] = x; });
       /* Cada linha junta os registos dos seus meses com a regra do campo */
       var l = linhasF.map(function (p) {
@@ -223,7 +223,7 @@
   P.descarregarFolha = function (m, pid, comDados) {
     var ped = pedidoDe(m, pid), cfg = cfgFolha(m, ped, true);
     if (!comDados) cfg.linhas = cfg.linhas.map(function (l) { var c = {}; Object.keys(l.c).forEach(function (k) { c[k] = k === 'periodo' ? l.c[k] : { t: '' }; }); return { id: l.id, c: c }; });
-    var defs = { nome: 'Columns', linhas: [['Column', 'Field', 'Unit', 'Source', 'Aggregation', 'Used by']].concat(P.colunasFolha(m, ped).map(function (c) { return [c.rot + ' (' + c.un + ')', c.k, c.un, DBS[c.db] + ' / ' + c.tab, AGREG[c.agreg], c.usa.join(', ')]; })) };
+    var defs = { nome: 'Columns', linhas: [['Column', 'Unit', 'How the rows add up', 'Used by']].concat(P.colunasFolha(m, ped).map(function (c) { return [c.rot + ' (' + c.un + ')', c.un, AGREG[c.agreg], c.usa.join(', ')]; })) };
     P.exportarGrelha(cfg, (ped.prefixo || 'pedido') + '-' + m.id.toLowerCase() + '-' + m.ano + (comDados ? '' : '-template') + '.xlsx', 'Data', defs);
   };
 
@@ -237,7 +237,7 @@
       cols.forEach(function (col) {
         var ch = p.k + '|' + col.k, v = f.cel[ch] === undefined ? null : f.cel[ch], er = validar(col, v), o = f.org[ch], dbv = f.db[ch], req = obrigatorio(col, p.i, p.agr);
         var difere = v !== null && dbv !== undefined && o !== 'db' && Math.abs(dbv - v) > 1e-9;
-        var tip = er || (v === null ? (req ? 'Required. ' : 'Optional: only the quarter-end months are needed. ') + AGREG[col.agreg] + ' of ' + col.k + '.' : ORIGEM_TXT[o] + (difere ? '. The database has ' + num(dbv) + '.' : o === 'db' ? ', ' + DBS[col.db] + ' / ' + col.tab + '.' : '.'));
+        var tip = er || (v === null ? (req ? 'Required. ' : 'Optional: only the quarter-end months are needed. ') + AGREG[col.agreg] + ' of ' + col.rot.toLowerCase() + '.' : ORIGEM_TXT[o] + (difere ? '. The database has ' + num(dbv) + '.' : o === 'db' ? ', ' + DBS[col.db] + ' / ' + col.tab + '.' : '.'));
         c[col.k] = { t: num(v), bruto: bruNum(v), num: v, cls: er ? 'err' : difere ? 'alerta' : v === null ? (req && pode ? 'falta' : '') : o === 'db' ? 'fh-db' : 'fh-man', tip: tip };
       });
       c.ref = { t: f.ref[p.k] || '' };
@@ -277,7 +277,7 @@
       var dif = x.novo !== null && x.atual !== null && x.atual !== undefined && Math.abs(x.novo - x.atual) > 1e-9;
       var vari = x.val && x.val.variacao !== null && x.val.variacao !== undefined ? '<span class="fh-var ' + (x.val.alertas.length || x.val.erros.length ? 'warn' : '') + '">' + (x.val.variacao > 0 ? '+' : '') + P.fmtNum(x.val.variacao, 1) + '%</span>' : '<span class="ps-mut">-</span>';
       var check = x.novo === null ? '<span class="ps-small ps-mut">' + (x.falta.length ? 'Needs ' + x.falta.map(function (k) { return e(CAMPOS[k] ? CAMPOS[k].rot : k); }).join(', ') : 'Fill in the sheet') + '</span>' : x.val.erros.length ? chip('Error', 'err') + '<br><small class="ps-mut">' + e(x.val.erros[0]) + '</small>' : x.val.alertas.length ? chip('Alert', 'warn') + '<br><small class="ps-mut">' + e(x.val.alertas[0]) + '</small>' : chip('Valid', 'ok');
-      return [e(x.c.nome) + '<br><small class="ps-mut">' + e(x.id) + ' · ' + e(x.c.unidade_medida) + '</small>', '<span class="ps-mono ps-small">' + e(x.r.subst || x.r.x || '') + '</span>', fmt(x.id, x.ant), fmt(x.id, x.atual), '<b class="fh-novo' + (dif ? ' muda' : '') + '">' + fmt(x.id, x.novo) + '</b>', vari, check];
+      return [e(x.c.nome) + '<br><small class="ps-mut">' + e(x.id) + ' · ' + e(x.c.unidade_medida) + '</small>', '<span class="ps-mono ps-small">' + e(x.r.subst || '') + '</span>', fmt(x.id, x.ant), fmt(x.id, x.atual), '<b class="fh-novo' + (dif ? ' muda' : '') + '">' + fmt(x.id, x.novo) + '</b>', vari, check];
     });
     var prontos = l.filter(function (x) { return x.novo !== null; }).length, alertas = l.filter(function (x) { return x.val && (x.val.alertas.length || x.val.erros.length); }).length;
     return '<section class="fh-imp" aria-labelledby="fh-imp-t"><div class="fh-imp-h"><h3 id="fh-imp-t">Impact on the indicators</h3><span class="ps-small ps-mut" aria-live="polite">' + prontos + ' of ' + l.length + ' calculated with this sheet' + (alertas ? ' · ' + alertas + ' to check' : '') + '. Updates as you type.</span></div>' +
@@ -289,18 +289,15 @@
     var m = P.ms(a.m), ped = pedidoDe(m, a.pid);
     if (!ped) return { t: 'Request not found', b: '<div class="ps-aviso">This file is no longer requested.</div>' };
     var pode = podeEditar(m), st = P.estadoFolha(m, ped), f = (m.folhas || {})[ped.id] || {}, cfg = cfgFolha(m, ped), pct = st.total ? Math.round(((st.total - st.faltam) / st.total) * 100) : 0;
-    var bases = {};
-    st.cols.forEach(function (c) { bases[DBS[c.db]] = (bases[DBS[c.db]] || []).concat(c.tab).filter(function (x, i, l) { return l.indexOf(x) === i; }); });
     var rel = U.fhRel && U.fhRel.pid === ped.id ? U.fhRel : null;
     var ferr = pode ? '<div class="fh-ferr" role="toolbar" aria-label="Sheet tools"><button type="button" class="ps-btn pri" data-a="fhPuxar">' + X.svg(X.I.ativ || X.I.doc, 15) + (f.puxado ? 'Pull again from the database' : 'Pull from the database') + '</button>' +
       '<button type="button" class="ps-btn" data-a="fhImportar">Import Excel</button><button type="button" class="ps-btn" data-a="fhModelo">Download template</button>' + (temFolha(m, ped.id) ? '<button type="button" class="ps-btn liga" data-a="fhLimpar">Clear sheet</button>' : '') + '</div>' : '';
-    var fontes = '<ul class="fh-fontes">' + Object.keys(bases).map(function (b) { return '<li><b>' + e(b) + '</b><small class="ps-mono">' + bases[b].map(e).join(', ') + '</small>' + chip('Test data', 'info') + '</li>'; }).join('') + '</ul>';
     var resumo = '<div class="fh-resumo"><div class="fh-prog"><div class="fh-prog-t"><b>' + (st.total - st.faltam) + ' of ' + st.total + '</b> required cells filled</div><div class="fh-barra" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + pct + '" aria-label="Sheet completion"><i style="width:' + pct + '%"></i></div></div>' +
       '<ul class="fh-leg" aria-label="Legend"><li><i class="db"></i>' + st.daBase + ' from the database</li><li><i class="man"></i>' + st.editadas + ' entered or pasted</li>' + (st.difere ? '<li><i class="dif"></i>' + st.difere + ' differ from the database</li>' : '') + (st.erros ? '<li><i class="err"></i>' + st.erros + ' with errors</li>' : '') + '</ul></div>';
     var aviso = rel && rel.notas && rel.notas.length ? '<div class="ps-aviso warn" role="status"><div class="ps-sp-b"><b>Not applied</b><button type="button" class="ps-btn liga" data-a="fhRelFechar">Dismiss</button></div><ul class="ps-notas">' + rel.notas.slice(0, 10).map(function (n) { return '<li>' + e(n) + '</li>'; }).join('') + '</ul></div>' :
       rel && rel.mantidas ? '<div class="ps-aviso warn" role="status"><div class="ps-sp-b"><span>' + rel.mantidas + ' cell(s) you edited differ from the database and were kept.</span><span class="ps-sp"><button type="button" class="ps-btn peq" data-a="fhSubstituir">Use the database values</button><button type="button" class="ps-btn liga" data-a="fhRelFechar">Keep mine</button></span></div></div>' : '';
-    var defs = '<details class="fh-defs"><summary>Columns of this request (' + st.cols.length + ')</summary><table class="fh-defs-t"><thead><tr><th>Column</th><th>Source</th><th>Aggregation</th><th>Used by</th></tr></thead><tbody>' + st.cols.map(function (c) {
-      return '<tr><td><b>' + e(c.rot) + '</b><br><small class="ps-mono ps-mut">' + e(c.k) + ' · ' + e(c.un) + '</small></td><td>' + e(DBS[c.db]) + '<br><small class="ps-mono ps-mut">' + e(c.tab) + '</small></td><td>' + e(AGREG[c.agreg]) + (c.agreg === 'ultimo' ? '<br><small class="ps-mut">Quarter-end months</small>' : '') + '</td><td>' + c.usa.map(e).join(', ') + '</td></tr>';
+    var defs = '<details class="fh-defs"><summary>Columns of this request (' + st.cols.length + ')</summary><table class="fh-defs-t"><thead><tr><th>Column</th><th>How the rows add up</th><th>Used by</th></tr></thead><tbody>' + st.cols.map(function (c) {
+      return '<tr><td><b>' + e(c.rot) + '</b><br><small class="ps-mut">' + e(c.un) + '</small></td><td>' + e(AGREG[c.agreg]) + (c.agreg === 'ultimo' ? '<br><small class="ps-mut">Quarter-end months</small>' : '') + '</td><td>' + c.usa.map(e).join(', ') + '</td></tr>';
     }).join('') + '</tbody></table></details>';
     var entregue = ped.entregues.filter(function (x) { return x.origem === 'grid'; }).slice(-1)[0];
     var estado = entregue ? '<div class="ps-aviso ok" role="status">Delivered as <b>' + e(entregue.ficheiro) + '</b> by ' + e(entregue.por) + ' on ' + e(P.fmtDataHora(entregue.em)) + '.' + (pode ? ' Changes you make now are delivered as a new version.' : '') + '</div>' : '';
@@ -309,7 +306,7 @@
     st.cols.forEach(function (c) { c.usa.forEach(function (id) { if (usa.indexOf(id) < 0) usa.push(id); }); });
     return {
       t: ped.nome, s: m.nome + ' · ' + m.empresa + ' · ' + P.rotPeriodo(m), cls: 'folha',
-      b: estado + (ped.instrucoes ? '<div class="ps-aviso info"><b>How to fill it in.</b> ' + e(ped.instrucoes) + '</div>' : '') + '<p class="ps-small ps-mut">' + e(ped.motivo || 'Fill in the columns this milestone needs.') + ' One row per month. Every cell keeps where it came from.</p>' + ferr + fontes + resumo + aviso + window.PortalGrelha.html(cfg) + impactoHtml(m, ped) + defs,
+      b: estado + (ped.instrucoes ? '<div class="ps-aviso info"><b>How to fill it in.</b> ' + e(ped.instrucoes) + '</div>' : '') + '<p class="ps-small ps-mut">' + e(ped.motivo || 'Fill in the columns this milestone needs.') + ' One row per month. Every cell keeps where it came from.</p>' + ferr + resumo + aviso + window.PortalGrelha.html(cfg) + impactoHtml(m, ped) + defs,
       p: '<span class="fh-motivo ' + (st.pronta ? 'ok' : '') + '" aria-live="polite">' + e(motivo) + (pode && usa.length ? '<small>Delivering updates ' + e(usa.join(', ')) + '</small>' : '') + '</span><button type="button" class="ps-btn" data-a="fecharPainel">' + (pode ? 'Save and close' : 'Close') + '</button>' +
         (pode ? '<button type="button" class="ps-btn pri" data-a="fhEntregar"' + (st.pronta ? '' : ' disabled') + '>' + (entregue ? 'Deliver new version' : 'Deliver data') + '</button>' : '') + (!pode && entregue ? '<button type="button" class="ps-btn" data-a="fhDescarregar">Download Excel</button>' : '')
     };
@@ -334,7 +331,7 @@
   var mAtual = function () { return X.msAtual(); };
   var pidAtual = function () { return U.painel && U.painel.args.pid; };
   A.fhAbrir = function (d) { U.fhRel = null; X.abrePainel('folha', { m: mAtual().id, pid: d.v }); };
-  A.fhPuxar = function () { var m = mAtual(), r = P.puxarFolha(m, pidAtual()); if (r.erro) return toast(r.erro, 'err'); U.fhRel = { pid: pidAtual(), mantidas: r.mantidas }; toast(r.n + ' cell(s) filled from ' + r.bases.length + ' source table(s), ' + r.registos + ' records.', 'ok'); R(); };
+  A.fhPuxar = function () { var m = mAtual(), r = P.puxarFolha(m, pidAtual()); if (r.erro) return toast(r.erro, 'err'); U.fhRel = { pid: pidAtual(), mantidas: r.mantidas }; toast(r.n + ' cell(s) filled from ' + r.bases.length + ' system(s), ' + r.registos + ' records.', 'ok'); R(); };
   A.fhSubstituir = function () { var m = mAtual(), r = P.puxarFolha(m, pidAtual(), true); if (r.erro) return toast(r.erro, 'err'); U.fhRel = null; toast('Database values applied.', 'ok'); R(); };
   A.fhRelFechar = function () { U.fhRel = null; R(); };
   A.fhLimpar = function () { var r = P.limparFolha(mAtual(), pidAtual()); if (r.erro) return toast(r.erro, 'err'); U.fhRel = null; toast('Sheet cleared.', 'ok'); R(); };

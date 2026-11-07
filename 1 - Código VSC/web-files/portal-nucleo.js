@@ -1092,7 +1092,7 @@
     l.forEach(function (x) { var c = P.cat(x.indicator_id); x.value = valorDemo(c); if (c.evidencia_obrigatoria) x.evidence_ref = 'DOC-' + m.ano + '-0001'; x.justification = c.regras_coerencia.length ? 'Confirmed with the area.' : ''; });
     if (l[0]) l[0].unit = 'unidade-errada';
     if (l[1]) l[1].period = String(m.ano - 1);
-    l.push({ milestone_id: m.id, indicator_id: m.indicadores.indexOf('G01') > -1 ? 'A01' : 'G01', indicator_name: 'Indicator from another milestone', entity: 'Consolidado', period: String(m.ano), value: 10, unit: '€', justification: '', source_system: 'ERP', evidence_ref: '', data_quality: 'measured', estimation_method: '' });
+    l.push({ milestone_id: m.id, indicator_id: m.indicadores.indexOf('G01') > -1 ? 'A01' : 'G01', indicator_name: 'Indicator from another milestone', entity: 'Consolidado', period: String(m.ano), value: 10, unit: '€', justification: '', source_system: 'financial-system', evidence_ref: '', data_quality: 'measured', estimation_method: '' });
     if (l[2]) { l[2].data_quality = 'estimated'; l[2].estimation_method = ''; }
     return l;
   };

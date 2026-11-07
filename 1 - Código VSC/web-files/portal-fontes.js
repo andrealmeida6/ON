@@ -10,7 +10,7 @@
   var P = window.Portal, S = P.S, X = P.ext;
   var A = X.A, e = X.e, chip = X.chip, cabCartao = X.cabCartao, tabela = X.tabela, toast = X.toast, R = X.R, u = X.u, fmtV = X.fmtV;
 
-  var DBS = { erp: 'ERP', rh: 'Human resources system', tele: 'Telemetry (SCADA)', lab: 'Laboratory (LIMS)', com: 'Commercial system (CRM)', amb: 'Environmental management' };
+  var DBS = { erp: 'Financial system', rh: 'Human resources system', tele: 'Telemetry (SCADA)', lab: 'Laboratory (LIMS)', com: 'Commercial system (CRM)', amb: 'Environmental management' };
   /* Indicadores de base: [campo, base, tabela, descricao, agregacao] */
   var BASE = {
     A01: ['volume_entrada_mm3', 'tele', 'volumes_agua', 'Água entrada no sistema', 'soma'], A02: ['volume_faturado_mm3', 'com', 'faturacao_agua', 'Água faturada', 'soma'],
@@ -137,7 +137,7 @@
   P.formulaTxt = function (id) {
     var c = P.cat(id);
     if (DERIV[id]) return c.formula || DERIV[id].t || DERIV[id].x;
-    var b = BASE[id]; return b ? AGREG[b[4]] + ' of ' + b[0] + ' (' + DBS[b[1]] + ')' : 'Reported value';
+    var b = BASE[id]; return b ? AGREG[b[4]] + ' of ' + (CAMPOS[b[0]] ? CAMPOS[b[0]].rot.toLowerCase() : b[3] || 'the source data') : 'Reported value';
   };
   P.camposMilestone = function (m) {
     var o = []; m.indicadores.forEach(function (id) { var x = P.expressaoDe(id); if (x) P.camposDaFormula(x).forEach(function (k) { if (CAMPOS[k] && o.indexOf(k) < 0) o.push(k); }); });
@@ -153,7 +153,7 @@
     var vals = {}, n = 0, bases = {};
     P.camposMilestone(m).forEach(function (k) { var l = P.registosCampo(k, m); vals[k] = agregarRegistos(k, l); n += l.length; bases[CAMPOS[k].db] = 1; });
     S.puxados[m.id] = { em: new Date().toISOString(), por: usr.nome, vals: vals, registos: n };
-    P.evento(m, 'Data pulled from ' + Object.keys(bases).map(function (b) { return DBS[b]; }).join(', ') + ': ' + Object.keys(vals).length + ' fields, ' + n + ' records.', usr.nome);
+    P.evento(m, 'Data pulled from ' + Object.keys(bases).map(function (b) { return DBS[b]; }).join(', ') + ': ' + Object.keys(vals).length + ' data items, ' + n + ' records.', usr.nome);
     P.guardar();
     return { campos: Object.keys(vals).length, registos: n };
   };
@@ -166,7 +166,7 @@
       if (!x) return r;
       var ler = function (k) { if (k.indexOf('fator.') === 0) return fator(k); return px && px.vals[k] !== undefined ? px.vals[k] : null; };
       P.camposDaFormula(x).forEach(function (k) { if (ler(k) === null) r.falta.push(k); });
-      r.subst = x.replace(/[A-Za-z_][\w.]*/g, function (k) { var v = ler(k); return v === null ? k : P.fmtNum(v, Math.abs(v) < 10 ? 3 : 2); });
+      r.subst = x.replace(/[A-Za-z_][\w.]*/g, function (k) { var v = ler(k); return v === null ? '?' : P.fmtNum(v, Math.abs(v) < 10 ? 3 : 2); });
       if (!r.falta.length) { try { r.valor = Number(avaliar(x, ler).toFixed(c.casas_decimais)); if (c.unidade_medida === '%' && r.valor > 100) r.valor = 100; } catch (er) { r.erro = 'Cannot calculate: ' + er.message; } }
       return r;
     });
@@ -194,36 +194,28 @@
   /* --- Ecra ------------------------------------------------------------------ */
   var num = function (v) { return v === null || v === undefined ? '-' : P.fmtNum(v, Math.abs(v) < 10 ? 3 : 2); };
   P.fontesHtml = function (m) {
-    var usr = u(), pode = podePuxar(m, usr), px = (S.puxados || {})[m.id], ks = P.camposMilestone(m), dbs = {};
-    ks.forEach(function (k) { var f = CAMPOS[k]; (dbs[f.db] = dbs[f.db] || {})[f.tab] = 1; });
-    var bases = '<ul class="fd-dbs">' + Object.keys(dbs).map(function (d) { return '<li><b>' + e(DBS[d]) + '</b><small>' + Object.keys(dbs[d]).map(e).join(', ') + '</small>' + chip('Test data', 'info') + '</li>'; }).join('') + '</ul>';
+    var usr = u(), pode = podePuxar(m, usr), px = (S.puxados || {})[m.id], ks = P.camposMilestone(m);
+    /* Na milestone so aparece o que o contribuidor precisa: o que e cada dado, de onde vem em termos simples e o valor. Campos tecnicos e API ficam no backoffice. */
     var linhas = ks.map(function (k) {
       var f = CAMPOS[k], v = px ? px.vals[k] : null, regs = px ? P.registosCampo(k, m) : [];
-      return ['<span class="ps-mono fd-k">' + e(k) + '</span>', e(f.rot), e(unidade(f)), e(DBS[f.db]) + '<br><small class="ps-mut ps-mono">' + e(f.tab) + '</small>', e(AGREG[f.agreg]), porCampo(m, k).map(function (id) { return '<button type="button" class="ps-btn liga" data-a="ficha" data-v="' + e(id) + '">' + e(id) + '</button>'; }).join(', '),
+      return [e(f.rot), e(unidade(f)), porCampo(m, k).map(function (id) { return '<button type="button" class="ps-btn liga" data-a="ficha" data-v="' + e(id) + '">' + e(id) + '</button>'; }).join(', '),
         px ? '<details class="fd-reg"><summary class="ps-num"><b>' + e(num(v)) + '</b> <small class="ps-mut">' + regs.length + ' records</small></summary><table class="fd-reg-t"><thead><tr><th>Period</th><th>Reference</th><th class="dir">Value</th></tr></thead><tbody>' + regs.map(function (r) { return '<tr><td>' + e(r.periodo) + '</td><td class="ps-mono">' + e(r.ref) + '</td><td class="dir ps-num">' + e(num(r.valor)) + '</td></tr>'; }).join('') + '</tbody></table></details>' : '<span class="ps-mut">Not pulled</span>'];
     });
-    var tabs = Object.keys(dbs).reduce(function (o, d) { Object.keys(dbs[d]).forEach(function (t) { o.push([d, t]); }); return o; }, []);
-    var api = tabs.map(function (dt) {
-      var ex = { company: m.empresa, period: m.ano + '-01', record_ref: dt[1].toUpperCase().slice(0, 3) + '-' + m.ano + '-0001' };
-      ks.filter(function (k) { return CAMPOS[k].tab === dt[1] && CAMPOS[k].db === dt[0]; }).forEach(function (k) { var r = P.registosCampo(k, m)[0]; ex[k] = r.valor; });
-      return '<div class="fd-api"><span class="ps-mono">GET /api/v1/data/' + e(dt[1]) + '?company=' + e(encodeURIComponent(m.empresa)) + '&amp;year=' + m.ano + '</span><pre class="ps-pre" tabindex="0">' + e(JSON.stringify({ records: [ex] }, null, 2)) + '</pre></div>';
-    }).join('');
     var calc = P.calculosMilestone(m), prontos = calc.filter(function (r) { return r.valor !== null; }).length;
     var linhasC = calc.map(function (r) {
       var c = P.cat(r.id), it = P.item(r.id, P.chave(m)), igual = r.valor !== null && it.valor === r.valor;
-      return [e(c.nome) + '<br><small class="ps-mut">' + e(r.id) + ' · ' + e(c.unidade_medida) + '</small>', '<span class="fd-f">' + e(P.formulaTxt(r.id)) + '</span>' + (r.x && DERIV[r.id] ? '<br><small class="ps-mono ps-mut">' + e(r.x) + '</small>' : ''),
+      return [e(c.nome) + '<br><small class="ps-mut">' + e(r.id) + ' · ' + e(c.unidade_medida) + '</small>', '<span class="fd-f">' + e(P.formulaTxt(r.id)) + '</span>',
         r.x ? '<span class="ps-mono ps-small">' + e(r.subst) + '</span>' : '-', r.valor === null ? '<span class="ps-mut">' + (r.erro ? e(r.erro) : r.x ? 'Pull the data' : '-') + '</span>' : '<b class="ps-num">' + e(fmtV(r.id, r.valor)) + '</b>',
         it.valor === null ? '<span class="ps-mut">-</span>' : '<span class="ps-num">' + e(fmtV(r.id, it.valor)) + '</span>',
         r.valor === null ? '' : igual ? chip('In use', 'ok') : pode ? '<button type="button" class="ps-btn peq" data-a="fdUsar" data-v="' + e(r.id) + '">Use</button>' : chip('Differs', 'warn')];
     });
-    return '<div class="ps-card">' + cabCartao('Data sources and fields', 'ativ', pode ? '<button type="button" class="ps-btn pri peq" data-a="fdPuxar">' + (px ? 'Pull again' : 'Pull data') + '</button>' : '') + '<div class="ps-card-body">' +
-      '<p class="ps-small ps-mut">' + (px ? 'Last pull ' + e(P.fmtDataHora(px.em)) + ' by ' + e(px.por) + ', ' + px.registos + ' records.' : 'These are the fields the indicators of this milestone are calculated from.') + '</p>' + bases +
-      tabela([{ t: 'Field' }, { t: 'Description' }, { t: 'Unit' }, { t: 'Source' }, { t: 'Aggregation' }, { t: 'Used by' }, { t: 'Value ' + m.ano }], linhas, 'No data fields for this milestone.') +
-      '<h3 class="ps-grupo-t">API for these fields</h3><p class="ps-small ps-mut">Each source table answers with the records for the company and year. ' + chip('Planned', 'warn') + '</p><div class="ps-sp"><button type="button" class="ps-btn peq" data-a="fdSchema">Download JSON Schema</button></div>' + api + '</div></div>' +
+    return '<div class="ps-card">' + cabCartao('Data from the systems', 'ativ', pode ? '<button type="button" class="ps-btn pri peq" data-a="fdPuxar">' + (px ? 'Pull again' : 'Pull data') + '</button>' : '') + '<div class="ps-card-body">' +
+      '<p class="ps-small ps-mut">' + (px ? 'Last pull ' + e(P.fmtDataHora(px.em)) + ' by ' + e(px.por) + ', ' + px.registos + ' records.' : 'This is the data the indicators of this milestone are calculated from. Pull it to fill in the values.') + '</p>' +
+      tabela([{ t: 'Data' }, { t: 'Unit' }, { t: 'Used by' }, { t: 'Value ' + m.ano }], linhas, 'No data for this milestone.') + '</div></div>' +
       '<div class="ps-card">' + cabCartao('Calculations', 'tarefa', pode && prontos ? '<button type="button" class="ps-btn pri peq" data-a="fdPreencher">Fill in ' + prontos + ' calculated value' + (prontos > 1 ? 's' : '') + '</button>' : '') + '<div class="ps-card-body">' +
       tabela([{ t: 'Indicator' }, { t: 'Formula' }, { t: 'With the source values' }, { t: 'Result' }, { t: 'Current value' }, { t: '' }], linhasC) + '</div></div>';
   };
-  A.fdPuxar = function () { var m = X.msAtual(), r = P.puxarDados(m, u()); if (r.erro) return toast(r.erro, 'err'); toast(r.campos + ' fields pulled, ' + r.registos + ' records.', 'ok'); R(); };
+  A.fdPuxar = function () { var m = X.msAtual(), r = P.puxarDados(m, u()); if (r.erro) return toast(r.erro, 'err'); toast(r.campos + ' data items pulled, ' + r.registos + ' records.', 'ok'); R(); };
   A.fdPreencher = function () { var m = X.msAtual(), r = P.preencherCalculados(m, u()); if (r.erro) return toast(r.erro, 'err'); toast(r.n + ' value(s) filled in. Check the alerts before submitting.', 'ok'); R(); };
   A.fdUsar = function (d) { var m = X.msAtual(), r = P.preencherCalculados(m, u(), [d.v]); if (r.erro) return toast(r.erro, 'err'); toast('Value filled in.', 'ok'); R(); };
   A.fdSchema = function () { var m = X.msAtual(); P.descarregar('data-fields-' + m.id + '.json', JSON.stringify(P.schemaCampos(m), null, 2), 'application/json'); };

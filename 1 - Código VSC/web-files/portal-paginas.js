@@ -455,7 +455,7 @@
     /* Uma so pagina, pela ordem do trabalho: pedido, fontes e calculos, dados, ficheiros, exploracao, qualidade, terceiros, auditoria e conversa */
     var secs = [['dados', decide ? 'Review' : 'Data request', 0, cartaoTrimestres(m) + (P.fontesHtml ? '<div id="sec-fontes" class="ps-sec">' + P.fontesHtml(m) + '</div>' : '') + (decide ? sepRevisao(m) : P.podePreencher(m, usr) ? sepRecolha(m) : sepLeitura(m)) + cartaoFicheiros(m)],
       ['evidencias', 'Evidence and quality', 0, sepEvidencias(m)], ['externos', 'External contributions', nExt, sepExternos(m)], ['auditoria', 'Audit', nAud, sepAuditoria(m)], ['conversa', 'Conversation and history', m.comentarios.length, (P.ext.sepConversa ? P.ext.sepConversa(m) : sepConversa(m))]];
-    var indice = [['dados', secs[0][1]], ['fontes', 'Data sources and calculations']].concat(secs.slice(1).map(function (s) { return [s[0], s[1], s[2]]; }));
+    var indice = [['dados', secs[0][1]], ['fontes', 'Data and calculations']].concat(secs.slice(1).map(function (s) { return [s[0], s[1], s[2]]; }));
     var tab = U.msTab[m.id] || 'trabalho', nDados = m.indicadores.filter(function (id) { return P.podeVerIndicador(P.cat(id), usr); }).length;
     var barra = '<div class="ps-mtabs" role="tablist" aria-label="Milestone views">' + [['trabalho', 'Work', ''], ['dados', 'Data store', nDados]].map(function (t) {
       return '<button type="button" role="tab" id="mtab-' + t[0] + '" aria-selected="' + (tab === t[0]) + '" aria-controls="mpan-' + t[0] + '" class="' + (tab === t[0] ? 'on' : '') + '" data-a="msTab" data-v="' + t[0] + '">' + e(t[1]) + (t[2] ? ' <span class="ps-n">' + t[2] + '</span>' : '') + '</button>';
@@ -1201,7 +1201,7 @@
     } else if (sec === 'tpl') {
       b += '<p>Templates for this milestone, with the indicators and year already in place.</p><div class="ps-sp"><button type="button" class="ps-btn pri" data-a="tplExcel">Template Excel</button><button type="button" class="ps-btn" data-a="tplCsv">Template CSV</button></div>';
     } else {
-      var ex = { milestone_id: m.id, submitted_by: 'svc-integration@example.com', source_system: 'ERP', records: [{ indicator_id: m.indicadores[0], entity: 'Consolidado', period: String(m.ano), value: 10, unit: P.cat(m.indicadores[0]).unidade_medida, data_quality: 'measured' }] };
+      var ex = { milestone_id: m.id, submitted_by: 'svc-integration@example.com', source_system: 'financial-system', records: [{ indicator_id: m.indicadores[0], entity: 'Consolidado', period: String(m.ano), value: 10, unit: P.cat(m.indicadores[0]).unidade_medida, data_quality: 'measured' }] };
       b += '<div class="ps-aviso warn">Planned integration contract.</div><dl class="ps-det"><dt>Get the schema</dt><dd class="ps-mono">GET /api/v1/milestones/' + e(m.id) + '/schema</dd><dt>Send values</dt><dd class="ps-mono">POST /api/v1/milestones/' + e(m.id) + '/submissions</dd><dt>Webhook</dt><dd class="ps-mono">milestone.step_completed</dd></dl><pre class="ps-pre" tabindex="0">' + e(JSON.stringify(ex, null, 2)) + '</pre>';
     }
     return { t: 'Technical view', s: m.nome, b: b, largo: true };

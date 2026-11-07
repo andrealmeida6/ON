@@ -91,7 +91,7 @@
     ];
     /* Ligacoes: ficam configuradas, nenhuma esta a sincronizar */
     S.apis = [
-      { id: 'api1', nome: 'ERP', ambito: 'Energia e combustíveis', frequencia: 'Daily', estado: 'pendente' },
+      { id: 'api1', nome: 'Sistema financeiro', ambito: 'Energia e combustíveis', frequencia: 'Daily', estado: 'pendente' },
       { id: 'api2', nome: 'Sistema de RH', ambito: 'Efetivos, formação e rotatividade', frequencia: 'Daily', estado: 'pendente' },
       { id: 'api3', nome: 'Telemetria', ambito: 'Volumes de água e leituras de contador', frequencia: 'Hourly', estado: 'pendente' },
       { id: 'api4', nome: 'Laboratório (LIMS)', ambito: 'Análises de água e cargas das ETAR', frequencia: 'Daily', estado: 'pendente' },

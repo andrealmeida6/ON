@@ -137,7 +137,7 @@ Pedidos do André a 5 de novembro de 2026, a partir do modelo de datapoints ESRS
 
 Pedido do André a 5 de novembro de 2026. A milestone deixou de ter separadores: as secções seguem a ordem do trabalho (pedido, fontes e cálculos, dados, ficheiros, exploração, evidências, contribuições externas, auditoria e conversa), com um índice ao lado.
 
-- **Campos dos dados:** cada indicador é uma fórmula sobre campos de seis bases (ERP, RH, telemetria, laboratório, comercial e ambiente). A vista técnica com o ficheiro da milestone (milestone_id, indicator_id) saiu; a API e o JSON Schema mostrados são os dos campos.
+- **Campos dos dados:** cada indicador é uma fórmula sobre campos de seis sistemas (financeiro, RH, telemetria, laboratório, comercial e ambiente). Dentro da milestone só aparece o nome do dado, a unidade, os indicadores que o usam e o valor; os nomes técnicos dos campos, as tabelas de origem, a API e o JSON Schema não aparecem.
 - **Puxar, calcular e preencher:** puxar lê os registos de cada campo da milestone, os cálculos mostram a fórmula com os valores e o resultado, e preencher grava os valores com versão e fica no histórico. Só quem pode preencher a milestone o faz.
 - **Fórmulas:** aparecem em cada indicador do formulário, da revisão e da leitura. P09, P10 e P13 não tinham fórmula no catálogo e ganharam uma.
 - **Limitação:** nenhuma base está ligada. Os registos são de teste, gerados em `portal-fontes.js`, e aparecem como "Test data". O endpoint da API está como planeado.
@@ -227,6 +227,16 @@ Pedido do André a 7 de novembro de 2026.
 - **Quem vê o quê:** administrador, equipa de sustentabilidade e auditor veem todas as milestones; cada departamento vê as suas e as que têm passos seus; externos não têm chat. As mensagens por ler contam-se por pessoa, neste navegador.
 - **Código:** `web-files/portal-chat.js`; contentor `data-chatapp` no template `paineis`.
 - **Supabase:** `esg_comentarios` ganhou `passo` e `indicador_id` (no `007_esg_periodos_tipos.sql`). Os dados de demonstração foram carregados a 7 de novembro de 2026: 66 milestones, 214 valores, 337 passos, 232 eventos e 10 comentários.
+
+## Dados técnicos fora da milestone
+
+Dentro da milestone o contribuidor vê apenas o que precisa para preencher e validar:
+
+- **Data and calculations:** nome do dado, unidade, indicadores que o usam e valor puxado, com o detalhe dos registos. Saíram o nome técnico do campo, a base e a tabela de origem, a regra de agregação e o bloco da API com o JSON Schema.
+- **Cálculos:** a fórmula aparece em palavras ("Soma da água entrada no sistema"); onde falta um valor aparece "?" em vez do nome do campo.
+- **Folha do pedido:** saiu a lista de bases e tabelas; a tabela de colunas mostra só a coluna, como as linhas se somam e os indicadores.
+- **ERP:** a plataforma deixou de usar o termo; passa a "Financial system" na interface e "Sistema financeiro" nas integrações.
+- **Onde fica o técnico:** o mapeamento dos campos continua no backoffice (Data types), só para quem gere a plataforma.
 
 ## O que falta para produção
 
