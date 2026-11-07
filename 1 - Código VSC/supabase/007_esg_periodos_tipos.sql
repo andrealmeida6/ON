@@ -72,3 +72,12 @@ begin
     execute format('create policy esg_gerir on public.%I for all to authenticated using (public.esg_gere()) with check (public.esg_gere())', t);
   end loop;
 end $$;
+
+-- Uma milestone por departamento, empresa, periodicidade, periodo e tipo (entrega ou consolidacao)
+alter table public.esg_milestones drop constraint if exists esg_milestones_unica;
+drop index if exists public.esg_milestones_unica;
+create unique index esg_milestones_unica on public.esg_milestones (ano, empresa, unidade, periodicidade, coalesce(periodo, ''), consolida);
+
+-- Comentarios: o passo do workflow em que foram escritos e, se for o caso, o indicador
+alter table public.esg_comentarios add column if not exists passo text;
+alter table public.esg_comentarios add column if not exists indicador_id text references public.esg_indicadores(id);

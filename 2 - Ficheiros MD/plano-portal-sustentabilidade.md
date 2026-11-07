@@ -216,6 +216,18 @@ Pedido do André a 7 de novembro de 2026, tendo o Workiva como referência de me
 - **Supabase:** `007_esg_periodos_tipos.sql` (aplicado a 7 de novembro de 2026) cria `esg_periodos`, `esg_relatorios` e `esg_tipos_dados`, acrescenta `periodo` aos valores, versões e evidências (chave `indicador_id, ano, periodo`), e `periodo`, `consolida`, `tipos` e `folhas` às milestones e `wf` e `passo` aos eventos. `portal-supabase.js` sincroniza tudo isto. `gerar-007-dados.js` gera `007_esg_dados_demonstracao.sql`, que apaga e volta a carregar os dados de demonstração.
 - **Limitações:** o lançamento usa o workflow base.
 
+## Comentários e chat das milestones
+
+Pedido do André a 7 de novembro de 2026.
+
+- **Comentários na milestone:** a secção Conversation passa a mensagens em bolhas, agrupadas por dia. Cada comentário guarda o passo do workflow em que a milestone estava (`passo`) e aparece com essa tag. Na caixa de escrita escolhe-se se é sobre a milestone toda ou sobre um indicador, e a tag do passo atual mostra-se antes de enviar.
+- **Comentários nos indicadores:** cada indicador da milestone (na recolha, na revisão e em leitura) tem um botão de comentários com o número de mensagens. Abre um painel só com a conversa desse indicador.
+- **Devoluções, decisões e pedidos do auditor** também ficam com o passo e, no caso do auditor, com o indicador.
+- **Chat:** botão flutuante no canto inferior direito, com o número de mensagens por ler. Abre uma janela tipo WhatsApp em que cada conversa é uma milestone: avatar do departamento, última mensagem, hora e mensagens por ler; pesquisa e filtros (All, With messages, Unread, With me). À direita, a conversa com o período e o estado da milestone, um atalho para a abrir, e a caixa de escrita (Enter envia, Shift+Enter muda de linha). No telemóvel ocupa o ecrã inteiro, com a lista e a conversa em separado.
+- **Quem vê o quê:** administrador, equipa de sustentabilidade e auditor veem todas as milestones; cada departamento vê as suas e as que têm passos seus; externos não têm chat. As mensagens por ler contam-se por pessoa, neste navegador.
+- **Código:** `web-files/portal-chat.js`; contentor `data-chatapp` no template `paineis`.
+- **Supabase:** `esg_comentarios` ganhou `passo` e `indicador_id` (no `007_esg_periodos_tipos.sql`). Os dados de demonstração foram carregados a 7 de novembro de 2026: 66 milestones, 214 valores, 337 passos, 232 eventos e 10 comentários.
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.

@@ -454,7 +454,7 @@
     var nExt = S.ext.filter(function (x) { return x.milestone_id === m.id && x.estado !== 'aplicado'; }).length;
     /* Uma so pagina, pela ordem do trabalho: pedido, fontes e calculos, dados, ficheiros, exploracao, qualidade, terceiros, auditoria e conversa */
     var secs = [['dados', decide ? 'Review' : 'Data request', 0, cartaoTrimestres(m) + (P.fontesHtml ? '<div id="sec-fontes" class="ps-sec">' + P.fontesHtml(m) + '</div>' : '') + (decide ? sepRevisao(m) : P.podePreencher(m, usr) ? sepRecolha(m) : sepLeitura(m)) + cartaoFicheiros(m)],
-      ['evidencias', 'Evidence and quality', 0, sepEvidencias(m)], ['externos', 'External contributions', nExt, sepExternos(m)], ['auditoria', 'Audit', nAud, sepAuditoria(m)], ['conversa', 'Conversation and history', m.comentarios.length, sepConversa(m)]];
+      ['evidencias', 'Evidence and quality', 0, sepEvidencias(m)], ['externos', 'External contributions', nExt, sepExternos(m)], ['auditoria', 'Audit', nAud, sepAuditoria(m)], ['conversa', 'Conversation and history', m.comentarios.length, (P.ext.sepConversa ? P.ext.sepConversa(m) : sepConversa(m))]];
     var indice = [['dados', secs[0][1]], ['fontes', 'Data sources and calculations']].concat(secs.slice(1).map(function (s) { return [s[0], s[1], s[2]]; }));
     var tab = U.msTab[m.id] || 'trabalho', nDados = m.indicadores.filter(function (id) { return P.podeVerIndicador(P.cat(id), usr); }).length;
     var barra = '<div class="ps-mtabs" role="tablist" aria-label="Milestone views">' + [['trabalho', 'Work', ''], ['dados', 'Data store', nDados]].map(function (t) {
@@ -491,7 +491,7 @@
       return '<div class="ps-ind" id="ind-' + e(id) + '"><div class="ps-ind-top"><div class="ps-ind-nome"><button type="button" data-a="ficha" data-v="' + e(id) + '">' + e(c.nome) + '</button><small>' + e(c.unidade_medida) + ' · ' + (c.tipo === 'derivado' ? 'Derived' : 'Base data') + ' · ' + e(c.perimetro) + (P.esrsDe(id).dps.length ? ' · ' + e(P.esrsDe(id).dps[0]) : '') + '</small><span class="ps-ind-desc">' + e(P.esrsDe(id).desc) + '</span>' + (P.formulaTxt ? '<span class="ps-ind-form">ƒ ' + e(P.formulaTxt(id)) + '</span>' : '') + '</div>' +
         '<div><span class="ps-ind-k">' + e(P.rotAnterior(P.chave(m))) + '</span><span class="ps-num">' + (ant === null || ant === undefined ? '-' : fmtV(id, ant)) + '</span></div>' +
         '<div class="ps-ind-campo"><label class="ps-ind-k" for="v-' + e(id) + '">Value ' + e(P.rotPeriodo(m)) + '</label><input id="v-' + e(id) + '" class="ps-in ps-num ' + cls + '" inputmode="decimal" autocomplete="off" value="' + e(txtBruto) + '" data-c="valor" data-id="' + e(id) + '"' + (v.erros.length ? ' aria-invalid="true" aria-describedby="err-' + e(id) + '"' : '') + '></div>' +
-        '<div><span class="ps-ind-k">Change</span><span class="ps-num">' + (v.variacao === null ? '-' : (v.variacao > 0 ? '+' : '') + P.fmtNum(v.variacao, 1) + '%') + '</span></div><div>' + res + '</div></div>' +
+        '<div><span class="ps-ind-k">Change</span><span class="ps-num">' + (v.variacao === null ? '-' : (v.variacao > 0 ? '+' : '') + P.fmtNum(v.variacao, 1) + '%') + '</span></div><div class="ps-ind-res">' + res + (P.botaoComentarInd ? P.botaoComentarInd(m, id) : '') + '</div></div>' +
         (v.erros.length ? '<div id="err-' + e(id) + '" class="ps-ind-msg ps-mt" role="alert">' + e(v.erros[0]) + '</div>' : '') +
         (v.alertas.length ? '<div class="ps-ind-just"><ul>' + v.alertas.map(function (a) { return '<li>' + e(a) + '</li>'; }).join('') + '</ul><label class="ps-lab" for="j-' + e(id) + '">Justification (required)</label><textarea id="j-' + e(id) + '" class="ps-ta" data-c="just" data-id="' + e(id) + '">' + e(it.justificacao) + '</textarea></div>' : '') +
         '<div class="ps-ind-sub">' + campo('q-' + id, 'Data quality', '<select id="q-' + e(id) + '" class="ps-sel" data-c="qual" data-id="' + e(id) + '">' + opt('medido', 'Measured', it.qualidade) + opt('calculado', 'Calculated', it.qualidade) + opt('estimado', 'Estimated', it.qualidade) + '</select>') +
@@ -737,14 +737,14 @@
     var p = P.passoAtual(m), rot = p.tipo === 'parecer' ? 'Give favourable opinion' : p.tipo === 'aprovacao' ? 'Approve and lock' : 'Complete review';
     return '<div class="ps-card ps-com-acao">' + cabCartao(p.nome, 'tarefa', ferrDados(m)) + '<div class="ps-card-body">' + (U.dadosVista === 'grid' ? corpoGrelha(m) : tabela([{ t: 'Indicator' }, { t: 'Value', dir: 1 }, { t: String(m.ano - 1), dir: 1 }, { t: 'Change', dir: 1 }, { t: 'Alerts and justification' }, { t: 'Quality' }], m.indicadores.map(function (id) {
       var it = P.item(id, P.chave(m)), v = P.validarItem(it), ant = P.valorAnterior(id, P.chave(m));
-      return [linkFicha(id) + (P.formulaTxt ? '<span class="ps-ind-form">ƒ ' + e(P.formulaTxt(id)) + '</span>' : ''), celValor(m, id) + ' ' + e(P.cat(id).unidade_medida), ant === null || ant === undefined ? '-' : fmtV(id, ant), v.variacao === null ? '-' : (v.variacao > 0 ? '+' : '') + P.fmtNum(v.variacao, 1) + '%', v.alertas.length ? '<span class="ps-small">' + e(v.alertas.join(' ')) + '<br><b>Justification:</b> ' + e(it.justificacao || '-') + '</span>' : chip('No alerts', 'ok'), e(P.QUALIDADE_TXT[it.qualidade])];
+      return [linkFicha(id) + (P.botaoComentarInd ? ' ' + P.botaoComentarInd(m, id) : '') + (P.formulaTxt ? '<span class="ps-ind-form">ƒ ' + e(P.formulaTxt(id)) + '</span>' : ''), celValor(m, id) + ' ' + e(P.cat(id).unidade_medida), ant === null || ant === undefined ? '-' : fmtV(id, ant), v.variacao === null ? '-' : (v.variacao > 0 ? '+' : '') + P.fmtNum(v.variacao, 1) + '%', v.alertas.length ? '<span class="ps-small">' + e(v.alertas.join(' ')) + '<br><b>Justification:</b> ' + e(it.justificacao || '-') + '</span>' : chip('No alerts', 'ok'), e(P.QUALIDADE_TXT[it.qualidade])];
     }))) + '<div class="ps-mt">' + campo('rev-com', 'Comment (required to return)', '<textarea id="rev-com" class="ps-ta"></textarea>') + '</div></div><div class="ps-sticky"><button type="button" class="ps-btn err" data-a="devolver">Return to the unit</button><button type="button" class="ps-btn pri" data-a="concluirPasso">' + e(rot) + '</button></div></div>';
   };
   var sepLeitura = function (m) {
     var msg = P.concluida(m) ? 'Milestone completed. Approved values only change by restatement.' : 'The current step is with ' + P.nomeResp(m, P.passoAtual(m).responsavel) + '. You can view the values.';
     return '<div class="ps-card">' + cabCartao('Requested data', 'doc', ferrDados(m)) + '<div class="ps-card-body"><div class="ps-aviso">' + e(msg) + '</div>' + (U.dadosVista === 'grid' ? corpoGrelha(m) : tabela([{ t: 'Indicator' }, { t: 'Value', dir: 1 }, { t: String(m.ano - 1), dir: 1 }, { t: 'Status' }, { t: 'Quality' }], m.indicadores.map(function (id) {
       var est = P.estadoIndicador(m, id), it = P.item(id, P.chave(m)), ant = P.valorAnterior(id, P.chave(m));
-      return [linkFicha(id) + marcaAmostra(id) + (it.reexpresso ? ' ' + chip('Restated', 'warn') : '') + (P.formulaTxt ? '<span class="ps-ind-form">ƒ ' + e(P.formulaTxt(id)) + '</span>' : ''), celValor(m, id) + ' ' + e(P.cat(id).unidade_medida), ant === null || ant === undefined ? '-' : fmtV(id, ant), chip(est.txt, est.cls), e(P.QUALIDADE_TXT[it.qualidade])];
+      return [linkFicha(id) + (P.botaoComentarInd ? ' ' + P.botaoComentarInd(m, id) : '') + marcaAmostra(id) + (it.reexpresso ? ' ' + chip('Restated', 'warn') : '') + (P.formulaTxt ? '<span class="ps-ind-form">ƒ ' + e(P.formulaTxt(id)) + '</span>' : ''), celValor(m, id) + ' ' + e(P.cat(id).unidade_medida), ant === null || ant === undefined ? '-' : fmtV(id, ant), chip(est.txt, est.cls), e(P.QUALIDADE_TXT[it.qualidade])];
     }))) + '</div></div>';
   };
   var sepEvidencias = function (m) {
@@ -1285,6 +1285,7 @@
     });
     pintarMarca();
     pintarPainel();
+    if (P.pintarChat) P.pintarChat();
     if (window.PortalGrelha) window.PortalGrelha.depois();
     /* No telemovel a timeline abre centrada no dia de hoje */
     document.querySelectorAll('.tlr-sc').forEach(function (sc) { var h = sc.querySelector('.tlr-hoje'); if (h && sc.scrollWidth > sc.clientWidth) sc.scrollLeft = Math.max(0, h.offsetLeft - sc.clientWidth / 2); });

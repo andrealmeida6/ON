@@ -63,7 +63,7 @@
     atrib: 'esg_assign', regrasEnt: 'esg_entity_rules', fatores: 'esg_factors', apis: 'esg_connections', evg: 'esg_config_log', selos: 'esg_seals',
     kpim: 'esg_kpi_master', puxados: 'esg_source_pulls', periodos: 'esg_periods', relatorios: 'esg_reports', tipos: 'esg_data_types', dpdec: 'esg_dp_decisions', gloss: 'esg_glossary', rq: 'esg_report_tables', doc: 'esg_report_doc'
   };
-  var VERSAO_DADOS = 7;
+  var VERSAO_DADOS = 8;
   var S = (P.S = {});
   var memoria = {};
   var ler = function (k) {
@@ -347,11 +347,29 @@
       /* O que ja passou da recolha entregou os ficheiros pedidos */
       if (cfg.i > 0) (FICHEIROS_BASE[pl.unidade] || []).forEach(function (f, ixF) { m.documentos_gerais.push({ ficheiro: f[3] + '-' + x.id.toLowerCase() + '-2026.' + f[2][0], por: nomeDe(pl.unidade), em: quando(-8), pedido: 'tipo:' + f[3] }); });
       if (cfg.dev) {
-        m.comentarios.push({ autor: 'Equipa de sustentabilidade', texto: 'A percentagem de veículos verdes parece baixa. Confirmem com a gestora da frota, por favor.', em: new Date(Date.now() - 86400000).toISOString() });
+        m.comentarios.push({ autor: 'Equipa de sustentabilidade', texto: 'A percentagem de veículos verdes parece baixa. Confirmem com a gestora da frota, por favor.', em: new Date(Date.now() - 86400000).toISOString(), passo: m.passos[2].nome, indicador: 'E09' });
         m.eventos.splice(1, 0, { texto: 'Milestone submitted.', em: new Date(Date.now() - 86400000 * 6).toISOString(), por: nomeDe(m.unidade), wf: 'avanco', passo: m.passos[0].nome }, { texto: 'Automatic validation completed: 1 indicator(s) with alerts.', em: new Date(Date.now() - 86400000 * 6 + 60000).toISOString(), por: 'System', wf: 'auto', passo: m.passos[1].nome });
         m.eventos.push({ texto: 'Returned to the unit.', em: new Date(Date.now() - 86400000).toISOString(), por: 'Sustainability team', wf: 'devolucao', passo: m.passos[2].nome });
       }
     });
+    /* Conversas de demonstracao: cada comentario com o passo em que foi escrito e, quando e o caso, o indicador */
+    var com = function (id, autor, texto, horas, passo, ind) {
+      var m = S.ms.filter(function (x) { return x.id === id; })[0];
+      if (!m) return;
+      var c = { autor: autor, texto: texto, em: new Date(Date.now() - 3600000 * horas).toISOString(), passo: passo };
+      if (ind) c.indicador = ind;
+      m.comentarios.push(c);
+      m.comentarios.sort(function (a, b) { return a.em < b.em ? -1 : 1; });
+    };
+    com('M01-T3', 'Marta Lopes', 'Submeti o T3. O volume de entrada subiu por causa da nova adução que entrou em serviço em março.', 600, 'Recolha e submissão dos dados', 'A01');
+    com('M01-T3', 'Equipa de sustentabilidade', 'Obrigado, Marta. Consegues anexar o extrato de setembro da telemetria para confirmarmos o A01?', 50, 'Revisão pela equipa de sustentabilidade', 'A01');
+    com('M01-T3', 'Marta Lopes', 'Anexado. O A09 está estimado porque faltam os registos de 12 a 15 de setembro.', 20, 'Revisão pela equipa de sustentabilidade', 'A09');
+    com('M02-T3', 'Rui Antunes', 'Os boletins de setembro já estão carregados.', 70, 'Validação técnica pela Direção de Operações');
+    com('M02-T3', 'Marta Lopes', 'Valido os resultados da ETA Central amanhã de manhã.', 30, 'Validação técnica pela Direção de Operações', 'A13');
+    com('M11-T3', 'Paulo Serra', 'O valor de compras bate com o balancete do T3. Dou o parecer até sexta.', 3, 'Parecer da Direção Financeira', 'G01');
+    com('M17', 'Paulo Serra', 'Ainda aguardamos as garantias de origem do comercializador de eletricidade.', 96, 'Recolha e submissão dos dados', 'E03');
+    com('M17', 'Equipa de sustentabilidade', 'Já enviei o pedido externo ao comercializador. O prazo é 16/11.', 72, 'Recolha e submissão dos dados', 'E03');
+    com('M26', 'Equipa de sustentabilidade', 'Quando o T3 estiver aprovado, usem os trimestres para fechar o ano.', 26, 'Recolha e submissão dos dados');
     S.ext = [
       { id: 'X1', indicador_id: 'E03', milestone_id: 'M17', entidade_externa: 'Comercializador de eletricidade', descricao: 'Percentagem de eletricidade com garantias de origem renovável no ano.', prazo: diasDe(9), estado: 'pendente', valor: null, evidencia: '', respondido_em: null },
       { id: 'X2', indicador_id: 'E09', milestone_id: 'M12-T3', entidade_externa: 'Gestora de frota em renting', descricao: 'Percentagem de viaturas elétricas ou híbridas plug-in na frota em renting a 31/12.', prazo: diasDe(2), estado: 'recebido', valor: 6.4, evidencia: 'frota-renting-dezembro.pdf', respondido_em: new Date(Date.now() - 3600000 * 5).toISOString() },
@@ -715,7 +733,7 @@
     p.concluido_em = agora(); p.concluido_por = u.nome;
     var verbo = p.tipo === 'parecer' ? 'Favourable opinion given' : p.tipo === 'aprovacao' ? 'Values approved and locked' : 'Review completed';
     ev(m, verbo + ': ' + p.nome + '.', u.nome, 'avanco', p.nome);
-    if (comentario && comentario.trim()) m.comentarios.push({ autor: u.nome, texto: comentario.trim(), em: agora() });
+    if (comentario && comentario.trim()) m.comentarios.push({ autor: u.nome, texto: comentario.trim(), em: agora(), passo: p.nome });
     m.passo_atual++;
     correrAutomaticos(m);
     guardar();
@@ -729,7 +747,7 @@
     m.passo_atual = 0;
     m.devolvida = true;
     if (P.diasAte(m.prazo) < 3) m.prazo = diasDe(3);
-    m.comentarios.push({ autor: u.nome, texto: comentario.trim(), em: agora() });
+    m.comentarios.push({ autor: u.nome, texto: comentario.trim(), em: agora(), passo: deOnde });
     ev(m, 'Returned to the unit. Due: ' + P.fmtData(m.prazo) + '.', u.nome, 'devolucao', deOnde);
     guardar();
     return { ok: true };
@@ -922,7 +940,7 @@
     if (!texto || !texto.trim()) return { erro: 'Write the request.' };
     var m = P.msDoIndicador(indId);
     S.aud.push({ id: 'A' + Date.now(), indicador_id: indId, texto: texto.trim(), por: u.nome, em: agora(), estado: 'aberto', resposta: null });
-    if (m) { m.comentarios.push({ autor: u.nome, texto: 'Information request on ' + P.cat(indId).nome + ': ' + texto.trim(), em: agora(), sistema: true }); ev(m, 'Auditor information request on ' + P.cat(indId).nome + '.', u.nome); }
+    if (m) { m.comentarios.push({ autor: u.nome, texto: 'Information request on ' + P.cat(indId).nome + ': ' + texto.trim(), em: agora(), sistema: true, passo: P.passoAtual(m) ? P.passoAtual(m).nome : 'Completed', indicador: indId }); ev(m, 'Auditor information request on ' + P.cat(indId).nome + '.', u.nome); }
     guardar();
     return { ok: true };
   };
@@ -937,7 +955,7 @@
     if (!texto || !texto.trim()) return { erro: 'Write the answer.' };
     a.resposta = { texto: texto.trim(), por: u.nome, em: agora() }; a.estado = 'respondido';
     var m = P.msDoIndicador(a.indicador_id);
-    if (m) m.comentarios.push({ autor: u.nome, texto: 'Answer to the auditor: ' + texto.trim(), em: agora() });
+    if (m) m.comentarios.push({ autor: u.nome, texto: 'Answer to the auditor: ' + texto.trim(), em: agora(), passo: P.passoAtual(m) ? P.passoAtual(m).nome : 'Completed' });
     guardar();
     return { ok: true };
   };
