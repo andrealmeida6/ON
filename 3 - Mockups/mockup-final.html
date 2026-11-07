@@ -21,6 +21,7 @@
       <div class="ps-h-grp" data-nav-grp>
         <button type="button" class="ps-h-mbtn" aria-haspopup="true">Monitoring<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
         <div class="ps-h-drop">
+          <a class="ps-h-link" href="/timeline/" data-nav="Timeline">Reporting timeline</a>
           <a class="ps-h-link" href="/consolidado/" data-nav="Consolidado">Overview</a>
           <a class="ps-h-link" href="/estado/" data-nav="Estado">Reporting status</a>
         </div>
@@ -133,9 +134,6 @@
 </section>
 
   <div class="ps-wrap">
-    <!-- template: bloco-dinamico -->
-<div data-bloco="timeline"></div>
-
     <div class="ps-ini">
       <div class="ps-ini-esq">
         <!-- template: bloco-dinamico -->
@@ -160,9 +158,6 @@
   <h1>Milestones</h1>
   <p>Choose a company to see its deliveries.</p>
 </header>
-
-    <!-- template: bloco-dinamico -->
-<div data-bloco="timeline"></div>
 
     <div class="ps-ini ps-ini-ms">
       <div class="ps-ini-esq">
@@ -191,6 +186,21 @@
 
     <!-- template: bloco-dinamico -->
 <div data-bloco="milestone-corpo"></div>
+
+  </div>
+</section>
+
+<!-- web page: Timeline -->
+<section class="ps-pagina" hidden data-pagina="Timeline">
+  <div class="ps-pag">
+    <!-- snippet: Timeline/Introducao -->
+<header class="ps-pag-head">
+  <h1>Reporting timeline</h1>
+  <p>The quarters and the year, their internal closes and the external deliveries they feed. Open a period to see its milestones.</p>
+</header>
+
+    <!-- template: bloco-dinamico -->
+<div data-bloco="timeline"></div>
 
   </div>
 </section>

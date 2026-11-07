@@ -116,7 +116,7 @@
   var paginasPermitidas = function (usr) {
     if (!usr) return ['Entrada'];
     if (usr.perfil === 'ext') return ['Pedidos'];
-    var base = ['Inicio', 'Milestones', 'Milestone', 'Consolidado', 'Documentos', 'Evidencias', 'Calculos', 'Relatorio', 'Kpis', 'Historico', 'Auditoria'];
+    var base = ['Inicio', 'Milestones', 'Milestone', 'Timeline', 'Consolidado', 'Documentos', 'Evidencias', 'Calculos', 'Relatorio', 'Kpis', 'Historico', 'Auditoria'];
     if (usr.perfil !== 'auditor') base.push('Dados');
     if (P.gereTudo(usr) || usr.perfil === 'auditor') base.push('Aprovacoes', 'Estado', 'Trilho');
     if (P.gereTudo(usr)) base.push('Atribuicao', 'Perimetro', 'Backoffice');
@@ -226,7 +226,7 @@
       todas.push(m);
     });
     var porPrazo = function (a, b) { return a.prazo < b.prazo ? -1 : 1; };
-    var dir = '<div class="ps-sp"><div class="ps-seg" role="group" aria-label="View"><button type="button" class="' + (U.entVista === 'board' ? 'on' : '') + '" data-a="entVista" data-v="board">Board</button><button type="button" class="' + (U.entVista === 'tabela' ? 'on' : '') + '" data-a="entVista" data-v="tabela">Table</button></div><a class="ps-btn liga" href="' + rota('Milestones') + '">View all milestones</a></div>';
+    var dir = '<div class="ps-sp"><div class="ps-seg" role="group" aria-label="View"><button type="button" class="' + (U.entVista === 'board' ? 'on' : '') + '" data-a="entVista" data-v="board">Board</button><button type="button" class="' + (U.entVista === 'tabela' ? 'on' : '') + '" data-a="entVista" data-v="tabela">Table</button></div><a class="ps-btn peq ps-btn-tl" href="' + rota('Timeline') + '">' + svg(I.cal, 14) + 'Reporting timeline</a><a class="ps-btn liga" href="' + rota('Milestones') + '">View all milestones</a></div>';
     var corpo;
     if (U.entVista === 'tabela') {
       corpo = '<div class="ps-card-body">' + tabela(COLS_MS, todas.sort(porPrazo).map(linhaTabMs), 'No upcoming deliveries.') + '</div>';
@@ -300,7 +300,24 @@
       return '<span class="tlr-r' + (feito ? ' feito' : '') + (i % 2 ? ' baixo' : '') + '" style="--x:' + x(dt).toFixed(2) + '" title="' + e(l.map(function (r) { return r.nome + ' (' + r.entidade + '), ' + P.fmtDataAno(r.data) + '. ' + r.base; }).join('\n')) + '"><i></i><b>' + e(l.map(function (r) { return r.sigla; }).join(' · ')) + '</b><small>' + e(l.length > 1 && l[l.length - 1].data !== dt ? P.fmtData(dt) + '–' + P.fmtData(l[l.length - 1].data) : P.fmtData(dt)) + '</small></span>';
     }).join('');
     var anoP = pers.filter(function (p) { return p.tipo === 'ano'; })[0];
-    var lista = rels.slice().sort(function (a, b) { return a.data < b.data ? -1 : 1; }).filter(function (r) { return r.data >= hoje; }).slice(0, 4);
+    var lista = rels.slice().sort(function (a, b) { return a.data < b.data ? -1 : 1; });
+    /* Telemovel: a mesma informacao na vertical, por ordem de data, com o dia de hoje no sitio certo */
+    var itens = pers.map(function (p) { return { d: p.fim, p: p }; }).concat(lista.map(function (r) { return { d: r.data, r: r }; }));
+    itens.sort(function (a, b) { return a.d < b.d ? -1 : a.d > b.d ? 1 : a.p ? -1 : 1; });
+    var vert = '', hojePosto = false;
+    itens.forEach(function (it) {
+      if (!hojePosto && it.d >= hoje) { vert += '<li class="tlv-hoje"><span>Today · ' + e(P.fmtDataAno(hoje)) + '</span></li>'; hojePosto = true; }
+      if (it.p) {
+        var p = it.p, st = estado(p), l = P.msPeriodo(p.id), conc = l.filter(P.concluida).length, pct = l.length ? Math.round(conc / l.length * 100) : 0;
+        vert += '<li class="tlv-p ' + st.cls + '"><a href="' + rota('Milestones?periodo=' + encodeURIComponent(p.id)) + '"><span class="tlv-pt"><b>' + e(p.nome) + '</b><em>' + e(st.cls === 'ok' ? 'Approved' : st.cls === 'err' ? 'Overdue' : st.cls === 'at' ? 'Open' : 'Upcoming') + '</em></span>' +
+          '<span class="tlv-pd">Data ' + e(P.fmtData(p.ini)) + ' to ' + e(P.fmtData(p.fim)) + ' · close ' + e(P.fmtDataAno(p.fecho)) + '</span>' +
+          '<span class="tlv-barra" aria-hidden="true"><i style="width:' + pct + '%"></i></span><span class="tlv-pn">' + e(st.txt) + '</span></a></li>';
+      } else {
+        var r = it.r, d = P.diasAte(r.data);
+        vert += '<li class="tlv-r' + (d < 0 ? ' feito' : '') + '"><i aria-hidden="true"></i><span><b>' + e(r.sigla) + '</b> ' + e(r.nome) + '<small>' + e(r.entidade) + '</small></span><em>' + e(P.fmtData(r.data)) + '<small>' + (d < 0 ? 'done' : 'in ' + d + ' d') + '</small></em></li>';
+      }
+    });
+    if (!hojePosto) vert += '<li class="tlv-hoje"><span>Today · ' + e(P.fmtDataAno(hoje)) + '</span></li>';
     return '<div class="ps-card ps-tlr">' + cabCartao('Reporting timeline ' + ano, 'cal', '<div class="ps-leg"><span><i class="ok"></i>Approved</span><span><i class="at"></i>Open</span><span><i class="err"></i>Overdue</span><span><i></i>Upcoming</span></div>') +
       '<div class="ps-card-body"><div class="tlr-sc" tabindex="0" aria-label="Reporting timeline, scroll sideways"><div class="tlr" role="img" aria-label="' + e(pers.map(function (p) { return p.nome + ', ' + estado(p).txt; }).join('; ')) + '">' +
       '<div class="tlr-m" aria-hidden="true">' + meses + '</div>' +
@@ -308,7 +325,8 @@
       (anoP ? '<div class="tlr-l"><span class="tlr-lt">Year</span>' + barra(anoP) + '<span class="tlr-cons" style="--x:' + x(anoP.fim).toFixed(2) + ';--w:' + (x(anoP.fecho) - x(anoP.fim)).toFixed(2) + '">Consolidation</span></div>' : '') +
       '<div class="tlr-l rel"><span class="tlr-lt">External</span>' + marcos + '</div>' +
       '<span class="tlr-hoje" style="--x:' + x(hoje).toFixed(2) + '"><small>Today</small></span></div></div>' +
-      (lista.length && U.rota.pag === 'Inicio' ? '<ul class="tlr-prox">' + lista.map(function (r) { var d = P.diasAte(r.data); return '<li><b>' + e(r.sigla) + '</b><span>' + e(r.nome) + '<small>' + e(r.entidade + ' · ' + r.base) + '</small></span><em>' + e(P.fmtDataAno(r.data)) + '<small>in ' + d + ' days</small></em></li>'; }).join('') + '</ul>' : '') + '</div></div>';
+      '<ol class="tlv">' + vert + '</ol>' +
+      (lista.length ? '<h3 class="ps-grupo-t tlr-prox-t">External deliveries</h3><ul class="tlr-prox">' + lista.map(function (r) { var d = P.diasAte(r.data); return '<li class="' + (d < 0 ? 'feito' : '') + '"><b>' + e(r.sigla) + '</b><span>' + e(r.nome) + '<small>' + e(r.entidade + ' · ' + r.base) + '</small></span><em>' + e(P.fmtDataAno(r.data)) + '<small>' + (d < 0 ? 'done' : 'in ' + d + ' days') + '</small></em></li>'; }).join('') + '</ul>' : '') + '</div></div>';
   };
   var MESES_C = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   Blocos['timeline'] = function () { return timeline(); };
@@ -364,7 +382,7 @@
       campo('f-es', 'Status', '<select id="f-es" class="ps-sel" data-c="msEstado">' + opt('todas', 'All', f.estado) + opt('curso', 'In progress', f.estado) + opt('atraso', 'Overdue', f.estado) + opt('concluidas', 'Completed', f.estado) + '</select>') +
       '<label class="ps-chk"><input id="f-minhas" type="checkbox" data-c="msMinhas"' + (f.minhas ? ' checked' : '') + '> Waiting on me</label>' +
       '<label class="ps-chk"><input id="f-esrs" type="checkbox" data-c="msEsrs"' + (f.esrs ? ' checked' : '') + '> Include ESRS track</label></div>';
-    var dir = '<div class="ps-sp"><div class="ps-seg" role="group" aria-label="View"><button type="button" class="' + (U.msVista === 'lista' ? 'on' : '') + '" data-a="msVista" data-v="lista">Table</button><button type="button" class="' + (U.msVista === 'board' ? 'on' : '') + '" data-a="msVista" data-v="board">Board</button></div><button type="button" class="ps-btn peq" data-a="msExcel"' + (lista.length ? '' : ' disabled') + '>Export to Excel</button></div>';
+    var dir = '<div class="ps-sp"><div class="ps-seg" role="group" aria-label="View"><button type="button" class="' + (U.msVista === 'lista' ? 'on' : '') + '" data-a="msVista" data-v="lista">Table</button><button type="button" class="' + (U.msVista === 'board' ? 'on' : '') + '" data-a="msVista" data-v="board">Board</button></div><a class="ps-btn peq ps-btn-tl" href="' + rota('Timeline') + '">' + svg(I.cal, 14) + 'Timeline</a><button type="button" class="ps-btn peq" data-a="msExcel"' + (lista.length ? '' : ' disabled') + '>Export to Excel</button></div>';
     var cab = cabCartao((f.empresa || 'All companies') + ' (' + lista.length + ')', 'tarefa', dir);
     if (!lista.length) return filtros + '<div class="ps-card">' + cab + vazio('No milestones match these filters.') + '</div>';
     if (U.msVista === 'board') {

@@ -42,7 +42,7 @@ Estado a 7 de novembro de 2026. A especificação funcional está em `especifica
 
 | Peça | Conteúdo |
 | --- | --- |
-| Web pages (11) | Entrada, Inicio, Milestones, Milestone, Consolidado, Documentos, Relatorio, Historico, Auditoria, Backoffice, Pedidos |
+| Web pages | Entrada, Inicio, Milestones, Milestone, Consolidado, Documentos, Relatorio, Historico, Auditoria, Backoffice, Pedidos |
 | Web templates (5) | `layout-portal`, `cabecalho`, `navegacao-movel`, `paineis`, `bloco-dinamico` (recebe o parâmetro `id`) |
 | Content snippets (11) | Textos de entrada, hero e introdução de cada página |
 | `global.css` | CSS único |
@@ -179,7 +179,7 @@ Pedido do André a 7 de novembro de 2026, com os prazos de uma entidade gestora 
 - **Valores por período:** as milestones trimestrais guardam os valores em `2026-T3:<indicador>`; as anuais continuam em `2026:<indicador>`, que é o que vai para o relatório. `P.chave(m)` escolhe a chave. Num trimestre, a comparação é com o mesmo trimestre do ano anterior; sem ele, com a quarta parte do ano anterior nas somas.
 - **Reutilizar os trimestres:** a milestone anual mostra o cartão "Reported in the quarters" com T1 a T4, a regra (`P.agregacao`: soma para volumes e horas, último trimestre para efetivos e ativos, média para taxas), o valor do ano e o valor atual. "Use the quarters" grava o valor com a origem "from quarters T1, T2, T3". Enquanto faltar um trimestre aprovado, avisa que é year to date. A regra pode ser fixada por indicador no catálogo com `agregacao`.
 - **Tags:** cada milestone mostra o período (T3 2026, Ano 2026) e as entregas que alimenta (RS, RQS, PCQA, MIRR, GF, R&C, QA T3), nas tabelas, no board, nas listas da home e no cabeçalho da milestone.
-- **Timeline:** na Home e em Milestones, com os trimestres, o ano e a consolidação, os fechos internos, as entregas externas e o dia de hoje. Cada período abre a lista de Milestones filtrada (`?periodo=2026-T3`). Na Home lista as quatro entregas seguintes. No telemóvel abre centrada no dia de hoje.
+- **Timeline:** página própria, Reporting timeline (web page `Timeline`), no menu Monitoring e nos botões "Reporting timeline" da Home (Upcoming deliveries) e de Milestones. Saiu da Home e de Milestones a 7 de novembro de 2026, por indicação do André. Mostra os trimestres, o ano e a consolidação, os fechos internos, as entregas externas (todas, as passadas a cinzento) e o dia de hoje. Cada período abre a lista de Milestones filtrada (`?periodo=2026-T3`). Até 720 px passa a uma lista vertical por ordem de data, com o dia de hoje no sítio certo.
 - **Demonstração:** T1 e T2 aprovados, T3 com os estados de demonstração anteriores, T4 em recolha e consolidações à espera do T4. São 69 milestones.
 - **Limitações:** `esg_valores.ano` no Supabase é um ano; os valores trimestrais precisam de uma coluna de período antes de voltar a ligar o login. `supabase/carregar-demonstracao.js` ainda usa os IDs antigos. Os prazos legais são um ponto de partida a confirmar com o jurídico.
 
