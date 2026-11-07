@@ -22,18 +22,26 @@
 
   /* --- Modelo ---------------------------------------------------------------- */
   var unidade = function (f) { if (f.un) return f.un; var c = P.cat(f.ind); return c ? c.unidade_medida : ''; };
-  var periodos = function (m) {
-    var l = MESES.map(function (n, i) { return { k: m.ano + '-' + (i < 9 ? '0' : '') + (i + 1), t: n + ' ' + m.ano, i: i }; });
-    if (P.trimestral(m)) { var t = P.periodo(m.periodo).t; l = l.filter(function (p) { return Math.floor(p.i / 3) === t - 1; }); }
+  /* Linhas da folha: meses, trimestres ou o ano, conforme a granularidade do tipo de dados, dentro do periodo da milestone */
+  var periodos = function (m, ped) {
+    var g = (ped && ped.granularidade) || 'mensal', tri = P.trimestral(m) ? P.periodo(m.periodo).t : 0;
+    var l = MESES.map(function (n, i) { return { k: m.ano + '-' + (i < 9 ? '0' : '') + (i + 1), t: n + ' ' + m.ano, i: i, meses: [i] }; });
+    if (g === 'trimestral') l = [1, 2, 3, 4].map(function (t) { var i = t * 3 - 1; return { k: m.ano + '-' + (i < 9 ? '0' : '') + (i + 1), t: 'T' + t + ' ' + m.ano, i: i, meses: [i - 2, i - 1, i], agr: 1 }; });
+    if (g === 'anual') l = [{ k: m.ano + '-12', t: 'Ano ' + m.ano, i: 11, meses: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], agr: 1 }];
+    if (tri) l = l.filter(function (p) { return p.meses.some(function (i) { return Math.floor(i / 3) === tri - 1; }); });
     return l;
   };
   /* Meses obrigatorios: todos para somas e medias, o fim de cada trimestre para os ultimos valores */
-  var obrigatorio = function (f, i) { return f.agreg === 'ultimo' ? i % 3 === 2 : true; };
+  var obrigatorio = function (f, i, agr) { return agr || f.agreg !== 'ultimo' ? true : i % 3 === 2; };
   P.colunasFolha = function (m, pedido) {
     if (!pedido || pedido.indicador) return [];
-    var ks = P.camposMilestone(m), dbs = pedido.proprio ? null : BASES_UNIDADE[m.unidade];
-    var sel = dbs ? ks.filter(function (k) { return dbs.indexOf(CAMPOS[k].db) > -1; }) : [];
-    if (!sel.length) sel = ks;
+    var ks = P.camposMilestone(m), dbs = pedido.proprio ? null : BASES_UNIDADE[m.unidade], sel;
+    /* Colunas fixadas no tipo de dados (Backoffice); sem elas, as que os indicadores da milestone usam */
+    if (pedido.colunas && pedido.colunas.length) sel = pedido.colunas.filter(function (k) { return CAMPOS[k]; });
+    else {
+      sel = dbs ? ks.filter(function (k) { return dbs.indexOf(CAMPOS[k].db) > -1; }) : [];
+      if (!sel.length) sel = ks;
+    }
     return sel.map(function (k) {
       var f = CAMPOS[k];
       return { k: k, rot: f.rot, un: unidade(f), db: f.db, tab: f.tab, agreg: f.agreg, usa: m.indicadores.filter(function (id) { var x = P.expressaoDe(id); return x && P.camposDaFormula(x).indexOf(k) > -1; }) };
@@ -58,11 +66,11 @@
   };
   /* Estado da folha: celulas preenchidas, em falta, com erro e totais por coluna */
   P.estadoFolha = function (m, pedido) {
-    var cols = P.colunasFolha(m, pedido), f = (m.folhas || {})[pedido.id] || { cel: {}, org: {}, db: {} }, pers = periodos(m);
+    var cols = P.colunasFolha(m, pedido), f = (m.folhas || {})[pedido.id] || { cel: {}, org: {}, db: {} }, pers = periodos(m, pedido);
     var r = { cols: cols, total: 0, cheias: 0, faltam: 0, erros: 0, daBase: 0, editadas: 0, difere: 0, totais: {} };
     cols.forEach(function (c) {
       var vals = pers.map(function (p) {
-        var ch = p.k + '|' + c.k, v = f.cel[ch] === undefined ? null : f.cel[ch], req = obrigatorio(c, p.i);
+        var ch = p.k + '|' + c.k, v = f.cel[ch] === undefined ? null : f.cel[ch], req = obrigatorio(c, p.i, p.agr);
         if (req) r.total++;
         if (v !== null) { r.cheias++; if (validar(c, v)) r.erros++; if (f.org[ch] === 'db') r.daBase++; else r.editadas++; if (f.db[ch] !== undefined && f.org[ch] !== 'db' && Math.abs(f.db[ch] - v) > 1e-9) r.difere++; }
         else if (req) r.faltam++;
@@ -105,12 +113,21 @@
   P.puxarFolha = function (m, pid, substituir) {
     if (!podeEditar(m)) return { erro: 'You can only pull data while the milestone is in collection with you.' };
     var ped = pedidoDe(m, pid), cols = P.colunasFolha(m, ped), f = folha(m, pid), n = 0, mantidas = 0, regs = 0, bases = {};
+    var linhasF = periodos(m, ped);
     cols.forEach(function (c) {
-      var l = P.registosCampo(c.k, m);
+      var reg = P.registosCampo(c.k, m), porMes = {};
       bases[DBS[c.db] + ' (' + c.tab + ')'] = 1;
-      l.forEach(function (x, i) {
-        var mes = l.length === 4 ? i * 3 + 2 : P.trimestral(m) ? (P.periodo(m.periodo).t - 1) * 3 + (l.length === 1 ? 2 : i) : i, per = m.ano + '-' + (mes < 9 ? '0' : '') + (mes + 1), ch = per + '|' + c.k;
-        regs++;
+      reg.forEach(function (x) { var q = /-Q(\d)$/.exec(x.periodo), mes = q ? q[1] * 3 - 1 : parseInt(x.periodo.slice(5), 10) - 1; porMes[mes] = x; });
+      /* Cada linha junta os registos dos seus meses com a regra do campo */
+      var l = linhasF.map(function (p) {
+        var xs = p.meses.filter(function (i) { return porMes[i]; }).map(function (i) { return porMes[i]; });
+        if (!xs.length) return null;
+        var v = c.agreg === 'ultimo' ? xs[xs.length - 1].valor : xs.reduce(function (a, x) { return a + x.valor; }, 0) / (c.agreg === 'media' ? xs.length : 1);
+        regs += xs.length;
+        return { per: p.k, valor: Math.round(v * 10000) / 10000, ref: xs[xs.length - 1].ref };
+      }).filter(Boolean);
+      l.forEach(function (x) {
+        var per = x.per, ch = per + '|' + c.k;
         /* Os registos de teste das medias podem passar de 100% no ultimo mes */
         if (c.un === '%') x = { valor: Math.min(x.valor, 100), ref: x.ref };
         f.db[ch] = x.valor;
@@ -140,13 +157,13 @@
     cab.forEach(function (t, i) { var k = norm(t); Object.keys(alvo).forEach(function (a) { if (mapa[a] === undefined && alvo[a].indexOf(k) > -1) mapa[a] = i; }); });
     return mapa;
   };
-  var acharPeriodo = function (m, txt, ix) {
-    var pers = periodos(m), k = norm(txt);
+  var acharPeriodo = function (m, txt, ix, ped) {
+    var pers = periodos(m, ped), k = norm(txt);
     if (k === '' || k === undefined) return pers[ix] ? pers[ix].k : null;
     var p = pers.filter(function (x) { return norm(x.k) === k || norm(x.t) === k || norm(x.t.slice(0, 3)) === k || k === String(x.i + 1) || k === m.ano + '-' + (x.i + 1); })[0];
     if (p) return p.k;
     var d = typeof txt === 'number' && txt > 30000 ? new Date(Math.round((txt - 25569) * 864e5)) : null;
-    if (d && d.getUTCFullYear() === m.ano) return pers[d.getUTCMonth()].k;
+    if (d && d.getUTCFullYear() === m.ano) { var pd = pers.filter(function (x) { return x.meses.indexOf(d.getUTCMonth()) > -1; })[0]; if (pd) return pd.k; }
     return null;
   };
   var planoMatriz = function (m, pid, mat, inicio) {
@@ -156,7 +173,7 @@
     var lista = [], ign = [];
     mat.slice(1).forEach(function (l, ix) {
       if (!l.some(function (x) { return String(x).trim(); })) return;
-      var per = acharPeriodo(m, mapa.periodo !== undefined ? l[mapa.periodo] : '', (inicio || 0) + ix);
+      var per = acharPeriodo(m, mapa.periodo !== undefined ? l[mapa.periodo] : '', (inicio || 0) + ix, ped);
       if (!per) { ign.push('Row ' + (ix + 2) + ': "' + l[mapa.periodo] + '" is not a month of ' + m.ano + '.'); return; }
       Object.keys(mapa).forEach(function (k) { if (k !== 'periodo' && l[mapa[k]] !== undefined) lista.push({ id: per, k: k, valor: l[mapa[k]] }); });
     });
@@ -215,10 +232,10 @@
   var cfgFolha = function (m, ped, exportar) {
     var cols = P.colunasFolha(m, ped), f = (m.folhas || {})[ped.id] || { cel: {}, ref: {}, org: {}, db: {} }, pode = podeEditar(m) && !exportar, st = P.estadoFolha(m, ped);
     var gc = [{ k: 'periodo', t: 'Period', larg: 92 }].concat(cols.map(function (c) { return { k: c.k, t: c.rot + ' (' + c.un + ')', dir: 1, edita: pode, larg: 150 }; })).concat([{ k: 'ref', t: 'Source reference', edita: pode, larg: 150 }]);
-    var linhas = periodos(m).map(function (p) {
+    var linhas = periodos(m, ped).map(function (p) {
       var c = { periodo: { t: p.t } };
       cols.forEach(function (col) {
-        var ch = p.k + '|' + col.k, v = f.cel[ch] === undefined ? null : f.cel[ch], er = validar(col, v), o = f.org[ch], dbv = f.db[ch], req = obrigatorio(col, p.i);
+        var ch = p.k + '|' + col.k, v = f.cel[ch] === undefined ? null : f.cel[ch], er = validar(col, v), o = f.org[ch], dbv = f.db[ch], req = obrigatorio(col, p.i, p.agr);
         var difere = v !== null && dbv !== undefined && o !== 'db' && Math.abs(dbv - v) > 1e-9;
         var tip = er || (v === null ? (req ? 'Required. ' : 'Optional: only the quarter-end months are needed. ') + AGREG[col.agreg] + ' of ' + col.k + '.' : ORIGEM_TXT[o] + (difere ? '. The database has ' + num(dbv) + '.' : o === 'db' ? ', ' + DBS[col.db] + ' / ' + col.tab + '.' : '.'));
         c[col.k] = { t: num(v), bruto: bruNum(v), num: v, cls: er ? 'err' : difere ? 'alerta' : v === null ? (req && pode ? 'falta' : '') : o === 'db' ? 'fh-db' : 'fh-man', tip: tip };
@@ -292,7 +309,7 @@
     st.cols.forEach(function (c) { c.usa.forEach(function (id) { if (usa.indexOf(id) < 0) usa.push(id); }); });
     return {
       t: ped.nome, s: m.nome + ' · ' + m.empresa + ' · ' + P.rotPeriodo(m), cls: 'folha',
-      b: estado + '<p class="ps-small ps-mut">' + e(ped.motivo || 'Fill in the columns this milestone needs.') + ' One row per month. Every cell keeps where it came from.</p>' + ferr + fontes + resumo + aviso + window.PortalGrelha.html(cfg) + impactoHtml(m, ped) + defs,
+      b: estado + (ped.instrucoes ? '<div class="ps-aviso info"><b>How to fill it in.</b> ' + e(ped.instrucoes) + '</div>' : '') + '<p class="ps-small ps-mut">' + e(ped.motivo || 'Fill in the columns this milestone needs.') + ' One row per month. Every cell keeps where it came from.</p>' + ferr + fontes + resumo + aviso + window.PortalGrelha.html(cfg) + impactoHtml(m, ped) + defs,
       p: '<span class="fh-motivo ' + (st.pronta ? 'ok' : '') + '" aria-live="polite">' + e(motivo) + (pode && usa.length ? '<small>Delivering updates ' + e(usa.join(', ')) + '</small>' : '') + '</span><button type="button" class="ps-btn" data-a="fecharPainel">' + (pode ? 'Save and close' : 'Close') + '</button>' +
         (pode ? '<button type="button" class="ps-btn pri" data-a="fhEntregar"' + (st.pronta ? '' : ' disabled') + '>' + (entregue ? 'Deliver new version' : 'Deliver data') + '</button>' : '') + (!pode && entregue ? '<button type="button" class="ps-btn" data-a="fhDescarregar">Download Excel</button>' : '')
     };

@@ -192,6 +192,29 @@ Pedido do André a 7 de novembro de 2026.
 - **O que mostra:** abertura da recolha, cada passo concluído, as validações automáticas e as devoluções (a vermelho, com o comentário), o passo atual (a pulsar, com o tempo decorrido), os passos que faltam e o prazo. Entre cada etapa aparece o tempo que passou, e o comprimento da ligação acompanha esse tempo. Em cima: tempo decorrido, passos feitos, passo mais longo e número de devoluções. No telemóvel fica na vertical.
 - **Dados:** `P.historicoWf(m)` lê os eventos da milestone. Os eventos do workflow passaram a guardar `wf` (criada, avanco, auto, devolucao) e `passo`; os antigos reconhecem-se pelo texto. A recolha de um trimestre abre no fim do trimestre e a do ano a 1 de janeiro.
 
+## Tipos de dados, lançamento de milestones e separador Data store
+
+Pedido do André a 7 de novembro de 2026, tendo o Workiva como referência de mercado e corrigindo as críticas mais frequentes que lhe fazem.
+
+**Críticas frequentes ao Workiva e o que o R2R faz diferente**
+
+| Crítica (G2, SoftwareReviews, Dcycle) | No R2R |
+| --- | --- |
+| Curva de aprendizagem e navegação difícil de início | O contribuidor só vê a sua milestone, com uma folha e um botão para puxar da base de dados. O lançamento é um assistente em quatro passos com pré-visualização |
+| "Ease of customization" é a capacidade com pior nota; dependência de consultores para configurar | Tipos de dados e lançamento de milestones no Backoffice, sem código: nome, formatos, colunas, granularidade, instruções |
+| "Automatic data collection" é a funcionalidade com pior nota | Cada coluna de um tipo de dados está ligada a um campo de uma base de origem, por isso pode ser puxada em vez de escrita |
+| Ligações frágeis entre documentos; mudanças de estrutura partem referências | As colunas usam IDs estáveis dos campos. Ao gravar, o editor diz que milestones abertas vão mudar; o que já foi entregue mantém a versão com que foi entregue |
+| Implementação demorou mais do que o previsto | Os tipos de dados vêm pré-carregados por departamento e o mapa de cobertura mostra logo o que falta lançar |
+
+**O que foi feito**
+
+- **Listas de milestones:** o botão de ação (Review, Approve, Fill in) saiu das listas, também no computador. No telemóvel, até 1100 px, cada linha é um cartão com o título e o estado em cima, as tags por baixo e uma linha com empresa, responsável e prazo.
+- **Milestone com dois separadores:** Work (tudo o que já existia, numa página com índice) e Data store (o cilindro). O cilindro só mostra as camadas que a milestone alimenta e, dentro delas, só os indicadores dela.
+- **Backoffice, Data types** (`S.tipos`, `esg_data_types`): o que cada departamento entrega. Cada tipo tem nome, motivo, departamento, formatos aceites, linhas da folha (mensal, trimestral ou anual), se é obrigatório, instruções e colunas (as que os indicadores da milestone usam, ou uma lista fixa escolhida por base de dados, com os campos usados marcados). Mostra a pré-visualização da folha, as milestones que o usam e grava versões. Pode arquivar-se.
+- **Backoffice, Launch milestones:** mapa de cobertura departamento por período, com o estado de cada milestone e as células por lançar ("+ Launch"). O assistente escolhe períodos, departamentos, tipos de dados e indicadores de cada um (pré-preenchidos a partir do plano), empresa e prazo (o fecho do período ou uma data), mostra o que vai ser criado e o que já existe, e lança. Na demonstração, o T4 de Frota e Compras fica por lançar.
+- **Folha do pedido:** usa as colunas e a granularidade do tipo de dados; o pull junta os registos de cada linha com a regra do campo. As instruções aparecem no topo da folha.
+- **Limitações:** os tipos de dados ainda não sincronizam com o Supabase (falta a tabela `esg_data_types`). O lançamento usa o workflow base.
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.

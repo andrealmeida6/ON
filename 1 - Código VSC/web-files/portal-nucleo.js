@@ -61,9 +61,9 @@
     docs: 'esg_docs', ent: 'esg_ent', janelas: 'esg_windows', marca: 'esg_brand', amostra: 'esg_sample', users: 'esg_users',
     areas: 'esg_areas', cat: 'esg_catalog', metas: 'esg_metas', deps: 'esg_deps',
     atrib: 'esg_assign', regrasEnt: 'esg_entity_rules', fatores: 'esg_factors', apis: 'esg_connections', evg: 'esg_config_log', selos: 'esg_seals',
-    kpim: 'esg_kpi_master', puxados: 'esg_source_pulls', periodos: 'esg_periods', relatorios: 'esg_reports', dpdec: 'esg_dp_decisions', gloss: 'esg_glossary', rq: 'esg_report_tables', doc: 'esg_report_doc'
+    kpim: 'esg_kpi_master', puxados: 'esg_source_pulls', periodos: 'esg_periods', relatorios: 'esg_reports', tipos: 'esg_data_types', dpdec: 'esg_dp_decisions', gloss: 'esg_glossary', rq: 'esg_report_tables', doc: 'esg_report_doc'
   };
-  var VERSAO_DADOS = 6;
+  var VERSAO_DADOS = 7;
   var S = (P.S = {});
   var memoria = {};
   var ler = function (k) {
@@ -83,7 +83,7 @@
   /* Online: o estado vem do Supabase depois do login. Ate la, fica vazio e com a marca publica. */
   var estadoVazio = function () {
     S.ciclo = { ano: new Date().getFullYear(), estado: 'aberto', data_abertura: null, fechados: [] };
-    S.ms = []; S.items = {}; S.wfbase = []; S.ext = []; S.aud = []; S.mat = []; S.docs = []; S.ent = []; S.deps = []; S.janelas = []; S.periodos = []; S.relatorios = []; S.amostra = []; S.users = []; S.areas = []; S.cat = []; S.metas = []; S.atrib = {}; S.regrasEnt = {}; S.fatores = []; S.apis = []; S.evg = []; S.selos = [];
+    S.ms = []; S.items = {}; S.wfbase = []; S.ext = []; S.aud = []; S.mat = []; S.docs = []; S.ent = []; S.deps = []; S.janelas = []; S.periodos = []; S.relatorios = []; S.tipos = []; S.amostra = []; S.users = []; S.areas = []; S.cat = []; S.metas = []; S.atrib = {}; S.regrasEnt = {}; S.fatores = []; S.apis = []; S.evg = []; S.selos = [];
     S.marca = S.marca || clone(P.MARCA_BASE);
   };
   P.estadoVazio = estadoVazio;
@@ -260,7 +260,7 @@
     S.mat = MATERIALIDADE.map(function (m) { return { norma: m[0], tema: m[1], avaliacao: m[2], justificacao: m[3] }; });
     S.ent = ENTIDADES.map(function (e) { return { id: e[0], nome: e[0], perimetro_grupo: !!e[1], perimetro_maioritario: !!e[2] }; });
     S.deps = DEPARTAMENTOS.map(function (n) { return { id: n, nome: n }; });
-    S.periodos = periodosAno(2026); S.relatorios = relatoriosAno(2026);
+    S.periodos = periodosAno(2026); S.relatorios = relatoriosAno(2026); S.tipos = tiposBase();
     S.janelas = JANELAS.map(function (j) { return { nome: j[0], tema: j[1], meses: j[2], dia_inicio: j[3], dia_fim: j[4] }; });
     S.areas = AREAS.map(function (a) { return { codigo: a[0], nome: a[1], uso: a[2] }; });
     S.marca = clone(P.MARCA_BASE);
@@ -294,7 +294,8 @@
     window.PORTAL_PLANO.forEach(function (pl, ixPlano) {
       var trim = pl.periodicidade === 'Mensal' || pl.periodicidade === 'Trimestral';
       if (trim) {
-        [1, 2, 3, 4].forEach(function (t) { inst.push({ pl: pl, ix: ixPlano, id: pl.id + '-T' + t, periodo: '2026-T' + t, t: t }); });
+        /* Frota e Compras ainda nao tem o T4 lancado: fica para lancar no Backoffice */
+        [1, 2, 3, 4].forEach(function (t) { if (t === 4 && ['M06', 'M11', 'M12'].indexOf(pl.id) > -1) return; inst.push({ pl: pl, ix: ixPlano, id: pl.id + '-T' + t, periodo: '2026-T' + t, t: t }); });
         trimPorUn[pl.unidade] = (trimPorUn[pl.unidade] || []).concat(pl.indicadores.filter(function (id) { return (trimPorUn[pl.unidade] || []).indexOf(id) < 0; }));
       } else inst.push({ pl: pl, ix: ixPlano, id: pl.id, periodo: '2026-A' });
     });
@@ -344,7 +345,7 @@
       }
       m.passo_atual = cfg.i;
       /* O que ja passou da recolha entregou os ficheiros pedidos */
-      if (cfg.i > 0) (FICHEIROS_BASE[pl.unidade] || []).forEach(function (f, ixF) { m.documentos_gerais.push({ ficheiro: f[3] + '-' + x.id.toLowerCase() + '-2026.' + f[2][0], por: nomeDe(pl.unidade), em: quando(-8), pedido: 'base:' + ixF }); });
+      if (cfg.i > 0) (FICHEIROS_BASE[pl.unidade] || []).forEach(function (f, ixF) { m.documentos_gerais.push({ ficheiro: f[3] + '-' + x.id.toLowerCase() + '-2026.' + f[2][0], por: nomeDe(pl.unidade), em: quando(-8), pedido: 'tipo:' + f[3] }); });
       if (cfg.dev) {
         m.comentarios.push({ autor: 'Equipa de sustentabilidade', texto: 'A percentagem de veículos verdes parece baixa. Confirmem com a gestora da frota, por favor.', em: new Date(Date.now() - 86400000).toISOString() });
         m.eventos.splice(1, 0, { texto: 'Milestone submitted.', em: new Date(Date.now() - 86400000 * 6).toISOString(), por: nomeDe(m.unidade), wf: 'avanco', passo: m.passos[0].nome }, { texto: 'Automatic validation completed: 1 indicator(s) with alerts.', em: new Date(Date.now() - 86400000 * 6 + 60000).toISOString(), por: 'System', wf: 'auto', passo: m.passos[1].nome });
@@ -473,10 +474,101 @@
     'Sistemas de Informação': [['Registo de incidentes de segurança', 'Sustenta os indicadores de cibersegurança.', ['xlsx', 'pdf'], 'registo-incidentes']],
     'I&D, CSR e ESG': [['Relatório de atividades do período', 'Sustenta os indicadores de comunidade.', ['pdf', 'xlsx'], 'relatorio-atividades']]
   };
+  /* --- Tipos de dados: o que se pede, em que formato, com que colunas e granularidade --- */
+  /* Comecam nos ficheiros base de cada departamento e editam-se no Backoffice, sem codigo */
+  var tiposBase = function () {
+    var l = [];
+    Object.keys(FICHEIROS_BASE).forEach(function (un) {
+      FICHEIROS_BASE[un].forEach(function (f) {
+        l.push({ id: f[3], nome: f[0], motivo: f[1], formatos: f[2].slice(), prefixo: f[3], unidade: un, colunas: null, granularidade: 'mensal', obrigatorio: true, instrucoes: '', ativo: true, versao: 1, alterado_em: '2026-01-05T10:00:00.000Z', alterado_por: 'Equipa de sustentabilidade' });
+      });
+    });
+    return l;
+  };
+  P.GRANULARIDADES = { mensal: 'Monthly rows', trimestral: 'Quarterly rows', anual: 'One row for the year' };
+  P.FORMATOS = ['xlsx', 'csv', 'pdf', 'json', 'docx'];
+  P.tipo = function (id) { return (S.tipos || []).filter(function (t) { return t.id === id; })[0] || null; };
+  /* Os tipos de uma milestone: os escolhidos ao lancar, ou os ativos do departamento */
+  P.tiposDe = function (m) {
+    if (m.tipos) return m.tipos.map(P.tipo).filter(function (t) { return t && t.ativo; });
+    return (S.tipos || []).filter(function (t) { return t.ativo && t.unidade === m.unidade; });
+  };
+  P.usosTipo = function (id) { return S.ms.filter(function (m) { return P.tiposDe(m).some(function (t) { return t.id === id; }); }); };
+  P.guardarTipo = function (dados, u) {
+    if (!P.gereTudo(u)) return { erro: 'No permission.' };
+    var nome = String(dados.nome || '').trim();
+    if (!nome) return { erro: 'Give the data type a name.' };
+    if (!dados.unidade) return { erro: 'Choose the department that delivers it.' };
+    if (!dados.formatos || !dados.formatos.length) return { erro: 'Choose at least one accepted format.' };
+    var t = dados.id ? P.tipo(dados.id) : null, novo = !t;
+    if (novo) {
+      var id = nome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'tipo';
+      while (P.tipo(id)) id += '-2';
+      t = { id: id, prefixo: id, versao: 0, ativo: true };
+      S.tipos.push(t);
+    }
+    ['nome', 'motivo', 'formatos', 'unidade', 'colunas', 'granularidade', 'obrigatorio', 'instrucoes'].forEach(function (k) { if (dados[k] !== undefined) t[k] = k === 'nome' ? nome : dados[k]; });
+    t.versao = (t.versao || 0) + 1; t.alterado_em = agora(); t.alterado_por = u.nome;
+    guardar();
+    return { ok: true, tipo: t, novo: novo };
+  };
+  P.arquivarTipo = function (id, ativo, u) {
+    if (!P.gereTudo(u)) return { erro: 'No permission.' };
+    var t = P.tipo(id);
+    if (!t) return { erro: 'Data type not found.' };
+    t.ativo = !!ativo; t.alterado_em = agora(); t.alterado_por = u.nome;
+    guardar();
+    return { ok: true };
+  };
+
+  /* --- Lancar milestones a partir do Backoffice ------------------------------ */
+  /* Indicadores sugeridos: os do plano do departamento com a periodicidade do periodo */
+  P.indicadoresSugeridos = function (un, pid) {
+    var per = P.periodo(pid), l = [];
+    (window.PORTAL_PLANO || []).forEach(function (pl) {
+      if (pl.unidade !== un) return;
+      var tri = pl.periodicidade === 'Mensal' || pl.periodicidade === 'Trimestral';
+      if (per && (per.tipo === 'trimestre') === tri) pl.indicadores.forEach(function (id) { if (l.indexOf(id) < 0) l.push(id); });
+    });
+    return l;
+  };
+  P.msExistente = function (un, pid) { return S.ms.filter(function (m) { return m.unidade === un && m.periodo === pid && !m.consolida; })[0] || null; };
+  P.lancarMilestones = function (cfg, u) {
+    if (!P.gereTudo(u)) return { erro: 'No permission.' };
+    if (!cfg.periodos.length || !cfg.unidades.length) return { erro: 'Choose at least one period and one department.' };
+    var criadas = [], ignoradas = [], num = S.ms.reduce(function (mx, m) { var n = parseInt(String(m.id).replace(/^M/, ''), 10); return isNaN(n) ? mx : Math.max(mx, n); }, 0);
+    cfg.unidades.forEach(function (un) {
+      num++;
+      cfg.periodos.forEach(function (pid) {
+        var per = P.periodo(pid);
+        if (!per) return;
+        if (P.msExistente(un, pid)) { ignoradas.push(un + ' · ' + per.nome); return; }
+        var inds = (cfg.indicadores && cfg.indicadores[un]) || P.indicadoresSugeridos(un, pid);
+        if (!inds.length) { ignoradas.push(un + ' · ' + per.nome + ' (no indicators)'); return; }
+        var id = 'M' + String(num).padStart(2, '0') + (per.tipo === 'trimestre' ? '-T' + per.t : '');
+        while (P.ms(id)) id += 'b';
+        var m = {
+          id: id, nome: per.tipo === 'trimestre' ? 'Entrega T' + per.t + ' ' + per.ano + ' de ' + un : 'Entrega anual ' + per.ano + ' de ' + un, ano: per.ano, periodo: pid, consolida: false,
+          empresa: cfg.empresa || (S.ent[0] && S.ent[0].nome) || '', departamentos: [un], atribuido_a: cfg.atribuido && cfg.atribuido[un] || null, ficheiros_pedidos: [], unidade: un,
+          periodicidade: per.tipo === 'trimestre' ? 'Trimestral' : 'Anual', prazo: cfg.prazo === 'fecho' || !cfg.prazo ? per.fecho : cfg.prazo,
+          indicadores: inds.slice(), tipos: cfg.tipos && cfg.tipos[un] ? cfg.tipos[un].slice() : null, passos: passosDe(WF_BASE()), passo_atual: 0, devolvida: false, workflow_ajustado: false,
+          documentos_gerais: [], comentarios: [], eventos: []
+        };
+        if (!m.tipos) delete m.tipos;
+        S.ms.push(m);
+        m.indicadores.forEach(function (i) { var ch = P.chave(m); if (!S.items[ch + ':' + i]) S.items[ch + ':' + i] = novoItem(i, ch, m.id, P.cat(i).tipo); });
+        ev(m, 'Milestone launched from the Backoffice for ' + per.nome + '.', u.nome, 'criada');
+        criadas.push(m);
+      });
+    });
+    if (criadas.length) guardar();
+    return { criadas: criadas, ignoradas: ignoradas };
+  };
+
   P.ficheirosPedidos = function (m) {
     var docs = m.documentos_gerais || [], l = [];
     var entregues = function (pid) { return docs.filter(function (d) { return d.pedido === pid; }); };
-    (FICHEIROS_BASE[m.unidade] || []).forEach(function (f, i) { l.push({ id: 'base:' + i, nome: f[0], motivo: f[1], formatos: f[2], prefixo: f[3], obrigatorio: true, entregues: entregues('base:' + i) }); });
+    P.tiposDe(m).forEach(function (t) { l.push({ id: 'tipo:' + t.id, nome: t.nome, motivo: t.motivo, formatos: t.formatos, prefixo: t.prefixo, obrigatorio: t.obrigatorio !== false, colunas: t.colunas, granularidade: t.granularidade || 'mensal', instrucoes: t.instrucoes || '', tipo: t, entregues: entregues('tipo:' + t.id) }); });
     (m.ficheiros_pedidos || []).forEach(function (f) { l.push({ id: f.id, nome: f.nome, motivo: f.motivo || '', formatos: [], obrigatorio: !!f.obrigatorio, proprio: true, entregues: entregues(f.id) }); });
     m.indicadores.forEach(function (id) {
       var c = P.cat(id);
