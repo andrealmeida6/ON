@@ -11,7 +11,7 @@
   var cicloMs = function () { return P.msCiclo(); };
   /* Indicadores com valor anual no ciclo: so trimestres lancados, sem a milestone do ano, ainda nao contam */
   var catCiclo = function () { return S.cat.filter(function (c) { return !!P.msDoIndicador(c.id) && !!P.item(c.id); }); };
-  var pessoa = function (x) { return x ? '<span class="ps-pess"><i aria-hidden="true">' + e(iniciais(x.nome)) + '</i>' + e(x.nome) + '</span>' : '<span class="ps-mut">-</span>'; };
+  var pessoa = function (x) { return x ? X.pessHtml(x.nome) : '<span class="ps-mut">-</span>'; };
   var cod = function (c) { return c.esrs_requisito ? '<span class="ps-cod">' + e(c.esrs_requisito) + '</span>' : ''; };
   var pills = function (acao, lista, ativa) {
     return '<div class="ps-seg" role="group">' + lista.map(function (x) { return '<button type="button" class="' + (ativa === x[0] ? 'on' : '') + '" data-a="' + acao + '" data-v="' + e(x[0]) + '">' + e(x[1]) + (x[2] !== undefined ? ' <span class="n">' + x[2] + '</span>' : '') + '</button>'; }).join('') + '</div>';

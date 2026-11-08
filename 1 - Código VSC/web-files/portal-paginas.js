@@ -27,11 +27,11 @@
     var q = r.split('?'), p = q[0].split('/');
     return '/' + p[0].toLowerCase() + '/' + (p[1] || q[1] ? '?' + [p[1] ? 'id=' + p[1] : '', q[1] || ''].filter(Boolean).join('&') : '');
   };
-  var tagsDe = function (m) { return '<span class="ps-tags">' + (m.departamentos || []).map(function (d) { return '<span class="ps-tag">' + e(d) + '</span>'; }).join('') + '</span>'; };
+  var tagsDe = function (m) { return '<span class="ps-tags">' + (m.departamentos || []).map(function (d) { return '<span class="ps-tag ps-tag-dep">' + avEquipa() + e(d) + '</span>'; }).join('') + '</span>'; };
   var atribHtml = function (m) {
     var a = P.atribuido(m);
     if (!a) return '<span class="ps-mut">-</span>';
-    return a.tipo === 'pessoa' ? '<span class="ps-pess"><i aria-hidden="true">' + e(iniciais(a.nome)) + '</i>' + e(a.nome) + '</span>' : '<span class="ps-tag">' + e(a.nome) + '</span>';
+    return a.tipo === 'pessoa' ? pessHtml(a.nome) : '<span class="ps-tag ps-tag-dep">' + avEquipa() + e(a.nome) + '</span>';
   };
   var rotaEmp = function (nome) { var x = S.ent.filter(function (y) { return y.nome === nome; })[0]; return rota('Milestones' + (x ? '?empresa=' + encodeURIComponent(x.id) : '')); };
   /* A mesma regra em todas as tabelas de milestones: empresa e a quem esta atribuida */
@@ -52,7 +52,15 @@
   };
   var chip = function (txt, cls) { return '<span class="ps-chip ' + (cls || '') + '">' + e(txt) + '</span>'; };
   var estChip = function (m) { var s = P.estadoMs(m); return chip(s.txt, s.cls); };
-  var iniciais = function (n) { return String(n).replace(/^Resp\.\s*/, '').split(/\s+/).filter(function (x) { return x.length > 2 || x === x.toUpperCase(); }).slice(0, 2).map(function (x) { return x[0]; }).join('') || '?'; };
+  /* Iniciais do primeiro e do ultimo nome (Maria Joao Silva Costa da MC) */
+  var iniciais = function (n) { var p = String(n).replace(/^Resp\.\s*/, '').split(/\s+/).filter(function (x) { return x.length > 2 || (x && x === x.toUpperCase()); }); return p.length ? (p[0][0] + (p.length > 1 ? p[p.length - 1][0] : '')).toUpperCase() : '?'; };
+  var ICO_EQUIPA = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c.6-3.2 2.9-5 5.5-5s4.9 1.8 5.5 5"/><circle cx="17" cy="9" r="2.6"/><path d="M15.5 14.3c2.4-.4 4.4 1.1 5 4.2"/></svg>';
+  /* data-fx-ignorar: os filtros das tabelas leem o nome, nao as iniciais */
+  var avPessoa = function (nome) { return '<i class="ps-avp" aria-hidden="true" data-fx-ignorar>' + e(iniciais(nome)) + '</i>'; };
+  var avEquipa = function () { return '<i class="ps-avd" aria-hidden="true">' + ICO_EQUIPA + '</i>'; };
+  var pessHtml = function (nome) { return '<span class="ps-pess">' + avPessoa(nome) + e(nome) + '</span>'; };
+  var depHtml = function (nome) { return nome ? '<span class="ps-dep">' + avEquipa() + e(nome) + '</span>' : '<span class="ps-mut">-</span>'; };
+  P.pessHtml = pessHtml; P.depHtml = depHtml;
   var cabCartao = function (t, ico, dir) { return '<div class="ps-card-head"><h2>' + (ico ? '<span class="ps-ic">' + svg(I[ico]) + '</span>' : '') + e(t) + '</h2>' + (dir || '') + '</div>'; };
   var vazio = function (t) { return '<div class="ps-vazio">' + e(t) + '</div>'; };
   var opt = function (val, txt, sel) { return '<option value="' + e(val) + '"' + (String(val) === String(sel) ? ' selected' : '') + '>' + e(txt === undefined ? val : txt) + '</option>'; };
@@ -1004,7 +1012,7 @@
   };
   B.utilizadores = function () {
     return '<div class="ps-card">' + cabCartao('Users and profiles', 'tarefa') + '<div class="ps-card-body">' + tabela([{ t: 'Name' }, { t: 'Login' }, { t: 'Profile' }, { t: 'Unit' }], S.users.map(function (x) {
-      return [e(x.nome), '<span class="ps-mono">' + e(x.login) + '</span>', '<select id="up-' + e(x.login) + '" class="ps-sel" aria-label="Profile of ' + e(x.nome) + '" data-c="userPerfil" data-id="' + e(x.login) + '">' + Object.keys(P.PERFIS).map(function (k) { return opt(k, P.PERFIS[k], x.perfil); }).join('') + '</select>', '<select id="uu-' + e(x.login) + '" class="ps-sel" aria-label="Unit of ' + e(x.nome) + '" data-c="userUnidade" data-id="' + e(x.login) + '">' + opt('', '-', x.unidade) + P.UNIDADES.map(function (o) { return opt(o, o, x.unidade); }).join('') + '</select>'];
+      return [pessHtml(x.nome), '<span class="ps-mono">' + e(x.login) + '</span>', '<select id="up-' + e(x.login) + '" class="ps-sel" aria-label="Profile of ' + e(x.nome) + '" data-c="userPerfil" data-id="' + e(x.login) + '">' + Object.keys(P.PERFIS).map(function (k) { return opt(k, P.PERFIS[k], x.perfil); }).join('') + '</select>', '<select id="uu-' + e(x.login) + '" class="ps-sel" aria-label="Unit of ' + e(x.nome) + '" data-c="userUnidade" data-id="' + e(x.login) + '">' + opt('', '-', x.unidade) + P.UNIDADES.map(function (o) { return opt(o, o, x.unidade); }).join('') + '</select>'];
     })) + '<h3 class="ps-grupo-t">New user</h3><div class="ps-form">' + campo('nu-nome', 'Name', '<input id="nu-nome" class="ps-in">') + campo('nu-login', 'Login', '<input id="nu-login" class="ps-in">') + campo('nu-perfil', 'Profile', '<select id="nu-perfil" class="ps-sel">' + Object.keys(P.PERFIS).map(function (k) { return opt(k, P.PERFIS[k], 'resp'); }).join('') + '</select>') + campo('nu-un', 'Unit', '<select id="nu-un" class="ps-sel">' + opt('', '-') + P.UNIDADES.map(function (o) { return opt(o); }).join('') + '</select>') + '</div><button type="button" class="ps-btn pri ps-mt" data-a="userNovo">Add user</button></div></div>';
   };
   B.externas = function () {
@@ -1020,7 +1028,7 @@
     var q = U.indBusca.toLowerCase(), l = S.cat.filter(function (c) { return !q || (c.nome + ' ' + c.id + ' ' + c.unidade_negocio).toLowerCase().indexOf(q) > -1; });
     return '<div class="ps-card">' + cabCartao('Indicators (' + S.cat.length + ')', 'doc') + '<div class="ps-card-body">' + campo('ind-busca', 'Search', '<input id="ind-busca" class="ps-in" value="' + e(U.indBusca) + '" data-c="indBusca">') + '<div class="ps-mt">' + tabela([{ t: 'Indicator' }, { t: 'Unit' }, { t: 'Department' }, { t: 'Type' }, { t: 'Frequency' }, { t: 'Table' }, { t: 'Required evidence', info: 'When ticked, whoever fills in this indicator must attach a supporting document (an Excel file, or a PDF such as an invoice). The milestone cannot be submitted until it is attached, it shows as a required file in the milestone, and it goes into the evidence package for the auditor.' }], l.map(function (c) {
       var freqs = P.FREQUENCIAS.some(function (f) { return f[0] === c.periodicidade; }) ? P.FREQUENCIAS : P.FREQUENCIAS.concat([[c.periodicidade, PERIODO_TXT[c.periodicidade] || c.periodicidade]]);
-      return [linkFicha(c.id, c.id + ' ' + c.nome), e(c.unidade_medida), e(c.unidade_negocio), c.tipo === 'derivado' ? 'Derived' : 'Base',
+      return [linkFicha(c.id, c.id + ' ' + c.nome), e(c.unidade_medida), depHtml(c.unidade_negocio), c.tipo === 'derivado' ? 'Derived' : 'Base',
         '<select id="fq-' + e(c.id) + '" class="ps-sel" aria-label="Frequency of ' + e(c.nome) + '" data-c="indFreq" data-id="' + e(c.id) + '">' + freqs.map(function (f) { return opt(f[0], f[1], c.periodicidade); }).join('') + '</select>', e(QUADRO_TXT[c.quadro] || c.quadro), '<label class="ps-chk"><input id="evo-' + e(c.id) + '" type="checkbox" data-c="evObrig" data-id="' + e(c.id) + '"' + (c.evidencia_obrigatoria ? ' checked' : '') + '><span class="ps-sr">Required evidence for ' + e(c.nome) + '</span></label>'];
     }), 'No indicators found.') + '</div></div></div>' +
       '<div class="ps-card">' + cabCartao('Milestones (' + P.msCiclo().length + ')', 'tarefa') + '<div class="ps-card-body">' + tabela([{ t: 'Milestone' }, { t: 'Company' }, { t: 'Assigned to' }, { t: 'Indicators', dir: 1 }, { t: 'Due' }, { t: 'Status' }], P.msCiclo().map(function (m) {
@@ -1100,7 +1108,7 @@
     if (!U.lanc) {
       /* Comeca no primeiro periodo com departamentos planeados ainda por lancar */
       var prox = (S.periodos || []).filter(function (p) { return p.ano === S.ciclo.ano && P.UNIDADES.some(function (un) { return !P.msExistente(un, p.id) && P.indicadoresSugeridos(un, p.id).length; }); })[0];
-      U.lanc = { periodos: prox ? [prox.id] : [], unidades: [], empresa: (S.ent[0] && S.ent[0].nome) || '', prazo: 'fecho', data: '', indicadores: {}, tipos: {}, aberto: '' };
+      U.lanc = { periodos: prox ? [prox.id] : [], unidades: [], empresa: (S.ent[0] && S.ent[0].nome) || '', prazo: 'fecho', data: '', indicadores: {}, tipos: {}, atrib: {}, aberto: '' };
     }
     return U.lanc;
   };
@@ -1120,31 +1128,37 @@
       '<p class="ps-mut ps-small">Each cell is a department in a reporting period. Open cells show how many indicators the plan expects; click one to launch it, or use the button of a period to launch every department at once. Indicators come from Reporting moments and can be adjusted before launching.</p>' +
       '<div class="ps-kpis ps-mt"><div class="ps-kpi"><span>Milestones ' + ano + '</span><b>' + P.msCiclo().length + '</b></div><div class="ps-kpi"><span>Planned, not launched</span><b>' + faltam + '</b></div></div>' +
       '<div class="ps-cob-sc ps-mt" tabindex="0" aria-label="Coverage by department and period"><table class="ps-cob-t"><thead><tr><th scope="col">Department</th>' + pers.map(function (p) { var n = porLancar(p); return '<th scope="col">' + e(p.nome) + '<small>close ' + e(P.fmtData(p.fecho)) + '</small>' + (n ? '<button type="button" class="ps-btn pri peq ps-cob-lanc" data-a="lancPeriodo" data-v="' + e(p.id) + '">Launch ' + e(p.nome) + '<small>' + n + ' department' + (n === 1 ? '' : 's') + '</small></button>' : '<span class="ps-cob-tudo">All launched</span>') + '</th>'; }).join('') + '</tr></thead><tbody>' +
-      uns.map(function (un) { return '<tr><th scope="row">' + e(un) + '</th>' + pers.map(function (p) { return '<td>' + cel(un, p) + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table></div></div></div>';
+      uns.map(function (un) { return '<tr><th scope="row">' + depHtml(un) + '</th>' + pers.map(function (p) { return '<td>' + cel(un, p) + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table></div></div></div>';
   };
   var pnLancar = function () {
     var L = lancEstado(), ano = S.ciclo.ano, pers = (S.periodos || []).filter(function (p) { return p.ano === ano; });
     var plano = [], novas = 0, existem = 0;
     L.unidades.forEach(function (un) { L.periodos.forEach(function (pid) { var p = P.periodo(pid), ex = P.msExistente(un, pid), inds = L.indicadores[un] || P.indicadoresSugeridos(un, pid); plano.push({ un: un, p: p, ex: ex, n: inds.length }); if (ex) existem++; else if (inds.length) novas++; }); });
-    var chk = function (cls, dataC, v, on, txt, sub) { return '<label class="ps-dt-chip ' + cls + (on ? ' on' : '') + '"><input type="checkbox" data-c="' + dataC + '" data-id="' + e(v) + '"' + (on ? ' checked' : '') + '>' + e(txt) + (sub ? '<small>' + e(sub) + '</small>' : '') + '</label>'; };
-    var porUn = L.unidades.map(function (un) {
+    L.atrib = L.atrib || {};
+    var idDe = function (dataC, v) { var h = 0, s = String(v); for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return 'lc-' + dataC + '-' + (h >>> 0).toString(36); };
+    var chk = function (cls, dataC, v, on, txt, sub, ico) { return '<label class="ps-dt-chip ' + cls + (on ? ' on' : '') + '"><input type="checkbox" id="' + idDe(dataC, v) + '" data-c="' + dataC + '" data-id="' + e(v) + '"' + (on ? ' checked' : '') + '>' + (ico || '') + e(txt) + (sub ? '<small>' + e(sub) + '</small>' : '') + '</label>'; };
+    var pessoasUn = function (un) { return S.users.filter(function (x) { return x.perfil === 'resp' && x.unidade === un; }); };
+    var quem = function (un) { var x = L.atrib[un] && P.user(L.atrib[un]); return x ? pessHtml(x.nome) : depHtml(un); };
+    var porUn = L.unidades.map(function (un, iu) {
       var aberto = L.aberto === un, inds = L.indicadores[un] || null, sug = {}, tiposUn = (S.tipos || []).filter(function (t) { return t.ativo && t.unidade === un; }), tSel = L.tipos[un] || tiposUn.map(function (t) { return t.id; });
       L.periodos.forEach(function (pid) { P.indicadoresSugeridos(un, pid).forEach(function (id) { sug[id] = 1; }); });
       var lista = Object.keys(sug), sel = inds || lista;
-      return '<li class="ps-lc-un' + (aberto ? ' aberto' : '') + '"><button type="button" class="ps-lc-un-h" data-a="lancUn" data-v="' + e(un) + '" aria-expanded="' + aberto + '"><b>' + e(un) + '</b><span>' + sel.length + ' indicators</span>' + svg(I.chev || '<path d="m6 9 6 6 6-6"/>', 14) + '</button>' +
+      var at = L.atrib[un] || '', ops = [{ v: '', ico: avEquipa(), t: un, s: 'Whole department' }].concat(pessoasUn(un).map(function (x) { return { v: x.login, ico: avPessoa(x.nome), t: x.nome, s: 'Data owner' }; }));
+      var escolha = '<div class="ps-atr-l"><span class="ps-lab">Assigned to</span><div class="ps-atr-esc" role="radiogroup" aria-label="Assigned to, ' + e(un) + '">' + ops.map(function (o, i) { return '<label class="ps-atr-op' + (at === o.v ? ' on' : '') + '"><input type="radio" id="lc-at-' + iu + '-' + i + '" name="lc-at-' + iu + '" data-c="lancAtrib" data-id="' + e(un) + '" value="' + e(o.v) + '"' + (at === o.v ? ' checked' : '') + '>' + o.ico + '<span>' + e(o.t) + '<small>' + e(o.s) + '</small></span></label>'; }).join('') + '</div></div>';
+      return '<li class="ps-lc-un' + (aberto ? ' aberto' : '') + '"><button type="button" class="ps-lc-un-h" data-a="lancUn" data-v="' + e(un) + '" aria-expanded="' + aberto + '">' + depHtml(un) + '<span>' + sel.length + ' indicators</span>' + svg(I.chev || '<path d="m6 9 6 6 6-6"/>', 14) + '</button>' + escolha +
         (aberto ? '<div class="ps-lc-un-b"><h4>Indicators</h4><div class="ps-dt-chips">' + (lista.length ? lista.map(function (id) { return chk('ind', 'lancInd', un + '|' + id, sel.indexOf(id) > -1, id, P.cat(id).nome); }).join('') : '<span class="ps-mut ps-small">The plan has no indicators for this department in the chosen periods.</span>') + '</div></div>' : '') + '</li>';
     }).join('');
     return {
-      t: 'Launch milestones', s: 'One milestone per department and period, with the base workflow', largo: true,
+      t: 'Launch milestones', s: 'One milestone per department and period, with the base workflow', largo: true, cls: 'alto',
       b: '<ol class="ps-lc">' +
         '<li><h3><span>1</span>Reporting periods</h3><div class="ps-dt-chips">' + pers.map(function (p) { var n = P.msPeriodo(p.id).length; return chk('', 'lancPer', p.id, L.periodos.indexOf(p.id) > -1, p.nome, n ? n + ' launched' : 'Close ' + P.fmtData(p.fecho)); }).join('') + '</div></li>' +
-        '<li><h3><span>2</span>Departments</h3><div class="ps-sp-b"><span class="ps-small ps-mut">' + L.unidades.length + ' selected</span><span class="ps-sp"><button type="button" class="ps-btn liga" data-a="lancTodos">Select all with a plan</button><button type="button" class="ps-btn liga" data-a="lancNenhum">Clear</button></span></div><div class="ps-dt-chips">' + P.UNIDADES.map(function (un) { return chk('', 'lancUnSel', un, L.unidades.indexOf(un) > -1, un); }).join('') + '</div></li>' +
-        '<li><h3><span>3</span>What each department is asked</h3>' + (L.unidades.length ? '<ul class="ps-lc-uns">' + porUn + '</ul>' : '<p class="ps-mut ps-small">Choose departments to see their indicators.</p>') + '</li>' +
+        '<li><h3><span>2</span>Departments</h3><div class="ps-sp-b"><span class="ps-small ps-mut">' + L.unidades.length + ' selected</span><span class="ps-sp"><button type="button" class="ps-btn liga" data-a="lancTodos">Select all with a plan</button><button type="button" class="ps-btn liga" data-a="lancNenhum">Clear</button></span></div><div class="ps-dt-chips">' + P.UNIDADES.map(function (un) { return chk('ps-dt-chip-dep', 'lancUnSel', un, L.unidades.indexOf(un) > -1, un, '', avEquipa()); }).join('') + '</div></li>' +
+        '<li><h3><span>3</span>Who it is assigned to and what is asked</h3>' + (L.unidades.length ? '<ul class="ps-lc-uns">' + porUn + '</ul>' : '<p class="ps-mut ps-small">Choose departments to see their indicators.</p>') + '</li>' +
         '<li><h3><span>4</span>Company and due date</h3><div class="ps-form2">' + campo('lc-emp', 'Company', '<select id="lc-emp" class="ps-sel" data-c="lancEmp">' + S.ent.map(function (x) { return opt(x.nome, x.nome, L.empresa); }).join('') + '</select>') +
         campo('lc-prazo', 'Due date', '<select id="lc-prazo" class="ps-sel" data-c="lancPrazo">' + opt('fecho', 'Internal close of each period', L.prazo) + opt('data', 'A specific date', L.prazo) + '</select>') + '</div>' +
         (L.prazo === 'data' ? campo('lc-data', 'Date', '<input id="lc-data" type="date" class="ps-in" value="' + e(L.data) + '" data-c="lancData">') : '') + '</li></ol>' +
         '<div class="ps-lc-res" aria-live="polite"><b>' + novas + ' milestone(s) will be created</b>' + (existem ? '<span>' + existem + ' already exist and will be skipped</span>' : '') +
-        (plano.length ? '<ul>' + plano.slice(0, 12).map(function (x) { return '<li class="' + (x.ex ? 'ex' : !x.n ? 'nada' : '') + '">' + e(x.un + ' · ' + x.p.nome) + '<small>' + (x.ex ? 'exists' : x.n ? x.n + ' indicators' : 'no indicators') + '</small></li>'; }).join('') + (plano.length > 12 ? '<li>…</li>' : '') + '</ul>' : '') + '</div>',
+        (plano.length ? '<ul>' + plano.slice(0, 12).map(function (x) { return '<li class="' + (x.ex ? 'ex' : !x.n ? 'nada' : '') + '"><span class="ps-lc-res-t">' + e(x.un + ' · ' + x.p.nome) + '<small>' + (x.ex ? 'exists' : x.n ? x.n + ' indicators' : 'no indicators') + '</small></span>' + (x.ex || !x.n ? '' : quem(x.un)) + '</li>'; }).join('') + (plano.length > 12 ? '<li>…</li>' : '') + '</ul>' : '') + '</div>',
       p: '<span class="ps-sp-flex"></span><button type="button" class="ps-btn" data-a="fecharPainel">Cancel</button><button type="button" class="ps-btn pri" data-a="lancConfirmar"' + (novas ? '' : ' disabled') + '>Launch ' + novas + ' milestone(s)</button>'
     };
   };
@@ -1156,7 +1170,7 @@
     var cx = function (c, grupo, k, on, rot) { return '<label class="ps-chk ps-mom-c"><input id="mo-' + e(c.id + '-' + k) + '" type="checkbox" data-c="momento" data-id="' + e(c.id + '|' + grupo + '|' + k) + '"' + (on ? ' checked' : '') + '><span class="ps-sr">' + e(rot + ', ' + c.id) + '</span></label>'; };
     var linhas = l.map(function (c) {
       var mo = P.momentosDe(c.id);
-      return [linkFicha(c.id, c.id + ' ' + c.nome) + (mo.proprio ? '<small class="ps-mom-prop" data-fx-ignorar>Custom ·<button type="button" class="ps-btn liga" data-a="momRepor" data-v="' + e(c.id) + '">Reset</button></small>' : ''), e(P.donoIndicador(c.id)), e(PERIODO_TXT[c.periodicidade] || c.periodicidade)]
+      return [linkFicha(c.id, c.id + ' ' + c.nome) + (mo.proprio ? '<small class="ps-mom-prop" data-fx-ignorar>Custom ·<button type="button" class="ps-btn liga" data-a="momRepor" data-v="' + e(c.id) + '">Reset</button></small>' : ''), depHtml(P.donoIndicador(c.id)), e(PERIODO_TXT[c.periodicidade] || c.periodicidade)]
         .concat(P.MOMENTOS_PER.map(function (x) { return cx(c, 'per', x[0], mo.per.indexOf(x[0]) > -1, x[1]); }))
         .concat(P.TIPOS_ENTREGA.map(function (x) { return cx(c, 'ent', x[0], mo.ent.indexOf(x[0]) > -1, x[2]); }));
     });
@@ -1286,10 +1300,20 @@
     var r = Pn[U.painel.tipo](U.painel.args);
     h.hidden = false;
     document.body.style.overflow = 'hidden';
-    var corpo = h.querySelector('.ps-pan-b'), sy = corpo && h.getAttribute('data-painel-tipo') === U.painel.tipo ? corpo.scrollTop : 0;
-    h.setAttribute('data-painel-tipo', U.painel.tipo);
-    h.innerHTML = '<div class="ps-pan-f" data-a="fecharPainel"></div><div class="ps-pan ' + (r.largo ? 'largo' : '') + (r.cls ? ' ' + r.cls : '') + '" role="dialog" aria-modal="true" aria-labelledby="pan-t"><div class="ps-pan-h"><div><h2 id="pan-t" tabindex="-1">' + e(r.t) + '</h2>' + (r.s ? '<div class="ps-mut ps-small">' + e(r.s) + '</div>' : '') + '</div><button type="button" class="ps-x" data-a="fecharPainel" aria-label="Close">×</button></div><div class="ps-pan-b">' + r.b + '</div>' + (r.p ? '<div class="ps-pan-p">' + r.p + '</div>' : '') + '</div>';
-    if (sy) { var nb = h.querySelector('.ps-pan-b'); if (nb) nb.scrollTop = sy; }
+    var pan = h.querySelector('.ps-pan'), mesmo = !!pan && h.getAttribute('data-painel-tipo') === U.painel.tipo;
+    var cls = 'ps-pan' + (r.largo ? ' largo' : '') + (r.cls ? ' ' + r.cls : '');
+    var cab = '<div><h2 id="pan-t" tabindex="-1">' + e(r.t) + '</h2>' + (r.s ? '<div class="ps-mut ps-small">' + e(r.s) + '</div>' : '') + '</div><button type="button" class="ps-x" data-a="fecharPainel" aria-label="Close">×</button>';
+    if (mesmo) {
+      if (pan.className !== cls) pan.className = cls;
+      var hd = pan.querySelector('.ps-pan-h'); if (hd && hd.innerHTML !== cab) hd.innerHTML = cab;
+      var cb = pan.querySelector('.ps-pan-b'), sy = cb.scrollTop;
+      cb.innerHTML = r.b; cb.scrollTop = sy;
+      var pe = pan.querySelector('.ps-pan-p');
+      if (r.p) { if (!pe) { pe = document.createElement('div'); pe.className = 'ps-pan-p'; pan.appendChild(pe); } if (pe.innerHTML !== r.p) pe.innerHTML = r.p; } else if (pe) pe.remove();
+    } else {
+      h.setAttribute('data-painel-tipo', U.painel.tipo);
+      h.innerHTML = '<div class="ps-pan-f" data-a="fecharPainel"></div><div class="' + cls + '" role="dialog" aria-modal="true" aria-labelledby="pan-t"><div class="ps-pan-h">' + cab + '</div><div class="ps-pan-b">' + r.b + '</div>' + (r.p ? '<div class="ps-pan-p">' + r.p + '</div>' : '') + '</div>';
+    }
     if (U.painelFoco) { U.painelFoco = false; var t = document.getElementById('pan-t'); if (t) t.focus(); }
   };
 
@@ -1439,7 +1463,7 @@
     lancTodos: function () { var L = lancEstado(); L.unidades = P.UNIDADES.filter(function (un) { return L.periodos.some(function (pid) { return P.indicadoresSugeridos(un, pid).length; }); }); R(); },
     lancNenhum: function () { var L = lancEstado(); L.unidades = []; R(); },
     lancConfirmar: function () {
-      var L = lancEstado(), r = P.lancarMilestones({ periodos: L.periodos, unidades: L.unidades, empresa: L.empresa, prazo: L.prazo === 'data' ? L.data : 'fecho', indicadores: L.indicadores, tipos: L.tipos }, u());
+      var L = lancEstado(), r = P.lancarMilestones({ periodos: L.periodos, unidades: L.unidades, empresa: L.empresa, prazo: L.prazo === 'data' ? L.data : 'fecho', indicadores: L.indicadores, tipos: L.tipos, atribuido: L.atrib }, u());
       if (r.erro) return toast(r.erro, 'err');
       toast(r.criadas.length + ' milestone(s) launched' + (r.ignoradas.length ? ', ' + r.ignoradas.length + ' skipped' : '') + '.', r.criadas.length ? 'ok' : 'err');
       U.lanc = null; fechaPainel();
@@ -1573,6 +1597,7 @@
     lancUnSel: function (el) { var L = lancEstado(), v = el.dataset.id; L.unidades = L.unidades.filter(function (x) { return x !== v; }); if (el.checked) { L.unidades.push(v); L.aberto = v; } },
     lancTipo: function (el) { var L = lancEstado(), x = el.dataset.id.split('|'), un = x[0]; var cur = L.tipos[un] || (S.tipos || []).filter(function (t) { return t.ativo && t.unidade === un; }).map(function (t) { return t.id; }); cur = cur.filter(function (i) { return i !== x[1]; }); if (el.checked) cur.push(x[1]); L.tipos[un] = cur; },
     lancInd: function (el) { var L = lancEstado(), x = el.dataset.id.split('|'), un = x[0], sug = {}; L.periodos.forEach(function (pid) { P.indicadoresSugeridos(un, pid).forEach(function (id) { sug[id] = 1; }); }); var cur = L.indicadores[un] || Object.keys(sug); cur = cur.filter(function (i) { return i !== x[1]; }); if (el.checked) cur.push(x[1]); L.indicadores[un] = cur; },
+    lancAtrib: function (el) { var L = lancEstado(); L.atrib = L.atrib || {}; L.atrib[el.dataset.id] = el.value; },
     lancEmp: function (el) { lancEstado().empresa = el.value; },
     lancPrazo: function (el) { lancEstado().prazo = el.value; },
     lancData: function (el) { lancEstado().data = el.value; },
@@ -1760,6 +1785,6 @@
     }
   };
   /* As paginas de controlo (portal-gestao.js) acrescentam-se aqui */
-  P.ext = { msAtual: function () { return msAtual(); }, Pn: Pn, abrePainel: function (t, a) { abrePainel(t, a); }, Blocos: Blocos, A: A, C: C, U: U, e: e, svg: svg, I: I, rota: rota, chip: chip, estChip: estChip, cabCartao: cabCartao, vazio: vazio, opt: opt, campo: campo, tabela: tabela, toast: toast, R: R, val: val, res: res, escolherFicheiro: escolherFicheiro, atribHtml: atribHtml, iniciais: iniciais, u: u, fmtV: fmtV, prazoTxt: prazoTxt };
+  P.ext = { pessHtml: pessHtml, depHtml: depHtml, avPessoa: avPessoa, avEquipa: avEquipa, msAtual: function () { return msAtual(); }, Pn: Pn, abrePainel: function (t, a) { abrePainel(t, a); }, Blocos: Blocos, A: A, C: C, U: U, e: e, svg: svg, I: I, rota: rota, chip: chip, estChip: estChip, cabCartao: cabCartao, vazio: vazio, opt: opt, campo: campo, tabela: tabela, toast: toast, R: R, val: val, res: res, escolherFicheiro: escolherFicheiro, atribHtml: atribHtml, iniciais: iniciais, u: u, fmtV: fmtV, prazoTxt: prazoTxt };
   document.addEventListener('DOMContentLoaded', P.iniciar);
 })();

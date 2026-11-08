@@ -306,6 +306,14 @@ Pedido do André a 8 de novembro de 2026.
 - **Ordem do Backoffice:** Reporting moments vem antes de Launch milestones, porque decide o que se lança.
 - **Lançar um período inteiro:** saiu o botão do topo. Cada período tem, no cabeçalho do mapa, "Launch T1 2026" com o número de departamentos por lançar; abre a pop-up já com esse período e esses departamentos, e basta confirmar. Quando não falta nada, mostra "All launched".
 
+## Pop-up sem piscar, atribuição ao lançar e avatares
+
+Pedido do André a 8 de novembro de 2026.
+
+- **Pop-ups suaves:** `pintarPainel` só redesenha o cabeçalho, o corpo e o rodapé quando o pop-up já está aberto; a animação de abertura não se repete e o scroll mantém-se. O pop-up de lançamento tem altura fixa (`alto`), para não saltar quando a lista encolhe. Os campos têm `id` estável, para o foco ficar onde estava.
+- **Atribuição no lançamento:** o passo 3 passa a "Who it is assigned to and what is asked". Cada departamento tem "Assigned to" com o departamento inteiro ou os responsáveis desse departamento. O resumo final mostra a quem fica cada milestone. Ao lançar, a milestone regista "Assigned to ...".
+- **Avatares em toda a plataforma:** pessoas com uma bolinha com as iniciais do primeiro e do último nome (`pessHtml`, `avPessoa`); departamentos com o símbolo de uma equipa (`depHtml`, `avEquipa`). Usados nas listas e tabelas de milestones (Assigned to e tags), no lançamento, nos departamentos das tabelas do Backoffice, na lista de utilizadores, no mapa de cobertura e na atribuição de KPIs. Os filtros das tabelas leem o nome e ignoram as iniciais (`data-fx-ignorar`).
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.

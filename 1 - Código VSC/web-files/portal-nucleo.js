@@ -683,6 +683,7 @@
         S.ms.push(m);
         m.indicadores.forEach(function (i) { var ch = P.chave(m); if (!S.items[ch + ':' + i]) S.items[ch + ':' + i] = novoItem(i, ch, m.id, P.cat(i).tipo); });
         ev(m, 'Milestone launched from the Backoffice for ' + per.nome + '.', u.nome, 'criada');
+        if (m.atribuido_a && P.user(m.atribuido_a)) ev(m, 'Assigned to ' + P.user(m.atribuido_a).nome + '.', u.nome);
         criadas.push(m);
       });
     });
