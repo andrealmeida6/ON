@@ -69,7 +69,7 @@
     var alt = (d.alteracoes || []).slice().sort(function (a, b) { return b.ano - a.ano; });
     var calc = c.formula ? e(c.formula) : 'Reported value' + (P.trimestral && P.agregacao ? '. Over the year: ' + e(P.AGREG_TXT[P.agregacao(id)].toLowerCase()) + '.' : '');
     return '<section class="ps-def" aria-labelledby="def-t"><div class="ps-sp-b"><h3 id="def-t" class="ps-grupo-t ps-sem-topo">Definition</h3><span class="ps-sp">' +
-      (st.mudou ? chip('Changed in ' + ano, 'warn') : '') + (st.d ? chip('Version ' + d.versao, '') : chip('To define', 'err')) +
+      (st.mudou ? chip('Changed in ' + ano, 'warn') : '') + (st.d ? '<span class="ps-chip ps-chip-tip" tabindex="0" data-tip="' + X.e('Version ' + d.versao + ' of this definition: it has been saved ' + d.versao + ' time' + (d.versao === 1 ? '' : 's') + '. Every save is kept, with who changed it and when, in the configuration log.') + '">Version ' + d.versao + '</span>' : chip('To define', 'err')) +
       (pode ? '<button type="button" class="ps-btn peq" data-a="defEditar" data-v="' + e(id) + '">Edit</button>' : '') + '</span></div>' +
       (st.mudou ? '<div class="ps-aviso warn"><b>What changed in ' + ano + '.</b> ' + e(alt.filter(function (x) { return x.ano === ano; })[0].txt) + '</div>' : '') +
       '<dl class="ps-def-l"><dt>What counts</dt><dd>' + (d.inclui ? e(d.inclui) : falta) + '</dd><dt>What does not count</dt><dd>' + (d.exclui ? e(d.exclui) : falta) + '</dd>' +

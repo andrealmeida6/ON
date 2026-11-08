@@ -297,6 +297,15 @@ Pedido do André a 8 de novembro de 2026.
 - **Supabase:** `009_esg_momentos_report.sql` acrescenta `momentos` (jsonb) a `esg_indicadores`; a sincronização já a escreve.
 - **Pop-ups:** todos os painéis laterais (lançar milestones, ficha do indicador, folhas dos pedidos, marca, tipos, workflow, comentários) abrem ao centro, por cima da página. No telemóvel ocupam o ecrã inteiro. Só mudou o CSS (`[data-painel] .ps-pan`).
 
+## Explicações e lançamento por período
+
+Pedido do André a 8 de novembro de 2026.
+
+- **"i" de informação:** `tabela()` aceita `info` em cada coluna e põe um "i" no cabeçalho, com a explicação ao passar o rato, ao tocar ou com o teclado. Usado em Required evidence: quem preenche tem de anexar um documento de suporte (Excel, ou PDF como uma fatura); a milestone não se submete sem ele, aparece como ficheiro obrigatório e entra no pacote de evidências do auditor.
+- **Versões:** "Version N" na definição do indicador e "vN" na última saída gerada têm uma explicação ao passar o rato (quantas vezes foi gravada ou gerada, e que nada se perde).
+- **Ordem do Backoffice:** Reporting moments vem antes de Launch milestones, porque decide o que se lança.
+- **Lançar um período inteiro:** saiu o botão do topo. Cada período tem, no cabeçalho do mapa, "Launch T1 2026" com o número de departamentos por lançar; abre a pop-up já com esse período e esses departamentos, e basta confirmar. Quando não falta nada, mostra "All launched".
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.

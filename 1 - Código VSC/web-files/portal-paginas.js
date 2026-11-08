@@ -57,9 +57,11 @@
   var vazio = function (t) { return '<div class="ps-vazio">' + e(t) + '</div>'; };
   var opt = function (val, txt, sel) { return '<option value="' + e(val) + '"' + (String(val) === String(sel) ? ' selected' : '') + '>' + e(txt === undefined ? val : txt) + '</option>'; };
   var campo = function (id, lab, html) { return '<div class="ps-campo"><label class="ps-lab" for="' + e(id) + '">' + e(lab) + '</label>' + html + '</div>'; };
+  /* "i" com a explicacao: aparece ao passar o rato, ao tocar ou com o teclado */
+  var info = function (txt) { return '<button type="button" class="ps-info" data-tip="' + e(txt) + '" aria-label="' + e(txt) + '"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M12 11v6M12 7.5v.01"/></svg></button>'; };
   var tabela = function (cols, linhas, vaz) {
     if (!linhas.length) return vazio(vaz || 'Sem dados.');
-    return '<div class="ps-tw"><table class="ps-t"><thead><tr>' + cols.map(function (c) { return '<th scope="col"' + (c.dir ? ' class="dir"' : '') + '>' + e(c.t) + '</th>'; }).join('') + '</tr></thead><tbody>' +
+    return '<div class="ps-tw"><table class="ps-t"><thead><tr>' + cols.map(function (c) { return '<th scope="col"' + (c.dir ? ' class="dir"' : '') + '>' + e(c.t) + (c.info ? info(c.info) : '') + '</th>'; }).join('') + '</tr></thead><tbody>' +
       linhas.map(function (l) {
         var cels = l.celulas || l;
         return '<tr' + (l.attrs ? ' ' + l.attrs : '') + '>' + cels.map(function (h, i) { return '<td' + (i === 0 ? ' class="prim"' : ' data-l="' + e(cols[i].t) + '"' + (cols[i].dir ? ' class="dir ps-num"' : '')) + '>' + h + '</td>'; }).join('') + '</tr>';
@@ -985,7 +987,7 @@
   };
 
   /* --- Backoffice -------------------------------------------------------- */
-  var BO = [['indicadores', 'Indicators and milestones'], ['lancar', 'Launch milestones'], ['momentos', 'Reporting moments'], ['periodos', 'Reporting periods'], ['materialidade', 'Materiality and frameworks'], ['utilizadores', 'Users and profiles'], ['externas', 'External entities'], ['wfbase', 'Base workflow'], ['calendario', 'Calendar'], ['regras', 'Validation rules'], ['areas', 'Data consumer areas'], ['entidades', 'Companies'], ['departamentos', 'Departments'], ['dados', 'Data and storage']];
+  var BO = [['indicadores', 'Indicators and milestones'], ['momentos', 'Reporting moments'], ['lancar', 'Launch milestones'], ['periodos', 'Reporting periods'], ['materialidade', 'Materiality and frameworks'], ['utilizadores', 'Users and profiles'], ['externas', 'External entities'], ['wfbase', 'Base workflow'], ['calendario', 'Calendar'], ['regras', 'Validation rules'], ['areas', 'Data consumer areas'], ['entidades', 'Companies'], ['departamentos', 'Departments'], ['dados', 'Data and storage']];
   var B = {};
   Blocos['backoffice'] = function () {
     return '<div class="ps-bo"><nav class="ps-bo-tabs" aria-label="Backoffice sections">' + BO.map(function (t) { return '<button type="button" class="ps-bo-tab ' + (U.boTab === t[0] ? 'on' : '') + '" data-a="boTab" data-v="' + t[0] + '"' + (U.boTab === t[0] ? ' aria-current="true"' : '') + '>' + e(t[1]) + '</button>'; }).join('') + '</nav><div class="ps-col">' + B[U.boTab]() + '</div></div>';
@@ -1016,7 +1018,7 @@
   };
   B.indicadores = function () {
     var q = U.indBusca.toLowerCase(), l = S.cat.filter(function (c) { return !q || (c.nome + ' ' + c.id + ' ' + c.unidade_negocio).toLowerCase().indexOf(q) > -1; });
-    return '<div class="ps-card">' + cabCartao('Indicators (' + S.cat.length + ')', 'doc') + '<div class="ps-card-body">' + campo('ind-busca', 'Search', '<input id="ind-busca" class="ps-in" value="' + e(U.indBusca) + '" data-c="indBusca">') + '<div class="ps-mt">' + tabela([{ t: 'Indicator' }, { t: 'Unit' }, { t: 'Department' }, { t: 'Type' }, { t: 'Frequency' }, { t: 'Table' }, { t: 'Required evidence' }], l.map(function (c) {
+    return '<div class="ps-card">' + cabCartao('Indicators (' + S.cat.length + ')', 'doc') + '<div class="ps-card-body">' + campo('ind-busca', 'Search', '<input id="ind-busca" class="ps-in" value="' + e(U.indBusca) + '" data-c="indBusca">') + '<div class="ps-mt">' + tabela([{ t: 'Indicator' }, { t: 'Unit' }, { t: 'Department' }, { t: 'Type' }, { t: 'Frequency' }, { t: 'Table' }, { t: 'Required evidence', info: 'When ticked, whoever fills in this indicator must attach a supporting document (an Excel file, or a PDF such as an invoice). The milestone cannot be submitted until it is attached, it shows as a required file in the milestone, and it goes into the evidence package for the auditor.' }], l.map(function (c) {
       var freqs = P.FREQUENCIAS.some(function (f) { return f[0] === c.periodicidade; }) ? P.FREQUENCIAS : P.FREQUENCIAS.concat([[c.periodicidade, PERIODO_TXT[c.periodicidade] || c.periodicidade]]);
       return [linkFicha(c.id, c.id + ' ' + c.nome), e(c.unidade_medida), e(c.unidade_negocio), c.tipo === 'derivado' ? 'Derived' : 'Base',
         '<select id="fq-' + e(c.id) + '" class="ps-sel" aria-label="Frequency of ' + e(c.nome) + '" data-c="indFreq" data-id="' + e(c.id) + '">' + freqs.map(function (f) { return opt(f[0], f[1], c.periodicidade); }).join('') + '</select>', e(QUADRO_TXT[c.quadro] || c.quadro), '<label class="ps-chk"><input id="evo-' + e(c.id) + '" type="checkbox" data-c="evObrig" data-id="' + e(c.id) + '"' + (c.evidencia_obrigatoria ? ' checked' : '') + '><span class="ps-sr">Required evidence for ' + e(c.nome) + '</span></label>'];
@@ -1113,10 +1115,11 @@
     };
     var faltam = 0;
     uns.forEach(function (un) { pers.forEach(function (p) { if (!P.msExistente(un, p.id) && P.indicadoresSugeridos(un, p.id).length) faltam++; }); });
-    return '<div class="ps-card">' + cabCartao('Launch milestones', 'cal', '<button type="button" class="ps-btn pri peq" data-a="lancAbrir">Launch milestones</button>') + '<div class="ps-card-body">' +
-      '<p class="ps-mut ps-small">Each cell is a department in a reporting period. Open cells show how many indicators the plan expects; click one to launch it, or launch several at once. Indicators come pre-filled and can be adjusted before launching.</p>' +
+    var porLancar = function (p) { return uns.filter(function (un) { return !P.msExistente(un, p.id) && P.indicadoresSugeridos(un, p.id).length; }).length; };
+    return '<div class="ps-card">' + cabCartao('Launch milestones', 'cal') + '<div class="ps-card-body">' +
+      '<p class="ps-mut ps-small">Each cell is a department in a reporting period. Open cells show how many indicators the plan expects; click one to launch it, or use the button of a period to launch every department at once. Indicators come from Reporting moments and can be adjusted before launching.</p>' +
       '<div class="ps-kpis ps-mt"><div class="ps-kpi"><span>Milestones ' + ano + '</span><b>' + P.msCiclo().length + '</b></div><div class="ps-kpi"><span>Planned, not launched</span><b>' + faltam + '</b></div></div>' +
-      '<div class="ps-cob-sc ps-mt" tabindex="0" aria-label="Coverage by department and period"><table class="ps-cob-t"><thead><tr><th scope="col">Department</th>' + pers.map(function (p) { return '<th scope="col">' + e(p.nome) + '<small>close ' + e(P.fmtData(p.fecho)) + '</small></th>'; }).join('') + '</tr></thead><tbody>' +
+      '<div class="ps-cob-sc ps-mt" tabindex="0" aria-label="Coverage by department and period"><table class="ps-cob-t"><thead><tr><th scope="col">Department</th>' + pers.map(function (p) { var n = porLancar(p); return '<th scope="col">' + e(p.nome) + '<small>close ' + e(P.fmtData(p.fecho)) + '</small>' + (n ? '<button type="button" class="ps-btn pri peq ps-cob-lanc" data-a="lancPeriodo" data-v="' + e(p.id) + '">Launch ' + e(p.nome) + '<small>' + n + ' department' + (n === 1 ? '' : 's') + '</small></button>' : '<span class="ps-cob-tudo">All launched</span>') + '</th>'; }).join('') + '</tr></thead><tbody>' +
       uns.map(function (un) { return '<tr><th scope="row">' + e(un) + '</th>' + pers.map(function (p) { return '<td>' + cel(un, p) + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table></div></div></div>';
   };
   var pnLancar = function () {
@@ -1429,6 +1432,8 @@
     tipoGuardar: function () { var r = P.guardarTipo(U.tipoEd, u()); if (r.erro) return toast(r.erro, 'err'); toast(r.novo ? 'Data type created.' : 'Saved as version ' + r.tipo.versao + '.', 'ok'); fechaPainel(); },
     tipoArquivar: function () { var t = U.tipoEd, r = P.arquivarTipo(t.id, !t.ativo, u()); if (r.erro) return toast(r.erro, 'err'); toast(t.ativo ? 'Archived. It is no longer requested in open milestones.' : 'Restored.', 'ok'); fechaPainel(); },
     lancAbrir: function () { lancEstado(); abrePainel('lancar', {}); },
+    /* Um periodo inteiro: todos os departamentos que ainda tem o que lancar nesse periodo */
+    lancPeriodo: function (d) { U.lanc = null; var L = lancEstado(); L.periodos = [d.v]; L.unidades = P.UNIDADES.filter(function (un) { return !P.msExistente(un, d.v) && P.indicadoresSugeridos(un, d.v).length; }); L.aberto = ''; abrePainel('lancar', {}); },
     lancCel: function (d) { var x = d.v.split('|'); U.lanc = null; var L = lancEstado(); L.periodos = [x[1]]; L.unidades = [x[0]]; L.aberto = x[0]; abrePainel('lancar', {}); },
     lancUn: function (d) { var L = lancEstado(); L.aberto = L.aberto === d.v ? '' : d.v; R(); },
     lancTodos: function () { var L = lancEstado(); L.unidades = P.UNIDADES.filter(function (un) { return L.periodos.some(function (pid) { return P.indicadoresSugeridos(un, pid).length; }); }); R(); },
@@ -1647,9 +1652,11 @@
     if (!t) { if (tip) tip.hidden = true; return; }
     if (!tip) { tip = document.createElement('div'); tip.className = 'ps-tip'; tip.style.position = 'fixed'; document.body.appendChild(tip); }
     tip.textContent = t.getAttribute('data-tip');
+    tip.classList.toggle('longo', tip.textContent.length > 60);
     tip.hidden = false;
     var r = t.getBoundingClientRect();
-    tip.style.left = Math.max(70, Math.min(window.innerWidth - 70, r.left + r.width / 2)) + 'px';
+    var meia = tip.classList.contains('longo') ? 160 : 70;
+    tip.style.left = Math.max(meia, Math.min(window.innerWidth - meia, r.left + r.width / 2)) + 'px';
     tip.style.top = (t.tagName === 'rect' ? r.top + 24 : r.top - 4) + 'px';
   };
 
