@@ -210,16 +210,85 @@
     return 'soma';
   };
   P.AGREG_TXT = { soma: 'Sum of the quarters', media: 'Average of the quarters', ultimo: 'Value of the last quarter' };
+  /* --- Momentos de report de cada indicador ----------------------------------
+     Em que periodos entra (T1 a T4, Ano) e que entregas externas alimenta.
+     Por omissao: a frequencia decide os periodos e as regras abaixo decidem as entregas.
+     O que se marcar em Backoffice > Reporting moments fica em c.momentos e passa a mandar. */
+  P.MOMENTOS_PER = [['T1', 'T1'], ['T2', 'T2'], ['T3', 'T3'], ['T4', 'T4'], ['A', 'Year']];
+  P.TIPOS_ENTREGA = [['QA', 'QA', 'Quarterly water quality, ERSAR'], ['PCQA', 'PCQA', 'PCQA annual results, ERSAR'], ['RQS', 'RQS', 'Service quality report, ERSAR'], ['MIRR', 'MIRR', 'Waste register, APA'], ['GF', 'GF', 'Fluorinated gases, APA'], ['RC', 'R&C', 'Annual report and accounts'], ['RS', 'RS', 'Sustainability report']];
+  P.FREQUENCIAS = [['Mensal', 'Monthly'], ['Trimestral', 'Quarterly'], ['Anual', 'Annual']];
+  var trimestralFreq = function (f) { return f === 'Mensal' || f === 'Trimestral'; };
+  var perPadrao = function (f) { return trimestralFreq(f) ? ['T1', 'T2', 'T3', 'T4'] : ['A']; };
+  /* Quem entrega o indicador: o departamento do plano, ou o dono no catalogo */
+  P.donoIndicador = function (id) {
+    var pl = (window.PORTAL_PLANO || []).filter(function (x) { return x.indicadores.indexOf(id) > -1; })[0], c = P.cat(id);
+    return pl ? pl.unidade : c ? c.unidade_negocio : '';
+  };
+  P.entregasPadrao = function (id) {
+    var c = P.cat(id), us = (c && c.utilizado_por) || [], l = [];
+    if (/^A1[23]$/.test(id)) l.push('QA', 'PCQA');
+    else if (us.indexOf('ERSAR') > -1) l.push('RQS');
+    if (id === 'N04') l.push('GF');
+    else if (us.indexOf('APA') > -1 && /^(R09|R10|R11|R12|N03)$/.test(id)) l.push('MIRR');
+    var q = P.idsQuadros ? P.idsQuadros() : [];
+    if (q.length ? q.indexOf(id) > -1 : us.indexOf('CONT') > -1) l.push('RC');
+    if (us.indexOf('REL') > -1 || /^N/.test(id)) l.push('RS');
+    return l;
+  };
+  P.momentosDe = function (id) {
+    var c = P.cat(id), mo = c && c.momentos;
+    return { per: mo && mo.per ? mo.per.slice() : perPadrao(c && c.periodicidade), ent: mo && mo.ent ? mo.ent.slice() : P.entregasPadrao(id), proprio: !!mo };
+  };
+  /* Milestones abertas que tem o indicador: e o que fica por rever quando se muda a configuracao */
+  P.msAbertasCom = function (id) { return S.ms.filter(function (m) { return m.indicadores.indexOf(id) > -1 && !P.concluida(m); }); };
+  P.mudarFrequencia = function (id, freq, u) {
+    if (!P.gereTudo(u)) return { erro: 'No permission.' };
+    var c = P.cat(id);
+    if (!c) return { erro: 'Indicator not found.' };
+    if (c.periodicidade === freq) return { ok: true, abertas: [] };
+    var antes = c.periodicidade;
+    c.periodicidade = freq;
+    if (c.momentos) c.momentos.per = perPadrao(freq);
+    if (P.eventoGlobal) P.eventoGlobal('Frequency of ' + id + ' ' + c.nome + ' changed from ' + antes + ' to ' + freq + '.', u.nome);
+    guardar();
+    return { ok: true, abertas: P.msAbertasCom(id) };
+  };
+  P.definirMomento = function (id, grupo, k, ligado, u) {
+    if (!P.gereTudo(u)) return { erro: 'No permission.' };
+    var c = P.cat(id);
+    if (!c) return { erro: 'Indicator not found.' };
+    var mo = P.momentosDe(id), l = mo[grupo].filter(function (x) { return x !== k; });
+    if (ligado) l.push(k);
+    if (grupo === 'per' && !l.length) return { erro: 'An indicator needs at least one reporting period.' };
+    var ordem = (grupo === 'per' ? P.MOMENTOS_PER : P.TIPOS_ENTREGA).map(function (x) { return x[0]; });
+    mo[grupo] = ordem.filter(function (x) { return l.indexOf(x) > -1; });
+    c.momentos = { per: mo.per, ent: mo.ent };
+    if (P.eventoGlobal) P.eventoGlobal(id + ' ' + (ligado ? 'added to ' : 'removed from ') + k + '.', u.nome);
+    guardar();
+    return { ok: true };
+  };
+  P.reporMomentos = function (id, u) {
+    if (!P.gereTudo(u)) return { erro: 'No permission.' };
+    var c = P.cat(id);
+    if (!c) return { erro: 'Indicator not found.' };
+    delete c.momentos;
+    if (P.eventoGlobal) P.eventoGlobal('Reporting moments of ' + id + ' back to the default.', u.nome);
+    guardar();
+    return { ok: true };
+  };
+  /* Que indicadores entram numa entrega externa */
+  P.indicadoresEntrega = function (rel) {
+    var t = rel.id.split('-')[0], per = P.periodo(rel.periodo), chaveP = per && per.tipo === 'trimestre' ? 'T' + per.t : null;
+    return S.cat.filter(function (c) { var mo = P.momentosDe(c.id); return mo.ent.indexOf(t) > -1 && (!chaveP || mo.per.indexOf(chaveP) > -1); }).map(function (c) { return c.id; });
+  };
   P.relatoriosDe = function (m) {
     var per = P.periodo(m.periodo), ano = m.ano, l = [];
     var add = function (id) { var r = (S.relatorios || []).filter(function (x) { return x.id === id; })[0]; if (r && l.indexOf(r) < 0) l.push(r); };
     m.indicadores.forEach(function (id) {
-      var c = P.cat(id), us = (c && c.utilizado_por) || [];
-      if (/^A1[23]$/.test(id)) { if (per && per.tipo === 'trimestre') add('QA-' + per.id); add('PCQA-' + ano); }
-      else if (us.indexOf('ERSAR') > -1) add('RQS-' + ano);
-      if (us.indexOf('APA') > -1) add(id === 'N04' ? 'GF-' + ano : 'MIRR-' + ano);
-      if (us.indexOf('CONT') > -1) add('RC-' + ano);
-      if (us.indexOf('REL') > -1 || /^N/.test(id)) add('RS-' + ano);
+      P.momentosDe(id).ent.forEach(function (t) {
+        if (t === 'QA') { if (per && per.tipo === 'trimestre') add('QA-' + per.id); }
+        else add(t + '-' + ano);
+      });
     });
     return l.sort(function (a, b) { return a.data < b.data ? -1 : 1; });
   };
@@ -577,15 +646,16 @@
   };
 
   /* --- Lancar milestones a partir do Backoffice ------------------------------ */
-  /* Indicadores sugeridos: os do plano do departamento com a periodicidade do periodo */
+  /* Indicadores sugeridos: os do departamento que tem este periodo nos seus momentos de report
+     (vem da frequencia de cada indicador, ou do que se marcou em Reporting moments) */
   P.indicadoresSugeridos = function (un, pid) {
-    var per = P.periodo(pid), l = [];
-    (window.PORTAL_PLANO || []).forEach(function (pl) {
-      if (pl.unidade !== un) return;
-      var tri = pl.periodicidade === 'Mensal' || pl.periodicidade === 'Trimestral';
-      if (per && (per.tipo === 'trimestre') === tri) pl.indicadores.forEach(function (id) { if (l.indexOf(id) < 0) l.push(id); });
-    });
-    return l;
+    var per = P.periodo(pid);
+    if (!per) return [];
+    var k = per.tipo === 'trimestre' ? 'T' + per.t : 'A', ordem = [];
+    (window.PORTAL_PLANO || []).forEach(function (pl) { pl.indicadores.forEach(function (id) { if (ordem.indexOf(id) < 0) ordem.push(id); }); });
+    var pos = function (id) { var i = ordem.indexOf(id); return i < 0 ? 9999 : i; };
+    return S.cat.filter(function (c) { return P.donoIndicador(c.id) === un && P.momentosDe(c.id).per.indexOf(k) > -1; })
+      .map(function (c) { return c.id; }).sort(function (a, b) { return pos(a) - pos(b); });
   };
   P.msExistente = function (un, pid) { return S.ms.filter(function (m) { return m.unidade === un && m.periodo === pid && !m.consolida; })[0] || null; };
   P.lancarMilestones = function (cfg, u) {

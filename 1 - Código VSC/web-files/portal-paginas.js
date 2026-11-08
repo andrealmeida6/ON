@@ -985,7 +985,7 @@
   };
 
   /* --- Backoffice -------------------------------------------------------- */
-  var BO = [['indicadores', 'Indicators and milestones'], ['lancar', 'Launch milestones'], ['periodos', 'Reporting periods'], ['materialidade', 'Materiality and frameworks'], ['utilizadores', 'Users and profiles'], ['externas', 'External entities'], ['wfbase', 'Base workflow'], ['calendario', 'Calendar'], ['regras', 'Validation rules'], ['areas', 'Data consumer areas'], ['entidades', 'Companies'], ['departamentos', 'Departments'], ['dados', 'Data and storage']];
+  var BO = [['indicadores', 'Indicators and milestones'], ['lancar', 'Launch milestones'], ['momentos', 'Reporting moments'], ['periodos', 'Reporting periods'], ['materialidade', 'Materiality and frameworks'], ['utilizadores', 'Users and profiles'], ['externas', 'External entities'], ['wfbase', 'Base workflow'], ['calendario', 'Calendar'], ['regras', 'Validation rules'], ['areas', 'Data consumer areas'], ['entidades', 'Companies'], ['departamentos', 'Departments'], ['dados', 'Data and storage']];
   var B = {};
   Blocos['backoffice'] = function () {
     return '<div class="ps-bo"><nav class="ps-bo-tabs" aria-label="Backoffice sections">' + BO.map(function (t) { return '<button type="button" class="ps-bo-tab ' + (U.boTab === t[0] ? 'on' : '') + '" data-a="boTab" data-v="' + t[0] + '"' + (U.boTab === t[0] ? ' aria-current="true"' : '') + '>' + e(t[1]) + '</button>'; }).join('') + '</nav><div class="ps-col">' + B[U.boTab]() + '</div></div>';
@@ -1017,7 +1017,9 @@
   B.indicadores = function () {
     var q = U.indBusca.toLowerCase(), l = S.cat.filter(function (c) { return !q || (c.nome + ' ' + c.id + ' ' + c.unidade_negocio).toLowerCase().indexOf(q) > -1; });
     return '<div class="ps-card">' + cabCartao('Indicators (' + S.cat.length + ')', 'doc') + '<div class="ps-card-body">' + campo('ind-busca', 'Search', '<input id="ind-busca" class="ps-in" value="' + e(U.indBusca) + '" data-c="indBusca">') + '<div class="ps-mt">' + tabela([{ t: 'Indicator' }, { t: 'Unit' }, { t: 'Department' }, { t: 'Type' }, { t: 'Frequency' }, { t: 'Table' }, { t: 'Required evidence' }], l.map(function (c) {
-      return [linkFicha(c.id, c.id + ' ' + c.nome), e(c.unidade_medida), e(c.unidade_negocio), c.tipo === 'derivado' ? 'Derived' : 'Base', e(PERIODO_TXT[c.periodicidade] || c.periodicidade), e(QUADRO_TXT[c.quadro] || c.quadro), '<label class="ps-chk"><input id="evo-' + e(c.id) + '" type="checkbox" data-c="evObrig" data-id="' + e(c.id) + '"' + (c.evidencia_obrigatoria ? ' checked' : '') + '><span class="ps-sr">Required evidence for ' + e(c.nome) + '</span></label>'];
+      var freqs = P.FREQUENCIAS.some(function (f) { return f[0] === c.periodicidade; }) ? P.FREQUENCIAS : P.FREQUENCIAS.concat([[c.periodicidade, PERIODO_TXT[c.periodicidade] || c.periodicidade]]);
+      return [linkFicha(c.id, c.id + ' ' + c.nome), e(c.unidade_medida), e(c.unidade_negocio), c.tipo === 'derivado' ? 'Derived' : 'Base',
+        '<select id="fq-' + e(c.id) + '" class="ps-sel" aria-label="Frequency of ' + e(c.nome) + '" data-c="indFreq" data-id="' + e(c.id) + '">' + freqs.map(function (f) { return opt(f[0], f[1], c.periodicidade); }).join('') + '</select>', e(QUADRO_TXT[c.quadro] || c.quadro), '<label class="ps-chk"><input id="evo-' + e(c.id) + '" type="checkbox" data-c="evObrig" data-id="' + e(c.id) + '"' + (c.evidencia_obrigatoria ? ' checked' : '') + '><span class="ps-sr">Required evidence for ' + e(c.nome) + '</span></label>'];
     }), 'No indicators found.') + '</div></div></div>' +
       '<div class="ps-card">' + cabCartao('Milestones (' + P.msCiclo().length + ')', 'tarefa') + '<div class="ps-card-body">' + tabela([{ t: 'Milestone' }, { t: 'Company' }, { t: 'Assigned to' }, { t: 'Indicators', dir: 1 }, { t: 'Due' }, { t: 'Status' }], P.msCiclo().map(function (m) {
         return ['<a href="' + rota('Milestone/' + m.id) + '">' + e(m.nome) + '</a>', '<select id="bo-emp-' + e(m.id) + '" class="ps-sel" aria-label="Company of ' + e(m.nome) + '" data-c="msEmpresa" data-id="' + e(m.id) + '">' + S.ent.map(function (x) { return opt(x.nome, x.nome, m.empresa); }).join('') + '</select>', P.concluida(m) || P.passoAtual(m).tipo !== 'recolha' ? atribHtml(m) : '<select id="bo-atr-' + e(m.id) + '" class="ps-sel" aria-label="Assigned to, ' + e(m.nome) + '" data-c="msAtrib" data-id="' + e(m.id) + '">' + opt('', m.unidade + ' (department)', m.atribuido_a || '') + P.atribuiveis(m).map(function (x) { return opt(x.login, x.nome, m.atribuido_a || ''); }).join('') + '</select>', m.indicadores.length, '<input id="pz-' + e(m.id) + '" class="ps-in" type="date" aria-label="Due date of ' + e(m.nome) + '" value="' + e(m.prazo) + '" data-c="msPrazo" data-id="' + e(m.id) + '">', estChip(m)];
@@ -1142,6 +1144,25 @@
         (plano.length ? '<ul>' + plano.slice(0, 12).map(function (x) { return '<li class="' + (x.ex ? 'ex' : !x.n ? 'nada' : '') + '">' + e(x.un + ' · ' + x.p.nome) + '<small>' + (x.ex ? 'exists' : x.n ? x.n + ' indicators' : 'no indicators') + '</small></li>'; }).join('') + (plano.length > 12 ? '<li>…</li>' : '') + '</ul>' : '') + '</div>',
       p: '<span class="ps-sp-flex"></span><button type="button" class="ps-btn" data-a="fecharPainel">Cancel</button><button type="button" class="ps-btn pri" data-a="lancConfirmar"' + (novas ? '' : ' disabled') + '>Launch ' + novas + ' milestone(s)</button>'
     };
+  };
+  /* Momentos de report: que indicadores entram em cada periodo e em cada entrega externa */
+  B.momentos = function () {
+    var q = norm(U.momBusca || ''), l = S.cat.filter(function (c) { return !q || norm(c.id + ' ' + c.nome + ' ' + P.donoIndicador(c.id)).indexOf(q) > -1; });
+    var tot = {}, todos = P.MOMENTOS_PER.concat(P.TIPOS_ENTREGA);
+    S.cat.forEach(function (c) { var mo = P.momentosDe(c.id); mo.per.concat(mo.ent).forEach(function (k) { tot[k] = (tot[k] || 0) + 1; }); });
+    var cx = function (c, grupo, k, on, rot) { return '<label class="ps-chk ps-mom-c"><input id="mo-' + e(c.id + '-' + k) + '" type="checkbox" data-c="momento" data-id="' + e(c.id + '|' + grupo + '|' + k) + '"' + (on ? ' checked' : '') + '><span class="ps-sr">' + e(rot + ', ' + c.id) + '</span></label>'; };
+    var linhas = l.map(function (c) {
+      var mo = P.momentosDe(c.id);
+      return [linkFicha(c.id, c.id + ' ' + c.nome) + (mo.proprio ? '<small class="ps-mom-prop" data-fx-ignorar>Custom ·<button type="button" class="ps-btn liga" data-a="momRepor" data-v="' + e(c.id) + '">Reset</button></small>' : ''), e(P.donoIndicador(c.id)), e(PERIODO_TXT[c.periodicidade] || c.periodicidade)]
+        .concat(P.MOMENTOS_PER.map(function (x) { return cx(c, 'per', x[0], mo.per.indexOf(x[0]) > -1, x[1]); }))
+        .concat(P.TIPOS_ENTREGA.map(function (x) { return cx(c, 'ent', x[0], mo.ent.indexOf(x[0]) > -1, x[2]); }));
+    });
+    return '<div class="ps-card">' + cabCartao('Reporting moments', 'cal') + '<div class="ps-card-body">' +
+      '<p class="ps-mut ps-small">Which indicators go into each reporting period and each external delivery. Periods start from the frequency of the indicator; deliveries from the rules of each report. Ticking a box here overrides that for the indicator. Launching milestones, the tags of each milestone and the Outputs page all follow this table. Milestones already launched keep their indicators.</p>' +
+      '<div class="ps-mom-tot ps-mt">' + todos.map(function (x) { return '<span title="' + e(x[2] || x[1]) + '"><b>' + (tot[x[0]] || 0) + '</b>' + e(x[1]) + '</span>'; }).join('') + '</div>' +
+      '<div class="ps-mt">' + campo('mom-busca', 'Search', '<input id="mom-busca" class="ps-in" value="' + e(U.momBusca || '') + '" data-c="momBusca" autocomplete="off">') + '</div>' +
+      '<div class="ps-mt ps-mom">' + tabela([{ t: 'Indicator' }, { t: 'Department' }, { t: 'Frequency' }].concat(P.MOMENTOS_PER.map(function (x) { return { t: x[1] }; })).concat(P.TIPOS_ENTREGA.map(function (x) { return { t: x[1] }; })), linhas, 'No indicators found.') + '</div>' +
+      '<div class="ps-leg ps-mt ps-small">' + P.TIPOS_ENTREGA.map(function (x) { return '<span><b>' + e(x[1]) + '</b> ' + e(x[2]) + '</span>'; }).join('') + '</div></div></div>';
   };
   B.periodos = function () {
     var ano = S.ciclo.ano;
@@ -1375,6 +1396,7 @@
   var val = function (id) { var el = document.getElementById(id); return el ? el.value : ''; };
   var A = {
     entrar: function (d) { P.entrar(d.v); var usr = P.user(d.v); P.irPara(usr.perfil === 'ext' ? 'Pedidos' : 'Inicio'); },
+    momRepor: function (d) { res(P.reporMomentos(d.v, u()), 'Back to the default for ' + d.v + '.'); },
     marcaAbrir: function () { U.menu = null; U.marca = null; U.logoEstado = ''; abrePainel('marca'); },
     ambienteTeste: function () { P.sair(); P.mudarAmbiente(true); },
     ambientePrincipal: function () { P.sair(); P.mudarAmbiente(false); },
@@ -1565,6 +1587,16 @@
     histInd: function (el) { U.histInd = el.value; },
     indBusca: function (el) { U.indBusca = el.value; },
     regraBusca: function (el) { U.regraBusca = el.value; },
+    momBusca: function (el) { U.momBusca = el.value; },
+    indFreq: function (el) {
+      var r = P.mudarFrequencia(el.dataset.id, el.value, u());
+      if (r.erro) return toast(r.erro, 'err');
+      toast('Frequency saved. New milestones follow it' + (r.abertas.length ? '; ' + r.abertas.length + ' open milestone(s) keep it as launched: ' + r.abertas.slice(0, 3).map(function (m) { return m.nome; }).join(', ') + (r.abertas.length > 3 ? '…' : '') : '') + '.', 'ok');
+    },
+    momento: function (el) {
+      var x = el.dataset.id.split('|'), r = P.definirMomento(x[0], x[1], x[2], el.checked, u());
+      if (r.erro) { el.checked = !el.checked; return toast(r.erro, 'err'); }
+    },
     evObrig: function (el) { P.cat(el.dataset.id).evidencia_obrigatoria = el.checked; P.guardar(); },
     msPrazo: function (el) { if (el.value) { var m = P.ms(el.dataset.id); m.prazo = el.value; P.evento(m, 'Due date changed to ' + P.fmtData(el.value) + '.', u().nome); P.guardar(); } },
     matAval: function (el) { S.mat.filter(function (x) { return x.norma === el.dataset.id; })[0].avaliacao = el.value; P.guardar(); },

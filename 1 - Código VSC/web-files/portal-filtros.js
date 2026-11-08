@@ -27,7 +27,10 @@
     if (sel && sel.selectedIndex > -1) return sel.options[sel.selectedIndex].text.trim();
     var inp = td.querySelector('input:not([type=checkbox]):not([type=radio]):not([type=hidden]):not([type=color])');
     if (inp) return inp.type === 'date' ? (inp.value ? P.fmtDataAno(inp.value) : '') : inp.value.trim();
-    var t = td.textContent.replace(/\s+/g, ' ').trim();
+    /* O texto so para leitores de ecra (.ps-sr) e as notas marcadas com data-fx-ignorar nao contam como valor */
+    var cl = td.cloneNode(true);
+    [].forEach.call(cl.querySelectorAll('.ps-sr,[data-fx-ignorar]'), function (x) { x.remove(); });
+    var t = cl.textContent.replace(/\s+/g, ' ').trim();
     var chk = td.querySelector('input[type=checkbox]');
     if (chk && (!t || t === 'Yes')) return chk.checked ? 'Yes' : 'No';
     return t;

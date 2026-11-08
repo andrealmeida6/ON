@@ -30,19 +30,9 @@
     (P.folhasCompletas ? P.folhasCompletas() : []).forEach(function (f) { f.quadros.forEach(function (q) { q.g.forEach(function (g) { g.s.forEach(function (s) { s.r.forEach(function (r) { if (r.k && o.indexOf(r.k) < 0) o.push(r.k); }); }); }); }); });
     return o;
   };
-  P.indicadoresSaida = function (rel) {
-    var t = tipoDe(rel);
-    if (t === 'RC') return idsQuadros();
-    return S.cat.filter(function (c) {
-      var us = c.utilizado_por || [];
-      if (t === 'QA' || t === 'PCQA') return /^A1[23]$/.test(c.id);
-      if (t === 'RQS') return us.indexOf('ERSAR') > -1 && !/^A1[23]$/.test(c.id);
-      if (t === 'MIRR') return us.indexOf('APA') > -1 && /^(R09|R10|R11|R12|N03)$/.test(c.id);
-      if (t === 'GF') return c.id === 'N04';
-      if (t === 'RS') return us.indexOf('REL') > -1;
-      return false;
-    }).map(function (c) { return c.id; });
-  };
+  P.idsQuadros = idsQuadros;
+  /* Os indicadores de cada entrega vem dos momentos de report (Backoffice > Reporting moments) */
+  P.indicadoresSaida = function (rel) { return P.indicadoresEntrega(rel); };
 
   /* Valor de um indicador para a entrega: trimestre, ano, ou o ano a partir dos trimestres */
   var linha = function (rel, id) {

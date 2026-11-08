@@ -287,6 +287,16 @@ Pedido do André a 8 de novembro de 2026.
 - **Datas:** `P.fmtData` e `P.fmtDataHora` dão sempre `dd/mm/aaaa` (e `dd/mm/aaaa hh:mm`), também no calendário e no chat.
 - **Fica por decidir:** os campos de data do navegador (`type="date"`) mostram a data no formato do idioma do navegador, e nomes de indicadores como "a 31/12" são uma referência ao fim do ano, não uma data.
 
+## Frequência, momentos de report e pop-ups
+
+Pedido do André a 8 de novembro de 2026.
+
+- **Frequência:** na tabela Indicators do Backoffice, a coluna Frequency é uma lista (Monthly, Quarterly, Annual). Mensal e trimestral entram nos trimestres; anual entra no Ano. Ao gravar, fica no registo de configuração e a plataforma diz que milestones abertas têm o indicador; essas ficam como foram lançadas.
+- **Reporting moments (Backoffice):** matriz indicador por momento: T1 a T4, Year e as entregas QA, PCQA, RQS, MIRR, GF, R&C e RS. Por omissão, os períodos vêm da frequência e as entregas das regras que já existiam (`P.entregasPadrao`). Marcar ou desmarcar uma caixa grava em `c.momentos` e o indicador fica com a tag "Custom" e um "Reset". Um indicador tem sempre pelo menos um período. Por cima, o total de indicadores por momento; tem pesquisa e os filtros tipo Excel.
+- **Quem usa a matriz:** o lançamento de milestones (`P.indicadoresSugeridos`, por indicador e pelo departamento do plano ou do catálogo), as tags "Feeds" das milestones (`P.relatoriosDe`) e a página Outputs (`P.indicadoresEntrega`). Na QA trimestral entra o indicador que tem a QA e esse trimestre.
+- **Supabase:** `009_esg_momentos_report.sql` acrescenta `momentos` (jsonb) a `esg_indicadores`; a sincronização já a escreve.
+- **Pop-ups:** todos os painéis laterais (lançar milestones, ficha do indicador, folhas dos pedidos, marca, tipos, workflow, comentários) abrem ao centro, por cima da página. No telemóvel ocupam o ecrã inteiro. Só mudou o CSS (`[data-painel] .ps-pan`).
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.
