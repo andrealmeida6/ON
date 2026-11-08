@@ -73,7 +73,7 @@
       (pode ? '<button type="button" class="ps-btn peq" data-a="defEditar" data-v="' + e(id) + '">Edit</button>' : '') + '</span></div>' +
       (st.mudou ? '<div class="ps-aviso warn"><b>What changed in ' + ano + '.</b> ' + e(alt.filter(function (x) { return x.ano === ano; })[0].txt) + '</div>' : '') +
       '<dl class="ps-def-l"><dt>What counts</dt><dd>' + (d.inclui ? e(d.inclui) : falta) + '</dd><dt>What does not count</dt><dd>' + (d.exclui ? e(d.exclui) : falta) + '</dd>' +
-      '<dt>Source</dt><dd>' + (d.fonte ? e(d.fonte) : falta) + '</dd><dt>Owner</dt><dd>' + e(dn.unidade || '-') + (dn.pessoa ? ' · ' + e(dn.pessoa) : '') + '</dd>' +
+      '<dt>Source</dt><dd>' + (d.fonte ? e(d.fonte) : falta) + '</dd><dt>Owner</dt><dd class="ps-dono">' + (dn.unidade ? P.depHtml(dn.unidade) : '-') + (dn.pessoa ? '<span class="ps-dono-sep">:</span>' + P.pessHtml(dn.pessoa) : '') + '</dd>' +
       '<dt>Calculation</dt><dd>' + calc + '</dd>' +
       '<dt>Changes from previous years</dt><dd>' + (alt.length ? '<ul class="ps-def-alt">' + alt.map(function (x) { return '<li><b>' + x.ano + '</b> ' + e(x.txt) + '</li>'; }).join('') + '</ul>' : 'No changes. Same definition as ' + (ano - 1) + '.') + '</dd></dl>' +
       (st.d ? '<p class="ps-small ps-mut">Last changed ' + e(P.fmtDataAno(d.em)) + ' by ' + e(d.por) + '.</p>' : '') + '</section>';
@@ -91,7 +91,7 @@
   X.Pn.defEditar = function (a) {
     var id = a.id, c = P.cat(id), d = (S.defs || {})[id] || {}, ano = S.ciclo.ano, alt = (d.alteracoes || []).filter(function (x) { return x.ano === ano; })[0];
     return {
-      t: 'Edit definition', s: id + ' · ' + c.nome,
+      t: 'Edit definition', s: id + ': ' + c.nome,
       b: '<p class="ps-small ps-mut">Everyone who fills in, reviews or audits this indicator reads this. Write it in plain words.</p><div class="ps-form ps-form-1">' +
         campo('df-i', 'What counts', '<textarea id="df-i" class="ps-ta">' + e(d.inclui || '') + '</textarea>') +
         campo('df-x', 'What does not count', '<textarea id="df-x" class="ps-ta">' + e(d.exclui || '') + '</textarea>') +

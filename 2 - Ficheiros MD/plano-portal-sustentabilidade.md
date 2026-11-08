@@ -314,6 +314,19 @@ Pedido do André a 8 de novembro de 2026.
 - **Atribuição no lançamento:** o passo 3 passa a "Who it is assigned to and what is asked". Cada departamento tem "Assigned to" com o departamento inteiro ou os responsáveis desse departamento. O resumo final mostra a quem fica cada milestone. Ao lançar, a milestone regista "Assigned to ...".
 - **Avatares em toda a plataforma:** pessoas com uma bolinha com as iniciais do primeiro e do último nome (`pessHtml`, `avPessoa`); departamentos com o símbolo de uma equipa (`depHtml`, `avEquipa`). Usados nas listas e tabelas de milestones (Assigned to e tags), no lançamento, nos departamentos das tabelas do Backoffice, na lista de utilizadores, no mapa de cobertura e na atribuição de KPIs. Os filtros das tabelas leem o nome e ignoram as iniciais (`data-fx-ignorar`).
 
+## Requested data único, pull com pop-up e atribuição no workflow
+
+Pedido do André a 8 de novembro de 2026.
+
+- **Sem "·":** a plataforma deixou de usar o ponto do meio. ":" entre um grupo e o que lhe pertence (Recursos Humanos: Inês Faria, Operações: T1 2026, passo: responsável); vírgula nas listas; o tempo até ao prazo entre parênteses (12/02/2027 (in 96 days)).
+- **Nomes:** `quemHtml` mostra a bolinha com as iniciais nas pessoas, o símbolo de equipa nos departamentos e equipas, e nada em "System". Usado no workflow, no histórico, nos comentários, nos documentos, nas versões, nos ficheiros entregues, nas saídas e no Owner da definição.
+- **Requested data:** junta o que eram "Data from the systems", "Calculations" e "Requested data". Em cima, "Source data": cada dado com a unidade, "Used by" (com "i"), o sistema e o seu estado, e o valor editável (marcado "From the system" ou "Typed"). Em baixo, os indicadores: os que se calculam das fontes ficam sombreados, sem campo, com a fórmula e os valores; os outros escrevem-se. Mudar uma fonte recalcula logo (`P.sincronizarCalculados`, com `it.daFonte`).
+- **Pull data from the systems:** só fica ativo se algum sistema da milestone estiver ligado; senão aparece desativado com a explicação. Abre um pop-up com a data da última atualização (ou "Live data"), o estado de cada sistema, o que vai ser preenchido (agora e depois) e os indicadores que ficam calculados; "Fill in" aplica. Depois pode-se editar cada valor ou "Clear source data", que esvazia também o que foi calculado, enquanto a milestone está em recolha. Tudo fica no histórico.
+- **Ligações:** cada sistema tem estado e frequência (Live, uma vez por hora, por dia, por semana, por mês). Na demonstração: Telemetria em tempo real; sistema financeiro, LIMS e CRM uma vez por dia; RH e gestão ambiental à espera de credenciais. O administrador muda o estado em Connections to other systems.
+- **Atribuição no workflow:** por baixo de "Current" aparece quem tem a milestone e um lápis; nos Details também. Abre um pop-up com o departamento e as pessoas; gravar regista "Assigned to ..." no histórico.
+- **Barra de ação:** "Submit milestone" (ou devolver e aprovar, na revisão) fica sempre visível no fundo do ecrã, com quantos indicadores têm valor e o que falta.
+- **Separadores Work e Data store:** sem barra de deslocamento vertical.
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.

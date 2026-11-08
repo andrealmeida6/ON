@@ -191,32 +191,150 @@
   };
   P.CAMPOS_FONTE = CAMPOS; P.BASES_DADOS = DBS;
 
+  /* --- Ligacoes aos sistemas --------------------------------------------------
+     So se puxa de um sistema ligado. Cada ligacao diz de quanto em quanto tempo sincroniza;
+     o pop-up mostra a data da ultima atualizacao quando nao e em tempo real. */
+  var API_DB = { api1: 'erp', api2: 'rh', api3: 'tele', api4: 'lab', api5: 'com', api6: 'amb' };
+  P.FREQ_LIGACAO = { Live: 'Live', Hourly: 'Synced every hour', Daily: 'Synced once a day', Weekly: 'Synced once a week', Monthly: 'Synced once a month' };
+  P.ligacaoDe = function (db) { return (S.apis || []).filter(function (a) { return (a.db || API_DB[a.id]) === db; })[0] || null; };
+  P.ligada = function (db) { var a = P.ligacaoDe(db); return !!(a && a.estado === 'ligada'); };
+  P.ultimaSync = function (a) {
+    var d = new Date(), f = a && a.frequencia;
+    if (f === 'Live') return { live: true, em: d.toISOString() };
+    if (f === 'Hourly') d.setMinutes(0, 0, 0);
+    else {
+      var antes = d.getHours() < 6; d.setHours(6, 0, 0, 0);
+      if (f === 'Monthly') d.setDate(1);
+      else if (f === 'Weekly') d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+      else if (antes) d.setDate(d.getDate() - 1);
+      if (d > new Date()) d.setMonth(d.getMonth() - (f === 'Monthly' ? 1 : 0));
+    }
+    return { live: false, em: d.toISOString() };
+  };
+  /* Texto do estado de um sistema: "Live", "Last update 08/11/2026 06:00" ou "Not connected" */
+  P.estadoSistema = function (db) {
+    var a = P.ligacaoDe(db);
+    if (!a || a.estado !== 'ligada') return { ligada: false, txt: 'Not connected', sub: a ? 'Waiting for credentials' : 'No connection set up' };
+    var s = P.ultimaSync(a);
+    return { ligada: true, live: s.live, em: s.em, txt: s.live ? 'Live' : 'Last update ' + P.fmtDataHora(s.em), sub: P.FREQ_LIGACAO[a.frequencia] || a.frequencia };
+  };
+  P.dbsMilestone = function (m) { var o = []; P.camposMilestone(m).forEach(function (k) { var db = CAMPOS[k].db; if (o.indexOf(db) < 0) o.push(db); }); return o; };
+  P.podePuxarSistemas = function (m) { return P.dbsMilestone(m).some(P.ligada); };
+
+  /* --- Valores das fontes: puxados, escritos, limpos -------------------------- */
+  var estadoFonte = function (m) { if (!S.puxados) S.puxados = {}; return S.puxados[m.id] || (S.puxados[m.id] = { em: null, por: null, vals: {}, registos: 0, editados: {} }); };
+  /* O que o pull vai trazer, campo a campo, sem gravar nada */
+  P.previewPuxar = function (m) {
+    var px = (S.puxados || {})[m.id];
+    return P.camposMilestone(m).map(function (k) {
+      var f = CAMPOS[k], lig = P.ligada(f.db), regs = lig ? P.registosCampo(k, m) : [];
+      return { k: k, f: f, db: f.db, ligada: lig, atual: px && px.vals[k] !== undefined ? px.vals[k] : null, novo: lig ? agregarRegistos(k, regs) : null, registos: regs.length };
+    });
+  };
+  /* Indicadores que se calculam com os valores atuais das fontes: grava-os; os que deixam de se calcular ficam vazios */
+  P.sincronizarCalculados = function (m, usr) {
+    var n = 0;
+    P.calculosMilestone(m).forEach(function (r) {
+      if (!r.x) return;
+      var it = P.item(r.id, P.chave(m));
+      if (r.valor !== null) {
+        if (it.valor !== r.valor || !it.daFonte) { P.gravarValor(m, r.id, String(r.valor).replace('.', ','), usr, DERIV[r.id] ? 'calculated from the source data' : 'source data'); n++; }
+        it.daFonte = true; it.qualidade = DERIV[r.id] ? 'calculado' : 'medido'; it.metodo = '';
+      } else if (it.daFonte) { P.gravarValor(m, r.id, '', usr); it.daFonte = false; n++; }
+    });
+    return n;
+  };
+  P.aplicarPuxar = function (m, usr) {
+    if (!podePuxar(m, usr)) return { erro: 'You can only pull data while the milestone is in collection with you.' };
+    var l = P.previewPuxar(m).filter(function (x) { return x.ligada && x.novo !== null; });
+    if (!l.length) return { erro: 'None of the systems of this milestone is connected.' };
+    var st = estadoFonte(m), regs = 0, dbs = {};
+    l.forEach(function (x) { st.vals[x.k] = x.novo; delete (st.editados || {})[x.k]; regs += x.registos; dbs[x.db] = 1; });
+    st.em = new Date().toISOString(); st.por = usr.nome; st.registos = regs;
+    var n = P.sincronizarCalculados(m, usr);
+    P.evento(m, 'Data pulled from ' + Object.keys(dbs).map(function (b) { return DBS[b] + ' (' + P.estadoSistema(b).txt + ')'; }).join(', ') + ': ' + l.length + ' data items, ' + n + ' indicator(s) calculated.', usr.nome);
+    P.guardar();
+    return { campos: l.length, indicadores: n };
+  };
+  P.definirFonte = function (m, k, bruto, usr) {
+    if (!podePuxar(m, usr)) return { erro: 'This milestone is read only for you right now.' };
+    var s = String(bruto === null || bruto === undefined ? '' : bruto).trim(), st = estadoFonte(m), v = s === '' ? null : P.lerNumero(s);
+    if (s !== '' && v === null) return { erro: 'Enter a number.' };
+    if (v === null) delete st.vals[k]; else st.vals[k] = v;
+    (st.editados || (st.editados = {}))[k] = 1;
+    P.sincronizarCalculados(m, usr);
+    P.guardar();
+    return { ok: true };
+  };
+  P.limparFontes = function (m, usr) {
+    if (!podePuxar(m, usr)) return { erro: 'This milestone is read only for you right now.' };
+    if (S.puxados) delete S.puxados[m.id];
+    var n = P.sincronizarCalculados(m, usr);
+    P.evento(m, 'Source data cleared' + (n ? '; ' + n + ' calculated value(s) emptied' : '') + '.', usr.nome);
+    P.guardar();
+    return { n: n };
+  };
+  P.calculoDe = function (m, id) { return P.calculosMilestone(m).filter(function (r) { return r.id === id; })[0] || null; };
+
   /* --- Ecra ------------------------------------------------------------------ */
   var num = function (v) { return v === null || v === undefined ? '-' : P.fmtNum(v, Math.abs(v) < 10 ? 3 : 2); };
+  var indsDe = function (m, k) { return porCampo(m, k).map(function (id) { return '<button type="button" class="ps-btn liga" data-a="ficha" data-v="' + e(id) + '">' + e(id) + '</button>'; }).join(', '); };
+  /* Botoes do cartao Requested data: puxar (so com ligacao) e limpar */
+  P.fontesAcoes = function (m) {
+    var usr = u(), pode = podePuxar(m, usr), px = (S.puxados || {})[m.id], tem = px && Object.keys(px.vals || {}).length;
+    if (!pode || !P.camposMilestone(m).length) return '';
+    var puxar = P.podePuxarSistemas(m) ? '<button type="button" class="ps-btn pri peq" data-a="fdAbrir">Pull data from the systems</button>'
+      : '<span class="ps-tip-alvo" tabindex="0" data-tip="None of the systems this milestone uses is connected yet, so the data has to be typed in. The administrator connects them in Connections to other systems."><button type="button" class="ps-btn peq" disabled>Pull data from the systems</button></span>';
+    return puxar + (tem ? '<button type="button" class="ps-btn peq" data-a="fdLimpar">Clear source data</button>' : '');
+  };
+  /* Bloco "Source data" dentro de Requested data: o que cada indicador usa, de que sistema vem e o valor, editavel */
   P.fontesHtml = function (m) {
     var usr = u(), pode = podePuxar(m, usr), px = (S.puxados || {})[m.id], ks = P.camposMilestone(m);
-    /* Na milestone so aparece o que o contribuidor precisa: o que e cada dado, de onde vem em termos simples e o valor. Campos tecnicos e API ficam no backoffice. */
+    if (!ks.length) return '';
+    var ed = (px && px.editados) || {};
     var linhas = ks.map(function (k) {
-      var f = CAMPOS[k], v = px ? px.vals[k] : null, regs = px ? P.registosCampo(k, m) : [];
-      return [e(f.rot), e(unidade(f)), porCampo(m, k).map(function (id) { return '<button type="button" class="ps-btn liga" data-a="ficha" data-v="' + e(id) + '">' + e(id) + '</button>'; }).join(', '),
-        px ? '<details class="fd-reg"><summary class="ps-num"><b>' + e(num(v)) + '</b> <small class="ps-mut">' + regs.length + ' records</small></summary><table class="fd-reg-t"><thead><tr><th>Period</th><th>Reference</th><th class="dir">Value</th></tr></thead><tbody>' + regs.map(function (r) { return '<tr><td>' + e(r.periodo) + '</td><td class="ps-mono">' + e(r.ref) + '</td><td class="dir ps-num">' + e(num(r.valor)) + '</td></tr>'; }).join('') + '</tbody></table></details>' : '<span class="ps-mut">Not pulled</span>'];
+      var f = CAMPOS[k], v = px && px.vals[k] !== undefined ? px.vals[k] : null, st = P.estadoSistema(f.db);
+      var orig = v === null ? '' : ed[k] ? '<small class="fd-orig ed" data-fx-ignorar>Typed</small>' : '<small class="fd-orig" data-fx-ignorar>From the system</small>';
+      return [e(f.rot), e(unidade(f)), indsDe(m, k),
+        '<span class="fd-sis' + (st.ligada ? '' : ' off') + '">' + e(DBS[f.db]) + '<small data-fx-ignorar>' + e(st.txt) + '</small></span>',
+        pode ? '<span class="fd-val"><input id="fd-' + e(k) + '" class="ps-in ps-num fd-in' + (ed[k] ? ' ed' : '') + '" inputmode="decimal" autocomplete="off" aria-label="' + e(f.rot) + '" value="' + e(v === null ? '' : String(Number(v.toFixed(4))).replace('.', ',')) + '" data-c="fdValor" data-id="' + e(k) + '">' + orig + '</span>'
+          : (v === null ? '<span class="ps-mut">-</span>' : '<b class="ps-num">' + e(num(v)) + '</b>' + orig)];
     });
-    var calc = P.calculosMilestone(m), prontos = calc.filter(function (r) { return r.valor !== null; }).length;
-    var linhasC = calc.map(function (r) {
-      var c = P.cat(r.id), it = P.item(r.id, P.chave(m)), igual = r.valor !== null && it.valor === r.valor;
-      return [e(c.nome) + '<br><small class="ps-mut">' + e(r.id) + ' · ' + e(c.unidade_medida) + '</small>', '<span class="fd-f">' + e(P.formulaTxt(r.id)) + '</span>',
-        r.x ? '<span class="ps-mono ps-small">' + e(r.subst) + '</span>' : '-', r.valor === null ? '<span class="ps-mut">' + (r.erro ? e(r.erro) : r.x ? 'Pull the data' : '-') + '</span>' : '<b class="ps-num">' + e(fmtV(r.id, r.valor)) + '</b>',
-        it.valor === null ? '<span class="ps-mut">-</span>' : '<span class="ps-num">' + e(fmtV(r.id, it.valor)) + '</span>',
-        r.valor === null ? '' : igual ? chip('In use', 'ok') : pode ? '<button type="button" class="ps-btn peq" data-a="fdUsar" data-v="' + e(r.id) + '">Use</button>' : chip('Differs', 'warn')];
-    });
-    return '<div class="ps-card">' + cabCartao('Data from the systems', 'ativ', pode ? '<button type="button" class="ps-btn pri peq" data-a="fdPuxar">' + (px ? 'Pull again' : 'Pull data') + '</button>' : '') + '<div class="ps-card-body">' +
-      '<p class="ps-small ps-mut">' + (px ? 'Last pull ' + e(P.fmtDataHora(px.em)) + ' by ' + e(px.por) + ', ' + px.registos + ' records.' : 'This is the data the indicators of this milestone are calculated from. Pull it to fill in the values.') + '</p>' +
-      tabela([{ t: 'Data' }, { t: 'Unit' }, { t: 'Used by' }, { t: 'Value ' + m.ano }], linhas, 'No data for this milestone.') + '</div></div>' +
-      '<div class="ps-card">' + cabCartao('Calculations', 'tarefa', pode && prontos ? '<button type="button" class="ps-btn pri peq" data-a="fdPreencher">Fill in ' + prontos + ' calculated value' + (prontos > 1 ? 's' : '') + '</button>' : '') + '<div class="ps-card-body">' +
-      tabela([{ t: 'Indicator' }, { t: 'Formula' }, { t: 'With the source values' }, { t: 'Result' }, { t: 'Current value' }, { t: '' }], linhasC) + '</div></div>';
+    var nota = px && px.em ? 'Last pull ' + P.fmtDataHora(px.em) + ' by ' + px.por + '.' : pode ? 'Pull the data from the systems or type it in. The indicators below that are calculated from it fill in by themselves.' : 'Data the indicators of this milestone are calculated from.';
+    return '<div class="fd-bloco"><div class="fd-bloco-h"><h3>Source data</h3><span class="ps-small ps-mut">' + e(nota) + '</span></div>' +
+      tabela([{ t: 'Data' }, { t: 'Unit' }, { t: 'Used by', info: 'The indicators of this milestone that are calculated from this data. Change the value here and they update by themselves. Click an indicator to see its definition and formula.' }, { t: 'System' }, { t: 'Value ' + P.rotPeriodo(m) }], linhas) + '</div>';
   };
-  A.fdPuxar = function () { var m = X.msAtual(), r = P.puxarDados(m, u()); if (r.erro) return toast(r.erro, 'err'); toast(r.campos + ' data items pulled, ' + r.registos + ' records.', 'ok'); R(); };
-  A.fdPreencher = function () { var m = X.msAtual(), r = P.preencherCalculados(m, u()); if (r.erro) return toast(r.erro, 'err'); toast(r.n + ' value(s) filled in. Check the alerts before submitting.', 'ok'); R(); };
-  A.fdUsar = function (d) { var m = X.msAtual(), r = P.preencherCalculados(m, u(), [d.v]); if (r.erro) return toast(r.erro, 'err'); toast('Value filled in.', 'ok'); R(); };
+  /* Pop-up do pull: data da ultima atualizacao, o que vai preencher e o resultado nos indicadores */
+  X.Pn.puxar = function () {
+    var m = X.msAtual(), l = P.previewPuxar(m), lig = l.filter(function (x) { return x.ligada; }), dbs = P.dbsMilestone(m);
+    var sts = dbs.map(function (db) { return { db: db, st: P.estadoSistema(db) }; }), ligs = sts.filter(function (x) { return x.st.ligada; });
+    var naoLive = ligs.filter(function (x) { return !x.st.live; }).sort(function (a, b) { return a.st.em < b.st.em ? -1 : 1; });
+    var topo = !ligs.length ? 'No system is connected.' : naoLive.length ? 'Last update of the data: ' + P.fmtDataHora(naoLive[0].st.em) : 'Live data, as of ' + P.fmtDataHora(new Date().toISOString());
+    var sobre = {}; lig.forEach(function (x) { sobre[x.k] = x.novo; });
+    var depois = P.calculosMilestone(m, sobre).filter(function (r) { return r.x; });
+    var muda = lig.filter(function (x) { return x.atual === null || Math.abs(x.atual - x.novo) > 1e-9; }).length;
+    return {
+      t: 'Pull data from the systems', s: m.nome, largo: true,
+      b: '<div class="fd-topo' + (naoLive.length ? '' : ' live') + '"><b>' + e(topo) + '</b><span>' + (naoLive.length ? 'These systems are not live: what comes in is what they had at their last update.' : 'The systems send their data as it happens.') + '</span></div>' +
+        '<div class="fd-sis-l">' + sts.map(function (x) { return '<span class="fd-sis-c' + (x.st.ligada ? (x.st.live ? ' live' : '') : ' off') + '"><b>' + e(DBS[x.db]) + '</b><small>' + e(x.st.txt) + (x.st.ligada && !x.st.live ? ': ' + e(x.st.sub) : '') + '</small></span>'; }).join('') + '</div>' +
+        '<h3 class="ps-grupo-t">What will be filled in</h3>' +
+        tabela([{ t: 'Data' }, { t: 'System' }, { t: 'Now', dir: 1 }, { t: 'From the system', dir: 1 }], l.map(function (x) {
+          var mud = x.ligada && (x.atual === null || Math.abs(x.atual - x.novo) > 1e-9);
+          return { attrs: 'class="' + (x.ligada ? (mud ? 'fd-mud' : '') : 'fd-off') + '"', celulas: [e(x.f.rot) + ' <small class="ps-mut">' + e(unidade(x.f)) + '</small>', e(DBS[x.db]), x.atual === null ? '<span class="ps-mut">-</span>' : e(num(x.atual)), x.ligada ? '<b>' + e(num(x.novo)) + '</b>' : '<span class="ps-mut">Not connected</span>'] };
+        })) +
+        (depois.length ? '<h3 class="ps-grupo-t">Indicators calculated with these values</h3>' + tabela([{ t: 'Indicator' }, { t: 'Formula' }, { t: 'Now', dir: 1 }, { t: 'After', dir: 1 }], depois.map(function (r) {
+          var it = P.item(r.id, P.chave(m));
+          return [e(r.id + ' ' + P.cat(r.id).nome), '<span class="ps-small">' + e(P.formulaTxt(r.id)) + '</span>', it.valor === null ? '<span class="ps-mut">-</span>' : e(fmtV(r.id, it.valor)), r.valor === null ? '<span class="ps-mut">Still missing data</span>' : '<b class="fd-calc">' + e(fmtV(r.id, r.valor)) + '</b>'];
+        })) : '') +
+        '<p class="ps-small ps-mut ps-mt">After filling in you can still change any value, or clear the source data, while the milestone is in collection.</p>',
+      p: '<span class="ps-sp-flex"></span><button type="button" class="ps-btn" data-a="fecharPainel">Cancel</button><button type="button" class="ps-btn pri" data-a="fdAplicar"' + (lig.length ? '' : ' disabled') + '>Fill in ' + lig.length + ' value' + (lig.length === 1 ? '' : 's') + (muda && muda < lig.length ? ' (' + muda + ' change)' : '') + '</button>'
+    };
+  };
+  A.fdAbrir = function () { X.abrePainel('puxar', {}); };
+  A.fdAplicar = function () { var m = X.msAtual(), r = P.aplicarPuxar(m, u()); if (r.erro) return toast(r.erro, 'err'); X.U.painel = null; toast(r.campos + ' values filled in, ' + r.indicadores + ' indicator(s) calculated. You can still change them.', 'ok'); R(); };
+  A.fdLimpar = function () { var m = X.msAtual(); if (!window.confirm('Clear the source data of this milestone? The values calculated from it are emptied too.')) return; var r = P.limparFontes(m, u()); if (r.erro) return toast(r.erro, 'err'); toast('Source data cleared.', 'ok'); R(); };
+  X.C.fdValor = function (el) { var r = P.definirFonte(X.msAtual(), el.dataset.id, el.value, u()); if (r.erro) toast(r.erro, 'err'); };
+  /* Compatibilidade: o pull direto continua a existir para as folhas dos pedidos */
+  A.fdPuxar = A.fdAbrir;
   A.fdSchema = function () { var m = X.msAtual(); P.descarregar('data-fields-' + m.id + '.json', JSON.stringify(P.schemaCampos(m), null, 2), 'application/json'); };
 })();

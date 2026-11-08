@@ -62,7 +62,7 @@
   var compositor = function (pref, m, indFixo) {
     var inds = m.indicadores;
     return '<div class="ps-cm-comp"><div class="ps-cm-comp-t"><span class="ps-cm-passo agora" title="This comment will be tagged with the current step">' + svg(I.relogio || I.cal, 11) + e(passoDe(m)) + '</span>' +
-      (indFixo ? '<span class="ps-cm-ind">' + e(indFixo) + '</span>' : '<label class="ps-sr" for="' + pref + '-ind">About</label><select id="' + pref + '-ind" class="ps-cm-sel" data-c="cmInd" data-id="' + pref + '"><option value="">Whole milestone</option>' + inds.map(function (id) { return '<option value="' + e(id) + '"' + ((U.cmInd || {})[pref] === id ? ' selected' : '') + '>' + e(id + ' · ' + P.cat(id).nome) + '</option>'; }).join('') + '</select>') + '</div>' +
+      (indFixo ? '<span class="ps-cm-ind">' + e(indFixo) + '</span>' : '<label class="ps-sr" for="' + pref + '-ind">About</label><select id="' + pref + '-ind" class="ps-cm-sel" data-c="cmInd" data-id="' + pref + '"><option value="">Whole milestone</option>' + inds.map(function (id) { return '<option value="' + e(id) + '"' + ((U.cmInd || {})[pref] === id ? ' selected' : '') + '>' + e(id + ': ' + P.cat(id).nome) + '</option>'; }).join('') + '</select>') + '</div>' +
       '<div class="ps-cm-comp-b"><label class="ps-sr" for="' + pref + '-txt">Message</label><textarea id="' + pref + '-txt" class="ps-cm-txt" rows="1" placeholder="Write a message" data-enviar="' + pref + '">' + e((U.cmRasc || {})[pref] || '') + '</textarea>' +
       '<button type="button" class="ps-cm-env" data-a="cmEnviar" data-v="' + pref + '" aria-label="Send">' + svg('<path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4z"/>', 18) + '</button></div></div>';
   };
@@ -70,7 +70,7 @@
   /* --- Conversa na milestone ----------------------------------------------- */
   X.sepConversa = function (m) {
     var usr = u(), lista = P.comentariosDe(m);
-    var evs = m.eventos.slice().reverse().map(function (x) { return '<li>' + e(x.texto) + '<small>' + e(x.por) + ' · ' + e(P.fmtDataHora(x.em)) + '</small></li>'; }).join('');
+    var evs = m.eventos.slice().reverse().map(function (x) { return '<li>' + e(x.texto) + '<small>' + P.quemHtml(x.por) + ', ' + e(P.fmtDataHora(x.em)) + '</small></li>'; }).join('');
     return '<div class="ps-card">' + X.cabCartao('Conversation', 'ativ', '<button type="button" class="ps-btn liga" data-a="chatAbrir" data-v="' + e(m.id) + '">Open in chat</button>') +
       '<ul class="ps-cm-lista ps-cm-ms" aria-label="Comments">' + (P.htmlMensagens(lista, usr) || '<li class="ps-cm-vazio">No comments yet. Each comment is tagged with the workflow step it was written in.</li>') + '</ul>' + compositor('msc', m) + '</div>' +
       '<div class="ps-card">' + X.cabCartao('History', 'cal') + '<ul class="ps-ev">' + evs + '</ul></div>';
@@ -83,7 +83,7 @@
   X.Pn.comInd = function (a) {
     var m = P.ms(a.m), c = P.cat(a.id), usr = u(), lista = P.comentariosDe(m, a.id);
     return {
-      t: c.nome, s: a.id + ' · ' + m.nome,
+      t: c.nome, s: a.id + ': ' + m.nome,
       b: '<ul class="ps-cm-lista ps-cm-pan" aria-label="Comments on ' + e(c.nome) + '">' + (P.htmlMensagens(lista, usr) || '<li class="ps-cm-vazio">No comments on this indicator yet.</li>') + '</ul>' + compositor('cmi', m, a.id),
       p: '<button type="button" class="ps-btn liga" data-a="chatAbrir" data-v="' + e(m.id) + '">See the whole conversation</button><span class="ps-sp-flex"></span><button type="button" class="ps-btn" data-a="fecharPainel">Close</button>'
     };
@@ -116,7 +116,7 @@
       return '<li><button type="button" class="ps-ch-it' + (ativa && ativa.id === m.id ? ' on' : '') + '" data-a="chatMs" data-v="' + e(m.id) + '">' +
         '<span class="ps-ch-av" style="--c:' + cor(m.unidade) + '" aria-hidden="true">' + e(sigla(m.unidade)) + '</span>' +
         '<span class="ps-ch-it-c"><span class="ps-ch-it-l1"><b>' + e(m.nome) + '</b><time>' + (l ? e(hora(l.em)) : '') + '</time></span>' +
-        '<span class="ps-ch-it-l2"><span class="ps-ch-prev">' + (l ? (l.autor === usr.nome ? 'You: ' : e(l.autor.split(' ')[0]) + ': ') + e(l.texto) : '<i>' + e(est.txt) + ' · no messages yet</i>') + '</span>' + (k ? '<span class="ps-ch-n" aria-label="' + k + ' unread">' + k + '</span>' : '') + '</span></span></button></li>';
+        '<span class="ps-ch-it-l2"><span class="ps-ch-prev">' + (l ? (l.autor === usr.nome ? 'You: ' : e(l.autor.split(' ')[0]) + ': ') + e(l.texto) : '<i>' + e(est.txt) + ', no messages yet</i>') + '</span>' + (k ? '<span class="ps-ch-n" aria-label="' + k + ' unread">' + k + '</span>' : '') + '</span></span></button></li>';
     }).join('');
     var FILTROS = [['todas', 'All'], ['ativas', 'With messages'], ['porLer', 'Unread'], ['comigo', 'With me']];
     var esq = '<div class="ps-ch-esq"><div class="ps-ch-esq-h"><h2>Chats</h2><span>' + lista.length + ' milestones</span></div>' +
@@ -128,7 +128,7 @@
     else {
       var est = P.estadoMs(ativa), msgs = P.comentariosDe(ativa);
       dir = '<div class="ps-ch-dir"><div class="ps-ch-dir-h"><button type="button" class="ps-ch-volta" data-a="chatVolta" aria-label="Back to chats">' + svg('<path d="m15 18-6-6 6-6"/>', 20) + '</button>' +
-        '<span class="ps-ch-av" style="--c:' + cor(ativa.unidade) + '" aria-hidden="true">' + e(sigla(ativa.unidade)) + '</span><div class="ps-ch-dir-t"><b>' + e(ativa.nome) + '</b><span>' + (P.tagPer ? P.tagPer(ativa) : '') + ' ' + e(ativa.unidade) + ' · ' + e(est.txt) + '</span></div>' +
+        '<span class="ps-ch-av" style="--c:' + cor(ativa.unidade) + '" aria-hidden="true">' + e(sigla(ativa.unidade)) + '</span><div class="ps-ch-dir-t"><b>' + e(ativa.nome) + '</b><span>' + (P.tagPer ? P.tagPer(ativa) : '') + ' ' + e(ativa.unidade) + ', ' + e(est.txt) + '</span></div>' +
         '<a class="ps-btn peq" href="' + rota('Milestone/' + ativa.id) + '" data-a="chatIr">Open</a></div>' +
         '<ul class="ps-cm-lista ps-ch-msgs" aria-label="Messages" aria-live="polite">' + (P.htmlMensagens(msgs, usr) || '<li class="ps-cm-vazio">No messages yet. Say what you need: the message is tagged with “' + e(passoDe(ativa)) + '”.</li>') + '</ul>' + compositor('chc', ativa) + '</div>';
     }

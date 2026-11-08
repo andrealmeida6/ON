@@ -485,6 +485,8 @@
     Object.keys(CHAVES).forEach(function (n) { S[n] = ler(CHAVES[n]); });
     /* Os pedidos de dados aceitam so Excel, tambem nos dados ja gravados neste navegador */
     (S.tipos || []).forEach(function (t) { t.formatos = ['xlsx']; });
+    /* Ligacoes gravadas antes de terem estado: passam a ter o estado de base */
+    if ((S.apis || []).length && !S.apis.some(function (a) { return a.db; }) && P.ligacoesBase) S.apis = P.ligacoesBase();
     if (P.garantirEsrs) P.garantirEsrs();
   };
   /* Gera os dados de demonstracao sem tocar no armazenamento: serve o carregamento inicial do Supabase */
@@ -667,9 +669,9 @@
       cfg.periodos.forEach(function (pid) {
         var per = P.periodo(pid);
         if (!per) return;
-        if (P.msExistente(un, pid)) { ignoradas.push(un + ' · ' + per.nome); return; }
+        if (P.msExistente(un, pid)) { ignoradas.push(un + ': ' + per.nome); return; }
         var inds = (cfg.indicadores && cfg.indicadores[un]) || P.indicadoresSugeridos(un, pid);
-        if (!inds.length) { ignoradas.push(un + ' · ' + per.nome + ' (no indicators)'); return; }
+        if (!inds.length) { ignoradas.push(un + ': ' + per.nome + ' (no indicators)'); return; }
         var id = 'M' + String(num).padStart(2, '0') + (per.tipo === 'trimestre' ? '-T' + per.t : '');
         while (P.ms(id)) id += 'b';
         var m = {

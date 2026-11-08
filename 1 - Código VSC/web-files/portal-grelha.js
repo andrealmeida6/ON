@@ -56,8 +56,8 @@
     if (at) at.classList.add('ativa');
     var x = cel(cfg, s.r, s.c), ref = el.querySelector('[data-gr-ref]'), val = el.querySelector('[data-gr-val]'), sm = el.querySelector('[data-gr-soma]');
     if (ref) ref.textContent = letra(s.c) + (s.r + 1);
-    if (val) { val.textContent = bruto(x) === '' ? (x.tip || '') : String(bruto(x)) + (x.tip ? '  ·  ' + x.tip : ''); val.classList.toggle('err', /err/.test(x.cls || '')); }
-    if (sm) sm.textContent = n > 1 ? 'Count: ' + n + (nums > 1 ? '  ·  Sum: ' + soma.toLocaleString('pt-PT', { maximumFractionDigits: 2 }) + '  ·  Average: ' + (soma / nums).toLocaleString('pt-PT', { maximumFractionDigits: 2 }) : '') : '';
+    if (val) { val.textContent = bruto(x) === '' ? (x.tip || '') : String(bruto(x)) + (x.tip ? ', ' + x.tip : ''); val.classList.toggle('err', /err/.test(x.cls || '')); }
+    if (sm) sm.textContent = n > 1 ? 'Count: ' + n + (nums > 1 ? ', Sum: ' + soma.toLocaleString('pt-PT', { maximumFractionDigits: 2 }) + ', Average: ' + (soma / nums).toLocaleString('pt-PT', { maximumFractionDigits: 2 }) : '') : '';
     if (at && at.scrollIntoView) { var tw = el.querySelector('[data-gr-tw]'); if (tw) {
       var a = at.getBoundingClientRect(), t = tw.getBoundingClientRect(), hd = el.querySelector('thead').getBoundingClientRect().height, lat = el.querySelector('tbody th').getBoundingClientRect().width;
       if (a.bottom > t.bottom - 12) tw.scrollTop += a.bottom - t.bottom + 12; else if (a.top < t.top + hd) tw.scrollTop -= t.top + hd - a.top;

@@ -62,6 +62,16 @@
     (S.cat || []).forEach(function (c) { var k = P.esrsDe(c.id); c.esrs_requisito = k.dr || c.esrs || 'Setorial'; });
     if (P.garantirQuadros) P.garantirQuadros();
   };
+  P.ligacoesBase = function () {
+    return [
+      { id: 'api1', db: 'erp', nome: 'Sistema financeiro', ambito: 'Energia e combustíveis', frequencia: 'Daily', estado: 'ligada' },
+      { id: 'api2', db: 'rh', nome: 'Sistema de RH', ambito: 'Efetivos, formação e rotatividade', frequencia: 'Daily', estado: 'pendente' },
+      { id: 'api3', db: 'tele', nome: 'Telemetria', ambito: 'Volumes de água e leituras de contador', frequencia: 'Live', estado: 'ligada' },
+      { id: 'api4', db: 'lab', nome: 'Laboratório (LIMS)', ambito: 'Análises de água e cargas das ETAR', frequencia: 'Daily', estado: 'ligada' },
+      { id: 'api5', db: 'com', nome: 'Sistema comercial (CRM)', ambito: 'Faturação, clientes e reclamações', frequencia: 'Daily', estado: 'ligada' },
+      { id: 'api6', db: 'amb', nome: 'Gestão ambiental', ambito: 'Lamas, resíduos, emissões e biodiversidade', frequencia: 'Monthly', estado: 'pendente' }
+    ];
+  };
   P.semearControlo = function () {
     S.kpim = S.dpdec = S.gloss = S.rq = S.doc = null; S.puxados = {};
     P.garantirEsrs();
@@ -89,15 +99,8 @@
       { id: 'gasoleo', nome: 'Gasóleo (frota própria)', unidade: 'L', fator: 2.66, unidade_fator: 'kgCO2e/L', versao: 2026, qtd: 420000, origem: 'Faturas', historico: [] },
       { id: 'r410a', nome: 'Fugas de refrigerante R-410A', unidade: 'kg', fator: 2088, unidade_fator: 'GWP', versao: 2026, qtd: 52, origem: 'Manual', historico: [] }
     ];
-    /* Ligacoes: ficam configuradas, nenhuma esta a sincronizar */
-    S.apis = [
-      { id: 'api1', nome: 'Sistema financeiro', ambito: 'Energia e combustíveis', frequencia: 'Daily', estado: 'pendente' },
-      { id: 'api2', nome: 'Sistema de RH', ambito: 'Efetivos, formação e rotatividade', frequencia: 'Daily', estado: 'pendente' },
-      { id: 'api3', nome: 'Telemetria', ambito: 'Volumes de água e leituras de contador', frequencia: 'Hourly', estado: 'pendente' },
-      { id: 'api4', nome: 'Laboratório (LIMS)', ambito: 'Análises de água e cargas das ETAR', frequencia: 'Daily', estado: 'pendente' },
-      { id: 'api5', nome: 'Sistema comercial (CRM)', ambito: 'Faturação, clientes e reclamações', frequencia: 'Daily', estado: 'pendente' },
-      { id: 'api6', nome: 'Gestão ambiental', ambito: 'Lamas, resíduos, emissões e biodiversidade', frequencia: 'Monthly', estado: 'pendente' }
-    ];
+    /* Ligacoes: a telemetria e em tempo real, tres sincronizam uma vez por dia, RH e gestao ambiental ainda esperam credenciais */
+    S.apis = P.ligacoesBase();
     S.evg = [];
     S.selos = [];
     P.selar();

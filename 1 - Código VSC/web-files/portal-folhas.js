@@ -277,10 +277,10 @@
       var dif = x.novo !== null && x.atual !== null && x.atual !== undefined && Math.abs(x.novo - x.atual) > 1e-9;
       var vari = x.val && x.val.variacao !== null && x.val.variacao !== undefined ? '<span class="fh-var ' + (x.val.alertas.length || x.val.erros.length ? 'warn' : '') + '">' + (x.val.variacao > 0 ? '+' : '') + P.fmtNum(x.val.variacao, 1) + '%</span>' : '<span class="ps-mut">-</span>';
       var check = x.novo === null ? '<span class="ps-small ps-mut">' + (x.falta.length ? 'Needs ' + x.falta.map(function (k) { return e(CAMPOS[k] ? CAMPOS[k].rot : k); }).join(', ') : 'Fill in the sheet') + '</span>' : x.val.erros.length ? chip('Error', 'err') + '<br><small class="ps-mut">' + e(x.val.erros[0]) + '</small>' : x.val.alertas.length ? chip('Alert', 'warn') + '<br><small class="ps-mut">' + e(x.val.alertas[0]) + '</small>' : chip('Valid', 'ok');
-      return [e(x.c.nome) + '<br><small class="ps-mut">' + e(x.id) + ' · ' + e(x.c.unidade_medida) + '</small>', '<span class="ps-mono ps-small">' + e(x.r.subst || '') + '</span>', fmt(x.id, x.ant), fmt(x.id, x.atual), '<b class="fh-novo' + (dif ? ' muda' : '') + '">' + fmt(x.id, x.novo) + '</b>', vari, check];
+      return [e(x.c.nome) + '<br><small class="ps-mut">' + e(x.id) + ', ' + e(x.c.unidade_medida) + '</small>', '<span class="ps-mono ps-small">' + e(x.r.subst || '') + '</span>', fmt(x.id, x.ant), fmt(x.id, x.atual), '<b class="fh-novo' + (dif ? ' muda' : '') + '">' + fmt(x.id, x.novo) + '</b>', vari, check];
     });
     var prontos = l.filter(function (x) { return x.novo !== null; }).length, alertas = l.filter(function (x) { return x.val && (x.val.alertas.length || x.val.erros.length); }).length;
-    return '<section class="fh-imp" aria-labelledby="fh-imp-t"><div class="fh-imp-h"><h3 id="fh-imp-t">Impact on the indicators</h3><span class="ps-small ps-mut" aria-live="polite">' + prontos + ' of ' + l.length + ' calculated with this sheet' + (alertas ? ' · ' + alertas + ' to check' : '') + '. Updates as you type.</span></div>' +
+    return '<section class="fh-imp" aria-labelledby="fh-imp-t"><div class="fh-imp-h"><h3 id="fh-imp-t">Impact on the indicators</h3><span class="ps-small ps-mut" aria-live="polite">' + prontos + ' of ' + l.length + ' calculated with this sheet' + (alertas ? ', ' + alertas + ' to check' : '') + '. Updates as you type.</span></div>' +
       X.tabela([{ t: 'Indicator' }, { t: 'Formula with these values' }, { t: P.rotAnterior(P.chave(m)), dir: 1 }, { t: 'Current', dir: 1 }, { t: 'With this sheet', dir: 1 }, { t: 'Change vs ' + P.rotAnterior(P.chave(m)), dir: 1 }, { t: 'Check' }], linhas) + '</section>';
   };
 
@@ -305,7 +305,7 @@
     var usa = [];
     st.cols.forEach(function (c) { c.usa.forEach(function (id) { if (usa.indexOf(id) < 0) usa.push(id); }); });
     return {
-      t: ped.nome, s: m.nome + ' · ' + m.empresa + ' · ' + P.rotPeriodo(m), cls: 'folha',
+      t: ped.nome, s: m.nome + ', ' + m.empresa + ', ' + P.rotPeriodo(m), cls: 'folha',
       b: estado + (ped.instrucoes ? '<div class="ps-aviso info"><b>How to fill it in.</b> ' + e(ped.instrucoes) + '</div>' : '') + '<p class="ps-small ps-mut">' + e(ped.motivo || 'Fill in the columns this milestone needs.') + ' One row per month. Every cell keeps where it came from.</p>' + ferr + resumo + aviso + window.PortalGrelha.html(cfg) + impactoHtml(m, ped) + defs,
       p: '<span class="fh-motivo ' + (st.pronta ? 'ok' : '') + '" aria-live="polite">' + e(motivo) + (pode && usa.length ? '<small>Delivering updates ' + e(usa.join(', ')) + '</small>' : '') + '</span><button type="button" class="ps-btn" data-a="fecharPainel">' + (pode ? 'Save and close' : 'Close') + '</button>' +
         (pode ? '<button type="button" class="ps-btn pri" data-a="fhEntregar"' + (st.pronta ? '' : ' disabled') + '>' + (entregue ? 'Deliver new version' : 'Deliver data') + '</button>' : '') + (!pode && entregue ? '<button type="button" class="ps-btn" data-a="fhDescarregar">Download Excel</button>' : '')

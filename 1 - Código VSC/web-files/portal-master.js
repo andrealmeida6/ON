@@ -38,14 +38,14 @@
     var filtro = '<div class="ps-form">' + campo('km-q', 'Search', '<input id="km-q" class="ps-in" data-c="kmF" data-id="q" value="' + e(f.q) + '">') + campo('km-rel', 'ESRS link', '<select id="km-rel" class="ps-sel" data-c="kmF" data-id="rel">' + opt('', 'All', f.rel) + Object.keys(REL).map(function (k) { return opt(k, REL[k][0], f.rel); }).join('') + '</select>') + campo('km-nor', 'Standard', '<select id="km-nor" class="ps-sel" data-c="kmF" data-id="norma">' + opt('', 'All', f.norma) + Object.keys(normas).sort().map(function (n) { return opt(n, n, f.norma); }).join('') + '</select>') + '</div>';
     var itens = lista.map(function (c) {
       var k = P.esrsDe(c.id);
-      return '<button type="button" class="ps-ev-it ' + (atual && c.id === atual.id ? 'on' : '') + '" data-a="kmVer" data-v="' + e(c.id) + '"><span><b>' + e(c.id) + ' · ' + e(c.nome) + '</b><small>' + e(k.dps[0] || 'No ESRS datapoint') + (k.dps.length > 1 ? ' +' + (k.dps.length - 1) : '') + '</small></span>' + chip(REL[k.rel][0], REL[k.rel][1]) + '</button>';
+      return '<button type="button" class="ps-ev-it ' + (atual && c.id === atual.id ? 'on' : '') + '" data-a="kmVer" data-v="' + e(c.id) + '"><span><b>' + e(c.id) + ', ' + e(c.nome) + '</b><small>' + e(k.dps[0] || 'No ESRS datapoint') + (k.dps.length > 1 ? ' +' + (k.dps.length - 1) : '') + '</small></span>' + chip(REL[k.rel][0], REL[k.rel][1]) + '</button>';
     }).join('');
     var det = '';
     if (atual) {
       var c = atual, k = P.esrsDe(c.id), r = registo(c.id), d = P.user((S.atrib[c.id] || {}).submete), m = P.msDoIndicador(c.id), ed = adm;
       var dps = k.dps.map(function (id) {
         var x = dpPor[id];
-        return '<div class="km-dp"><div class="ps-sp-b"><span class="ps-mono km-id">' + e(x.id) + '</span><span class="ps-small ps-mut">' + e(x.dr) + ' · §' + e(x.par) + (x.ar ? ' · ' + e(x.ar) : '') + ' · ' + e(x.tipo) + '</span></div><b>' + e(x.nome) + '</b><p class="ps-small">' + e(x.texto) + '</p></div>';
+        return '<div class="km-dp"><div class="ps-sp-b"><span class="ps-mono km-id">' + e(x.id) + '</span><span class="ps-small ps-mut">' + e(x.dr) + ', §' + e(x.par) + (x.ar ? ', ' + e(x.ar) : '') + ', ' + e(x.tipo) + '</span></div><b>' + e(x.nome) + '</b><p class="ps-small">' + e(x.texto) + '</p></div>';
       }).join('');
       det = '<div class="ps-card">' + cabCartao(c.nome, 'tarefa', chip(REL[k.rel][0], REL[k.rel][1])) + '<div class="ps-card-body"><p>' + e(k.desc) + '</p>' +
         (k.nota ? '<div class="ps-aviso warn ps-mt">' + e(k.nota) + '</div>' : '') +

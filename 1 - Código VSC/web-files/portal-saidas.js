@@ -67,7 +67,7 @@
   var nomeFicheiro = function (rel, versao, final, fmt) { return rel.id + '_' + ascii(rel.entidade) + '_v' + versao + (final ? '' : '_draft') + '.' + fmt; };
   var xlsxEntrega = function (rel, pr, final, versao) {
     var X2 = window.XLSX, wb = X2.utils.book_new(), f = FORMATO[tipoDe(rel)], usr = u();
-    var capa = [[rel.nome], [], ['Destination', rel.entidade + ' · ' + f.destino], ['Period', P.periodo(rel.periodo) ? P.periodo(rel.periodo).nome : rel.periodo], ['Due date', P.fmtDataAno(rel.data)], ['Legal basis', rel.base || ''],
+    var capa = [[rel.nome], [], ['Destination', rel.entidade + ': ' + f.destino], ['Period', P.periodo(rel.periodo) ? P.periodo(rel.periodo).nome : rel.periodo], ['Due date', P.fmtDataAno(rel.data)], ['Legal basis', rel.base || ''],
       ['Status', final ? 'Final: every value approved in the platform' : 'Draft: ' + (pr.total - pr.ok) + ' of ' + pr.total + ' values not approved yet'], ['Version', versao], ['Generated', P.fmtDataHora(new Date().toISOString()) + ' by ' + usr.nome], [],
       ['Before submitting, check that the layout still matches the current form of the destination.']];
     var dados = [['Code', 'Indicator', 'Unit', 'Period', 'Value', 'Previous period', 'Change %', 'Status', 'Data quality', 'Evidence', 'What counts', 'Source']].concat(pr.l.map(function (x) {
@@ -104,9 +104,9 @@
   var barra = function (pr) { return '<div class="sd-barra" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + pr.pct + '" aria-label="Values approved"><i class="' + (pr.final ? 'ok' : '') + '" style="--x:' + pr.pct + '%"></i></div>'; };
   var cartao = function (rel) {
     var t = tipoDe(rel), f = FORMATO[t] || { f: ['xlsx'], modelo: '', destino: '' }, pr = P.prontidaoSaida(rel), g = geracoes(rel).slice(-1)[0], d = P.diasAte(rel.data), pode = P.gereTudo(u()), per = P.periodo(rel.periodo);
-    var prazo = P.fmtDataAno(rel.data) + (d < 0 ? ' · ' + Math.abs(d) + ' days ago' : d === 0 ? ' · today' : ' · in ' + d + ' days');
+    var prazo = P.fmtDataAno(rel.data) + (d < 0 ? ' (' + Math.abs(d) + ' days ago)' : d === 0 ? ' (today)' : ' (in ' + d + ' days)');
     return '<article class="sd-card' + (d < 0 && !g ? ' late' : '') + '"><header><div><span class="sd-sig">' + e(rel.sigla) + '</span>' + (per ? '<span class="ps-per">' + e(per.nome) + '</span>' : '') + '</div>' + chip(rel.entidade, 'info') + '</header>' +
-      '<h3>' + e(rel.nome) + '</h3><dl class="sd-det"><dt>Due</dt><dd>' + e(prazo) + '</dd><dt>Goes to</dt><dd>' + e(f.destino) + '</dd><dt>Template</dt><dd>' + e(f.modelo) + ' · ' + f.f.map(function (x) { return FMT_TXT[x]; }).join(' and ') + '</dd></dl>' +
+      '<h3>' + e(rel.nome) + '</h3><dl class="sd-det"><dt>Due</dt><dd>' + e(prazo) + '</dd><dt>Goes to</dt><dd>' + e(f.destino) + '</dd><dt>Template</dt><dd>' + e(f.modelo) + ', ' + f.f.map(function (x) { return FMT_TXT[x]; }).join(' and ') + '</dd></dl>' +
       '<div class="sd-pr"><div class="ps-sp-b"><span><b>' + pr.ok + ' of ' + pr.total + '</b> values approved</span>' + (pr.falta ? '<span class="ps-small sd-falta">' + pr.falta + ' missing</span>' : '') + '</div>' + barra(pr) + '</div>' +
       '<p class="ps-small ps-mut sd-ult">' + (g ? 'Last file: <span class="ps-chip-tip" tabindex="0" data-tip="' + e('Version ' + g.versao + ': this delivery has been generated ' + g.versao + ' time' + (g.versao === 1 ? '' : 's') + '. Each new file gets the next number, so earlier files are never overwritten.') + '">v' + g.versao + '</span>' + (g.final ? '' : ' draft') + ', ' + e(P.fmtDataHora(g.em)) + ' by ' + e(g.por) : 'No file generated yet') + '</p>' +
       '<footer><button type="button" class="ps-btn" data-a="sdVer" data-v="' + e(rel.id) + '">Check the values</button>' + (pode ? f.f.map(function (x, i) { return '<button type="button" class="ps-btn' + (i ? '' : ' pri') + '" data-a="sdGerar" data-v="' + e(rel.id) + '" data-f="' + x + '">' + svg(I.doc, 14) + (pr.final ? '' : 'Draft ') + FMT_TXT[x] + '</button>'; }).join('') : '') + '</footer></article>';
@@ -116,7 +116,7 @@
     var ents = []; rels.forEach(function (r) { if (ents.indexOf(r.entidade) < 0) ents.push(r.entidade); });
     var vis = rels.filter(function (r) { return !U.sd.ent || r.entidade === U.sd.ent; });
     var prs = rels.map(P.prontidaoSaida), prontas = prs.filter(function (x) { return x.final; }).length, prox = rels.filter(function (r) { return P.diasAte(r.data) >= 0; })[0];
-    var kpis = '<div class="ps-kpis"><div class="ps-kpi"><span>Deliveries ' + ano + '</span><b>' + rels.length + '</b></div><div class="ps-kpi"><span>Ready to submit</span><b>' + prontas + '</b></div><div class="ps-kpi"><span>Files generated</span><b>' + (S.saidas || []).length + '</b></div><div class="ps-kpi"><span>Next due</span><b>' + (prox ? e(prox.sigla) + ' · ' + e(P.fmtData(prox.data)) : '-') + '</b></div></div>';
+    var kpis = '<div class="ps-kpis"><div class="ps-kpi"><span>Deliveries ' + ano + '</span><b>' + rels.length + '</b></div><div class="ps-kpi"><span>Ready to submit</span><b>' + prontas + '</b></div><div class="ps-kpi"><span>Files generated</span><b>' + (S.saidas || []).length + '</b></div><div class="ps-kpi"><span>Next due</span><b>' + (prox ? e(prox.sigla) + ', ' + e(P.fmtData(prox.data)) : '-') + '</b></div></div>';
     var filtro = '<div class="ps-seg" role="group" aria-label="Filter by destination"><button type="button" class="' + (U.sd.ent ? '' : 'on') + '" data-a="sdEnt" data-v="">All</button>' + ents.map(function (x) { return '<button type="button" class="' + (U.sd.ent === x ? 'on' : '') + '" data-a="sdEnt" data-v="' + e(x) + '">' + e(x) + '</button>'; }).join('') + '</div>';
     return kpis + '<div class="ps-sp-b ps-mt">' + filtro + '</div><div class="sd-grid">' + vis.map(cartao).join('') + '</div>';
   };
@@ -126,13 +126,13 @@
     if (!rel) return { t: 'Delivery not found', b: '' };
     var t = tipoDe(rel), f = FORMATO[t], pr = P.prontidaoSaida(rel), gs = geracoes(rel).slice().reverse(), pode = P.gereTudo(u());
     var linhas = pr.l.map(function (x) {
-      return ['<button type="button" class="ps-btn liga" data-a="ficha" data-v="' + e(x.id) + '">' + e(x.c.nome) + '</button><br><small class="ps-mut">' + e(x.id) + ' · ' + e(x.c.unidade_medida) + (x.origem ? ' · ' + e(x.origem) : '') + '</small>',
+      return ['<button type="button" class="ps-btn liga" data-a="ficha" data-v="' + e(x.id) + '">' + e(x.c.nome) + '</button><br><small class="ps-mut">' + e(x.id) + ', ' + e(x.c.unidade_medida) + (x.origem ? ', ' + e(x.origem) : '') + '</small>',
         x.v === null ? '<span class="ps-mut">-</span>' : '<b class="ps-num">' + e(fmtV(x.id, x.v)) + '</b>', x.ant === null ? '<span class="ps-mut">-</span>' : '<span class="ps-num">' + e(fmtV(x.id, x.ant)) + '</span>',
         chip(x.est.t, x.est.c) + (x.alertas.length ? ' ' + chip(x.alertas.length + ' alert' + (x.alertas.length > 1 ? 's' : ''), 'warn') : ''), x.m ? '<a class="ps-btn liga" href="' + X.rota('Milestone/' + x.m.id) + '" data-a="fecharPainel" data-nao-impedir="1">' + e(x.m.unidade) + '</a>' : '-'];
     });
-    var hist = gs.length ? '<ul class="ps-ev ps-sem-pad">' + gs.map(function (g) { return '<li><b>' + e(g.ficheiro) + '</b> ' + (g.final ? chip('Final', 'ok') : chip('Draft', 'warn')) + '<small>' + e(g.por) + ' · ' + e(P.fmtDataHora(g.em)) + ' · ' + g.ok + ' of ' + g.total + ' approved</small></li>'; }).join('') + '</ul>' : '<p class="ps-small ps-mut">No file generated yet.</p>';
+    var hist = gs.length ? '<ul class="ps-ev ps-sem-pad">' + gs.map(function (g) { return '<li><b>' + e(g.ficheiro) + '</b> ' + (g.final ? chip('Final', 'ok') : chip('Draft', 'warn')) + '<small>' + P.quemHtml(g.por) + ', ' + e(P.fmtDataHora(g.em)) + ', ' + g.ok + ' of ' + g.total + ' approved</small></li>'; }).join('') + '</ul>' : '<p class="ps-small ps-mut">No file generated yet.</p>';
     return {
-      t: rel.nome, s: rel.entidade + ' · due ' + P.fmtDataAno(rel.data), largo: true,
+      t: rel.nome, s: rel.entidade + ', due ' + P.fmtDataAno(rel.data), largo: true,
       b: (pr.final ? '<div class="ps-aviso ok">Every value is approved. The file goes out as final.</div>' : '<div class="ps-aviso warn">' + (pr.total - pr.ok) + ' of ' + pr.total + ' values are not approved yet. You can generate a draft to check the layout; it is marked as draft in the name and on the cover.</div>') +
         '<dl class="ps-det sd-det-p"><dt>Goes to</dt><dd>' + e(f.destino) + '</dd><dt>Template</dt><dd>' + e(f.modelo) + '</dd><dt>Legal basis</dt><dd>' + e(rel.base || '-') + '</dd></dl>' +
         tabela([{ t: 'Indicator' }, { t: 'Value', dir: 1 }, { t: 'Previous', dir: 1 }, { t: 'Status' }, { t: 'Milestone' }], linhas, 'No indicators feed this delivery.') +

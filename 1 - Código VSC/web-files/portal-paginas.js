@@ -40,7 +40,7 @@
   var tagPer = function (m) { var p = P.periodo(m.periodo); return p ? '<span class="ps-per' + (p.tipo === 'ano' ? ' ano' : '') + '" title="Reporting period ' + e(P.fmtData(p.ini)) + ' to ' + e(P.fmtData(p.fim)) + '">' + e(p.nome) + '</span>' : ''; };
   var tagsRel = function (m, max) {
     var l = P.relatoriosDe(m), mostrar = max ? l.slice(0, max) : l;
-    return mostrar.map(function (r) { return '<span class="ps-rel-t" title="' + e(r.nome + ' · ' + r.entidade + ' · due ' + P.fmtDataAno(r.data)) + '">' + e(r.sigla) + '</span>'; }).join('') + (max && l.length > max ? '<span class="ps-rel-t mais">+' + (l.length - max) + '</span>' : '');
+    return mostrar.map(function (r) { return '<span class="ps-rel-t" title="' + e(r.nome + ', ' + r.entidade + ', due ' + P.fmtDataAno(r.data)) + '">' + e(r.sigla) + '</span>'; }).join('') + (max && l.length > max ? '<span class="ps-rel-t mais">+' + (l.length - max) + '</span>' : '');
   };
   var tagsMs = function (m, max) { return '<span class="ps-per-l">' + tagPer(m) + tagsRel(m, max) + '</span>'; };
   P.tagPer = tagPer; P.tagsMs = tagsMs;
@@ -48,7 +48,7 @@
   var linhaTabMs = function (m) {
     var a = P.atribuido(m);
     return { attrs: 'class="ps-tr-ms"', celulas: ['<div class="ps-ms-cel"><div class="ps-ms-cel-t"><a href="' + rota('Milestone/' + m.id) + '">' + e(m.nome) + '</a><span class="ps-so-mob">' + estChip(m) + '</span></div>' + tagsMs(m, 3) +
-      '<span class="ps-so-mob ps-ms-meta">' + e(m.empresa) + (a ? ' · ' + e(a.nome) : '') + ' · due ' + e(prazoTxt(m)) + '</span></div>', e(m.empresa), atribHtml(m), '<span class="ps-nowrap">' + e(prazoTxt(m)) + '</span>', estChip(m)] };
+      '<span class="ps-so-mob ps-ms-meta">' + e(m.empresa) + (a ? ', ' + e(a.nome) : '') + ', due ' + e(prazoTxt(m)) + '</span></div>', e(m.empresa), atribHtml(m), '<span class="ps-nowrap">' + e(prazoTxt(m)) + '</span>', estChip(m)] };
   };
   var chip = function (txt, cls) { return '<span class="ps-chip ' + (cls || '') + '">' + e(txt) + '</span>'; };
   var estChip = function (m) { var s = P.estadoMs(m); return chip(s.txt, s.cls); };
@@ -61,6 +61,14 @@
   var pessHtml = function (nome) { return '<span class="ps-pess">' + avPessoa(nome) + e(nome) + '</span>'; };
   var depHtml = function (nome) { return nome ? '<span class="ps-dep">' + avEquipa() + e(nome) + '</span>' : '<span class="ps-mut">-</span>'; };
   P.pessHtml = pessHtml; P.depHtml = depHtml;
+  var quemHtml = function (nome) {
+    if (!nome) return '<span class="ps-mut">-</span>';
+    if (/^(System|Automatic|Sistema)$/i.test(nome)) return e(nome);
+    var x = (S.users || []).filter(function (y) { return y.nome === nome; })[0];
+    return x && x.perfil !== 'esg' && x.perfil !== 'ext' ? pessHtml(nome) : depHtml(nome);
+  };
+  P.quemHtml = quemHtml;
+  var ICO_LAPIS = '<path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="m14 6 4 4"/>';
   var cabCartao = function (t, ico, dir) { return '<div class="ps-card-head"><h2>' + (ico ? '<span class="ps-ic">' + svg(I[ico]) + '</span>' : '') + e(t) + '</h2>' + (dir || '') + '</div>'; };
   var vazio = function (t) { return '<div class="ps-vazio">' + e(t) + '</div>'; };
   var opt = function (val, txt, sel) { return '<option value="' + e(val) + '"' + (String(val) === String(sel) ? ' selected' : '') + '>' + e(txt === undefined ? val : txt) + '</option>'; };
@@ -81,12 +89,12 @@
   var passoTxt = function (m) {
     if (P.concluida(m)) return 'All steps completed';
     var p = P.passoAtual(m);
-    return p.nome + ' · ' + P.nomeResp(m, p.responsavel);
+    return p.nome + ': ' + P.nomeResp(m, p.responsavel);
   };
   var prazoTxt = function (m) {
     if (P.concluida(m)) return P.fmtData(m.prazo);
     var d = P.diasAte(m.prazo);
-    return P.fmtData(m.prazo) + (d < 0 ? ' · ' + Math.abs(d) + ' days ago' : d === 0 ? ' · today' : ' · in ' + d + ' days');
+    return P.fmtData(m.prazo) + (d < 0 ? ' (' + Math.abs(d) + ' days ago)' : d === 0 ? ' (today)' : ' (in ' + d + ' days)');
   };
   var fmtV = function (id, v) { return P.fmtNum(v, P.cat(id).casas_decimais); };
   var u = function () { return P.sessao(); };
@@ -189,7 +197,7 @@
           ? '<button class="ps-menu-it" type="button" data-a="ambienteLimpar">Clear test environment</button><button class="ps-menu-it" type="button" data-a="ambientePrincipal">Back to main environment</button>'
           : '<button class="ps-menu-it" type="button" data-a="ambienteTeste">Open test environment</button>';
         if (usr.perfil === 'admin') amb = '<button class="ps-menu-it" type="button" data-a="marcaAbrir">Brand<small>Logo, name and colours</small></button>' + amb;
-        menu.innerHTML = '<div class="ps-menu-head"><b>' + e(usr.nome) + '</b>' + e(P.PERFIS[usr.perfil]) + (usr.unidade ? ' · ' + e(usr.unidade) : '') + '</div><div class="ps-menu-sec"><button class="ps-menu-it" type="button" data-a="sair">' + (P.online() ? 'Sign out' : 'Switch profile') + '</button>' + amb + '</div>';
+        menu.innerHTML = '<div class="ps-menu-head"><b>' + e(usr.nome) + '</b>' + e(P.PERFIS[usr.perfil]) + (usr.unidade ? ': ' + e(usr.unidade) : '') + '</div><div class="ps-menu-sec"><button class="ps-menu-it" type="button" data-a="sair">' + (P.online() ? 'Sign out' : 'Switch profile') + '</button>' + amb + '</div>';
       }
     }
   };
@@ -241,7 +249,7 @@
   };
   var linhaMs = function (m, cta) {
     var ico = P.estadoMs(m).cls === 'err' ? 'err' : '';
-    return '<li><a class="ps-row" href="' + rota('Milestone/' + m.id) + '"><span class="ps-row-ico ' + ico + '">' + svg(I.doc, 18) + '</span><span class="ps-row-txt"><b>' + e(m.nome) + '</b><span>' + tagPer(m) + ' ' + e(m.empresa) + ' · ' + e(passoTxt(m)) + ' · due ' + e(prazoTxt(m)) + '</span></span>' + estChip(m) + (cta ? '<span class="ps-row-cta">' + e(cta) + '</span>' : '') + '</a></li>';
+    return '<li><a class="ps-row" href="' + rota('Milestone/' + m.id) + '"><span class="ps-row-ico ' + ico + '">' + svg(I.doc, 18) + '</span><span class="ps-row-txt"><b>' + e(m.nome) + '</b><span>' + tagPer(m) + ' ' + e(m.empresa) + ', ' + e(passoTxt(m)) + ', due ' + e(prazoTxt(m)) + '</span></span>' + estChip(m) + (cta ? '<span class="ps-row-cta">' + e(cta) + '</span>' : '') + '</a></li>';
   };
   var ctaPasso = function (m) { var p = P.passoAtual(m); return !p ? '' : p.tipo === 'recolha' ? 'Fill in' : p.tipo === 'parecer' ? 'Give opinion' : p.tipo === 'aprovacao' ? 'Approve' : 'Review'; };
   var pintarHero = function () {
@@ -274,7 +282,7 @@
       corpo = '<div class="ps-tl">' + cols.map(function (c) {
         c[1].sort(porPrazo);
         return '<div class="ps-tl-col ' + c[2] + '"><h4>' + e(c[0]) + ' <span class="ps-n">' + c[1].length + '</span></h4>' + (c[1].length ? c[1].slice(0, 6).map(function (m) {
-          return '<a class="ps-tl-it" href="' + rota('Milestone/' + m.id) + '"><b>' + e(m.nome) + '</b><small>' + tagPer(m) + ' ' + e(m.empresa) + ' · ' + e(P.fmtData(m.prazo)) + '</small>' + (P.podeAgir(m, usr) ? '<span class="ps-tl-tag">with you</span>' : '') + '</a>';
+          return '<a class="ps-tl-it" href="' + rota('Milestone/' + m.id) + '"><b>' + e(m.nome) + '</b><small>' + tagPer(m) + ' ' + e(m.empresa) + ', ' + e(P.fmtData(m.prazo)) + '</small>' + (P.podeAgir(m, usr) ? '<span class="ps-tl-tag">with you</span>' : '') + '</a>';
         }).join('') + (c[1].length > 6 ? '<a class="ps-btn liga" href="' + rota('Milestones') + '">' + (c[1].length - 6) + ' more</a>' : '') : '<div class="ps-mut ps-small">Nothing here.</div>') + '</div>';
       }).join('') + '</div>';
     }
@@ -318,7 +326,7 @@
     var estado = function (p) {
       var l = P.msPeriodo(p.id), conc = l.filter(P.concluida).length, atr = l.filter(function (m) { return P.estadoMs(m).cod === 'atraso'; }).length;
       var cls = l.length && conc === l.length ? 'ok' : hoje > p.fecho ? 'err' : hoje >= p.ini ? 'at' : '';
-      return { cls: atr && cls !== 'ok' ? 'err' : cls, txt: !l.length ? 'No milestones' : conc === l.length ? 'Approved' : conc + ' of ' + l.length + ' approved' + (atr ? ' · ' + atr + ' overdue' : ''), n: l.length };
+      return { cls: atr && cls !== 'ok' ? 'err' : cls, txt: !l.length ? 'No milestones' : conc === l.length ? 'Approved' : conc + ' of ' + l.length + ' approved' + (atr ? ', ' + atr + ' overdue' : ''), n: l.length };
     };
     var meses = '';
     for (var k = 0; k < 19; k++) { var d = new Date(ano, k, 1), iso = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-01'; meses += '<span style="--x:' + x(iso).toFixed(2) + '">' + e(MESES_C[d.getMonth()]) + (d.getMonth() === 0 ? ' ' + d.getFullYear() : '') + '</span>'; }
@@ -337,7 +345,7 @@
     grupos.forEach(function (g) { porData[g.dt] = g.l; });
     var marcos = Object.keys(porData).sort().map(function (dt, i) {
       var l = porData[dt], feito = l[l.length - 1].data < hoje;
-      return '<span class="tlr-r' + (feito ? ' feito' : '') + (i % 2 ? ' baixo' : '') + '" style="--x:' + x(dt).toFixed(2) + '" title="' + e(l.map(function (r) { return r.nome + ' (' + r.entidade + '), ' + P.fmtDataAno(r.data) + '. ' + r.base; }).join('\n')) + '"><i></i><b>' + e(l.map(function (r) { return r.sigla; }).join(' · ')) + '</b><small>' + e(l.length > 1 && l[l.length - 1].data !== dt ? P.fmtData(dt) + '–' + P.fmtData(l[l.length - 1].data) : P.fmtData(dt)) + '</small></span>';
+      return '<span class="tlr-r' + (feito ? ' feito' : '') + (i % 2 ? ' baixo' : '') + '" style="--x:' + x(dt).toFixed(2) + '" title="' + e(l.map(function (r) { return r.nome + ' (' + r.entidade + '), ' + P.fmtDataAno(r.data) + '. ' + r.base; }).join('\n')) + '"><i></i><b>' + e(l.map(function (r) { return r.sigla; }).join(', ')) + '</b><small>' + e(l.length > 1 && l[l.length - 1].data !== dt ? P.fmtData(dt) + '–' + P.fmtData(l[l.length - 1].data) : P.fmtData(dt)) + '</small></span>';
     }).join('');
     var anoP = pers.filter(function (p) { return p.tipo === 'ano'; })[0];
     var lista = rels.slice().sort(function (a, b) { return a.data < b.data ? -1 : 1; });
@@ -346,18 +354,18 @@
     itens.sort(function (a, b) { return a.d < b.d ? -1 : a.d > b.d ? 1 : a.p ? -1 : 1; });
     var vert = '', hojePosto = false;
     itens.forEach(function (it) {
-      if (!hojePosto && it.d >= hoje) { vert += '<li class="tlv-hoje"><span>Today · ' + e(P.fmtDataAno(hoje)) + '</span></li>'; hojePosto = true; }
+      if (!hojePosto && it.d >= hoje) { vert += '<li class="tlv-hoje"><span>Today: ' + e(P.fmtDataAno(hoje)) + '</span></li>'; hojePosto = true; }
       if (it.p) {
         var p = it.p, st = estado(p), l = P.msPeriodo(p.id), conc = l.filter(P.concluida).length, pct = l.length ? Math.round(conc / l.length * 100) : 0;
         vert += '<li class="tlv-p ' + st.cls + '"><a href="' + rota('Milestones?periodo=' + encodeURIComponent(p.id)) + '"><span class="tlv-pt"><b>' + e(p.nome) + '</b><em>' + e(st.cls === 'ok' ? 'Approved' : st.cls === 'err' ? 'Overdue' : st.cls === 'at' ? 'Open' : 'Upcoming') + '</em></span>' +
-          '<span class="tlv-pd">Data ' + e(P.fmtData(p.ini)) + ' to ' + e(P.fmtData(p.fim)) + ' · close ' + e(P.fmtDataAno(p.fecho)) + '</span>' +
+          '<span class="tlv-pd">Data ' + e(P.fmtData(p.ini)) + ' to ' + e(P.fmtData(p.fim)) + ', close ' + e(P.fmtDataAno(p.fecho)) + '</span>' +
           '<span class="tlv-barra" aria-hidden="true"><i style="width:' + pct + '%"></i></span><span class="tlv-pn">' + e(st.txt) + '</span></a></li>';
       } else {
         var r = it.r, d = P.diasAte(r.data);
         vert += '<li class="tlv-r' + (d < 0 ? ' feito' : '') + '"><i aria-hidden="true"></i><span><b>' + e(r.sigla) + '</b> ' + e(r.nome) + '<small>' + e(r.entidade) + '</small></span><em>' + e(P.fmtData(r.data)) + '<small>' + (d < 0 ? 'done' : 'in ' + d + ' d') + '</small></em></li>';
       }
     });
-    if (!hojePosto) vert += '<li class="tlv-hoje"><span>Today · ' + e(P.fmtDataAno(hoje)) + '</span></li>';
+    if (!hojePosto) vert += '<li class="tlv-hoje"><span>Today: ' + e(P.fmtDataAno(hoje)) + '</span></li>';
     return '<div class="ps-card ps-tlr">' + cabCartao('Reporting timeline ' + ano, 'cal', '<div class="ps-leg"><span><i class="ok"></i>Approved</span><span><i class="at"></i>Open</span><span><i class="err"></i>Overdue</span><span><i></i>Upcoming</span></div>') +
       '<div class="ps-card-body"><div class="tlr-sc" tabindex="0" aria-label="Reporting timeline, scroll sideways"><div class="tlr" role="img" aria-label="' + e(pers.map(function (p) { return p.nome + ', ' + estado(p).txt; }).join('; ')) + '">' +
       '<div class="tlr-m" aria-hidden="true">' + meses + '</div>' +
@@ -366,7 +374,7 @@
       '<div class="tlr-l rel"><span class="tlr-lt">External</span>' + marcos + '</div>' +
       '<span class="tlr-hoje" style="--x:' + x(hoje).toFixed(2) + '"><small>Today</small></span></div></div>' +
       '<ol class="tlv">' + vert + '</ol>' +
-      (lista.length ? '<h3 class="ps-grupo-t tlr-prox-t">External deliveries</h3><ul class="tlr-prox">' + lista.map(function (r) { var d = P.diasAte(r.data); return '<li class="' + (d < 0 ? 'feito' : '') + '"><b>' + e(r.sigla) + '</b><span>' + e(r.nome) + '<small>' + e(r.entidade + ' · ' + r.base) + '</small></span><em>' + e(P.fmtDataAno(r.data)) + '<small>' + (d < 0 ? 'done' : 'in ' + d + ' days') + '</small></em></li>'; }).join('') + '</ul>' : '') + '</div></div>';
+      (lista.length ? '<h3 class="ps-grupo-t tlr-prox-t">External deliveries</h3><ul class="tlr-prox">' + lista.map(function (r) { var d = P.diasAte(r.data); return '<li class="' + (d < 0 ? 'feito' : '') + '"><b>' + e(r.sigla) + '</b><span>' + e(r.nome) + '<small>' + e(r.entidade + ', ' + r.base) + '</small></span><em>' + e(P.fmtDataAno(r.data)) + '<small>' + (d < 0 ? 'done' : 'in ' + d + ' days') + '</small></em></li>'; }).join('') + '</ul>' : '') + '</div></div>';
   };
   var MESES_C = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   Blocos['timeline'] = function () { return timeline(); };
@@ -395,7 +403,7 @@
     var f = U.msFiltro, ms = P.msCiclo();
     var cartao = function (href, nome, mono, l, on) {
       var conc = l.filter(P.concluida).length, atr = l.filter(function (m) { return P.estadoMs(m).cod === 'atraso'; }).length, pct = l.length ? Math.round((conc / l.length) * 100) : 0;
-      return '<a class="ps-emp' + (on ? ' on' : '') + '" href="' + href + '"' + (on ? ' aria-current="true"' : '') + '><span class="ps-emp-mono" aria-hidden="true">' + e(mono) + '</span><span class="ps-emp-txt"><b>' + e(nome) + '</b><small>' + l.length + (l.length === 1 ? ' milestone' : ' milestones') + (atr ? ' · <em>' + atr + ' overdue</em>' : '') + '</small><span class="ps-emp-barra" aria-hidden="true"><i style="width:' + pct + '%"></i></span><small>' + conc + ' of ' + l.length + ' completed</small></span></a>';
+      return '<a class="ps-emp' + (on ? ' on' : '') + '" href="' + href + '"' + (on ? ' aria-current="true"' : '') + '><span class="ps-emp-mono" aria-hidden="true">' + e(mono) + '</span><span class="ps-emp-txt"><b>' + e(nome) + '</b><small>' + l.length + (l.length === 1 ? ' milestone' : ' milestones') + (atr ? ', <em>' + atr + ' overdue</em>' : '') + '</small><span class="ps-emp-barra" aria-hidden="true"><i style="width:' + pct + '%"></i></span><small>' + conc + ' of ' + l.length + ' completed</small></span></a>';
     };
     var daEmpresa = function (nome) { return ms.filter(function (m) { return m.empresa === nome; }); };
     var com = S.ent.filter(function (x) { return daEmpresa(x.nome).length; }), sem = S.ent.filter(function (x) { return !daEmpresa(x.nome).length; });
@@ -447,16 +455,18 @@
     var ext = S.ext.filter(function (x) { return x.milestone_id === m.id; }).length;
     return '<nav class="ps-mig" aria-label="Breadcrumb"><a href="' + rota('Inicio') + '">Home</a><span>/</span><a href="' + rota('Milestones') + '">Milestones</a><span>/</span><a href="' + rotaEmp(m.empresa) + '">' + e(m.empresa) + '</a><span>/</span><b>' + e(m.nome) + '</b></nav>' +
       '<div class="ps-ban"><div class="ps-ban-top"><div><div class="ps-ban-tags"><span class="ps-ban-tag">' + e(m.empresa) + '</span><span class="ps-ban-tag forte">' + e(P.rotPeriodo(m)) + '</span><span class="ps-ban-tag">' + e(m.consolida ? 'Annual consolidation' : PERIODO_TXT[m.periodicidade] || m.periodicidade) + '</span>' + (m.periodicidade === 'Novos dados ESRS' ? '<span class="ps-ban-tag">ESRS track</span>' : '') + (m.workflow_ajustado ? '<span class="ps-ban-tag">Adjusted workflow</span>' : '') + '</div>' +
-      '<h1>' + e(m.nome) + '</h1><div class="ps-ban-sub">' + (function () { var p = P.periodo(m.periodo); return p ? 'Data from ' + e(P.fmtDataAno(p.ini)) + ' to ' + e(P.fmtDataAno(p.fim)) : 'Reporting year ' + e(m.ano); })() + ' · ' + e(m.unidade) + '</div>' + (P.relatoriosDe(m).length ? '<div class="ps-ban-rel"><span>Feeds</span>' + P.relatoriosDe(m).map(function (r) { return '<span class="ps-ban-tag" title="' + e(r.base) + '">' + e(r.sigla + ' · ' + r.entidade + ' · ' + P.fmtDataAno(r.data)) + '</span>'; }).join('') + '</div>' : '') + '</div>' +
+      '<h1>' + e(m.nome) + '</h1><div class="ps-ban-sub">' + (function () { var p = P.periodo(m.periodo); return p ? 'Data from ' + e(P.fmtDataAno(p.ini)) + ' to ' + e(P.fmtDataAno(p.fim)) : 'Reporting year ' + e(m.ano); })() + ', ' + e(m.unidade) + '</div>' + (P.relatoriosDe(m).length ? '<div class="ps-ban-rel"><span>Feeds</span>' + P.relatoriosDe(m).map(function (r) { return '<span class="ps-ban-tag" title="' + e(r.base) + '">' + e(r.sigla + ', ' + r.entidade + ', ' + P.fmtDataAno(r.data)) + '</span>'; }).join('') + '</div>' : '') + '</div>' +
       '<div class="ps-ban-dir"><div class="ps-ban-pill"><small>Due</small>' + e(P.fmtDataAno(m.prazo)) + '</div>' + estChip(m) + '</div></div>' +
       '<div class="ps-ban-stats"><div class="ps-ban-stat"><b>' + preenchidos(m) + '/' + m.indicadores.length + '</b><span>Indicators filled in</span></div><div class="ps-ban-stat"><b>' + m.indicadores.filter(function (id) { return P.item(id, P.chave(m)).evidencias.length; }).length + '</b><span>With evidence</span></div><div class="ps-ban-stat"><b>' + ext + '</b><span>External requests</span></div><div class="ps-ban-stat"><b>' + (P.concluida(m) ? '-' : d + 'd') + '</b><span>Until due</span></div></div></div>';
   };
+  var quemAtual = function (m) { var a = P.atribuido(m); return !a ? '<span class="ps-mut">-</span>' : a.tipo === 'pessoa' ? pessHtml(a.nome) : depHtml(a.nome); };
+  var podeReatribuir = function (m, usr) { var p = P.passoAtual(m); return !!p && !P.concluida(m) && p.tipo === 'recolha' && P.acompanha(m, usr); };
   Blocos['milestone-workflow'] = function () {
     var m = msAtual(), feitos = Math.min(m.passo_atual, m.passos.length), pct = Math.round((feitos / m.passos.length) * 100), abertoH = !!U.wfHist[m.id];
     return '<div class="ps-card ps-mt">' + cabCartao('Milestone workflow', 'ativ', '<div class="ps-sp"><div class="ps-leg"><span><i class="ok"></i>Completed</span><span><i class="at"></i>Current</span><span><i></i>To do</span></div>' + '<button type="button" class="ps-wfh-btn' + (abertoH ? ' on' : '') + '" data-a="wfHist" aria-expanded="' + abertoH + '" aria-controls="wf-hist" title="' + (abertoH ? 'Hide the timeline' : 'Show the timeline of this workflow') + '"><span class="ps-wfh-ico">' + svg(I.relogio, 18) + '</span><span class="ps-wfh-txt">' + (abertoH ? 'Hide timeline' : 'Timeline') + '</span></button>' + (P.podeAlterarWorkflow(m, u()) ? '<button type="button" class="ps-btn peq" data-a="abrirWf">Change workflow</button>' : '') + '</div>') +
       '<div class="ps-wf-barra ps-mt" role="img" aria-label="' + pct + '% of steps completed"><i style="width:' + pct + '%"></i></div><div class="ps-wf">' + m.passos.map(function (p, i) {
         var c = i < m.passo_atual ? 'ok' : i === m.passo_atual ? (m.devolvida ? 'at dev' : 'at') : '';
-        return '<div class="ps-wf-p ' + c + '"' + (i === m.passo_atual ? ' aria-current="step"' : '') + '><div class="ps-wf-n">' + e(p.nome) + '</div><div class="ps-wf-c">' + (i < m.passo_atual ? svg(I.tick, 18) : m.devolvida && i === m.passo_atual ? svg(I.voltar, 18) : i + 1) + '</div><div class="ps-wf-r">' + (p.concluido_em ? '<b>' + e(P.fmtData(p.concluido_em)) + '</b><br>' + e(p.concluido_por) : i === m.passo_atual ? '<b>Current</b><br>' + e(P.nomeResp(m, p.responsavel)) : e(P.nomeResp(m, p.responsavel))) + '</div></div>';
+        return '<div class="ps-wf-p ' + c + '"' + (i === m.passo_atual ? ' aria-current="step"' : '') + '><div class="ps-wf-n">' + e(p.nome) + '</div><div class="ps-wf-c">' + (i < m.passo_atual ? svg(I.tick, 18) : m.devolvida && i === m.passo_atual ? svg(I.voltar, 18) : i + 1) + '</div><div class="ps-wf-r">' + (p.concluido_em ? '<b>' + e(P.fmtData(p.concluido_em)) + '</b><span class="ps-wf-q">' + quemHtml(p.concluido_por) + '</span>' : i === m.passo_atual ? '<b>Current</b><span class="ps-wf-q">' + quemAtual(m) + (podeReatribuir(m, u()) ? '<button type="button" class="ps-wf-edit" data-a="msAtrAbrir" aria-label="Change who it is assigned to" title="Change who it is assigned to">' + svg(ICO_LAPIS, 14) + '</button>' : '') + '</span>' : '<span class="ps-wf-q">' + quemHtml(P.nomeResp(m, p.responsavel)) + '</span>') + '</div></div>';
       }).join('') + '</div>' + (abertoH ? historicoHtml(m) : '') + '</div>';
   };
   /* Linha do tempo do workflow: para tras (com devolucoes), o passo atual e o que falta, com o tempo entre etapas */
@@ -479,7 +489,7 @@
       var d = P.diasAte(h.prazo);
       partes.push(lig(null, 'fut', '')); partes.push(no('prazo' + (d < 0 ? ' atr' : ''), I.cal, 'Due', d < 0 ? Math.abs(d) + ' days overdue' : d === 0 ? 'Today' : 'in ' + d + ' days', P.fmtDataAno(h.prazo)));
     } else partes.push(lig(null, 'fim', '')), partes.push(no('fim', I.tick, 'Completed', 'All steps done', ''));
-    var stats = [['Elapsed', P.fmtDur(h.total) || '-'], ['Steps done', h.feito.filter(function (x) { return x.wf === 'avanco' || x.wf === 'auto'; }).length + ' of ' + m.passos.length], ['Longest step', h.maisLonga ? h.maisLonga.passo + ' · ' + P.fmtDur(h.maisLonga.dur) : '-'], ['Returns', String(h.devolucoes)]];
+    var stats = [['Elapsed', P.fmtDur(h.total) || '-'], ['Steps done', h.feito.filter(function (x) { return x.wf === 'avanco' || x.wf === 'auto'; }).length + ' of ' + m.passos.length], ['Longest step', h.maisLonga ? h.maisLonga.passo + ': ' + P.fmtDur(h.maisLonga.dur) : '-'], ['Returns', String(h.devolucoes)]];
     return '<div class="ps-wfh" id="wf-hist" role="region" aria-label="Workflow timeline"><dl class="ps-wfh-stats">' + stats.map(function (x) { return '<div><dt>' + e(x[0]) + '</dt><dd>' + e(x[1]) + '</dd></div>'; }).join('') + '</dl>' +
       '<div class="ps-wfh-sc" tabindex="0" aria-label="Steps, scroll sideways"><div class="ps-wfh-trilho">' + partes.join('') + '</div></div></div>';
   };
@@ -488,27 +498,37 @@
     var nAud = S.aud.filter(function (a) { var x = P.msDoIndicador(a.indicador_id, m.ano); return x && x.id === m.id && a.estado !== 'resolvido'; }).length;
     var nExt = S.ext.filter(function (x) { return x.milestone_id === m.id && x.estado !== 'aplicado'; }).length;
     /* Uma so pagina, pela ordem do trabalho: pedido, fontes e calculos, dados, ficheiros, exploracao, qualidade, terceiros, auditoria e conversa */
-    var secs = [['dados', decide ? 'Review' : 'Data request', 0, cartaoTrimestres(m) + (P.fontesHtml ? '<div id="sec-fontes" class="ps-sec">' + P.fontesHtml(m) + '</div>' : '') + (decide ? sepRevisao(m) : P.podePreencher(m, usr) ? sepRecolha(m) : sepLeitura(m)) + cartaoFicheiros(m)],
+    var secs = [['dados', decide ? 'Review' : 'Requested data', 0, cartaoTrimestres(m) + (decide ? sepRevisao(m) : P.podePreencher(m, usr) ? sepRecolha(m) : sepLeitura(m)) + cartaoFicheiros(m)],
       ['evidencias', 'Evidence and quality', 0, sepEvidencias(m)], ['externos', 'External contributions', nExt, sepExternos(m)], ['auditoria', 'Audit', nAud, sepAuditoria(m)], ['conversa', 'Conversation and history', m.comentarios.length, (P.ext.sepConversa ? P.ext.sepConversa(m) : sepConversa(m))]];
-    var indice = [['dados', secs[0][1]], ['fontes', 'Data and calculations']].concat(secs.slice(1).map(function (s) { return [s[0], s[1], s[2]]; }));
+    var indice = [['dados', secs[0][1]]].concat(secs.slice(1).map(function (s) { return [s[0], s[1], s[2]]; }));
     var tab = U.msTab[m.id] || 'trabalho', nDados = m.indicadores.filter(function (id) { return P.podeVerIndicador(P.cat(id), usr); }).length;
     var barra = '<div class="ps-mtabs" role="tablist" aria-label="Milestone views">' + [['trabalho', 'Work', ''], ['dados', 'Data store', nDados]].map(function (t) {
       return '<button type="button" role="tab" id="mtab-' + t[0] + '" aria-selected="' + (tab === t[0]) + '" aria-controls="mpan-' + t[0] + '" class="' + (tab === t[0] ? 'on' : '') + '" data-a="msTab" data-v="' + t[0] + '">' + e(t[1]) + (t[2] ? ' <span class="ps-n">' + t[2] + '</span>' : '') + '</button>';
     }).join('') + '</div>';
     if (tab === 'dados') return barra + '<div id="mpan-dados" role="tabpanel" aria-labelledby="mtab-dados" class="ps-col">' + sepExplorar(m) + '</div>';
-    return barra + '<div id="mpan-trabalho" role="tabpanel" aria-labelledby="mtab-trabalho"><div class="ps-grid-side ps-ms-corrida"><div class="ps-col">' + secs.map(function (s) { return '<section id="sec-' + s[0] + '" class="ps-sec ps-col" aria-label="' + e(s[1]) + '">' + s[3] + '</section>'; }).join('') + '</div>' +
+    return barra + '<div id="mpan-trabalho" role="tabpanel" aria-labelledby="mtab-trabalho"><div class="ps-grid-side ps-ms-corrida"><div class="ps-col">' + secs.map(function (s) { return '<section id="sec-' + s[0] + '" class="ps-sec ps-col" aria-label="' + e(s[1]) + '">' + s[3] + '</section>'; }).join('') + barraAcao(m, usr, decide) + '</div>' +
       '<div class="ps-col ps-ms-lado"><nav class="ps-card ps-ms-indice" aria-label="On this page">' + cabCartao('On this page') + '<ul>' + indice.map(function (s) { return '<li><button type="button" class="ps-btn liga" data-a="sep" data-v="' + s[0] + '">' + e(s[1]) + (s[2] ? ' <span class="ps-n">' + s[2] + '</span>' : '') + '</button></li>'; }).join('') + '</ul></nav>' +
       '<div class="ps-card">' + cabCartao('Details') + '<div class="ps-card-body"><dl class="ps-det"><dt>Company</dt><dd>' + (P.gereTudo(usr) ? '<select id="ms-emp" class="ps-sel" aria-label="Company" data-c="msEmpresa">' + S.ent.map(function (x) { return opt(x.nome, x.nome, m.empresa); }).join('') + '</select>' : e(m.empresa)) + '</dd><dt>Departments</dt><dd>' + editorTags(m, usr) + '</dd><dt>Unit</dt><dd>' + e(m.unidade) + '</dd><dt>Current step</dt><dd>' + e(P.concluida(m) ? 'Completed' : P.passoAtual(m).nome) + '</dd><dt>Assigned to</dt><dd>' + editorAtrib(m, usr) + '</dd><dt>Due</dt><dd>' + e(prazoTxt(m)) + '</dd><dt>Indicators</dt><dd>' + m.indicadores.length + '</dd></dl></div></div></div></div></div>';
   };
+  /* Barra de acao: fica sempre a vista no fundo do ecra enquanto se trabalha na milestone */
+  var barraAcao = function (m, usr, decide) {
+    if (decide) {
+      var p = P.passoAtual(m), rot = p.tipo === 'parecer' ? 'Give favourable opinion' : p.tipo === 'aprovacao' ? 'Approve and lock' : 'Complete review';
+      return '<div class="ps-ms-acao" role="region" aria-label="Actions"><span class="ps-small">' + e(p.nome) + '</span><span class="ps-sp"><button type="button" class="ps-btn err" data-a="devolver">Return to the unit</button><button type="button" class="ps-btn pri" data-a="concluirPasso">' + e(rot) + '</button></span></div>';
+    }
+    if (!P.podePreencher(m, usr)) return '';
+    var f = P.faltasSubmissao(m).length, feitos = preenchidos(m);
+    return '<div class="ps-ms-acao" role="region" aria-label="Actions"><span class="ps-small" aria-live="polite"><b>' + feitos + ' of ' + m.indicadores.length + '</b> indicators with a value' + (f ? '<span class="ps-mut">, ' + f + ' item' + (f === 1 ? '' : 's') + ' still missing</span>' : '<span class="ps-txt-ok">, ready to submit</span>') + '</span><button type="button" id="btn-submeter" class="ps-btn pri" data-a="submeter">Submit milestone</button></div>';
+  };
   var editorAtrib = function (m, usr) {
     var p = P.passoAtual(m);
-    if (!p || p.tipo !== 'recolha' || !P.acompanha(m, usr)) return atribHtml(m);
-    return '<select id="ms-atr" class="ps-sel" aria-label="Assigned to" data-c="msAtrib">' + opt('', m.unidade + ' (department)', m.atribuido_a || '') + P.atribuiveis(m).map(function (x) { return opt(x.login, x.nome, m.atribuido_a || ''); }).join('') + '</select>';
+    if (!p || !podeReatribuir(m, usr)) return atribHtml(m);
+    return '<span class="ps-det-atr">' + atribHtml(m) + '<button type="button" class="ps-wf-edit" data-a="msAtrAbrir" aria-label="Change who it is assigned to" title="Change who it is assigned to">' + svg(ICO_LAPIS, 14) + '</button></span>';
   };
   var editorTags = function (m, usr) {
     if (!P.acompanha(m, usr) || P.concluida(m)) return tagsDe(m);
     var livres = P.UNIDADES.filter(function (d) { return m.departamentos.indexOf(d) < 0; });
-    return '<span class="ps-tags">' + m.departamentos.map(function (d) { return '<span class="ps-tag">' + e(d) + '<button type="button" data-a="msTagDel" data-v="' + e(d) + '" aria-label="Remove ' + e(d) + '">×</button></span>'; }).join('') + '</span>' +
+    return '<span class="ps-tags">' + m.departamentos.map(function (d) { return '<span class="ps-tag ps-tag-dep">' + avEquipa() + e(d) + '<button type="button" data-a="msTagDel" data-v="' + e(d) + '" aria-label="Remove ' + e(d) + '">×</button></span>'; }).join('') + '</span>' +
       (livres.length ? '<select id="ms-tag" class="ps-sel ps-mt" aria-label="Add department" data-c="msTagAdd">' + opt('', 'Add department') + livres.map(function (d) { return opt(d); }).join('') + '</select>' : '');
   };
   var celValor = function (m, id) { var it = P.item(id, P.chave(m)); return it.valor === null ? '-' : fmtV(id, it.valor); };
@@ -516,17 +536,20 @@
   var marcaAmostra = function (id) { return S.amostra.indexOf(id) > -1 ? ' ' + chip('Sample', 'rev') : ''; };
 
   var sepRecolha = function (m) {
-    var usr = u(), rel = U.imp[m.id], feitos = preenchidos(m);
+    var usr = u(), rel = U.imp[m.id], calcs = P.calculosMilestone ? P.calculosMilestone(m) : [], comFontes = P.camposMilestone ? P.camposMilestone(m).length > 0 : false;
     var linhas = m.indicadores.map(function (id) {
       var c = P.cat(id), it = P.item(id, P.chave(m)), v = P.validarItem(it), ant = P.valorAnterior(id, P.chave(m));
+      var calc = calcs.filter(function (r) { return r.id === id; })[0], emCalc = !!(calc && calc.x && calc.valor !== null && it.daFonte);
       var txtBruto = it.rascunho || (it.valor === null ? '' : String(it.valor).replace('.', ','));
       var cls = v.erros.length ? 'erro' : v.alertas.length ? 'alerta' : '';
       var res = v.erros.length ? chip('Error', 'err') : v.alertas.length ? chip(v.alertas.length + ' alert(s)', 'warn') : it.valor !== null ? chip('Valid', 'ok') : chip('To fill in');
       var recebido = S.ext.filter(function (x) { return x.indicador_id === id && x.milestone_id === m.id && x.estado === 'recebido'; })[0];
-      return '<div class="ps-ind" id="ind-' + e(id) + '"><div class="ps-ind-top"><div class="ps-ind-nome"><button type="button" data-a="ficha" data-v="' + e(id) + '">' + e(c.nome) + '</button><small>' + e(c.unidade_medida) + ' · ' + (c.tipo === 'derivado' ? 'Derived' : 'Base data') + ' · ' + e(c.perimetro) + (P.esrsDe(id).dps.length ? ' · ' + e(P.esrsDe(id).dps[0]) : '') + '</small><span class="ps-ind-desc">' + e(P.esrsDe(id).desc) + '</span>' + (P.formulaTxt ? '<span class="ps-ind-form">ƒ ' + e(P.formulaTxt(id)) + '</span>' : '') + '</div>' +
+      return '<div class="ps-ind" id="ind-' + e(id) + '"><div class="ps-ind-top"><div class="ps-ind-nome"><button type="button" data-a="ficha" data-v="' + e(id) + '">' + e(c.nome) + '</button><small>' + e(c.unidade_medida) + ', ' + (c.tipo === 'derivado' ? 'Derived' : 'Base data') + ', ' + e(c.perimetro) + (P.esrsDe(id).dps.length ? ', ' + e(P.esrsDe(id).dps[0]) : '') + '</small><span class="ps-ind-desc">' + e(P.esrsDe(id).desc) + '</span>' + (P.formulaTxt ? '<span class="ps-ind-form">ƒ ' + e(P.formulaTxt(id)) + '</span>' : '') + '</div>' +
         '<div><span class="ps-ind-k">' + e(P.rotAnterior(P.chave(m))) + '</span><span class="ps-num">' + (ant === null || ant === undefined ? '-' : fmtV(id, ant)) + '</span></div>' +
-        '<div class="ps-ind-campo"><label class="ps-ind-k" for="v-' + e(id) + '">Value ' + e(P.rotPeriodo(m)) + '</label><input id="v-' + e(id) + '" class="ps-in ps-num ' + cls + '" inputmode="decimal" autocomplete="off" value="' + e(txtBruto) + '" data-c="valor" data-id="' + e(id) + '"' + (v.erros.length ? ' aria-invalid="true" aria-describedby="err-' + e(id) + '"' : '') + '></div>' +
+        (emCalc ? '<div class="ps-ind-campo ps-ind-calc"><span class="ps-ind-k">Value ' + e(P.rotPeriodo(m)) + '</span><span class="ps-calc-v ps-num ' + cls + '" title="Calculated from the source data">' + e(fmtV(id, it.valor)) + '</span></div>' :
+        '<div class="ps-ind-campo"><label class="ps-ind-k" for="v-' + e(id) + '">Value ' + e(P.rotPeriodo(m)) + '</label><input id="v-' + e(id) + '" class="ps-in ps-num ' + cls + '" inputmode="decimal" autocomplete="off" value="' + e(txtBruto) + '" data-c="valor" data-id="' + e(id) + '"' + (v.erros.length ? ' aria-invalid="true" aria-describedby="err-' + e(id) + '"' : '') + '></div>') +
         '<div><span class="ps-ind-k">Change</span><span class="ps-num">' + (v.variacao === null ? '-' : (v.variacao > 0 ? '+' : '') + P.fmtNum(v.variacao, 1) + '%') + '</span></div><div class="ps-ind-res">' + res + (P.botaoComentarInd ? P.botaoComentarInd(m, id) : '') + '</div></div>' +
+        (emCalc ? '<div class="ps-ind-calc-f"><span class="ps-mono">ƒ ' + e(calc.subst) + '</span> = <b>' + e(fmtV(id, calc.valor)) + '</b><small>Calculated from the source data above. Change those values to change it.</small></div>' : calc && calc.x && comFontes ? '<div class="ps-ind-calc-f falta"><small>Fill in the source data above and this value is calculated, or type it here.</small></div>' : '') +
         (v.erros.length ? '<div id="err-' + e(id) + '" class="ps-ind-msg ps-mt" role="alert">' + e(v.erros[0]) + '</div>' : '') +
         (v.alertas.length ? '<div class="ps-ind-just"><ul>' + v.alertas.map(function (a) { return '<li>' + e(a) + '</li>'; }).join('') + '</ul><label class="ps-lab" for="j-' + e(id) + '">Justification (required)</label><textarea id="j-' + e(id) + '" class="ps-ta" data-c="just" data-id="' + e(id) + '">' + e(it.justificacao) + '</textarea></div>' : '') +
         '<div class="ps-ind-sub">' + campo('q-' + id, 'Data quality', '<select id="q-' + e(id) + '" class="ps-sel" data-c="qual" data-id="' + e(id) + '">' + opt('medido', 'Measured', it.qualidade) + opt('calculado', 'Calculated', it.qualidade) + opt('estimado', 'Estimated', it.qualidade) + '</select>') +
@@ -537,8 +560,9 @@
     return '<div class="ps-card">' + cabCartao('Import file', 'doc') +
       '<div class="ps-drop"><button type="button" class="ps-btn pri" data-a="importar">Import file</button><button type="button" class="ps-btn" data-a="tplExcel">Excel template</button><button type="button" class="ps-btn" data-a="impExemplo">Test with a sample file</button><span class="ps-mut ps-small">Excel (.xlsx) only</span></div>' +
       (rel ? relatorioImport(m, rel) : '') + '</div>' +
-      '<div class="ps-card ps-com-acao">' + cabCartao('Requested data', 'tarefa', ferrDados(m)) + (U.dadosVista === 'grid' ? corpoGrelha(m) : linhas) +
-      '<div class="ps-sticky"><span class="ps-small ps-mut" aria-live="polite">' + feitos + ' of ' + m.indicadores.length + ' indicators with a value</span><button type="button" id="btn-submeter" class="ps-btn pri" data-a="submeter">Submit milestone</button></div></div>';
+      '<div class="ps-card">' + cabCartao('Requested data', 'tarefa', '<div class="ps-sp">' + (P.fontesAcoes ? P.fontesAcoes(m) : '') + ferrDados(m) + '</div>') +
+      (P.fontesHtml && comFontes ? '<div class="ps-card-body">' + P.fontesHtml(m) + '</div>' : '') +
+      (U.dadosVista === 'grid' ? corpoGrelha(m) : (comFontes ? '<div class="ps-ind-h"><h3>Indicators</h3><span class="ps-leg"><span><i class="calc"></i>Calculated from the source data</span></span></div>' : '') + linhas) + '</div>';
   };
   /* --- Na milestone do ano: o que ja foi reportado nos trimestres ------------ */
   var cartaoTrimestres = function (m) {
@@ -550,8 +574,8 @@
     var linhas = ids.map(function (id) {
       var c = P.cat(id), r = P.anualDosTrimestres(m, id), it = P.item(id, P.chave(m)), usado = r && it.valor === r.valor;
       if (r && !usado) prontos++;
-      return [e(c.nome) + '<br><small class="ps-mut">' + e(id) + ' · ' + e(c.unidade_medida) + '</small>'].concat(P.trimestresDe(m, id).map(function (x) {
-        return x.valor === null ? '<span class="ps-mut" title="' + e(x.m ? P.estadoMs(x.m).txt : 'Not requested') + '">-</span>' : (x.m ? '<a class="ps-num" href="' + rota('Milestone/' + x.m.id) + '" title="' + e(x.m.nome + ' · ' + P.estadoMs(x.m).txt) + '">' : '<span class="ps-num">') + e(fmtV(id, x.valor)) + (x.m ? '</a>' : '</span>') + (x.aprovado ? '' : '<br><small class="ps-mut">' + e(x.m ? P.estadoMs(x.m).txt : '') + '</small>');
+      return [e(c.nome) + '<br><small class="ps-mut">' + e(id) + ', ' + e(c.unidade_medida) + '</small>'].concat(P.trimestresDe(m, id).map(function (x) {
+        return x.valor === null ? '<span class="ps-mut" title="' + e(x.m ? P.estadoMs(x.m).txt : 'Not requested') + '">-</span>' : (x.m ? '<a class="ps-num" href="' + rota('Milestone/' + x.m.id) + '" title="' + e(x.m.nome + ', ' + P.estadoMs(x.m).txt) + '">' : '<span class="ps-num">') + e(fmtV(id, x.valor)) + (x.m ? '</a>' : '</span>') + (x.aprovado ? '' : '<br><small class="ps-mut">' + e(x.m ? P.estadoMs(x.m).txt : '') + '</small>');
       })).concat([e(P.AGREG_TXT[P.agregacao(id)]), r ? '<b class="ps-num">' + e(fmtV(id, r.valor)) + '</b>' + (r.n < r.total ? '<br><small class="ps-tri-parc">' + r.trimestres.join('+') + ' only</small>' : '') : '<span class="ps-mut">-</span>',
         it.valor === null ? '<span class="ps-mut">-</span>' : '<span class="ps-num">' + e(fmtV(id, it.valor)) + '</span>', !r ? '' : usado ? chip('In use', 'ok') : pode ? '<button type="button" class="ps-btn peq" data-a="triUsar" data-v="' + e(id) + '">Use</button>' : '']);
     });
@@ -566,7 +590,7 @@
     var usr = u(), pode = P.podePreencher(m, usr), gere = P.gereTudo(usr) && !P.concluida(m), fics = P.ficheirosPedidos(m);
     return '<div class="ps-card">' + cabCartao('Requested files', 'doc') + '<div class="ps-card-body">' + tabela([{ t: 'File' }, { t: 'Why it is requested' }, { t: 'Format' }, { t: 'Delivered' }, { t: 'Status' }], fics.map(function (f) {
       var ent = f.entregues, acao = (P.folhaAcoes ? P.folhaAcoes(m, f, pode) + ' ' : '') + (pode ? '<button type="button" id="fp-' + e(f.id) + '" class="ps-btn peq' + (ent.length ? '' : ' pri') + '" data-a="ficEntregar" data-v="' + e(f.id) + '">' + (ent.length ? 'Add another' : 'Upload') + '</button>' : '') + (gere && f.proprio ? ' <button type="button" class="ps-btn peq err" data-a="ficRetirar" data-v="' + e(f.id) + '">Remove</button>' : '');
-      return [e(f.nome) + (f.obrigatorio ? '' : ' <span class="ps-mut ps-small">(optional)</span>'), e(f.motivo || '-'), e(f.formatos.length ? f.formatos.join(', ') : 'Any'), (ent.length ? ent.map(function (x) { return '<span class="ps-small">' + e(x.ficheiro) + '<br><span class="ps-mut">' + e(x.por) + (x.origem === 'grid' ? ' · filled in on the platform' : '') + '</span></span>'; }).join('<br>') : '<span class="ps-mut">-</span>') + (P.folhaEstado ? P.folhaEstado(m, f) : ''), '<span class="ps-sp">' + (ent.length ? chip('Delivered', 'ok') : f.obrigatorio ? chip('Missing', 'warn') : chip('Optional')) + acao + '</span>'];
+      return [e(f.nome) + (f.obrigatorio ? '' : ' <span class="ps-mut ps-small">(optional)</span>'), e(f.motivo || '-'), e(f.formatos.length ? f.formatos.join(', ') : 'Any'), (ent.length ? ent.map(function (x) { return '<span class="ps-small">' + e(x.ficheiro) + '<br><span class="ps-mut">' + quemHtml(x.por) + (x.origem === 'grid' ? ', filled in on the platform' : '') + '</span></span>'; }).join('<br>') : '<span class="ps-mut">-</span>') + (P.folhaEstado ? P.folhaEstado(m, f) : ''), '<span class="ps-sp">' + (ent.length ? chip('Delivered', 'ok') : f.obrigatorio ? chip('Missing', 'warn') : chip('Optional')) + acao + '</span>'];
     }), 'No files requested for this milestone.') +
       (gere ? '<div class="ps-form ps-mt ps-fic-novo">' + campo('fp-nome', 'Request another file', '<input id="fp-nome" class="ps-in" placeholder="Nome do ficheiro pedido">') + '<label class="ps-chk"><input id="fp-obr" type="checkbox" checked> Required</label><button type="button" class="ps-btn" data-a="ficPedir">Add to the request</button></div>' : '') + '</div></div>';
   };
@@ -753,7 +777,7 @@
       '<div class="ps-mt">' + campo('exp-q', 'Search this layer', '<input id="exp-q" class="ps-in" value="' + e(x.q) + '" data-c="expBusca" autocomplete="off">') + '</div>' +
       (lista.length ? '<ul class="ps-exp-lista">' + lista.map(function (c) {
         var pt = ultimoPonto(c.id), mx = P.msDoIndicador(c.id), est = mx ? P.estadoIndicador(mx, c.id) : { txt: 'To collect', cls: '' };
-        return '<li><label><input id="exp-' + e(c.id) + '" type="checkbox" data-c="expSel" data-id="' + e(c.id) + '"' + (x.sel.indexOf(c.id) > -1 ? ' checked' : '') + '><span class="ps-mono">' + e(c.id) + '</span><span class="n">' + e(c.nome) + '</span><span class="v ps-num">' + (pt ? e(fmtV(c.id, pt.v)) + ' <small>' + e(c.unidade_medida) + ' · ' + pt.ano + '</small>' : '<small>No value yet</small>') + '</span>' + chip(est.txt, est.cls) + '</label></li>';
+        return '<li><label><input id="exp-' + e(c.id) + '" type="checkbox" data-c="expSel" data-id="' + e(c.id) + '"' + (x.sel.indexOf(c.id) > -1 ? ' checked' : '') + '><span class="ps-mono">' + e(c.id) + '</span><span class="n">' + e(c.nome) + '</span><span class="v ps-num">' + (pt ? e(fmtV(c.id, pt.v)) + ' <small>' + e(c.unidade_medida) + ', ' + pt.ano + '</small>' : '<small>No value yet</small>') + '</span>' + chip(est.txt, est.cls) + '</label></li>';
       }).join('') + '</ul>' : vazio(dom.ok.length ? 'Nothing matches your search.' : 'You have no access to this layer.')) + '</div></div></div>' +
       '<div class="ps-card">' + cabCartao('Your report (' + cfg.linhas.length + ')', 'ativ', '<button type="button" class="ps-btn peq pri" data-a="expExcel"' + (cfg.linhas.length ? '' : ' disabled') + '>Export to Excel</button>') + '<div class="ps-card-body">' + window.PortalGrelha.html(cfg) + '</div></div>';
   };
@@ -770,14 +794,14 @@
   };
   var sepRevisao = function (m) {
     var p = P.passoAtual(m), rot = p.tipo === 'parecer' ? 'Give favourable opinion' : p.tipo === 'aprovacao' ? 'Approve and lock' : 'Complete review';
-    return '<div class="ps-card ps-com-acao">' + cabCartao(p.nome, 'tarefa', ferrDados(m)) + '<div class="ps-card-body">' + (U.dadosVista === 'grid' ? corpoGrelha(m) : tabela([{ t: 'Indicator' }, { t: 'Value', dir: 1 }, { t: String(m.ano - 1), dir: 1 }, { t: 'Change', dir: 1 }, { t: 'Alerts and justification' }, { t: 'Quality' }], m.indicadores.map(function (id) {
+    return '<div class="ps-card">' + cabCartao(p.nome, 'tarefa', ferrDados(m)) + '<div class="ps-card-body">' + (P.fontesHtml ? P.fontesHtml(m) : '') + (U.dadosVista === 'grid' ? corpoGrelha(m) : tabela([{ t: 'Indicator' }, { t: 'Value', dir: 1 }, { t: String(m.ano - 1), dir: 1 }, { t: 'Change', dir: 1 }, { t: 'Alerts and justification' }, { t: 'Quality' }], m.indicadores.map(function (id) {
       var it = P.item(id, P.chave(m)), v = P.validarItem(it), ant = P.valorAnterior(id, P.chave(m));
       return [linkFicha(id) + (P.botaoComentarInd ? ' ' + P.botaoComentarInd(m, id) : '') + (P.formulaTxt ? '<span class="ps-ind-form">ƒ ' + e(P.formulaTxt(id)) + '</span>' : ''), celValor(m, id) + ' ' + e(P.cat(id).unidade_medida), ant === null || ant === undefined ? '-' : fmtV(id, ant), v.variacao === null ? '-' : (v.variacao > 0 ? '+' : '') + P.fmtNum(v.variacao, 1) + '%', v.alertas.length ? '<span class="ps-small">' + e(v.alertas.join(' ')) + '<br><b>Justification:</b> ' + e(it.justificacao || '-') + '</span>' : chip('No alerts', 'ok'), e(P.QUALIDADE_TXT[it.qualidade])];
-    }))) + '<div class="ps-mt">' + campo('rev-com', 'Comment (required to return)', '<textarea id="rev-com" class="ps-ta"></textarea>') + '</div></div><div class="ps-sticky"><button type="button" class="ps-btn err" data-a="devolver">Return to the unit</button><button type="button" class="ps-btn pri" data-a="concluirPasso">' + e(rot) + '</button></div></div>';
+    }))) + '<div class="ps-mt">' + campo('rev-com', 'Comment (required to return)', '<textarea id="rev-com" class="ps-ta"></textarea>') + '</div></div></div>';
   };
   var sepLeitura = function (m) {
     var msg = P.concluida(m) ? 'Milestone completed. Approved values only change by restatement.' : 'The current step is with ' + P.nomeResp(m, P.passoAtual(m).responsavel) + '. You can view the values.';
-    return '<div class="ps-card">' + cabCartao('Requested data', 'doc', ferrDados(m)) + '<div class="ps-card-body"><div class="ps-aviso">' + e(msg) + '</div>' + (U.dadosVista === 'grid' ? corpoGrelha(m) : tabela([{ t: 'Indicator' }, { t: 'Value', dir: 1 }, { t: String(m.ano - 1), dir: 1 }, { t: 'Status' }, { t: 'Quality' }], m.indicadores.map(function (id) {
+    return '<div class="ps-card">' + cabCartao('Requested data', 'doc', ferrDados(m)) + '<div class="ps-card-body"><div class="ps-aviso">' + e(msg) + '</div>' + (P.fontesHtml ? P.fontesHtml(m) : '') + (U.dadosVista === 'grid' ? corpoGrelha(m) : tabela([{ t: 'Indicator' }, { t: 'Value', dir: 1 }, { t: String(m.ano - 1), dir: 1 }, { t: 'Status' }, { t: 'Quality' }], m.indicadores.map(function (id) {
       var est = P.estadoIndicador(m, id), it = P.item(id, P.chave(m)), ant = P.valorAnterior(id, P.chave(m));
       return [linkFicha(id) + (P.botaoComentarInd ? ' ' + P.botaoComentarInd(m, id) : '') + marcaAmostra(id) + (it.reexpresso ? ' ' + chip('Restated', 'warn') : '') + (P.formulaTxt ? '<span class="ps-ind-form">ƒ ' + e(P.formulaTxt(id)) + '</span>' : ''), celValor(m, id) + ' ' + e(P.cat(id).unidade_medida), ant === null || ant === undefined ? '-' : fmtV(id, ant), chip(est.txt, est.cls), e(P.QUALIDADE_TXT[it.qualidade])];
     }))) + '</div></div>';
@@ -788,7 +812,7 @@
       tabela([{ t: 'Indicator' }, { t: 'Quality' }, { t: 'Method' }, { t: 'Evidence' }], m.indicadores.map(function (id) {
         var it = P.item(id, P.chave(m)), c = P.cat(id);
         return [linkFicha(id), e(P.QUALIDADE_TXT[it.qualidade]), e(it.metodo || '-'), (it.evidencias.length ? it.evidencias.map(function (x) { return e(x.ficheiro); }).join(', ') : c.evidencia_obrigatoria ? chip('Required, missing', 'warn') : '-')];
-      })) + '<h3 class="ps-grupo-t">General milestone documents</h3>' + (m.documentos_gerais.length ? '<ul class="ps-list">' + m.documentos_gerais.map(function (d) { return '<li class="ps-row"><span class="ps-row-ico">' + svg(I.doc, 18) + '</span><span class="ps-row-txt"><b>' + e(d.ficheiro) + '</b><span>' + e(d.por) + ' · ' + e(P.fmtDataHora(d.em)) + '</span></span></li>'; }).join('') + '</ul>' : '<p class="ps-mut ps-small">No general documents yet.</p>') +
+      })) + '<h3 class="ps-grupo-t">General milestone documents</h3>' + (m.documentos_gerais.length ? '<ul class="ps-list">' + m.documentos_gerais.map(function (d) { return '<li class="ps-row"><span class="ps-row-ico">' + svg(I.doc, 18) + '</span><span class="ps-row-txt"><b>' + e(d.ficheiro) + '</b><span>' + quemHtml(d.por) + '<span class="ps-q-sep">, </span>' + e(P.fmtDataHora(d.em)) + '</span></span></li>'; }).join('') + '</ul>' : '<p class="ps-mut ps-small">No general documents yet.</p>') +
       (P.acompanha(m, usr) ? '<button type="button" class="ps-btn ps-mt" data-a="anexarGeral">Attach general document</button>' : '') + '</div></div>';
   };
   var sepExternos = function (m) {
@@ -805,7 +829,7 @@
     return lista.map(function (a) {
       var est = a.estado === 'aberto' ? chip('Open', 'warn') : a.estado === 'respondido' ? chip('Answered', 'info') : chip('Resolved', 'ok');
       var pode = a.estado === 'aberto' && P.podeResponderAuditor(a, usr);
-      return '<div class="ps-ind"><div class="ps-sp-b"><b>' + e(P.cat(a.indicador_id).nome) + '</b>' + est + '</div><p class="ps-mt">' + e(a.texto) + '</p><small class="ps-mut">' + e(a.por) + ' · ' + e(P.fmtDataHora(a.em)) + '</small>' +
+      return '<div class="ps-ind"><div class="ps-sp-b"><b>' + e(P.cat(a.indicador_id).nome) + '</b>' + est + '</div><p class="ps-mt">' + e(a.texto) + '</p><small class="ps-mut">' + quemHtml(a.por) + '<span class="ps-q-sep">, </span>' + e(P.fmtDataHora(a.em)) + '</small>' +
         (a.resposta ? '<div class="ps-aviso ps-mt"><b>Answer from ' + e(a.resposta.por) + ':</b> ' + e(a.resposta.texto) + '</div>' : '') +
         (pode ? '<div class="ps-mt">' + campo('ra-' + a.id, 'Answer', '<textarea id="ra-' + e(a.id) + '" class="ps-ta"></textarea>') + '<button type="button" class="ps-btn pri ps-mt" data-a="responderAud" data-v="' + e(a.id) + '">Answer</button></div>' : '') +
         (a.estado === 'respondido' && (usr.perfil === 'auditor' || usr.perfil === 'admin') ? '<button type="button" class="ps-btn ps-mt" data-a="resolverAud" data-v="' + e(a.id) + '">Mark as resolved</button>' : '') + '</div>';
@@ -819,8 +843,8 @@
   };
   var sepConversa = function (m) {
     var usr = u();
-    var msgs = m.comentarios.map(function (c) { var eu = c.autor === usr.nome; return '<div class="ps-msg ' + (eu ? 'eu' : '') + (c.sistema ? ' sis' : '') + '"><small>' + e(c.autor) + ' · ' + e(P.fmtDataHora(c.em)) + '</small><p>' + e(c.texto) + '</p></div>'; }).join('');
-    var evs = m.eventos.slice().reverse().map(function (x) { return '<li>' + e(x.texto) + '<small>' + e(x.por) + ' · ' + e(P.fmtDataHora(x.em)) + '</small></li>'; }).join('');
+    var msgs = m.comentarios.map(function (c) { var eu = c.autor === usr.nome; return '<div class="ps-msg ' + (eu ? 'eu' : '') + (c.sistema ? ' sis' : '') + '"><small>' + quemHtml(c.autor) + '<span class="ps-q-sep">, </span>' + e(P.fmtDataHora(c.em)) + '</small><p>' + e(c.texto) + '</p></div>'; }).join('');
+    var evs = m.eventos.slice().reverse().map(function (x) { return '<li>' + e(x.texto) + '<small>' + quemHtml(x.por) + '<span class="ps-q-sep">, </span>' + e(P.fmtDataHora(x.em)) + '</small></li>'; }).join('');
     return '<div class="ps-card">' + cabCartao('Conversation', 'ativ') + '<div class="ps-chat">' + (msgs || '<div class="ps-mut ps-small">No comments yet.</div>') + '</div>' + '<div class="ps-card-body ps-sp"><div class="ps-campo ps-cresce"><label class="ps-sr" for="chat-txt">Comment</label><input id="chat-txt" class="ps-in" placeholder="Write a comment"></div><button type="button" class="ps-btn pri" data-a="comentar">Send</button></div></div>' +
       '<div class="ps-card">' + cabCartao('History', 'cal') + '<ul class="ps-ev">' + evs + '</ul></div>';
   };
@@ -858,14 +882,14 @@
       var m = P.msDoIndicador(x.indicador_id), it = P.item(x.indicador_id), v = m && P.concluida(m) ? it.valor : null, base = P.valorAnterior(x.indicador_id, S.ciclo.ano), pct;
       if (x.sentido === 'subir') pct = v === null ? 0 : Math.min(100, (v / x.valor_meta) * 100);
       else pct = v === null || base === null || !base ? 0 : Math.max(0, Math.min(100, (1 - v / base) * 100));
-      return '<div class="ps-meta"><div class="ps-meta-t">' + e(x.nome) + '<span>Target: ' + e(P.fmtNum(x.valor_meta, 0)) + ' ' + e(x.unidade) + ' in ' + x.ano_meta + ' · Current: ' + (v === null ? 'pending approval' : e(fmtV(x.indicador_id, v))) + '</span></div><div class="ps-meta-b"><i style="width:' + pct + '%"></i></div></div>';
+      return '<div class="ps-meta"><div class="ps-meta-t">' + e(x.nome) + '<span>Target: ' + e(P.fmtNum(x.valor_meta, 0)) + ' ' + e(x.unidade) + ' in ' + x.ano_meta + ', Current: ' + (v === null ? 'pending approval' : e(fmtV(x.indicador_id, v))) + '</span></div><div class="ps-meta-b"><i style="width:' + pct + '%"></i></div></div>';
     }).join('');
     var areas = P.UNIDADES.map(function (un) {
       var cs = cat.filter(function (c) { return c.unidade_negocio === un; }), mss = ms.filter(function (m) { return m.unidade === un; });
       if (!cs.length) return '';
       var s = situacao(cs), atraso = mss.some(function (m) { return P.estadoMs(m).cod === 'atraso'; });
       var est = s.a === s.t ? chip('All approved', 'ok') : atraso ? chip('Overdue', 'err') : s.a + s.r === s.t ? chip('All reported', 'rev') : chip('In progress', 'info');
-      return '<details class="ps-card ps-mt" id="area-' + e(un.replace(/\W/g, '')) + '"><summary class="ps-card-head ps-sp-b ps-sumario"><b>' + e(un) + '</b><span class="ps-sp">' + est + '<span class="ps-mut ps-small">' + s.a + ' of ' + s.t + ' approved · ' + mss.length + ' milestones</span></span></summary><div class="ps-card-body">' +
+      return '<details class="ps-card ps-mt" id="area-' + e(un.replace(/\W/g, '')) + '"><summary class="ps-card-head ps-sp-b ps-sumario"><b>' + e(un) + '</b><span class="ps-sp">' + est + '<span class="ps-mut ps-small">' + s.a + ' of ' + s.t + ' approved, ' + mss.length + ' milestones</span></span></summary><div class="ps-card-body">' +
         tabela([{ t: 'Indicator' }, { t: 'Value', dir: 1 }, { t: 'Status' }], cs.map(function (c) {
           var m = P.msDoIndicador(c.id), est2 = m ? P.estadoIndicador(m, c.id) : { txt: 'To collect', cls: '' }, it = P.item(c.id);
           return [linkFicha(c.id), it && it.valor !== null ? e(fmtV(c.id, it.valor) + ' ' + c.unidade_medida) : '-', chip(est2.txt, est2.cls)];
@@ -886,7 +910,7 @@
   Blocos['documentos'] = function () {
     var linhas = S.docs.map(function (d) {
       var dif = difTel(d), fora = dif !== null && Math.abs(dif) > 5;
-      return [e(d.fornecedor) + '<br><small class="ps-mut">' + e(TIPO_DOC[d.tipo] || d.tipo) + ' · ' + e(d.periodo) + '</small>', e(d.instalacao) + '<br><small class="ps-mut">' + e(d.entidade) + '</small>', e(P.fmtNum(d.consumo, 0)) + ' ' + unidadeDoc(d.tipo), e(P.fmtNum(d.valor_sem_iva, 2)) + ' €', dif === null ? '-' : (fora ? chip((dif > 0 ? '+' : '') + P.fmtNum(dif, 1) + '%', 'err') : chip((dif > 0 ? '+' : '') + P.fmtNum(dif, 1) + '%', 'ok')),
+      return [e(d.fornecedor) + '<br><small class="ps-mut">' + e(TIPO_DOC[d.tipo] || d.tipo) + ', ' + e(d.periodo) + '</small>', e(d.instalacao) + '<br><small class="ps-mut">' + e(d.entidade) + '</small>', e(P.fmtNum(d.consumo, 0)) + ' ' + unidadeDoc(d.tipo), e(P.fmtNum(d.valor_sem_iva, 2)) + ' €', dif === null ? '-' : (fora ? chip((dif > 0 ? '+' : '') + P.fmtNum(dif, 1) + '%', 'err') : chip((dif > 0 ? '+' : '') + P.fmtNum(dif, 1) + '%', 'ok')),
         d.estado === 'distribuída' ? chip('Distributed', 'ok') : (fora ? chip('Validate with supplier', 'err') : '<button type="button" class="ps-btn peq" data-a="distribuir" data-v="' + e(d.id) + '">Confirm and distribute</button>')];
     });
     var alerta = S.docs.filter(function (d) { var x = difTel(d); return x !== null && Math.abs(x) > 5 && d.estado !== 'distribuída'; });
@@ -989,7 +1013,7 @@
         var c = P.cat(x.indicador_id), aberto = x.estado === 'pendente';
         return '<div class="ps-ind"><div class="ps-sp-b"><b>' + e(c.nome) + ' (' + e(c.unidade_medida) + ')</b>' + (aberto ? chip('Due ' + P.fmtData(x.prazo), 'warn') : chip('Sent', 'ok')) + '</div><p class="ps-mt">' + e(x.descricao) + '</p>' +
           (aberto ? '<div class="ps-form ps-mt">' + campo('xv-' + x.id, 'Value', '<input id="xv-' + e(x.id) + '" class="ps-in" inputmode="decimal">') + campo('xe-' + x.id, 'Supporting document (.xlsx, or .pdf for invoices)', '<input id="xe-' + e(x.id) + '" class="ps-in" type="file" accept="' + P.ACEITA_SUPORTE + '">') + '</div><button type="button" class="ps-btn pri ps-mt" data-a="enviarExt" data-v="' + e(x.id) + '">Send</button>' :
-            '<p class="ps-mut ps-small ps-mt">Value sent: ' + e(fmtV(x.indicador_id, x.valor)) + (x.evidencia ? ' · ' + e(x.evidencia) : '') + ' · ' + e(P.fmtDataHora(x.respondido_em)) + '</p>') + '</div>';
+            '<p class="ps-mut ps-small ps-mt">Value sent: ' + e(fmtV(x.indicador_id, x.valor)) + (x.evidencia ? ', ' + e(x.evidencia) : '') + ', ' + e(P.fmtDataHora(x.respondido_em)) + '</p>') + '</div>';
       }).join('') + '</div>';
     }).join('');
   };
@@ -1050,7 +1074,7 @@
       var usos = P.usosTipo(t.id), abertas = usos.filter(function (m) { return !P.concluida(m); }).length, nc = t.colunas && t.colunas.length;
       return ['<button type="button" class="ps-btn liga ps-dt-nome" data-a="tipoEditar" data-v="' + e(t.id) + '">' + e(t.nome) + '</button><small class="ps-mut ps-dt-mot">' + e(t.motivo || '') + '</small>', e(t.unidade),
         '<span class="ps-dt-fmt">' + t.formatos.map(function (x) { return '<span>' + e(x) + '</span>'; }).join('') + '</span>', e(GRAN_TXT[t.granularidade] || 'Monthly'),
-        nc ? '<b>' + nc + '</b> fixed' : '<span class="ps-mut">From the indicators</span>', abertas + ' open · ' + usos.length + ' total', 'v' + t.versao + '<br><small class="ps-mut">' + e(P.fmtData(t.alterado_em)) + '</small>'];
+        nc ? '<b>' + nc + '</b> fixed' : '<span class="ps-mut">From the indicators</span>', abertas + ' open, ' + usos.length + ' total', 'v' + t.versao + '<br><small class="ps-mut">' + e(P.fmtData(t.alterado_em)) + '</small>'];
     });
     return '<div class="ps-card">' + cabCartao('Data types', 'doc', '<button type="button" class="ps-btn pri peq" data-a="tipoNovo">New data type</button>') + '<div class="ps-card-body">' +
       '<p class="ps-mut ps-small">What each department is asked to deliver: the file, the accepted formats, the columns and their granularity. A data type is used by every milestone of its department; changes apply to open milestones and are versioned. Columns map to the source databases, so contributors can pull them instead of typing.</p>' +
@@ -1083,14 +1107,14 @@
         ordemDb.map(function (db) {
           return '<div class="ps-dt-db"><h4>' + svg(I.base || I.doc, 14) + e(DBS[db] || db) + '</h4><ul>' + porDb[db].map(function (k) {
             var c = CAMPOS[k], on = fixas.indexOf(k) > -1;
-            return '<li><label class="ps-chk"><input id="dtc-' + e(k) + '" type="checkbox" data-c="tipoCol" data-id="' + e(k) + '"' + (on ? ' checked' : '') + '><span><b>' + e(c.rot) + '</b><small class="ps-mono">' + e(k) + ' · ' + e(c.tab) + ' · ' + e(c.agreg) + '</small></span>' + (usados[k] ? '<span class="ps-dt-uso">used</span>' : '') + '</label></li>';
+            return '<li><label class="ps-chk"><input id="dtc-' + e(k) + '" type="checkbox" data-c="tipoCol" data-id="' + e(k) + '"' + (on ? ' checked' : '') + '><span><b>' + e(c.rot) + '</b><small class="ps-mono">' + e(k) + ', ' + e(c.tab) + ', ' + e(c.agreg) + '</small></span>' + (usados[k] ? '<span class="ps-dt-uso">used</span>' : '') + '</label></li>';
           }).join('') + '</ul></div>';
         }).join('')) + '</fieldset>';
     var aviso = t.id && abertas.length ? '<div class="ps-aviso warn">Saving updates ' + abertas.length + ' open milestone(s): ' + e(abertas.slice(0, 4).map(function (m) { return m.nome; }).join(', ')) + (abertas.length > 4 ? '…' : '') + '. Data already delivered keeps the version it was delivered with.</div>' : '';
     var prev = '<div class="ps-dt-prev"><span class="ps-mut ps-small">Preview of the sheet contributors get</span><div class="ps-tw"><table class="ps-t ps-dt-prev-t"><thead><tr><th>Period</th>' + (auto ? sugeridas.slice(0, 4) : fixas.slice(0, 4)).map(function (k) { return '<th>' + e(CAMPOS[k] ? CAMPOS[k].rot : k) + '</th>'; }).join('') + ((auto ? sugeridas : fixas).length > 4 ? '<th>…</th>' : '') + '<th>Source reference</th></tr></thead><tbody>' +
       (t.granularidade === 'anual' ? ['Ano 2026'] : t.granularidade === 'trimestral' ? ['T1 2026', 'T2 2026', '…'] : ['Jan 2026', 'Feb 2026', '…']).map(function (r) { return '<tr><td>' + r + '</td>' + (auto ? sugeridas.slice(0, 4) : fixas.slice(0, 4)).map(function () { return '<td></td>'; }).join('') + ((auto ? sugeridas : fixas).length > 4 ? '<td></td>' : '') + '<td></td></tr>'; }).join('') + '</tbody></table></div></div>';
     return {
-      t: t.id ? 'Edit data type' : 'New data type', s: t.id ? 'Version ' + t.versao + ' · used by ' + usos.length + ' milestone(s)' : 'Define once, used by every milestone of the department', largo: true,
+      t: t.id ? 'Edit data type' : 'New data type', s: t.id ? 'Version ' + t.versao + ', used by ' + usos.length + ' milestone(s)' : 'Define once, used by every milestone of the department', largo: true,
       b: '<div class="ps-form2">' + campo('dt-nome', 'Name', '<input id="dt-nome" class="ps-in" value="' + e(t.nome) + '" data-c="tipoCampo" data-id="nome" placeholder="e.g. Faturas de eletricidade do período">') +
         campo('dt-unid', 'Department that delivers it', '<select id="dt-unid" class="ps-sel" data-c="tipoCampo" data-id="unidade">' + P.UNIDADES.map(function (d) { return opt(d, d, t.unidade); }).join('') + '</select>') + '</div>' +
         campo('dt-mot', 'Why it is requested', '<input id="dt-mot" class="ps-in" value="' + e(t.motivo) + '" data-c="tipoCampo" data-id="motivo" placeholder="Shown to the contributor next to the request">') +
@@ -1117,9 +1141,9 @@
     /* Mapa de cobertura: departamento x periodo, com o estado de cada milestone */
     var cel = function (un, p) {
       var m = P.msExistente(un, p.id) || S.ms.filter(function (x) { return x.unidade === un && x.periodo === p.id; })[0];
-      if (m) { var st = P.estadoMs(m); return '<a class="ps-cob ' + (P.concluida(m) ? 'ok' : st.cls) + '" href="' + rota('Milestone/' + m.id) + '" title="' + e(m.nome + ' · ' + st.txt) + '">' + e(P.concluida(m) ? 'Done' : st.txt) + '</a>'; }
+      if (m) { var st = P.estadoMs(m); return '<a class="ps-cob ' + (P.concluida(m) ? 'ok' : st.cls) + '" href="' + rota('Milestone/' + m.id) + '" title="' + e(m.nome + ', ' + st.txt) + '">' + e(P.concluida(m) ? 'Done' : st.txt) + '</a>'; }
       var sug = P.indicadoresSugeridos(un, p.id).length;
-      return sug ? '<button type="button" class="ps-cob vazio" data-a="lancCel" data-v="' + e(un + '|' + p.id) + '" title="Launch ' + e(un + ' · ' + p.nome) + '">+ Launch<small>' + sug + ' indicators</small></button>' : '<span class="ps-cob nada" title="No indicators planned">·</span>';
+      return sug ? '<button type="button" class="ps-cob vazio" data-a="lancCel" data-v="' + e(un + '|' + p.id) + '" title="Launch ' + e(un + ': ' + p.nome) + '">+ Launch<small>' + sug + ' indicators</small></button>' : '<span class="ps-cob nada" title="No indicators planned">-</span>';
     };
     var faltam = 0;
     uns.forEach(function (un) { pers.forEach(function (p) { if (!P.msExistente(un, p.id) && P.indicadoresSugeridos(un, p.id).length) faltam++; }); });
@@ -1158,7 +1182,7 @@
         campo('lc-prazo', 'Due date', '<select id="lc-prazo" class="ps-sel" data-c="lancPrazo">' + opt('fecho', 'Internal close of each period', L.prazo) + opt('data', 'A specific date', L.prazo) + '</select>') + '</div>' +
         (L.prazo === 'data' ? campo('lc-data', 'Date', '<input id="lc-data" type="date" class="ps-in" value="' + e(L.data) + '" data-c="lancData">') : '') + '</li></ol>' +
         '<div class="ps-lc-res" aria-live="polite"><b>' + novas + ' milestone(s) will be created</b>' + (existem ? '<span>' + existem + ' already exist and will be skipped</span>' : '') +
-        (plano.length ? '<ul>' + plano.slice(0, 12).map(function (x) { return '<li class="' + (x.ex ? 'ex' : !x.n ? 'nada' : '') + '"><span class="ps-lc-res-t">' + e(x.un + ' · ' + x.p.nome) + '<small>' + (x.ex ? 'exists' : x.n ? x.n + ' indicators' : 'no indicators') + '</small></span>' + (x.ex || !x.n ? '' : quem(x.un)) + '</li>'; }).join('') + (plano.length > 12 ? '<li>…</li>' : '') + '</ul>' : '') + '</div>',
+        (plano.length ? '<ul>' + plano.slice(0, 12).map(function (x) { return '<li class="' + (x.ex ? 'ex' : !x.n ? 'nada' : '') + '"><span class="ps-lc-res-t">' + e(x.un + ': ' + x.p.nome) + '<small>' + (x.ex ? 'exists' : x.n ? x.n + ' indicators' : 'no indicators') + '</small></span>' + (x.ex || !x.n ? '' : quem(x.un)) + '</li>'; }).join('') + (plano.length > 12 ? '<li>…</li>' : '') + '</ul>' : '') + '</div>',
       p: '<span class="ps-sp-flex"></span><button type="button" class="ps-btn" data-a="fecharPainel">Cancel</button><button type="button" class="ps-btn pri" data-a="lancConfirmar"' + (novas ? '' : ' disabled') + '>Launch ' + novas + ' milestone(s)</button>'
     };
   };
@@ -1170,7 +1194,7 @@
     var cx = function (c, grupo, k, on, rot) { return '<label class="ps-chk ps-mom-c"><input id="mo-' + e(c.id + '-' + k) + '" type="checkbox" data-c="momento" data-id="' + e(c.id + '|' + grupo + '|' + k) + '"' + (on ? ' checked' : '') + '><span class="ps-sr">' + e(rot + ', ' + c.id) + '</span></label>'; };
     var linhas = l.map(function (c) {
       var mo = P.momentosDe(c.id);
-      return [linkFicha(c.id, c.id + ' ' + c.nome) + (mo.proprio ? '<small class="ps-mom-prop" data-fx-ignorar>Custom ·<button type="button" class="ps-btn liga" data-a="momRepor" data-v="' + e(c.id) + '">Reset</button></small>' : ''), depHtml(P.donoIndicador(c.id)), e(PERIODO_TXT[c.periodicidade] || c.periodicidade)]
+      return [linkFicha(c.id, c.id + ' ' + c.nome) + (mo.proprio ? '<small class="ps-mom-prop" data-fx-ignorar>Custom <button type="button" class="ps-btn liga" data-a="momRepor" data-v="' + e(c.id) + '">Reset</button></small>' : ''), depHtml(P.donoIndicador(c.id)), e(PERIODO_TXT[c.periodicidade] || c.periodicidade)]
         .concat(P.MOMENTOS_PER.map(function (x) { return cx(c, 'per', x[0], mo.per.indexOf(x[0]) > -1, x[1]); }))
         .concat(P.TIPOS_ENTREGA.map(function (x) { return cx(c, 'ent', x[0], mo.ent.indexOf(x[0]) > -1, x[2]); }));
     });
@@ -1235,6 +1259,14 @@
   var fechaPainel = function () { if (U.painel && U.painel.tipo === 'marca' && U.marca) { U.marca = null; U.logoEstado = ''; P.aplicarMarca(); } U.painel = null; R(); };
   var Pn = {};
   Pn.tipo = pnTipo; Pn.lancar = pnLancar;
+  /* Mudar a quem esta atribuida: fica no historico da milestone */
+  Pn.atribuir = function () {
+    var m = msAtual(), atual = m.atribuido_a || '', sel = U.atrSel === undefined ? atual : U.atrSel;
+    var ops = [{ v: '', ico: avEquipa(), t: m.unidade, s: 'Whole department' }].concat(P.atribuiveis(m).map(function (x) { return { v: x.login, ico: avPessoa(x.nome), t: x.nome, s: 'Data owner, ' + x.unidade }; }));
+    return { t: 'Assigned to', s: m.nome + ': ' + P.passoAtual(m).nome,
+      b: '<p class="ps-small ps-mut">Who fills in this milestone. Anyone in ' + e(m.unidade) + ' can still act on it. The change is recorded in the history of the milestone.</p><div class="ps-atr-esc ps-atr-col" role="radiogroup" aria-label="Assigned to">' + ops.map(function (o, i) { return '<label class="ps-atr-op' + (sel === o.v ? ' on' : '') + '"><input type="radio" id="atr-' + i + '" name="atr-sel" data-c="atrMsSel" value="' + e(o.v) + '"' + (sel === o.v ? ' checked' : '') + '>' + o.ico + '<span>' + e(o.t) + '<small>' + e(o.s) + '</small></span>' + (o.v === atual ? '<em>Current</em>' : '') + '</label>'; }).join('') + '</div>',
+      p: '<span class="ps-sp-flex"></span><button type="button" class="ps-btn" data-a="fecharPainel">Cancel</button><button type="button" class="ps-btn pri" data-a="msAtrGuardar"' + (sel === atual ? ' disabled' : '') + '>Save</button>' };
+  };
   /* Marca: abre-se no menu do avatar do administrador. Fechar sem gravar desfaz a pre-visualizacao. */
   Pn.marca = function () { return { t: 'Brand', s: 'Logo, name and colours of the platform', largo: true, b: B.marca().replace(/<div class="ps-sticky ps-mt">[\s\S]*?<\/div>/, ''), p: '<span class="ps-sp-flex"></span><button type="button" class="ps-btn" data-a="fecharPainel">Cancel</button><button type="button" class="ps-btn pri" data-a="mcGuardar">Save brand</button>' }; };
   Pn.ficha = function (a) {
@@ -1245,8 +1277,8 @@
     var b = '<div class="ps-sp">' + chip(est.txt, est.cls) + marcaAmostra(id) + (it.reexpresso ? chip('Restated', 'warn') : '') + '</div><div class="ps-kpis"><div class="ps-kpi"><span>' + (m.ano - 1) + '</span><b>' + (ant === null || ant === undefined ? '-' : e(fmtV(id, ant))) + '</b></div><div class="ps-kpi"><span>' + m.ano + '</span><b>' + (it.valor === null ? '-' : e(fmtV(id, it.valor))) + '</b></div><div class="ps-kpi"><span>Change</span><b>' + (v.variacao === null ? '-' : (v.variacao > 0 ? '+' : '') + P.fmtNum(v.variacao, 1) + '%') + '</b></div></div>' +
       (v.alertas.length ? '<div class="ps-aviso warn">' + v.alertas.map(e).join('<br>') + '</div>' : '') + (it.justificacao ? '<div><span class="ps-lab">Justification</span>' + e(it.justificacao) + '</div>' : '') +
       '<p class="ps-ficha-desc">' + e(P.esrsDe(id).desc) + '</p>' +
-      '<dl class="ps-det"><dt>Year and unit</dt><dd>' + m.ano + ' · ' + e(c.unidade_medida) + '</dd><dt>Milestone</dt><dd>' + e(m.nome) + '</dd><dt>Type</dt><dd>' + (c.tipo === 'derivado' ? 'Derived' : 'Base data') + '</dd>' + (c.formula ? '<dt>Formula</dt><dd>' + e(c.formula) + '</dd>' : '') + '<dt>Threshold</dt><dd>' + c.limiar_variacao_pct + '%</dd><dt>Users</dt><dd>' + e(c.utilizado_por.join(', ')) + '</dd><dt>Quality</dt><dd>' + e(P.QUALIDADE_TXT[it.qualidade]) + (it.metodo ? ' · ' + e(it.metodo) : '') + '</dd><dt>Evidence</dt><dd>' + (it.evidencias.map(function (x) { return e(x.ficheiro); }).join(', ') || '-') + '</dd><dt>ESRS datapoint</dt><dd>' + (P.esrsDe(id).dps.length ? '<span class="ps-mono">' + e(P.esrsDe(id).dps.join(', ')) + '</span>' : 'Entity-specific') + '</dd><dt>Frameworks</dt><dd>ESRS ' + e(c.esrs_requisito) + (refs ? ' (' + e(MAT_TXT[refs] || refs) + ')' : '') + ' · GRI ' + e(c.gri) + '</dd></dl>' +
-      '<div><h3 class="ps-grupo-t">Value history</h3>' + (it.versoes.length ? '<ul class="ps-ev ps-sem-pad">' + it.versoes.slice().reverse().map(function (x) { return '<li><b class="ps-num">' + e(fmtV(id, x.valor)) + '</b> · ' + e(x.origem) + (x.motivo ? '. Reason: ' + e(x.motivo) : '') + '<small>' + e(x.por) + ' · ' + e(P.fmtDataHora(x.em)) + '</small></li>'; }).join('') + '</ul>' : '<p class="ps-mut ps-small">No values yet.</p>') + '</div>';
+      '<dl class="ps-det"><dt>Year and unit</dt><dd>' + m.ano + ', ' + e(c.unidade_medida) + '</dd><dt>Milestone</dt><dd>' + e(m.nome) + '</dd><dt>Type</dt><dd>' + (c.tipo === 'derivado' ? 'Derived' : 'Base data') + '</dd>' + (c.formula ? '<dt>Formula</dt><dd>' + e(c.formula) + '</dd>' : '') + '<dt>Threshold</dt><dd>' + c.limiar_variacao_pct + '%</dd><dt>Users</dt><dd>' + e(c.utilizado_por.join(', ')) + '</dd><dt>Quality</dt><dd>' + e(P.QUALIDADE_TXT[it.qualidade]) + (it.metodo ? ', ' + e(it.metodo) : '') + '</dd><dt>Evidence</dt><dd>' + (it.evidencias.map(function (x) { return e(x.ficheiro); }).join(', ') || '-') + '</dd><dt>ESRS datapoint</dt><dd>' + (P.esrsDe(id).dps.length ? '<span class="ps-mono">' + e(P.esrsDe(id).dps.join(', ')) + '</span>' : 'Entity-specific') + '</dd><dt>Frameworks</dt><dd>ESRS ' + e(c.esrs_requisito) + (refs ? ' (' + e(MAT_TXT[refs] || refs) + ')' : '') + ', GRI ' + e(c.gri) + '</dd></dl>' +
+      '<div><h3 class="ps-grupo-t">Value history</h3>' + (it.versoes.length ? '<ul class="ps-ev ps-sem-pad">' + it.versoes.slice().reverse().map(function (x) { return '<li><b class="ps-num">' + e(fmtV(id, x.valor)) + '</b>, ' + e(x.origem) + (x.motivo ? '. Reason: ' + e(x.motivo) : '') + '<small>' + quemHtml(x.por) + '<span class="ps-q-sep">, </span>' + e(P.fmtDataHora(x.em)) + '</small></li>'; }).join('') + '</ul>' : '<p class="ps-mut ps-small">No values yet.</p>') + '</div>';
     if (P.concluida(m) && P.podeReexpressar(usr)) b += '<div class="ps-card ps-card-body"><h3 class="ps-grupo-t ps-sem-topo">Restate approved value</h3><div class="ps-form">' + campo('rx-val', 'New value', '<input id="rx-val" class="ps-in" inputmode="decimal">') + campo('rx-mot', 'Reason (required)', '<input id="rx-mot" class="ps-in">') + '</div><button type="button" class="ps-btn pri ps-mt" data-a="reexpressar" data-v="' + e(id) + '">Restate value</button></div>';
     if (usr.perfil === 'auditor' || usr.perfil === 'admin') b += '<div class="ps-card ps-card-body"><h3 class="ps-grupo-t ps-sem-topo">Auditor information request</h3>' + campo('pa-txt', 'What you need to know', '<textarea id="pa-txt" class="ps-ta"></textarea>') + '<button type="button" class="ps-btn ps-mt" data-a="pedidoAud" data-v="' + e(id) + '">Send request</button></div>';
     return { t: c.nome, s: c.id, b: b, p: '<a class="ps-btn" href="' + rota('Milestone/' + m.id) + '" data-a="fecharPainel" data-nao-impedir="1">Open the milestone</a>' };
@@ -1423,6 +1455,8 @@
   var val = function (id) { var el = document.getElementById(id); return el ? el.value : ''; };
   var A = {
     entrar: function (d) { P.entrar(d.v); var usr = P.user(d.v); P.irPara(usr.perfil === 'ext' ? 'Pedidos' : 'Inicio'); },
+    msAtrAbrir: function () { U.atrSel = undefined; abrePainel('atribuir', {}); },
+    msAtrGuardar: function () { var m = msAtual(), v = U.atrSel === undefined ? (m.atribuido_a || '') : U.atrSel; U.painel = null; U.atrSel = undefined; res(P.atribuir(m, v, u()), 'Assignment saved. It is in the history of the milestone.'); },
     momRepor: function (d) { res(P.reporMomentos(d.v, u()), 'Back to the default for ' + d.v + '.'); },
     marcaAbrir: function () { U.menu = null; U.marca = null; U.logoEstado = ''; abrePainel('marca'); },
     ambienteTeste: function () { P.sair(); P.mudarAmbiente(true); },
@@ -1618,6 +1652,7 @@
     indBusca: function (el) { U.indBusca = el.value; },
     regraBusca: function (el) { U.regraBusca = el.value; },
     momBusca: function (el) { U.momBusca = el.value; },
+    atrMsSel: function (el) { U.atrSel = el.value; },
     indFreq: function (el) {
       var r = P.mudarFrequencia(el.dataset.id, el.value, u());
       if (r.erro) return toast(r.erro, 'err');
