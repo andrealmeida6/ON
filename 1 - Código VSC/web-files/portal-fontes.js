@@ -304,6 +304,24 @@
     return '<div class="fd-bloco"><div class="fd-bloco-h"><h3>Source data</h3><span class="ps-small ps-mut">' + e(nota) + '</span></div>' +
       tabela([{ t: 'Data' }, { t: 'Unit' }, { t: 'Used by', info: 'The indicators of this milestone that are calculated from this data. Change the value here and they update by themselves. Click an indicator to see its definition and formula.' }, { t: 'System' }, { t: 'Value ' + P.rotPeriodo(m) }], linhas) + '</div>';
   };
+  /* Dados de um indicador, para ficarem logo por cima dele em Requested data.
+     Um dado que ja apareceu num indicador anterior volta so como referencia, sem campo, para nao haver dois sitios a mudar o mesmo valor. */
+  P.fontesDoIndicador = function (m, id, vistos) {
+    var x = P.expressaoDe(id);
+    if (!x) return '';
+    var ks = P.camposDaFormula(x).filter(function (k) { return CAMPOS[k]; });
+    if (!ks.length) return '';
+    var usr = u(), pode = podePuxar(m, usr), px = (S.puxados || {})[m.id], ed = (px && px.editados) || {};
+    return '<div class="rq-fs" role="group" aria-label="Source data of ' + e(id) + '">' + ks.map(function (k) {
+      var f = CAMPOS[k], v = px && px.vals[k] !== undefined ? px.vals[k] : null, st = P.estadoSistema(f.db), ja = vistos[k];
+      if (!ja) vistos[k] = id;
+      var orig = v === null ? '' : '<small class="fd-orig' + (ed[k] ? ' ed' : '') + '">' + (ed[k] ? 'Typed' : 'From the system') + '</small>';
+      var val = ja ? '<span class="rq-f-ref"><b class="ps-num">' + (v === null ? '-' : e(num(v))) + '</b><small>Same value as in ' + e(ja) + ' above</small></span>'
+        : pode ? '<input id="fd-' + e(k) + '" class="ps-in ps-num fd-in' + (ed[k] ? ' ed' : '') + '" inputmode="decimal" autocomplete="off" aria-label="' + e(f.rot) + '" placeholder="-" value="' + e(v === null ? '' : String(Number(v.toFixed(4))).replace('.', ',')) + '" data-c="fdValor" data-id="' + e(k) + '">' + orig
+          : '<b class="ps-num">' + (v === null ? '-' : e(num(v))) + '</b>' + orig;
+      return '<div class="rq-f' + (ja ? ' ref' : '') + '"><span class="rq-f-n">' + e(f.rot) + '<small class="' + (st.ligada ? (st.live ? 'live' : 'sync') : 'off') + '">' + e(DBS[f.db]) + ': ' + e(st.txt) + '</small></span><span class="rq-f-u">' + e(unidade(f)) + '</span><span class="rq-f-v">' + val + '</span></div>';
+    }).join('') + '</div>';
+  };
   /* Pop-up do pull: data da ultima atualizacao, o que vai preencher e o resultado nos indicadores */
   X.Pn.puxar = function () {
     var m = X.msAtual(), l = P.previewPuxar(m), lig = l.filter(function (x) { return x.ligada; }), dbs = P.dbsMilestone(m);

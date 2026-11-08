@@ -72,7 +72,7 @@
   A.visaoModo = function (d) { U.visao.modo = d.v; R(); };
   C.visaoEmp = function (el) { U.visao.empresa = el.value; };
   /* Estado de uma ligacao: so com "Connected" se pode puxar dados desse sistema nas milestones */
-  C.ligEstado = function (el) { var a = S.apis[+el.dataset.id], usr = u(); if (!a || !P.gereTudo(usr)) return; a.estado = el.value; if (P.eventoGlobal) P.eventoGlobal('Connection ' + a.nome + ': ' + (el.value === 'ligada' ? 'connected' : 'waiting for credentials') + '.', usr.nome); P.guardar(); toast('Connection updated.', 'ok'); };
+  C.ligEstado = function (el) { var a = S.apis[+el.dataset.id], usr = u(); if (!a || !P.gereTudo(usr)) return; a.estado = el.value; a.mudado = true; if (P.eventoGlobal) P.eventoGlobal('Connection ' + a.nome + ': ' + (el.value === 'ligada' ? 'connected' : 'waiting for credentials') + '.', usr.nome); P.guardar(); toast('Connection updated.', 'ok'); };
 
   /* --- Estado de reporte -------------------------------------------------------- */
   U.est = { norma: '', empresa: '', dono: '', estado: 'todos' };

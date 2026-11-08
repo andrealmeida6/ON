@@ -98,7 +98,7 @@
   };
   var fmtV = function (id, v) { return P.fmtNum(v, P.cat(id).casas_decimais); };
   var u = function () { return P.sessao(); };
-  var doUtilizador = function (m, usr) { return usr.perfil === 'resp' ? m.unidade === usr.unidade : true; };
+  var doUtilizador = function (m, usr) { return usr.perfil === 'resp' ? m.unidade === usr.unidade || m.atribuido_a === usr.login : true; };
   var aviso = function (t, cls) { toast(t, cls); };
   var toastTimer = null;
   var toast = function (t, cls) {
@@ -536,15 +536,16 @@
   var marcaAmostra = function (id) { return S.amostra.indexOf(id) > -1 ? ' ' + chip('Sample', 'rev') : ''; };
 
   var sepRecolha = function (m) {
-    var usr = u(), rel = U.imp[m.id], calcs = P.calculosMilestone ? P.calculosMilestone(m) : [], comFontes = P.camposMilestone ? P.camposMilestone(m).length > 0 : false;
+    var usr = u(), rel = U.imp[m.id], calcs = P.calculosMilestone ? P.calculosMilestone(m) : [], comFontes = P.camposMilestone ? P.camposMilestone(m).length > 0 : false, vistos = {};
     var linhas = m.indicadores.map(function (id) {
       var c = P.cat(id), it = P.item(id, P.chave(m)), v = P.validarItem(it), ant = P.valorAnterior(id, P.chave(m));
       var calc = calcs.filter(function (r) { return r.id === id; })[0], emCalc = !!(calc && calc.x && calc.valor !== null && it.daFonte);
+      var fontes = U.dadosVista === 'ind' || !P.fontesDoIndicador ? '' : P.fontesDoIndicador(m, id, vistos);
       var txtBruto = it.rascunho || (it.valor === null ? '' : String(it.valor).replace('.', ','));
       var cls = v.erros.length ? 'erro' : v.alertas.length ? 'alerta' : '';
       var res = v.erros.length ? chip('Error', 'err') : v.alertas.length ? chip(v.alertas.length + ' alert(s)', 'warn') : it.valor !== null ? chip('Valid', 'ok') : chip('To fill in');
       var recebido = S.ext.filter(function (x) { return x.indicador_id === id && x.milestone_id === m.id && x.estado === 'recebido'; })[0];
-      return '<div class="ps-ind" id="ind-' + e(id) + '"><div class="ps-ind-top"><div class="ps-ind-nome"><button type="button" data-a="ficha" data-v="' + e(id) + '">' + e(c.nome) + '</button><small>' + e(c.unidade_medida) + ', ' + (c.tipo === 'derivado' ? 'Derived' : 'Base data') + ', ' + e(c.perimetro) + (P.esrsDe(id).dps.length ? ', ' + e(P.esrsDe(id).dps[0]) : '') + '</small><span class="ps-ind-desc">' + e(P.esrsDe(id).desc) + '</span>' + (P.formulaTxt ? '<span class="ps-ind-form">ƒ ' + e(P.formulaTxt(id)) + '</span>' : '') + '</div>' +
+      return '<div class="rq-g' + (fontes ? ' com-f' : '') + (emCalc ? ' calc' : '') + '">' + fontes + '<div class="ps-ind" id="ind-' + e(id) + '"><div class="ps-ind-top"><div class="ps-ind-nome"><button type="button" data-a="ficha" data-v="' + e(id) + '">' + e(c.nome) + '</button><small>' + e(c.unidade_medida) + ', ' + (c.tipo === 'derivado' ? 'Derived' : 'Base data') + ', ' + e(c.perimetro) + (P.esrsDe(id).dps.length ? ', ' + e(P.esrsDe(id).dps[0]) : '') + '</small><span class="ps-ind-desc">' + e(P.esrsDe(id).desc) + '</span>' + (P.formulaTxt ? '<span class="ps-ind-form">ƒ ' + e(P.formulaTxt(id)) + '</span>' : '') + '</div>' +
         '<div><span class="ps-ind-k">' + e(P.rotAnterior(P.chave(m))) + '</span><span class="ps-num">' + (ant === null || ant === undefined ? '-' : fmtV(id, ant)) + '</span></div>' +
         (emCalc ? '<div class="ps-ind-campo ps-ind-calc"><span class="ps-ind-k">Value ' + e(P.rotPeriodo(m)) + '</span><span class="ps-calc-v ps-num ' + cls + '" title="Calculated from the source data">' + e(fmtV(id, it.valor)) + '</span></div>' :
         '<div class="ps-ind-campo"><label class="ps-ind-k" for="v-' + e(id) + '">Value ' + e(P.rotPeriodo(m)) + '</label><input id="v-' + e(id) + '" class="ps-in ps-num ' + cls + '" inputmode="decimal" autocomplete="off" value="' + e(txtBruto) + '" data-c="valor" data-id="' + e(id) + '"' + (v.erros.length ? ' aria-invalid="true" aria-describedby="err-' + e(id) + '"' : '') + '></div>') +
@@ -555,14 +556,13 @@
         '<div class="ps-ind-sub">' + campo('q-' + id, 'Data quality', '<select id="q-' + e(id) + '" class="ps-sel" data-c="qual" data-id="' + e(id) + '">' + opt('medido', 'Measured', it.qualidade) + opt('calculado', 'Calculated', it.qualidade) + opt('estimado', 'Estimated', it.qualidade) + '</select>') +
         (it.qualidade === 'estimado' ? campo('m-' + id, 'Estimation method (required)', '<input id="m-' + e(id) + '" class="ps-in" value="' + e(it.metodo) + '" data-c="metodo" data-id="' + e(id) + '">') : '') +
         '<div class="ps-sp"><button type="button" id="e-' + e(id) + '" class="ps-btn peq" data-a="anexar" data-v="' + e(id) + '">Attach evidence</button>' + (c.evidencia_obrigatoria ? (it.evidencias.length ? chip('Evidence attached', 'ok') : chip('Evidence required', 'warn')) : (it.evidencias.length ? chip(it.evidencias.length + ' evidence item(s)', 'ok') : '')) + '<button type="button" class="ps-btn peq" data-a="pedirExt" data-v="' + e(id) + '">Ask an external entity</button></div></div>' +
-        (recebido ? '<div class="ps-aviso ok ps-mt">' + e(recebido.entidade_externa) + ' sent ' + e(fmtV(id, recebido.valor)) + ' ' + e(c.unidade_medida) + '. <button type="button" class="ps-btn peq" data-a="usarExt" data-v="' + e(recebido.id) + '">Use this value</button></div>' : '') + '</div>';
+        (recebido ? '<div class="ps-aviso ok ps-mt">' + e(recebido.entidade_externa) + ' sent ' + e(fmtV(id, recebido.valor)) + ' ' + e(c.unidade_medida) + '. <button type="button" class="ps-btn peq" data-a="usarExt" data-v="' + e(recebido.id) + '">Use this value</button></div>' : '') + '</div></div>';
     }).join('');
     return '<div class="ps-card">' + cabCartao('Import file', 'doc') +
       '<div class="ps-drop"><button type="button" class="ps-btn pri" data-a="importar">Import file</button><button type="button" class="ps-btn" data-a="tplExcel">Excel template</button><button type="button" class="ps-btn" data-a="impExemplo">Test with a sample file</button><span class="ps-mut ps-small">Excel (.xlsx) only</span></div>' +
       (rel ? relatorioImport(m, rel) : '') + '</div>' +
       '<div class="ps-card">' + cabCartao('Requested data', 'tarefa', '<div class="ps-sp">' + (P.fontesAcoes ? P.fontesAcoes(m) : '') + ferrDados(m) + '</div>') +
-      (P.fontesHtml && comFontes ? '<div class="ps-card-body">' + P.fontesHtml(m) + '</div>' : '') +
-      (U.dadosVista === 'grid' ? corpoGrelha(m) : (comFontes ? '<div class="ps-ind-h"><h3>Indicators</h3><span class="ps-leg"><span><i class="calc"></i>Calculated from the source data</span></span></div>' : '') + linhas) + '</div>';
+      (U.dadosVista === 'grid' ? corpoGrelha(m) : (comFontes ? '<div class="rq-leg">' + (U.dadosVista === 'ind' ? '<span>Showing the indicators only. Their source data is in Data and indicators.</span>' : '<span><i class="f"></i>Source data, from the systems or typed</span><span><i class="calc"></i>Indicator calculated from the data above it</span>') + '</div>' : '') + '<div class="rq-lista">' + linhas + '</div>') + '</div>';
   };
   /* --- Na milestone do ano: o que ja foi reportado nos trimestres ------------ */
   var cartaoTrimestres = function (m) {
@@ -595,7 +595,8 @@
       (gere ? '<div class="ps-form ps-mt ps-fic-novo">' + campo('fp-nome', 'Request another file', '<input id="fp-nome" class="ps-in" placeholder="Nome do ficheiro pedido">') + '<label class="ps-chk"><input id="fp-obr" type="checkbox" checked> Required</label><button type="button" class="ps-btn" data-a="ficPedir">Add to the request</button></div>' : '') + '</div></div>';
   };
   var ferrDados = function (m) {
-    return '<div class="ps-sp"><div class="ps-seg" role="group" aria-label="View"><button type="button" class="' + (U.dadosVista === 'grid' ? '' : 'on') + '" data-a="dadosVista" data-v="form">' + (P.podePreencher(m, u()) ? 'Form' : 'Table') + '</button><button type="button" class="' + (U.dadosVista === 'grid' ? 'on' : '') + '" data-a="dadosVista" data-v="grid">Grid</button></div><button type="button" class="ps-btn peq" data-a="dadosExcel">Export to Excel</button></div>';
+    var pode = P.podePreencher(m, u()), vs = pode && P.camposMilestone && P.camposMilestone(m).length ? [['form', 'Data and indicators'], ['ind', 'Indicators only'], ['grid', 'Grid']] : [['form', pode ? 'Form' : 'Table'], ['grid', 'Grid']], at = U.dadosVista === 'ind' && vs.length < 3 ? 'form' : U.dadosVista || 'form';
+    return '<div class="ps-sp"><div class="ps-seg" role="group" aria-label="View">' + vs.map(function (v) { return '<button type="button" class="' + (at === v[0] ? 'on' : '') + '" data-a="dadosVista" data-v="' + v[0] + '">' + v[1] + '</button>'; }).join('') + '</div><button type="button" class="ps-btn peq" data-a="dadosExcel">Export to Excel</button></div>';
   };
 
   /* --- Grelha de dados ---------------------------------------------------- */
@@ -1262,9 +1263,19 @@
   /* Mudar a quem esta atribuida: fica no historico da milestone */
   Pn.atribuir = function () {
     var m = msAtual(), atual = m.atribuido_a || '', sel = U.atrSel === undefined ? atual : U.atrSel;
-    var ops = [{ v: '', ico: avEquipa(), t: m.unidade, s: 'Whole department' }].concat(P.atribuiveis(m).map(function (x) { return { v: x.login, ico: avPessoa(x.nome), t: x.nome, s: 'Data owner, ' + x.unidade }; }));
-    return { t: 'Assigned to', s: m.nome + ': ' + P.passoAtual(m).nome,
-      b: '<p class="ps-small ps-mut">Who fills in this milestone. Anyone in ' + e(m.unidade) + ' can still act on it. The change is recorded in the history of the milestone.</p><div class="ps-atr-esc ps-atr-col" role="radiogroup" aria-label="Assigned to">' + ops.map(function (o, i) { return '<label class="ps-atr-op' + (sel === o.v ? ' on' : '') + '"><input type="radio" id="atr-' + i + '" name="atr-sel" data-c="atrMsSel" value="' + e(o.v) + '"' + (sel === o.v ? ' checked' : '') + '>' + o.ico + '<span>' + e(o.t) + '<small>' + e(o.s) + '</small></span>' + (o.v === atual ? '<em>Current</em>' : '') + '</label>'; }).join('') + '</div>',
+    var resp = P.atribuiveis(m), q = norm(U.atrBusca || '');
+    var sug = [{ v: '', ico: avEquipa(), t: m.unidade, s: 'Whole department' }].concat(resp.map(function (x) { return { v: x.login, ico: avPessoa(x.nome), t: x.nome, s: 'Data owner, ' + x.unidade }; }));
+    var todos = S.users.filter(function (x) { return x.perfil !== 'ext' && x.perfil !== 'auditor' && resp.indexOf(x) < 0; });
+    var achados = todos.filter(function (x) { return !q || norm(x.nome + ' ' + (x.unidade || '') + ' ' + x.login).indexOf(q) > -1; });
+    /* Se a pessoa escolhida nao aparece com a pesquisa, continua a vista no topo */
+    var escolhido = todos.filter(function (x) { return x.login === sel; })[0];
+    if (escolhido && achados.indexOf(escolhido) < 0) achados.unshift(escolhido);
+    var op = function (o, i) { return '<label class="ps-atr-op' + (sel === o.v ? ' on' : '') + '"><input type="radio" id="atr-' + i + '" name="atr-sel" data-c="atrMsSel" value="' + e(o.v) + '"' + (sel === o.v ? ' checked' : '') + '>' + o.ico + '<span>' + e(o.t) + '<small>' + e(o.s) + '</small></span>' + (o.v === atual ? '<em>Current</em>' : '') + '</label>'; };
+    return { t: 'Assigned to', s: m.nome + ': ' + P.passoAtual(m).nome, cls: 'alto',
+      b: '<p class="ps-small ps-mut">Who fills in this milestone. Anyone in ' + e(m.unidade) + ' can still act on it, and so can the person it is assigned to, even from another department. The change is recorded in the history of the milestone.</p>' +
+        '<h4 class="ps-atr-t">Team and data owner</h4><div class="ps-atr-esc ps-atr-col" role="radiogroup" aria-label="Team and data owner">' + sug.map(op).join('') + '</div>' +
+        '<h4 class="ps-atr-t">Anyone else in the company</h4>' + campo('atr-busca', 'Search by name or department', '<input id="atr-busca" type="search" class="ps-in" autocomplete="off" value="' + e(U.atrBusca || '') + '" data-c="atrBusca" data-i="atrBuscaLive">') +
+        '<div class="ps-atr-esc ps-atr-col ps-mt" role="radiogroup" aria-label="Anyone else in the company">' + (achados.length ? achados.map(function (x, i) { return op({ v: x.login, ico: avPessoa(x.nome), t: x.nome, s: x.unidade || P.PERFIS[x.perfil] }, 'o' + i); }).join('') : '<p class="ps-small ps-mut">No one matches.</p>') + '</div>',
       p: '<span class="ps-sp-flex"></span><button type="button" class="ps-btn" data-a="fecharPainel">Cancel</button><button type="button" class="ps-btn pri" data-a="msAtrGuardar"' + (sel === atual ? ' disabled' : '') + '>Save</button>' };
   };
   /* Marca: abre-se no menu do avatar do administrador. Fechar sem gravar desfaz a pre-visualizacao. */
@@ -1455,7 +1466,7 @@
   var val = function (id) { var el = document.getElementById(id); return el ? el.value : ''; };
   var A = {
     entrar: function (d) { P.entrar(d.v); var usr = P.user(d.v); P.irPara(usr.perfil === 'ext' ? 'Pedidos' : 'Inicio'); },
-    msAtrAbrir: function () { U.atrSel = undefined; abrePainel('atribuir', {}); },
+    msAtrAbrir: function () { U.atrSel = undefined; U.atrBusca = ''; abrePainel('atribuir', {}); },
     msAtrGuardar: function () { var m = msAtual(), v = U.atrSel === undefined ? (m.atribuido_a || '') : U.atrSel; U.painel = null; U.atrSel = undefined; res(P.atribuir(m, v, u()), 'Assignment saved. It is in the history of the milestone.'); },
     momRepor: function (d) { res(P.reporMomentos(d.v, u()), 'Back to the default for ' + d.v + '.'); },
     marcaAbrir: function () { U.menu = null; U.marca = null; U.logoEstado = ''; abrePainel('marca'); },
@@ -1653,6 +1664,7 @@
     regraBusca: function (el) { U.regraBusca = el.value; },
     momBusca: function (el) { U.momBusca = el.value; },
     atrMsSel: function (el) { U.atrSel = el.value; },
+    atrBusca: function (el) { U.atrBusca = el.value; },
     indFreq: function (el) {
       var r = P.mudarFrequencia(el.dataset.id, el.value, u());
       if (r.erro) return toast(r.erro, 'err');
@@ -1693,6 +1705,8 @@
     mcCorT: function (el) { if (/^#[0-9a-fA-F]{6}$/.test(el.value)) { U.marca.cores[el.dataset.id] = el.value; P.aplicarMarca(U.marca); } else toast('Use a colour in #RRGGBB format.', 'err'); }
   };
   var Live = {
+    /* Pesquisa de pessoas no pop-up de atribuicao: filtra enquanto se escreve */
+    atrBuscaLive: function (el) { U.atrBusca = el.value; R(); },
     mcCor: function (el) { U.marca.cores[el.dataset.id] = el.value; var t = document.getElementById('cor-t-' + el.dataset.id); if (t) t.value = el.value; mudouMarca(); }
   };
 

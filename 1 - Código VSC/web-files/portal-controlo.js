@@ -65,7 +65,7 @@
   P.ligacoesBase = function () {
     return [
       { id: 'api1', db: 'erp', nome: 'Sistema financeiro', ambito: 'Energia e combustíveis', frequencia: 'Daily', estado: 'ligada' },
-      { id: 'api2', db: 'rh', nome: 'Sistema de RH', ambito: 'Efetivos, formação e rotatividade', frequencia: 'Daily', estado: 'pendente' },
+      { id: 'api2', db: 'rh', nome: 'Sistema de RH', ambito: 'Efetivos, formação e rotatividade', frequencia: 'Daily', estado: 'ligada' },
       { id: 'api3', db: 'tele', nome: 'Telemetria', ambito: 'Volumes de água e leituras de contador', frequencia: 'Live', estado: 'ligada' },
       { id: 'api4', db: 'lab', nome: 'Laboratório (LIMS)', ambito: 'Análises de água e cargas das ETAR', frequencia: 'Daily', estado: 'ligada' },
       { id: 'api5', db: 'com', nome: 'Sistema comercial (CRM)', ambito: 'Faturação, clientes e reclamações', frequencia: 'Daily', estado: 'ligada' },

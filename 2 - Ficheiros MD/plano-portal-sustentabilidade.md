@@ -327,6 +327,15 @@ Pedido do André a 8 de novembro de 2026.
 - **Barra de ação:** "Submit milestone" (ou devolver e aprovar, na revisão) fica sempre visível no fundo do ecrã, com quantos indicadores têm valor e o que falta.
 - **Separadores Work e Data store:** sem barra de deslocamento vertical.
 
+## Atribuir a qualquer pessoa e Requested data numa só lista
+
+Pedido do André a 8 de novembro de 2026.
+
+- **Atribuir:** o pop-up mostra em cima a equipa e o responsável do departamento e, por baixo, "Anyone else in the company", com pesquisa por nome ou departamento que filtra enquanto se escreve. Quem fica com a milestone atribuída pode preenchê-la e vê-a nas suas listas, mesmo sendo de outro departamento (`P.podeAgir`, `doUtilizador`). O departamento continua a poder agir.
+- **RH ligado:** o sistema de RH passa a "Connected", sincronizado uma vez por dia. Nos navegadores com dados antigos passa a ligado ao abrir, a não ser que o administrador o tenha mudado.
+- **Uma só lista:** em Requested data, cada indicador aparece com os seus dados logo por cima (`P.fontesDoIndicador`): o dado, o sistema e o estado, a unidade e o valor editável. Um dado usado por mais do que um indicador só se edita no primeiro; nos seguintes aparece como referência ("Same value as in A01 above").
+- **Vistas:** "Data and indicators" (a lista), "Indicators only" (esconde os dados) e "Grid", que aparece logo no topo do cartão.
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.

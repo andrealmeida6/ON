@@ -487,6 +487,8 @@
     (S.tipos || []).forEach(function (t) { t.formatos = ['xlsx']; });
     /* Ligacoes gravadas antes de terem estado: passam a ter o estado de base */
     if ((S.apis || []).length && !S.apis.some(function (a) { return a.db; }) && P.ligacoesBase) S.apis = P.ligacoesBase();
+    /* O sistema de RH passou a estar ligado; so fica por ligar se o administrador o mudou */
+    (S.apis || []).forEach(function (a) { if (a.id === 'api2' && a.estado === 'pendente' && !a.mudado) a.estado = 'ligada'; });
     if (P.garantirEsrs) P.garantirEsrs();
   };
   /* Gera os dados de demonstracao sem tocar no armazenamento: serve o carregamento inicial do Supabase */
@@ -794,7 +796,7 @@
     if (!p || !u || p.responsavel === 'sistema') return false;
     if (u.perfil === 'admin') return true;
     if (p.responsavel === 'esg') return u.perfil === 'esg';
-    if (p.responsavel === 'unidade') return u.perfil === 'resp' && u.unidade === m.unidade;
+    if (p.responsavel === 'unidade') return (u.perfil === 'resp' && u.unidade === m.unidade) || (!!m.atribuido_a && m.atribuido_a === u.login);
     if (p.responsavel.indexOf('area:') === 0) return u.perfil === 'resp' && u.unidade === p.responsavel.slice(5);
     return false;
   };
