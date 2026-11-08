@@ -44,7 +44,7 @@
   var cor = function (s) { var h = 0; String(s).split('').forEach(function (c) { h = (h * 31 + c.charCodeAt(0)) >>> 0; }); return COR[h % COR.length]; };
   var sigla = function (un) { return String(un).split(/[\s,&]+/).filter(function (w) { return w.length > 2 || /^[A-Z]/.test(w); }).slice(0, 2).map(function (w) { return w[0]; }).join('').toUpperCase(); };
   var hora = function (iso) { var d = new Date(iso), hj = new Date(); if (d.toDateString() === hj.toDateString()) return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }); var on = new Date(hj.getTime() - 864e5); if (d.toDateString() === on.toDateString()) return 'Yesterday'; return P.fmtData(iso.slice(0, 10)); };
-  var dia = function (iso) { var d = new Date(iso), hj = new Date(); if (d.toDateString() === hj.toDateString()) return 'Today'; var on = new Date(hj.getTime() - 864e5); if (d.toDateString() === on.toDateString()) return 'Yesterday'; return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }); };
+  var dia = function (iso) { var d = new Date(iso), hj = new Date(); if (d.toDateString() === hj.toDateString()) return 'Today'; var on = new Date(hj.getTime() - 864e5); if (d.toDateString() === on.toDateString()) return 'Yesterday'; return P.fmtDataAno(iso); };
   /* Tags de uma mensagem: o passo do workflow e o indicador */
   var tagsMsg = function (c) {
     return (c.passo ? '<span class="ps-cm-passo" title="Workflow step when the comment was written">' + svg(I.relogio || I.cal, 11) + e(c.passo) + '</span>' : '') +

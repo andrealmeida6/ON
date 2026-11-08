@@ -339,7 +339,7 @@
   A.fhDescarregar = function () { P.descarregarFolha(mAtual(), pidAtual(), true); };
   A.fhImportar = function () {
     var m = mAtual(), pid = pidAtual();
-    X.escolherFicheiro('.xlsx,.csv,.json', function (file) {
+    X.escolherFicheiro(P.ACEITA_DADOS, function (file) {
       P.importarFolha(m, pid, file).then(function (r) {
         if (r.erro) return toast(r.erro, 'err');
         U.fhRel = { pid: pid, notas: r.recusados.concat(r.ignorados) };

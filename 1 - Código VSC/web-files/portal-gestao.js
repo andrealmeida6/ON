@@ -160,7 +160,7 @@
   };
   var abaExcel = function (usr) {
     var x = U.de.excel, abertas = cicloMs().filter(function (m) { return P.podePreencher(m, usr); });
-    var corpo = '<div class="ps-card">' + cabCartao('Upload an Excel file', 'doc', '<button type="button" class="ps-btn peq" data-a="deTemplate">Download template (.xlsx)</button>') + '<div class="ps-card-body"><button type="button" class="ps-de-drop" data-a="deFicheiro"><b>Choose the file</b><span>.xlsx or .csv, one row per indicator. ' + abertas.length + ' milestone(s) in collection with you.</span></button><p class="ps-small ps-mut ps-mt">To paste straight from Excel, open a milestone and use its grid.</p></div></div>';
+    var corpo = '<div class="ps-card">' + cabCartao('Upload an Excel file', 'doc', '<button type="button" class="ps-btn peq" data-a="deTemplate">Download template (.xlsx)</button>') + '<div class="ps-card-body"><button type="button" class="ps-de-drop" data-a="deFicheiro"><b>Choose the file</b><span>Excel (.xlsx), one row per indicator. ' + abertas.length + ' milestone(s) in collection with you.</span></button><p class="ps-small ps-mut ps-mt">To paste straight from Excel, open a milestone and use its grid.</p></div></div>';
     if (!x) return corpo;
     if (x.erro) return corpo + '<div class="ps-aviso err ps-mt" role="alert">' + e(x.nome) + ': ' + e(x.erro) + '</div>';
     var linhas = []; x.grupos.forEach(function (g) { g.rel.linhas.forEach(function (r) { linhas.push({ r: r, m: g.m }); }); });
@@ -227,7 +227,7 @@
     P.escreverFolhas('template-data-' + S.ciclo.ano + '.xlsx', { dados: linhas });
   };
   A.deFicheiro = function () {
-    X.escolherFicheiro('.xlsx,.csv', function (f) {
+    X.escolherFicheiro(P.ACEITA_DADOS, function (f) {
       P.lerFicheiro(f).then(function (r) {
         if (r.erro) { U.de.excel = { nome: r.nome, erro: r.erro }; return R(); }
         var usr = u(), porMs = {}, soltas = [];

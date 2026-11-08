@@ -276,6 +276,17 @@ Pedido do André a 8 de novembro de 2026: entrar numa plataforma sem dados, lan�
 - **Corrigido pelo caminho:** com só trimestres lançados, a página Overview falhava, porque procurava o valor anual. As vistas anuais passam a contar só os indicadores que já têm milestone anual.
 - **Limitação:** vive só no navegador de quem testa; não vai ao Supabase.
 
+## Backoffice mais curto, filtros nas tabelas e datas
+
+Pedido do André a 8 de novembro de 2026.
+
+- **Saíram do Backoffice:** Data types, Reporting cycle e Brand. O que está fechado ou aberto passa a ser dado pelas milestones de cada período, não por um ciclo. Os tipos de dados continuam a existir por baixo, um por departamento, e as folhas dos pedidos continuam a usá-los; deixaram de se editar e de aparecer no lançamento.
+- **Marca:** passa ao menu do avatar, só para o administrador ("Brand"), num painel. Cancelar desfaz a pré-visualização; "Save brand" grava.
+- **Formatos:** os dados entram só em Excel (`.xlsx`): pedidos de dados, importação, folhas e entrada de dados (`P.ACEITA_DADOS`). PDF só nos documentos de suporte, como faturas (evidências, documentos gerais, contribuições externas: `P.ACEITA_SUPORTE`, `.xlsx,.pdf`). Saiu o template CSV. Os dados já gravados num navegador passam a `xlsx` ao abrir.
+- **Filtros tipo Excel:** `web-files/portal-filtros.js`. Todas as tabelas `.ps-t` com 3 ou mais linhas ganham, em cada coluna, um botão que abre ordenação (A a Z, números, datas), pesquisa de valores e caixas com contagem. Por cima da tabela aparecem os filtros ativos, "N of M rows" e "Clear all". Os campos de pesquisa das páginas mantêm-se e somam-se aos filtros. O estado guarda-se por tabela enquanto a página está aberta e sobrevive aos redesenhos. No telemóvel, botão "Filter and sort" e uma folha que sobe do fundo. Excluem-se as colunas sem nome e "Actions"; uma tabela pode excluir-se com a classe `ps-sem-filtro`.
+- **Datas:** `P.fmtData` e `P.fmtDataHora` dão sempre `dd/mm/aaaa` (e `dd/mm/aaaa hh:mm`), também no calendário e no chat.
+- **Fica por decidir:** os campos de data do navegador (`type="date"`) mostram a data no formato do idioma do navegador, e nomes de indicadores como "a 31/12" são uma referência ao fim do ano, não uma data.
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.

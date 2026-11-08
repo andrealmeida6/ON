@@ -26,10 +26,11 @@
     var int = partes[0].replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
     return (neg ? '-' : '') + int + (partes[1] ? ',' + partes[1] : '');
   };
+  /* Datas sempre em dd/mm/aaaa */
   P.fmtData = function (iso) {
     if (!iso) return '-';
     var d = new Date(iso.length === 10 ? iso + 'T12:00:00' : iso);
-    return new Intl.DateTimeFormat('pt-PT', { day: '2-digit', month: '2-digit', timeZone: 'Europe/Lisbon' }).format(d);
+    return new Intl.DateTimeFormat('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Europe/Lisbon' }).format(d);
   };
   P.fmtDataAno = function (iso) {
     if (!iso) return '-';
@@ -38,7 +39,7 @@
   };
   P.fmtDataHora = function (iso) {
     if (!iso) return '-';
-    return new Intl.DateTimeFormat('pt-PT', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Lisbon' }).format(new Date(iso));
+    return new Intl.DateTimeFormat('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Lisbon' }).format(new Date(iso)).replace(',', '');
   };
   /* Aceita "1 181,5", "1.181,5", "1181.5" e "17,11". Devolve null se nao for numero. */
   var lerNumero = function (bruto) {
@@ -387,7 +388,7 @@
     com('M02-T3', 'Marta Lopes', 'Valido os resultados da ETA Central amanhã de manhã.', 30, 'Validação técnica pela Direção de Operações', 'A13');
     com('M11-T3', 'Paulo Serra', 'O valor de compras bate com o balancete do T3. Dou o parecer até sexta.', 3, 'Parecer da Direção Financeira', 'G01');
     com('M17', 'Paulo Serra', 'Ainda aguardamos as garantias de origem do comercializador de eletricidade.', 96, 'Recolha e submissão dos dados', 'E03');
-    com('M17', 'Equipa de sustentabilidade', 'Já enviei o pedido externo ao comercializador. O prazo é 16/11.', 72, 'Recolha e submissão dos dados', 'E03');
+    com('M17', 'Equipa de sustentabilidade', 'Já enviei o pedido externo ao comercializador. O prazo é 16/11/2026.', 72, 'Recolha e submissão dos dados', 'E03');
     com('M26', 'Equipa de sustentabilidade', 'Quando o T3 estiver aprovado, usem os trimestres para fechar o ano.', 26, 'Recolha e submissão dos dados');
     S.ext = [
       { id: 'X1', indicador_id: 'E03', milestone_id: 'M17', entidade_externa: 'Comercializador de eletricidade', descricao: 'Percentagem de eletricidade com garantias de origem renovável no ano.', prazo: diasDe(9), estado: 'pendente', valor: null, evidencia: '', respondido_em: null },
@@ -413,6 +414,8 @@
     if (P.online()) { estadoVazio(); return; }
     if (!ler(CHAVES.ms) || ler('esg_versao') !== VERSAO_DADOS) { P.cat = catBoot; semearAmbiente(); escrever('esg_versao', VERSAO_DADOS); return; }
     Object.keys(CHAVES).forEach(function (n) { S[n] = ler(CHAVES[n]); });
+    /* Os pedidos de dados aceitam so Excel, tambem nos dados ja gravados neste navegador */
+    (S.tipos || []).forEach(function (t) { t.formatos = ['xlsx']; });
     if (P.garantirEsrs) P.garantirEsrs();
   };
   /* Gera os dados de demonstracao sem tocar no armazenamento: serve o carregamento inicial do Supabase */
@@ -511,17 +514,17 @@
   /* --- Pedido de dados: ficheiros pedidos em cada milestone ------------------ */
   /* [nome, porque e pedido, formatos aceites, prefixo do ficheiro de exemplo] */
   var FICHEIROS_BASE = {
-    'Operações': [['Extrato de telemetria do período', 'Sustenta os volumes e as ocorrências reportados.', ['xlsx', 'csv'], 'extrato-telemetria']],
-    'Qualidade e Laboratório': [['Boletins de análise do período', 'Sustentam os resultados de qualidade reportados.', ['pdf', 'xlsx'], 'boletins-analise']],
-    'Comercial e Relação com o Cliente': [['Extrato de faturação do período', 'Sustenta os volumes faturados e o número de clientes.', ['xlsx', 'csv'], 'extrato-faturacao']],
-    'Ambiente, Saúde e Segurança': [['Registo de resíduos e de acidentes', 'Sustenta os indicadores de ambiente e de segurança.', ['xlsx', 'pdf'], 'registo-ass']],
-    'Recursos Humanos': [['Mapa de pessoal e de formação', 'Sustenta os indicadores de pessoas.', ['xlsx', 'csv'], 'mapa-pessoal']],
-    'Financeira': [['Balancete e mapa de custos', 'Sustenta os valores financeiros e de energia.', ['xlsx', 'pdf'], 'balancete']],
-    'Jurídico e Compliance': [['Registo de ocorrências de conformidade', 'Sustenta os indicadores de governance.', ['xlsx', 'pdf'], 'registo-conformidade']],
-    'Compras': [['Lista de compras e de fornecedores', 'Sustenta os indicadores da cadeia de valor.', ['xlsx', 'csv'], 'lista-compras']],
-    'Frota': [['Mapa de frota e de abastecimentos', 'Sustenta os consumos e a composição da frota.', ['xlsx', 'csv'], 'mapa-frota']],
-    'Sistemas de Informação': [['Registo de incidentes de segurança', 'Sustenta os indicadores de cibersegurança.', ['xlsx', 'pdf'], 'registo-incidentes']],
-    'I&D, CSR e ESG': [['Relatório de atividades do período', 'Sustenta os indicadores de comunidade.', ['pdf', 'xlsx'], 'relatorio-atividades']]
+    'Operações': [['Extrato de telemetria do período', 'Sustenta os volumes e as ocorrências reportados.', ['xlsx'], 'extrato-telemetria']],
+    'Qualidade e Laboratório': [['Boletins de análise do período', 'Sustentam os resultados de qualidade reportados.', ['xlsx'], 'boletins-analise']],
+    'Comercial e Relação com o Cliente': [['Extrato de faturação do período', 'Sustenta os volumes faturados e o número de clientes.', ['xlsx'], 'extrato-faturacao']],
+    'Ambiente, Saúde e Segurança': [['Registo de resíduos e de acidentes', 'Sustenta os indicadores de ambiente e de segurança.', ['xlsx'], 'registo-ass']],
+    'Recursos Humanos': [['Mapa de pessoal e de formação', 'Sustenta os indicadores de pessoas.', ['xlsx'], 'mapa-pessoal']],
+    'Financeira': [['Balancete e mapa de custos', 'Sustenta os valores financeiros e de energia.', ['xlsx'], 'balancete']],
+    'Jurídico e Compliance': [['Registo de ocorrências de conformidade', 'Sustenta os indicadores de governance.', ['xlsx'], 'registo-conformidade']],
+    'Compras': [['Lista de compras e de fornecedores', 'Sustenta os indicadores da cadeia de valor.', ['xlsx'], 'lista-compras']],
+    'Frota': [['Mapa de frota e de abastecimentos', 'Sustenta os consumos e a composição da frota.', ['xlsx'], 'mapa-frota']],
+    'Sistemas de Informação': [['Registo de incidentes de segurança', 'Sustenta os indicadores de cibersegurança.', ['xlsx'], 'registo-incidentes']],
+    'I&D, CSR e ESG': [['Relatório de atividades do período', 'Sustenta os indicadores de comunidade.', ['xlsx'], 'relatorio-atividades']]
   };
   /* --- Tipos de dados: o que se pede, em que formato, com que colunas e granularidade --- */
   /* Comecam nos ficheiros base de cada departamento e editam-se no Backoffice, sem codigo */
@@ -535,7 +538,10 @@
     return l;
   };
   P.GRANULARIDADES = { mensal: 'Monthly rows', trimestral: 'Quarterly rows', anual: 'One row for the year' };
-  P.FORMATOS = ['xlsx', 'csv', 'pdf', 'json', 'docx'];
+  P.FORMATOS = ['xlsx', 'pdf'];
+  /* Os dados entram so em Excel; PDF so para faturas e outros documentos de suporte */
+  P.ACEITA_DADOS = '.xlsx';
+  P.ACEITA_SUPORTE = '.xlsx,.pdf';
   P.tipo = function (id) { return (S.tipos || []).filter(function (t) { return t.id === id; })[0] || null; };
   /* Os tipos de uma milestone: os escolhidos ao lancar, ou os ativos do departamento */
   P.tiposDe = function (m) {
@@ -1028,7 +1034,7 @@
     var nome = file.name, ext = (nome.split('.').pop() || '').toLowerCase();
     return new Promise(function (ok) {
       if (ext === 'xls') return ok({ nome: nome, erro: 'The old .xls format is not accepted. Save the file as .xlsx and try again.' });
-      if (['xlsx', 'csv', 'json'].indexOf(ext) < 0) return ok({ nome: nome, erro: 'Format not supported. Use .xlsx, .csv or .json.' });
+      if (ext !== 'xlsx') return ok({ nome: nome, erro: 'Format not supported. Use an Excel file (.xlsx).' });
       var r = new FileReader();
       r.onerror = function () { ok({ nome: nome, erro: 'The file could not be read.' }); };
       r.onload = function () {
