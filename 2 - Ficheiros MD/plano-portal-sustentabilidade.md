@@ -161,7 +161,7 @@ Pedido do André a 7 de novembro de 2026: em cada ficheiro pedido da milestone, 
 
 ## Períodos de reporte, timeline e reutilização dos trimestres
 
-Pedido do André a 7 de novembro de 2026, com os prazos de uma entidade gestora de água como a Aquapor.
+Pedido do André a 7 de novembro de 2026, com os prazos de uma entidade gestora de água como a Entidade A.
 
 - **Períodos:** T1 a T4 e o Ano, em `S.periodos` (`esg_periods`), editáveis no Backoffice, separador Reporting periods. Cada trimestre tem fecho interno 45 dias depois do fim (15 mai, 14 ago, 13 nov, 12 fev); o ano fecha a 26 de fevereiro.
 - **Entregas externas** (`S.relatorios`, `esg_reports`), com a base legal à vista e o prazo editável:
@@ -258,8 +258,8 @@ Dentro da milestone o contribuidor vê apenas o que precisa para preencher e val
 - **Página Outputs (Reporting):** um cartão por entrega do ano, com o destino, o prazo, o modelo, os formatos, os valores aprovados e o último ficheiro gerado. Há filtros por entidade.
 - **Entregas e formatos:**
   - ERSAR (QA trimestral, PCQA, RQS) e APA (MIRR, gases fluorados): Excel com três folhas (Cover, Data, Checks). A folha Data leva o valor, o período anterior, a variação, o estado, a qualidade, as evidências, o que conta e a fonte.
-  - R&C: quadros com o modelo da Aquapor, em Excel e Word.
-  - Relatório de Sustentabilidade: documento com o modelo da Aquapor, em Word e Excel.
+  - R&C: quadros com o modelo da Entidade A, em Excel e Word.
+  - Relatório de Sustentabilidade: documento com o modelo da Entidade A, em Word e Excel.
 - **Final ou rascunho:** quando nem todos os valores estão aprovados, o ficheiro sai como rascunho, com "_draft" no nome e na capa.
 - **Valores anuais sem consolidação:** vêm dos trimestres, com a indicação de quantos trimestres entraram.
 - **Registo:** cada ficheiro gerado fica registado, com a versão, quem o gerou e quantos valores estavam aprovados. Supabase: tabela `esg_saidas`, onde só se acrescenta.

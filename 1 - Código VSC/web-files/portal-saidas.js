@@ -11,20 +11,20 @@
   var Blocos = X.Blocos, A = X.A, C = X.C, U = X.U, e = X.e, chip = X.chip, cabCartao = X.cabCartao, tabela = X.tabela, toast = X.toast, R = X.R, u = X.u, fmtV = X.fmtV, svg = X.svg, I = X.I;
 
   var TIPO_X = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', TIPO_W = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-  /* Formato e modelo de cada entrega. aquapor: usa os quadros e o documento com o desenho da Aquapor */
+  /* Formato e modelo de cada entrega. quadros: usa os quadros e o documento com o desenho da Entidade A */
   var FORMATO = {
     QA: { f: ['xlsx'], modelo: 'Quarterly water quality sheet', destino: 'ERSAR portal' },
     PCQA: { f: ['xlsx'], modelo: 'PCQA annual results sheet', destino: 'ERSAR portal' },
     RQS: { f: ['xlsx'], modelo: 'Service quality indicators sheet', destino: 'ERSAR portal' },
     MIRR: { f: ['xlsx'], modelo: 'Waste register sheet', destino: 'SILiAmb (APA)' },
     GF: { f: ['xlsx'], modelo: 'Fluorinated gases sheet', destino: 'SILiAmb (APA)' },
-    RC: { f: ['xlsx', 'docx'], modelo: 'Aquapor indicator tables', destino: 'Financial reporting team', aquapor: true },
-    RS: { f: ['docx', 'xlsx'], modelo: 'Aquapor report document', destino: 'Communication team', aquapor: true }
+    RC: { f: ['xlsx', 'docx'], modelo: 'Entidade A indicator tables', destino: 'Financial reporting team', quadros: true },
+    RS: { f: ['docx', 'xlsx'], modelo: 'Entidade A report document', destino: 'Communication team', quadros: true }
   };
   var tipoDe = function (rel) { return rel.id.split('-')[0]; };
   var FMT_TXT = { xlsx: 'Excel', docx: 'Word' };
 
-  /* Indicadores dos quadros do relatorio (modelo Aquapor) */
+  /* Indicadores dos quadros do relatorio (modelo Entidade A) */
   var idsQuadros = function () {
     var o = [];
     (P.folhasCompletas ? P.folhasCompletas() : []).forEach(function (f) { f.quadros.forEach(function (q) { q.g.forEach(function (g) { g.s.forEach(function (s) { s.r.forEach(function (r) { if (r.k && o.indexOf(r.k) < 0) o.push(r.k); }); }); }); }); });
@@ -98,7 +98,7 @@
     if (!rel) return { erro: 'Delivery not found.' };
     if (!P.gereTudo(usr)) return { erro: 'Only the sustainability team can generate the files.' };
     var t = tipoDe(rel), f = FORMATO[t], pr = P.prontidaoSaida(rel), versao = geracoes(rel).filter(function (g) { return g.formato === fmt; }).length + 1, nome = nomeFicheiro(rel, versao, pr.final, fmt), bytes;
-    if (f.aquapor) {
+    if (f.quadros) {
       if (fmt === 'docx') bytes = P.documentoDocx(t === 'RS' ? S.doc : P.docCompleto());
       else bytes = P.quadrosXlsx(P.folhasCompletas());
     } else bytes = xlsxEntrega(rel, pr, pr.final, versao);
