@@ -265,6 +265,17 @@ Dentro da milestone o contribuidor vê apenas o que precisa para preencher e val
 - **Registo:** cada ficheiro gerado fica registado, com a versão, quem o gerou e quantos valores estavam aprovados. Supabase: tabela `esg_saidas`, onde só se acrescenta.
 - **Em aberto:** confirmar o desenho com os formulários atuais do portal da ERSAR e do SILiAmb antes da primeira submissão real. Hoje a plataforma gera um desenho próprio, organizado como esses formulários.
 
+## Ambiente de testes
+
+Pedido do André a 8 de novembro de 2026: entrar numa plataforma sem dados, lançar e atribuir milestones de raiz e entrar no perfil de cada pessoa.
+
+- **Como entrar:** menu da conta (avatar), "Open test environment", ou o link com `?ambiente=teste`. Sai-se com "Back to main environment" ou `?ambiente=principal`. A escolha fica guardada no navegador.
+- **O que tem:** as mesmas pessoas, empresas, departamentos, indicadores, workflow base, períodos, entregas, tipos de dados, definições e marca. Não tem milestones, valores, comentários, documentos, pedidos externos, saídas nem registo de configuração.
+- **Separação:** grava com o prefixo `tst_` no `localStorage` (e a sessão e o chat também), por isso nunca mexe nos dados do ambiente principal. "Clear test environment" volta a pôr o ambiente vazio.
+- **Sinal:** tag "Test environment" no cabeçalho e cartão no ecrã de perfis. Nesse ecrã, cada pessoa mostra quantas milestones tem à espera dela.
+- **Corrigido pelo caminho:** com só trimestres lançados, a página Overview falhava, porque procurava o valor anual. As vistas anuais passam a contar só os indicadores que já têm milestone anual.
+- **Limitação:** vive só no navegador de quem testa; não vai ao Supabase.
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.

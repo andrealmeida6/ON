@@ -9,7 +9,8 @@
   var P = window.Portal, S = P.S, X = P.ext;
   var Blocos = X.Blocos, A = X.A, C = X.C, U = X.U, e = X.e, rota = X.rota, chip = X.chip, estChip = X.estChip, cabCartao = X.cabCartao, vazio = X.vazio, opt = X.opt, campo = X.campo, tabela = X.tabela, toast = X.toast, R = X.R, val = X.val, res = X.res, atribHtml = X.atribHtml, iniciais = X.iniciais, u = X.u, fmtV = X.fmtV;
   var cicloMs = function () { return P.msCiclo(); };
-  var catCiclo = function () { return S.cat.filter(function (c) { return !!P.msDoIndicador(c.id); }); };
+  /* Indicadores com valor anual no ciclo: so trimestres lancados, sem a milestone do ano, ainda nao contam */
+  var catCiclo = function () { return S.cat.filter(function (c) { return !!P.msDoIndicador(c.id) && !!P.item(c.id); }); };
   var pessoa = function (x) { return x ? '<span class="ps-pess"><i aria-hidden="true">' + e(iniciais(x.nome)) + '</i>' + e(x.nome) + '</span>' : '<span class="ps-mut">-</span>'; };
   var cod = function (c) { return c.esrs_requisito ? '<span class="ps-cod">' + e(c.esrs_requisito) + '</span>' : ''; };
   var pills = function (acao, lista, ativa) {
@@ -24,7 +25,7 @@
     var c = P.cat(id), r = P.valorConsolidado(id, empresa), m = r.m, it = P.item(id), ant = P.valorAnterior(id, S.ciclo.ano), est = P.estadoKpi(id);
     var val2 = r.valor === null ? '-' : P.fmtNum(r.valor, r.racio || empresa ? c.casas_decimais : 0);
     var dif = it && it.valor !== null && ant ? ((it.valor - ant) / Math.abs(ant)) * 100 : null;
-    var nota = r.fora ? 'Reported by ' + (m ? m.empresa : 'another company') : it.valor === null ? 'Not reported yet' : !empresa && r.peso === 0 ? m.empresa + ' is outside the consolidation' : !empresa && !r.racio && r.peso !== 1 ? 'Counted at ' + P.fmtNum(r.peso * 100, 0) + '%, ' + m.empresa : (m ? m.empresa : '');
+    var nota = r.fora ? 'Reported by ' + (m ? m.empresa : 'another company') : !it || it.valor === null ? 'Not reported yet' : !empresa && r.peso === 0 ? m.empresa + ' is outside the consolidation' : !empresa && !r.racio && r.peso !== 1 ? 'Counted at ' + P.fmtNum(r.peso * 100, 0) + '%, ' + m.empresa : (m ? m.empresa : '');
     return '<div class="ps-tile"><div class="ps-tile-t"><span>' + e(c.nome) + '</span>' + cod(c) + '</div><div class="ps-tile-v"><b>' + e(val2) + '</b> <small>' + e(c.unidade_medida) + '</small></div><div class="ps-tile-s">' + (dif === null || r.fora ? '' : '<span>' + (dif < 0 ? '▼ ' : dif > 0 ? '▲ ' : '') + e(P.fmtNum(Math.abs(dif), 1)) + '% vs ' + (S.ciclo.ano - 1) + '</span>') + '<span>' + e(nota) + '</span></div><div class="ps-tile-e">' + chip(est.txt, est.cls) + '</div></div>';
   };
   var completude = function (empresa) {

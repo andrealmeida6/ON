@@ -66,12 +66,30 @@
   var VERSAO_DADOS = 9;
   var S = (P.S = {});
   var memoria = {};
+  /* Ambiente de testes: as mesmas pessoas, empresas, indicadores e configuracao, sem milestones nem valores.
+     Guarda-se com chaves proprias (prefixo tst_), por isso nunca mexe nos dados do ambiente principal.
+     Entra-se com ?ambiente=teste e sai-se com ?ambiente=principal, ou pelo menu da conta. */
+  var TESTE = (function () {
+    try {
+      var q = location.search + location.hash;
+      if (/[?&]ambiente=teste\b/.test(q)) localStorage.setItem('esg_ambiente', 'teste');
+      else if (/[?&]ambiente=principal\b/.test(q)) localStorage.removeItem('esg_ambiente');
+      return localStorage.getItem('esg_ambiente') === 'teste';
+    } catch (e) { return false; }
+  })();
+  var PFX = TESTE ? 'tst_' : '';
+  P.teste = function () { return TESTE; };
+  P.prefixo = PFX;
+  P.mudarAmbiente = function (teste) {
+    try { if (teste) localStorage.setItem('esg_ambiente', 'teste'); else localStorage.removeItem('esg_ambiente'); } catch (e) { /* sem armazenamento, fica no principal */ }
+    location.href = location.pathname + location.search.replace(/[?&]ambiente=\w+/, '').replace(/^&/, '?');
+  };
   var ler = function (k) {
-    try { var v = localStorage.getItem(k); return v === null ? null : JSON.parse(v); }
+    try { var v = localStorage.getItem(PFX + k); return v === null ? null : JSON.parse(v); }
     catch (e) { return memoria[k] === undefined ? null : memoria[k]; }
   };
   var escrever = function (k, v) {
-    try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { memoria[k] = v; }
+    try { localStorage.setItem(PFX + k, JSON.stringify(v)); } catch (e) { memoria[k] = v; }
   };
   var B = window.PortalBackend;
   P.online = function () { return !!(B && B.ativo); };
@@ -382,17 +400,27 @@
     guardar();
   };
 
+  /* Ambiente de testes: parte da configuracao completa e tira tudo o que e trabalho feito */
+  var semearTeste = function () {
+    semear();
+    S.ms = []; S.items = {}; S.ext = []; S.aud = []; S.docs = []; S.amostra = [];
+    S.puxados = {}; S.saidas = []; S.evg = []; S.selos = []; S.rq = {};
+    S.ciclo.data_abertura = hojeISO();
+    guardar();
+  };
+  var semearAmbiente = function () { if (TESTE) semearTeste(); else semear(); };
   P.carregar = function () {
     if (P.online()) { estadoVazio(); return; }
-    if (!ler(CHAVES.ms) || ler('esg_versao') !== VERSAO_DADOS) { P.cat = catBoot; semear(); escrever('esg_versao', VERSAO_DADOS); return; }
+    if (!ler(CHAVES.ms) || ler('esg_versao') !== VERSAO_DADOS) { P.cat = catBoot; semearAmbiente(); escrever('esg_versao', VERSAO_DADOS); return; }
     Object.keys(CHAVES).forEach(function (n) { S[n] = ler(CHAVES[n]); });
     if (P.garantirEsrs) P.garantirEsrs();
   };
   /* Gera os dados de demonstracao sem tocar no armazenamento: serve o carregamento inicial do Supabase */
   P.dadosDemonstracao = function () { semear(); return S; };
   P.reporDemonstracao = function () {
-    Object.keys(CHAVES).forEach(function (n) { try { localStorage.removeItem(CHAVES[n]); } catch (e) { delete memoria[CHAVES[n]]; } });
-    semear();
+    Object.keys(CHAVES).forEach(function (n) { try { localStorage.removeItem(PFX + CHAVES[n]); } catch (e) { delete memoria[CHAVES[n]]; } });
+    try { localStorage.removeItem(PFX + 'esg_chat_read'); } catch (e) { /* nada a limpar */ }
+    semearAmbiente();
   };
   P.exportarTudo = function () { var o = {}; Object.keys(CHAVES).forEach(function (n) { o[CHAVES[n]] = S[n]; }); return o; };
   P.importarTudo = function (o) {
@@ -418,11 +446,11 @@
   /* Sessao: sem backend entra-se sem palavra-passe. Online, o login vem da conta autenticada (P.entrar depois de B.carregar). */
   P.sessao = function () {
     var l = null;
-    try { l = sessionStorage.getItem('esg_sess'); } catch (e) { l = memoria.sess; }
+    try { l = sessionStorage.getItem(PFX + 'esg_sess'); } catch (e) { l = memoria.sess; }
     return l ? P.user(l) : null;
   };
-  P.entrar = function (login) { try { sessionStorage.setItem('esg_sess', login); } catch (e) { memoria.sess = login; } };
-  P.sair = function () { try { sessionStorage.removeItem('esg_sess'); } catch (e) { delete memoria.sess; } };
+  P.entrar = function (login) { try { sessionStorage.setItem(PFX + 'esg_sess', login); } catch (e) { memoria.sess = login; } };
+  P.sair = function () { try { sessionStorage.removeItem(PFX + 'esg_sess'); } catch (e) { delete memoria.sess; } };
 
   P.valorAnterior = function (id, ano) {
     var tri = /^(\d{4})-T(\d)$/.exec(String(ano));

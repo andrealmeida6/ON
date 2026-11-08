@@ -136,6 +136,7 @@
   var pintarCabecalho = function () {
     var usr = u(), pag = U.rota.pag;
     document.body.classList.toggle('ps-sem-nav', !usr || pag === 'Entrada');
+    document.querySelectorAll('[data-teste-tag]').forEach(function (t) { t.hidden = !P.teste(); });
     var h = document.querySelector('[data-cabecalho]');
     if (!h) return;
     h.hidden = !usr || pag === 'Entrada';
@@ -174,7 +175,10 @@
           return '<a class="ps-menu-it" href="' + rota(n.rota) + '" data-a="fecharMenu"><i class="ps-menu-dot ' + e(n.cls) + '"></i><span>' + e(n.texto) + '<small>' + e(n.sub) + '</small></span></a>';
         }).join('') : vazio('No notifications.')) + '</div>';
       } else if (U.menu === 'conta') {
-        menu.innerHTML = '<div class="ps-menu-head"><b>' + e(usr.nome) + '</b>' + e(P.PERFIS[usr.perfil]) + (usr.unidade ? ' · ' + e(usr.unidade) : '') + '</div><div class="ps-menu-sec"><button class="ps-menu-it" type="button" data-a="sair">' + (P.online() ? 'Sign out' : 'Switch profile') + '</button></div>';
+        var amb = P.online() ? '' : P.teste()
+          ? '<button class="ps-menu-it" type="button" data-a="ambienteLimpar">Clear test environment</button><button class="ps-menu-it" type="button" data-a="ambientePrincipal">Back to main environment</button>'
+          : '<button class="ps-menu-it" type="button" data-a="ambienteTeste">Open test environment</button>';
+        menu.innerHTML = '<div class="ps-menu-head"><b>' + e(usr.nome) + '</b>' + e(P.PERFIS[usr.perfil]) + (usr.unidade ? ' · ' + e(usr.unidade) : '') + '</div><div class="ps-menu-sec"><button class="ps-menu-it" type="button" data-a="sair">' + (P.online() ? 'Sign out' : 'Switch profile') + '</button>' + amb + '</div>';
       }
     }
   };
@@ -190,11 +194,27 @@
         '<button type="submit" class="ps-btn pri"' + (U.aEntrar ? ' disabled' : '') + '>' + (U.aEntrar ? 'Signing in' : 'Sign in') + '</button></form>';
     }
     var grupos = [['Administration', 'admin'], ['Sustainability', 'esg'], ['Data owners', 'resp'], ['Audit', 'auditor'], ['External entities', 'ext']];
-    return grupos.map(function (g) {
+    /* Ao lado de cada pessoa: quantas milestones tem e quantas esperam por ela */
+    var resumo = function (x) {
+      if (x.perfil === 'ext') return '';
+      var minhas = P.msCiclo().filter(function (m) { return doUtilizador(m, x); }).length, esp = pendentesDe(x).length;
+      if (!minhas && !esp) return '';
+      return '<span class="ps-ent-n">' + (esp ? '<b>' + esp + '</b> waiting' : minhas + ' milestone' + (minhas === 1 ? '' : 's')) + '</span>';
+    };
+    return ambienteHtml() + grupos.map(function (g) {
       return '<div class="ps-ent-grp"><h3>' + e(g[0]) + '</h3>' + S.users.filter(function (x) { return x.perfil === g[1]; }).map(function (x) {
-        return '<button type="button" class="ps-ent-p" data-a="entrar" data-v="' + e(x.login) + '"><span class="ps-av s" aria-hidden="true">' + e(iniciais(x.nome)) + '</span><span><b>' + e(x.nome) + '</b><small>' + e(x.unidade || P.PERFIS[x.perfil]) + '</small></span></button>';
+        return '<button type="button" class="ps-ent-p" data-a="entrar" data-v="' + e(x.login) + '"><span class="ps-av s" aria-hidden="true">' + e(iniciais(x.nome)) + '</span><span><b>' + e(x.nome) + '</b><small>' + e(x.unidade || P.PERFIS[x.perfil]) + '</small></span>' + resumo(x) + '</button>';
       }).join('') + '</div>';
     }).join('');
+  };
+  /* Cartao do ambiente: entrar no ambiente de testes, ou sair dele e limpa-lo */
+  var ambienteHtml = function () {
+    if (P.teste()) {
+      return '<div class="ps-amb on"><div><b>Test environment</b><p>Same people, companies, indicators and settings, with no milestones or values. What you do here never touches the main environment.</p></div>' +
+        '<div class="ps-amb-acts"><button type="button" class="ps-btn peq" data-a="ambienteLimpar">Clear test environment</button><button type="button" class="ps-btn peq pri" data-a="ambientePrincipal">Back to main environment</button></div></div>';
+    }
+    return '<div class="ps-amb"><div><b>Test environment</b><p>Start from an empty platform: launch milestones, assign them and follow each person step by step.</p></div>' +
+      '<div class="ps-amb-acts"><button type="button" class="ps-btn peq" data-a="ambienteTeste">Open test environment</button></div></div>';
   };
 
   /* --- Inicio ------------------------------------------------------------ */
@@ -1348,6 +1368,9 @@
   var val = function (id) { var el = document.getElementById(id); return el ? el.value : ''; };
   var A = {
     entrar: function (d) { P.entrar(d.v); var usr = P.user(d.v); P.irPara(usr.perfil === 'ext' ? 'Pedidos' : 'Inicio'); },
+    ambienteTeste: function () { P.sair(); P.mudarAmbiente(true); },
+    ambientePrincipal: function () { P.sair(); P.mudarAmbiente(false); },
+    ambienteLimpar: function () { if (!window.confirm('Clear the test environment? Every milestone, value and comment created here will be removed.')) return; P.reporDemonstracao(); U.menu = null; U.imp = {}; U.cal = null; toast('Test environment cleared.', 'ok'); P.irPara('Inicio'); },
     sair: function () { P.sair(); if (P.online()) { window.PortalBackend.sair(); P.estadoVazio(); } U.menu = null; U.cal = null; P.irPara('Entrada'); },
     menuNotif: function () { U.menu = U.menu === 'notif' ? null : 'notif'; R(); },
     menuConta: function () { U.menu = U.menu === 'conta' ? null : 'conta'; R(); },

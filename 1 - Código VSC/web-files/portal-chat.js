@@ -32,7 +32,7 @@
     });
   };
   /* Lidas: so neste navegador, por pessoa */
-  var CH = 'esg_chat_read', lidos = {};
+  var CH = (P.prefixo || '') + 'esg_chat_read', lidos = {};
   try { lidos = JSON.parse(localStorage.getItem(CH)) || {}; } catch (x) { lidos = {}; }
   var gravarLidos = function () { try { localStorage.setItem(CH, JSON.stringify(lidos)); } catch (x) { /* fica em memoria */ } };
   var porLer = function (m, usr) { var l = (lidos[usr.login] || {})[m.id] || ''; return (m.comentarios || []).filter(function (c) { return c.autor !== usr.nome && c.em > l; }).length; };
