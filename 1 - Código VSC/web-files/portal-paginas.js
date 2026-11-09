@@ -18,7 +18,7 @@
   var I = {
     tick: '<path d="M20 6L9 17l-5-5"/>', doc: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>',
     tarefa: '<path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"/>', cal: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
-    ativ: '<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>', relogio: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 2"/>', voltar: '<path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/>', cima: '<polyline points="18 15 12 9 6 15"/>', baixo: '<polyline points="6 9 12 15 18 9"/>', lixo: '<path d="M3 6h18M8 6V4h8v2M6 6l1 15h10l1-15"/>'
+    ativ: '<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>', relogio: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 2"/>', voltar: '<path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/>', upload: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><path d="M12 3v12"/>', cima: '<polyline points="18 15 12 9 6 15"/>', baixo: '<polyline points="6 9 12 15 18 9"/>', lixo: '<path d="M3 6h18M8 6V4h8v2M6 6l1 15h10l1-15"/>'
   };
 
   /* --- Componentes ------------------------------------------------------- */
@@ -77,6 +77,13 @@
   var vazio = function (t) { return '<div class="ps-vazio">' + e(t) + '</div>'; };
   var opt = function (val, txt, sel) { return '<option value="' + e(val) + '"' + (String(val) === String(sel) ? ' selected' : '') + '>' + e(txt === undefined ? val : txt) + '</option>'; };
   var campo = function (id, lab, html) { return '<div class="ps-campo"><label class="ps-lab" for="' + e(id) + '">' + e(lab) + '</label>' + html + '</div>'; };
+  /* Seletor de ficheiro com botao proprio: o input nativo fica escondido e o nome escolhido aparece ao lado */
+  var ficheiroHtml = function (id, aceita) {
+    var tipos = String(aceita || '').split(',').filter(Boolean).map(function (x) { return x.replace('.', '').toUpperCase(); }).join(', ');
+    return '<label class="ps-fic" for="' + e(id) + '"><input id="' + e(id) + '" class="ps-fic-in" type="file"' + (aceita ? ' accept="' + e(aceita) + '"' : '') + ' data-i="ficNome">' +
+      '<span class="ps-fic-btn">' + svg(I.upload) + 'Choose file</span>' +
+      '<span class="ps-fic-txt"><span class="ps-fic-nome">No file chosen</span>' + (tipos ? '<span class="ps-fic-tipos">' + e(tipos) + '</span>' : '') + '</span></label>';
+  };
   /* "i" com a explicacao: aparece ao passar o rato, ao tocar ou com o teclado */
   var info = function (txt) { return '<button type="button" class="ps-info" data-tip="' + e(txt) + '" aria-label="' + e(txt) + '"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M12 11v6M12 7.5v.01"/></svg></button>'; };
   var tabela = function (cols, linhas, vaz) {
@@ -1053,7 +1060,7 @@
       return '<div class="ps-card ps-mt">' + cabCartao(m ? m.nome : mid, 'doc') + grupos[mid].map(function (x) {
         var c = P.cat(x.indicador_id), aberto = x.estado === 'pendente';
         return '<div class="ps-ind"><div class="ps-sp-b"><b>' + e(c.nome) + ' (' + e(c.unidade_medida) + ')</b>' + (aberto ? chip('Due ' + P.fmtData(x.prazo), 'warn') : chip('Sent', 'ok')) + '</div><p class="ps-mt">' + e(x.descricao) + '</p>' +
-          (aberto ? '<div class="ps-form ps-mt">' + campo('xv-' + x.id, 'Value', '<input id="xv-' + e(x.id) + '" class="ps-in" inputmode="decimal">') + campo('xe-' + x.id, 'Supporting document (.xlsx, or .pdf for invoices)', '<input id="xe-' + e(x.id) + '" class="ps-in" type="file" accept="' + P.ACEITA_SUPORTE + '">') + '</div><button type="button" class="ps-btn pri ps-mt" data-a="enviarExt" data-v="' + e(x.id) + '">Send</button>' :
+          (aberto ? '<div class="ps-form ps-mt">' + campo('xv-' + x.id, 'Value', '<input id="xv-' + e(x.id) + '" class="ps-in" inputmode="decimal">') + campo('xe-' + x.id, 'Supporting document (.xlsx, or .pdf for invoices)', ficheiroHtml('xe-' + x.id, P.ACEITA_SUPORTE)) + '</div><button type="button" class="ps-btn pri ps-mt" data-a="enviarExt" data-v="' + e(x.id) + '">Send</button>' :
             '<p class="ps-mut ps-small ps-mt">Value sent: ' + e(fmtV(x.indicador_id, x.valor)) + (x.evidencia ? ', ' + e(x.evidencia) : '') + ', ' + e(P.fmtDataHora(x.respondido_em)) + '</p>') + '</div>';
       }).join('') + '</div>';
     }).join('');
@@ -1780,6 +1787,12 @@
     atrBuscaLive: function (el) { U.atrBusca = el.value; R(); },
     ajBuscaLive: function (el) { U.ajuda.q = el.value; R(); },
     ajMsgLive: function (el) { U.ajuda.msg = el.value; U.ajuda.editada = true; },
+    ficNome: function (el) {
+      var lb = el.closest('.ps-fic'), n = lb && lb.querySelector('.ps-fic-nome'), f = el.files && el.files[0];
+      if (!n) return;
+      n.textContent = f ? f.name : 'No file chosen';
+      lb.classList.toggle('tem', !!f);
+    },
     mcCor: function (el) { U.marca.cores[el.dataset.id] = el.value; var t = document.getElementById('cor-t-' + el.dataset.id); if (t) t.value = el.value; mudouMarca(); }
   };
 
@@ -1907,6 +1920,6 @@
     }
   };
   /* As paginas de controlo (portal-gestao.js) acrescentam-se aqui */
-  P.ext = { pessHtml: pessHtml, depHtml: depHtml, empHtml: empHtml, avPessoa: avPessoa, avEquipa: avEquipa, avEmpresa: avEmpresa, msAtual: function () { return msAtual(); }, Pn: Pn, abrePainel: function (t, a) { abrePainel(t, a); }, Blocos: Blocos, A: A, C: C, U: U, e: e, svg: svg, I: I, rota: rota, chip: chip, estChip: estChip, cabCartao: cabCartao, vazio: vazio, opt: opt, campo: campo, tabela: tabela, toast: toast, R: R, val: val, res: res, escolherFicheiro: escolherFicheiro, atribHtml: atribHtml, iniciais: iniciais, u: u, fmtV: fmtV, prazoTxt: prazoTxt };
+  P.ext = { pessHtml: pessHtml, depHtml: depHtml, empHtml: empHtml, avPessoa: avPessoa, avEquipa: avEquipa, avEmpresa: avEmpresa, msAtual: function () { return msAtual(); }, Pn: Pn, abrePainel: function (t, a) { abrePainel(t, a); }, Blocos: Blocos, A: A, C: C, U: U, e: e, svg: svg, I: I, rota: rota, chip: chip, estChip: estChip, cabCartao: cabCartao, vazio: vazio, opt: opt, campo: campo, ficheiroHtml: ficheiroHtml, tabela: tabela, toast: toast, R: R, val: val, res: res, escolherFicheiro: escolherFicheiro, atribHtml: atribHtml, iniciais: iniciais, u: u, fmtV: fmtV, prazoTxt: prazoTxt };
   document.addEventListener('DOMContentLoaded', P.iniciar);
 })();

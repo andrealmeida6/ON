@@ -347,6 +347,14 @@ Pedido do André a 9 de novembro de 2026.
 - **Pull data from system:** novo nome do botão e do pop-up. O pop-up mostra a data da última atualização e, por indicador (fechado por omissão), o valor agora e depois e o que muda. Aberto, mostra os dados usados (agora, da fonte e registos lidos), a fórmula com os valores e os detalhes técnicos de cada dado: objeto de origem, campo, filtros (código de empresa, ano fiscal, períodos), agregação, registos e a consulta. A nomenclatura técnica segue a do ERP de origem (tabelas `ZESG_*`, `BUKRS`, `GJAHR`, `POPER`), mas a plataforma nunca diz qual é o sistema. Pela mesma razão, os dados de origem em Requested data e o histórico deixaram de mostrar o nome do sistema.
 - **Limitação:** os campos novos dos pedidos de ajuda (`tipo`, `para`, `pedido_por`, `nota`) ainda não vão para o Supabase; ficam no `localStorage`.
 
+## Botão de upload de documentos
+
+Pedido do André a 9 de novembro de 2026.
+
+- O "Choose File" nativo do browser foi substituído por um seletor próprio (`ficheiroHtml(id, aceita)` em `portal-paginas.js`, disponível também em `P.ext`). O input nativo fica escondido dentro de um `label.ps-fic`. Mostra um botão azul "Choose file" com um ícone de upload, o nome do ficheiro escolhido (ou "No file chosen") e os formatos aceites (por exemplo "XLSX, PDF"). Com um ficheiro escolhido, a caixa passa a verde (`.tem`, via `Live.ficNome`).
+- Usa-se no envio de valores das entidades externas (Data requests). Os outros uploads da plataforma (Deliver, Import, Attach, evidências, marca e dados) já abriam o seletor a partir de um botão `ps-btn` e ficam iguais.
+- O CSS está na secção 31 de `global.css`. Também estiliza com `::file-selector-button` qualquer `input type=file` nativo que surja no futuro, para manter o mesmo aspeto.
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.
