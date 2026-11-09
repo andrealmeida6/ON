@@ -28,6 +28,7 @@
     if (!usr || usr.perfil === 'ext') return [];
     return P.msCiclo().filter(function (m) {
       if (P.gereTudo(usr) || usr.perfil === 'auditor') return true;
+      if ((S.ext || []).some(function (x) { return x.tipo === 'ajuda' && x.para === usr.login && x.milestone_id === m.id; })) return true;
       return m.unidade === usr.unidade || (m.departamentos || []).indexOf(usr.unidade) > -1 || m.passos.some(function (p) { return p.responsavel === 'area:' + usr.unidade; });
     });
   };
@@ -105,7 +106,7 @@
     var conv = lista.filter(function (m) {
       if (q && (m.nome + ' ' + m.unidade + ' ' + P.rotPeriodo(m)).toLowerCase().indexOf(q) < 0) return false;
       if (st.filtro === 'porLer') return porLer(m, usr) > 0;
-      if (st.filtro === 'comigo') return P.podeAgir(m, usr) || P.podePreencher(m, usr);
+      if (st.filtro === 'comigo') return P.esperaPor(m, usr);
       if (st.filtro === 'ativas') return (m.comentarios || []).length > 0;
       return true;
     }).sort(function (a, b) { var x = ult(a), y = ult(b); if (x && y) return x.em < y.em ? 1 : -1; if (x) return -1; if (y) return 1; return a.prazo < b.prazo ? -1 : 1; });

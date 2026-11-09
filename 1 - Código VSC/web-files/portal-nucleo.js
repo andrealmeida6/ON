@@ -800,6 +800,12 @@
     if (p.responsavel.indexOf('area:') === 0) return u.perfil === 'resp' && u.unidade === p.responsavel.slice(5);
     return false;
   };
+  /* "Waiting on you": o administrador pode agir em tudo, mas so lhe espera o que e mesmo dele */
+  P.esperaPor = function (m, u) {
+    if (!P.podeAgir(m, u)) return false;
+    if (u.perfil !== 'admin') return true;
+    return P.passoAtual(m).responsavel === 'admin' || (!!m.atribuido_a && m.atribuido_a === u.login);
+  };
   P.podePreencher = function (m, u) { var p = P.passoAtual(m); return !!p && p.tipo === 'recolha' && P.podeAgir(m, u); };
   P.gereTudo = function (u) { return !!u && (u.perfil === 'admin' || u.perfil === 'esg'); };
   P.acompanha = function (m, u) { return !!u && (P.gereTudo(u) || (u.perfil === 'resp' && u.unidade === m.unidade)); };
@@ -975,14 +981,39 @@
     guardar();
     return { ok: true };
   };
+  /* Pedido de ajuda a qualquer pessoa da empresa: fica nos contributos da milestone e a mensagem vai para a conversa */
+  P.pedirAjuda = function (m, indId, login, mensagem, prazo, u) {
+    var quem = P.user(login), txt = String(mensagem || '').trim();
+    if (!quem || quem.perfil === 'ext') return { erro: 'Choose who you are asking for assistance.' };
+    if (quem.login === u.login) return { erro: 'Choose someone other than yourself.' };
+    if (!txt) return { erro: 'Write a message for ' + quem.nome + '.' };
+    if (!prazo) return { erro: 'Enter the due date.' };
+    S.ext.push({ id: 'X' + Date.now(), tipo: 'ajuda', para: quem.login, pedido_por: u.nome, indicador_id: indId, milestone_id: m.id, entidade_externa: quem.nome, descricao: txt, prazo: prazo, estado: 'pendente', valor: null, evidencia: '', respondido_em: null });
+    m.comentarios.push({ autor: u.nome, texto: '@' + quem.nome + ' ' + txt, em: agora(), passo: P.passoAtual(m) ? P.passoAtual(m).nome : 'Completed', indicador: indId, para: quem.login });
+    ev(m, 'Assistance requested from ' + quem.nome + ': ' + P.cat(indId).nome + '.', u.nome);
+    guardar();
+    return { ok: true, nome: quem.nome };
+  };
+  P.responderAjuda = function (x, bruto, nota, u) {
+    if (x.tipo !== 'ajuda' || x.para !== u.login) return { erro: 'This request is not for you.' };
+    if (x.estado !== 'pendente') return { erro: 'This request was already answered.' };
+    var n = lerNumero(bruto), c = P.cat(x.indicador_id);
+    if (n === null) return { erro: 'Enter a numeric value.' };
+    var m = P.ms(x.milestone_id), v = P.validar(c, n, P.chave(m));
+    if (v.erros.length) return { erro: v.erros[0] };
+    x.valor = n; x.nota = String(nota || '').trim(); x.estado = 'recebido'; x.respondido_em = agora();
+    ev(m, u.nome + ' added a value for ' + c.nome + '.', u.nome);
+    guardar();
+    return { ok: true };
+  };
   P.usarExterno = function (x, u) {
-    var m = P.ms(x.milestone_id), it = P.item(x.indicador_id, P.chave(m));
+    var m = P.ms(x.milestone_id), it = P.item(x.indicador_id, P.chave(m)), ajuda = x.tipo === 'ajuda';
     if (!P.podePreencher(m, u)) return { erro: 'Only during collection, by whoever has it.' };
     it.valor = x.valor; it.rascunho = null; it.qualidade = 'medido'; it.metodo = '';
-    it.versoes.push({ valor: x.valor, em: agora(), por: u.nome, origem: 'external: ' + x.entidade_externa, motivo: '' });
+    it.versoes.push({ valor: x.valor, em: agora(), por: u.nome, origem: (ajuda ? 'assistance: ' : 'external: ') + x.entidade_externa, motivo: '' });
     if (x.evidencia) it.evidencias.push({ id: 'ev' + Date.now(), ficheiro: x.evidencia, por: x.entidade_externa, em: agora() });
     x.estado = 'aplicado';
-    ev(m, 'External contribution applied to ' + P.cat(x.indicador_id).nome + '.', u.nome);
+    ev(m, (ajuda ? 'Value from ' + x.entidade_externa + ' applied to ' : 'External contribution applied to ') + P.cat(x.indicador_id).nome + '.', u.nome);
     guardar();
     return { ok: true };
   };
@@ -1407,7 +1438,10 @@
         if (est.cod === 'atraso') add('err', m.nome + ' is overdue', 'Due ' + P.fmtData(m.prazo), r);
         if (est.cod === 'recolha' && P.diasAte(m.prazo) <= 5) add('warn', m.nome + ' due soon', 'Due ' + P.fmtData(m.prazo), r);
       }
-      if (P.podeAgir(m, u) && ['revisao', 'parecer', 'aprovacao'].indexOf(est.cod) > -1) add('info', m.nome + ' awaiting decision', P.passoAtual(m).nome, r);
+      if (P.esperaPor(m, u) && ['revisao', 'parecer', 'aprovacao'].indexOf(est.cod) > -1) add('info', m.nome + ' awaiting decision', P.passoAtual(m).nome, r);
+    });
+    S.ext.filter(function (x) { return x.tipo === 'ajuda' && x.para === u.login && x.estado === 'pendente'; }).forEach(function (x) {
+      add('warn', 'Assistance requested by ' + x.pedido_por + ': ' + P.cat(x.indicador_id).nome, x.descricao.length > 90 ? x.descricao.slice(0, 87) + '...' : x.descricao, 'Milestone/' + x.milestone_id + '?sep=externos');
     });
     S.aud.forEach(function (a) {
       var m = P.msDoIndicador(a.indicador_id), r = m ? 'Milestone/' + m.id + '?sep=auditoria' : 'Auditoria';

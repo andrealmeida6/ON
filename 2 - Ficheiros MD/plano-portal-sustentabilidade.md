@@ -336,6 +336,17 @@ Pedido do André a 8 de novembro de 2026.
 - **Uma só lista:** em Requested data, cada indicador aparece com os seus dados logo por cima (`P.fontesDoIndicador`): o dado, o sistema e o estado, a unidade e o valor editável. Um dado usado por mais do que um indicador só se edita no primeiro; nos seguintes aparece como referência ("Same value as in A01 above").
 - **Vistas:** "Data and indicators" (a lista), "Indicators only" (esconde os dados) e "Grid", que aparece logo no topo do cartão.
 
+## Waiting on you, empresas, Requested data simples, pedidos de ajuda e pull por indicador
+
+Pedido do André a 9 de novembro de 2026.
+
+- **Waiting on you:** o administrador já não vê todas as milestones em que pode agir, só as do passo dele ou as que lhe estão atribuídas (`P.esperaPor`). Vale para a Home, o filtro de Milestones, Approvals ("Waiting on me"), o chat ("With me") e as notificações. Quem recebeu um pedido de ajuda pendente também vê essa milestone (`esperaMim`). Os outros perfis ficam como estavam.
+- **Empresas com ícone:** um edifício ao lado do nome da empresa, como o símbolo das equipas (`empHtml`, `avEmpresa`). Aparece nas listas e tabelas de milestones, na timeline, no quadro, no breadcrumb, na etiqueta do banner, nos Details, nas aprovações, nas evidências, no trilho de auditoria, na atribuição de KPIs, no perímetro e nos pedidos.
+- **Requested data mais simples:** uma linha por indicador, como na grelha: nome (com ID, unidade e marcas como Calculated ou Evidence required), valor do ano anterior, valor do período, variação, estado e comentários. A seta abre o detalhe: definição e fórmula, dados de origem, alertas e justificação, qualidade, evidência e "Request assistance". As linhas com erro ou alerta abrem sozinhas; "Expand all" abre todas. As vistas passam a List e Grid.
+- **Request assistance:** substitui "Ask an external entity". Abre um pop-up com o indicador, a pessoa (qualquer utilizador interno, com pesquisa por nome ou departamento, primeiro os do mesmo departamento), a mensagem (pré-preenchida e editável) e o prazo. Enviar regista o pedido (`P.pedirAjuda`, `tipo: 'ajuda'`), deixa a mensagem no chat da milestone com a menção e cria uma notificação para essa pessoa. Ela responde em "Assistance requests" com o valor e uma nota (`P.responderAjuda`); quem pediu decide se usa o valor ("Use this value").
+- **Pull data from system:** novo nome do botão e do pop-up. O pop-up mostra a data da última atualização e, por indicador (fechado por omissão), o valor agora e depois e o que muda. Aberto, mostra os dados usados (agora, da fonte e registos lidos), a fórmula com os valores e os detalhes técnicos de cada dado: objeto de origem, campo, filtros (código de empresa, ano fiscal, períodos), agregação, registos e a consulta. A nomenclatura técnica segue a do ERP de origem (tabelas `ZESG_*`, `BUKRS`, `GJAHR`, `POPER`), mas a plataforma nunca diz qual é o sistema. Pela mesma razão, os dados de origem em Requested data e o histórico deixaram de mostrar o nome do sistema.
+- **Limitação:** os campos novos dos pedidos de ajuda (`tipo`, `para`, `pedido_por`, `nota`) ainda não vão para o Supabase; ficam no `localStorage`.
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.

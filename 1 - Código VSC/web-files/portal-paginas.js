@@ -11,7 +11,7 @@
   var e = function (v) {
     return String(v === null || v === undefined ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; });
   };
-  var U = { rota: { pag: '', arg: '', q: {} }, sep: 'dados', msTab: {}, tipoEd: null, lanc: null, msFiltro: { empresa: '', dep: '', estado: 'todas', esrs: true, minhas: false }, msEmpTodas: false, dadosVista: 'form', colRel: {}, wfHist: {}, exp: {}, msVista: 'lista', entVista: 'board', imp: {}, cal: null, consEsrs: false, histInd: 'A03', audFiltro: 'todas', boTab: 'indicadores', painel: null, menu: null, docNova: false, indBusca: '', marca: null, regraBusca: '', logoEstado: '' };
+  var U = { rota: { pag: '', arg: '', q: {} }, sep: 'dados', msTab: {}, tipoEd: null, lanc: null, msFiltro: { empresa: '', dep: '', estado: 'todas', esrs: true, minhas: false }, msEmpTodas: false, dadosVista: 'form', rqAberto: {}, colRel: {}, wfHist: {}, exp: {}, msVista: 'lista', entVista: 'board', imp: {}, cal: null, consEsrs: false, histInd: 'A03', audFiltro: 'todas', boTab: 'indicadores', painel: null, menu: null, docNova: false, indBusca: '', marca: null, regraBusca: '', logoEstado: '' };
 
   /* --- Icones ------------------------------------------------------------ */
   var svg = function (d, t) { return '<svg width="' + (t || 16) + '" height="' + (t || 16) + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + d + '</svg>'; };
@@ -48,7 +48,7 @@
   var linhaTabMs = function (m) {
     var a = P.atribuido(m);
     return { attrs: 'class="ps-tr-ms"', celulas: ['<div class="ps-ms-cel"><div class="ps-ms-cel-t"><a href="' + rota('Milestone/' + m.id) + '">' + e(m.nome) + '</a><span class="ps-so-mob">' + estChip(m) + '</span></div>' + tagsMs(m, 3) +
-      '<span class="ps-so-mob ps-ms-meta">' + e(m.empresa) + (a ? ', ' + e(a.nome) : '') + ', due ' + e(prazoTxt(m)) + '</span></div>', e(m.empresa), atribHtml(m), '<span class="ps-nowrap">' + e(prazoTxt(m)) + '</span>', estChip(m)] };
+      '<span class="ps-so-mob ps-ms-meta">' + empHtml(m.empresa) + (a ? ', ' + e(a.nome) : '') + ', due ' + e(prazoTxt(m)) + '</span></div>', empHtml(m.empresa), atribHtml(m), '<span class="ps-nowrap">' + e(prazoTxt(m)) + '</span>', estChip(m)] };
   };
   var chip = function (txt, cls) { return '<span class="ps-chip ' + (cls || '') + '">' + e(txt) + '</span>'; };
   var estChip = function (m) { var s = P.estadoMs(m); return chip(s.txt, s.cls); };
@@ -58,9 +58,13 @@
   /* data-fx-ignorar: os filtros das tabelas leem o nome, nao as iniciais */
   var avPessoa = function (nome) { return '<i class="ps-avp" aria-hidden="true" data-fx-ignorar>' + e(iniciais(nome)) + '</i>'; };
   var avEquipa = function () { return '<i class="ps-avd" aria-hidden="true">' + ICO_EQUIPA + '</i>'; };
+  var ICO_EMPRESA = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21V5a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v16"/><path d="M15 9h4a1 1 0 0 1 1 1v11"/><path d="M2.5 21h19"/><path d="M8 8h3M8 12h3M8 16h3"/></svg>';
+  var avEmpresa = function () { return '<i class="ps-ave" aria-hidden="true">' + ICO_EMPRESA + '</i>'; };
   var pessHtml = function (nome) { return '<span class="ps-pess">' + avPessoa(nome) + e(nome) + '</span>'; };
   var depHtml = function (nome) { return nome ? '<span class="ps-dep">' + avEquipa() + e(nome) + '</span>' : '<span class="ps-mut">-</span>'; };
-  P.pessHtml = pessHtml; P.depHtml = depHtml;
+  /* Empresa: sempre com o icone do edificio a esquerda, como as equipas */
+  var empHtml = function (nome) { return nome ? '<span class="ps-empr">' + avEmpresa() + e(nome) + '</span>' : '<span class="ps-mut">-</span>'; };
+  P.pessHtml = pessHtml; P.depHtml = depHtml; P.empHtml = empHtml;
   var quemHtml = function (nome) {
     if (!nome) return '<span class="ps-mut">-</span>';
     if (/^(System|Automatic|Sistema)$/i.test(nome)) return e(nome);
@@ -150,7 +154,9 @@
   /* O botao da timeline so aparece a quem tem a pagina */
   var botaoTl = function (t) { return paginasPermitidas(u()).indexOf('Timeline') > -1 ? '<a class="ps-btn peq ps-btn-tl" href="' + rota('Timeline') + '">' + svg(I.cal, 14) + e(t) + '</a>' : ''; };
   var ativaNav = function (pag) { return pag === 'Milestone' ? 'Milestones' : pag; };
-  var pendentesDe = function (usr) { return P.msCiclo().filter(function (m) { return P.podeAgir(m, usr); }); };
+  /* Espera por mim: o passo que e meu e tambem o pedido de ajuda que me fizeram */
+  var esperaMim = function (m, usr) { return P.esperaPor(m, usr) || (!P.concluida(m) && S.ext.some(function (x) { return x.tipo === 'ajuda' && x.para === usr.login && x.milestone_id === m.id && x.estado === 'pendente'; })); };
+  var pendentesDe = function (usr) { return P.msCiclo().filter(function (m) { return esperaMim(m, usr); }); };
   var pintarCabecalho = function () {
     var usr = u(), pag = U.rota.pag;
     document.body.classList.toggle('ps-sem-nav', !usr || pag === 'Entrada');
@@ -249,7 +255,7 @@
   };
   var linhaMs = function (m, cta) {
     var ico = P.estadoMs(m).cls === 'err' ? 'err' : '';
-    return '<li><a class="ps-row" href="' + rota('Milestone/' + m.id) + '"><span class="ps-row-ico ' + ico + '">' + svg(I.doc, 18) + '</span><span class="ps-row-txt"><b>' + e(m.nome) + '</b><span>' + tagPer(m) + ' ' + e(m.empresa) + ', ' + e(passoTxt(m)) + ', due ' + e(prazoTxt(m)) + '</span></span>' + estChip(m) + (cta ? '<span class="ps-row-cta">' + e(cta) + '</span>' : '') + '</a></li>';
+    return '<li><a class="ps-row" href="' + rota('Milestone/' + m.id) + '"><span class="ps-row-ico ' + ico + '">' + svg(I.doc, 18) + '</span><span class="ps-row-txt"><b>' + e(m.nome) + '</b><span>' + tagPer(m) + ' ' + empHtml(m.empresa) + ', ' + e(passoTxt(m)) + ', due ' + e(prazoTxt(m)) + '</span></span>' + estChip(m) + (cta ? '<span class="ps-row-cta">' + e(cta) + '</span>' : '') + '</a></li>';
   };
   var ctaPasso = function (m) { var p = P.passoAtual(m); return !p ? '' : p.tipo === 'recolha' ? 'Fill in' : p.tipo === 'parecer' ? 'Give opinion' : p.tipo === 'aprovacao' ? 'Approve' : 'Review'; };
   var pintarHero = function () {
@@ -282,7 +288,7 @@
       corpo = '<div class="ps-tl">' + cols.map(function (c) {
         c[1].sort(porPrazo);
         return '<div class="ps-tl-col ' + c[2] + '"><h4>' + e(c[0]) + ' <span class="ps-n">' + c[1].length + '</span></h4>' + (c[1].length ? c[1].slice(0, 6).map(function (m) {
-          return '<a class="ps-tl-it" href="' + rota('Milestone/' + m.id) + '"><b>' + e(m.nome) + '</b><small>' + tagPer(m) + ' ' + e(m.empresa) + ', ' + e(P.fmtData(m.prazo)) + '</small>' + (P.podeAgir(m, usr) ? '<span class="ps-tl-tag">with you</span>' : '') + '</a>';
+          return '<a class="ps-tl-it" href="' + rota('Milestone/' + m.id) + '"><b>' + e(m.nome) + '</b><small>' + tagPer(m) + ' ' + empHtml(m.empresa) + ', ' + e(P.fmtData(m.prazo)) + '</small>' + (P.esperaPor(m, usr) ? '<span class="ps-tl-tag">with you</span>' : '') + '</a>';
         }).join('') + (c[1].length > 6 ? '<a class="ps-btn liga" href="' + rota('Milestones') + '">' + (c[1].length - 6) + ' more</a>' : '') : '<div class="ps-mut ps-small">Nothing here.</div>') + '</div>';
       }).join('') + '</div>';
     }
@@ -387,7 +393,7 @@
       if (f.empresa && m.empresa !== f.empresa) return false;
       if (f.dep && m.departamentos.indexOf(f.dep) < 0) return false;
       if (f.periodo && m.periodo !== f.periodo) return false;
-      if (f.minhas && !P.podeAgir(m, usr)) return false;
+      if (f.minhas && !esperaMim(m, usr)) return false;
       if (f.estado === 'curso' && c === 'concluida') return false;
       if (f.estado === 'atraso' && c !== 'atraso') return false;
       if (f.estado === 'concluidas' && c !== 'concluida') return false;
@@ -438,7 +444,7 @@
       return filtros + '<div class="ps-card">' + cab + '<div class="ps-card-body"><div class="ps-board">' + cols.map(function (c) {
         var it = lista.filter(function (m) { return c[1].indexOf(P.estadoMs(m).cod) > -1; });
         return '<div class="ps-board-col"><h3>' + e(c[0]) + '<span class="ps-n">' + it.length + '</span></h3>' + it.map(function (m) {
-          return '<a class="ps-board-it" href="' + rota('Milestone/' + m.id) + '"><b>' + e(m.nome) + '</b>' + tagsMs(m, 2) + '<small class="ps-mut">' + e(m.empresa) + '</small><div>' + atribHtml(m) + '</div><div class="ps-sp-b ps-mt">' + estChip(m) + '<span class="ps-mut ps-small">' + e(P.fmtData(m.prazo)) + '</span></div></a>';
+          return '<a class="ps-board-it" href="' + rota('Milestone/' + m.id) + '"><b>' + e(m.nome) + '</b>' + tagsMs(m, 2) + '<small class="ps-mut">' + empHtml(m.empresa) + '</small><div>' + atribHtml(m) + '</div><div class="ps-sp-b ps-mt">' + estChip(m) + '<span class="ps-mut ps-small">' + e(P.fmtData(m.prazo)) + '</span></div></a>';
         }).join('') + '</div>';
       }).join('') + '</div></div></div>';
     }
@@ -453,11 +459,11 @@
   Blocos['milestone-cabecalho'] = function () {
     var m = msAtual(), d = P.diasAte(m.prazo);
     var ext = S.ext.filter(function (x) { return x.milestone_id === m.id; }).length;
-    return '<nav class="ps-mig" aria-label="Breadcrumb"><a href="' + rota('Inicio') + '">Home</a><span>/</span><a href="' + rota('Milestones') + '">Milestones</a><span>/</span><a href="' + rotaEmp(m.empresa) + '">' + e(m.empresa) + '</a><span>/</span><b>' + e(m.nome) + '</b></nav>' +
-      '<div class="ps-ban"><div class="ps-ban-top"><div><div class="ps-ban-tags"><span class="ps-ban-tag">' + e(m.empresa) + '</span><span class="ps-ban-tag forte">' + e(P.rotPeriodo(m)) + '</span><span class="ps-ban-tag">' + e(m.consolida ? 'Annual consolidation' : PERIODO_TXT[m.periodicidade] || m.periodicidade) + '</span>' + (m.periodicidade === 'Novos dados ESRS' ? '<span class="ps-ban-tag">ESRS track</span>' : '') + (m.workflow_ajustado ? '<span class="ps-ban-tag">Adjusted workflow</span>' : '') + '</div>' +
+    return '<nav class="ps-mig" aria-label="Breadcrumb"><a href="' + rota('Inicio') + '">Home</a><span>/</span><a href="' + rota('Milestones') + '">Milestones</a><span>/</span>    <a href="' + rotaEmp(m.empresa) + '">' + empHtml(m.empresa) + '</a><span>/</span><b>' + e(m.nome) + '</b></nav>' +
+          '<div class="ps-ban"><div class="ps-ban-top"><div><div class="ps-ban-tags"><span class="ps-ban-tag">' + avEmpresa() + e(m.empresa) + '</span><span class="ps-ban-tag forte">' + e(P.rotPeriodo(m)) + '</span><span class="ps-ban-tag">' + e(m.consolida ? 'Annual consolidation' : PERIODO_TXT[m.periodicidade] || m.periodicidade) + '</span>' + (m.periodicidade === 'Novos dados ESRS' ? '<span class="ps-ban-tag">ESRS track</span>' : '') + (m.workflow_ajustado ? '<span class="ps-ban-tag">Adjusted workflow</span>' : '') + '</div>' +
       '<h1>' + e(m.nome) + '</h1><div class="ps-ban-sub">' + (function () { var p = P.periodo(m.periodo); return p ? 'Data from ' + e(P.fmtDataAno(p.ini)) + ' to ' + e(P.fmtDataAno(p.fim)) : 'Reporting year ' + e(m.ano); })() + ', ' + e(m.unidade) + '</div>' + (P.relatoriosDe(m).length ? '<div class="ps-ban-rel"><span>Feeds</span>' + P.relatoriosDe(m).map(function (r) { return '<span class="ps-ban-tag" title="' + e(r.base) + '">' + e(r.sigla + ', ' + r.entidade + ', ' + P.fmtDataAno(r.data)) + '</span>'; }).join('') + '</div>' : '') + '</div>' +
       '<div class="ps-ban-dir"><div class="ps-ban-pill"><small>Due</small>' + e(P.fmtDataAno(m.prazo)) + '</div>' + estChip(m) + '</div></div>' +
-      '<div class="ps-ban-stats"><div class="ps-ban-stat"><b>' + preenchidos(m) + '/' + m.indicadores.length + '</b><span>Indicators filled in</span></div><div class="ps-ban-stat"><b>' + m.indicadores.filter(function (id) { return P.item(id, P.chave(m)).evidencias.length; }).length + '</b><span>With evidence</span></div><div class="ps-ban-stat"><b>' + ext + '</b><span>External requests</span></div><div class="ps-ban-stat"><b>' + (P.concluida(m) ? '-' : d + 'd') + '</b><span>Until due</span></div></div></div>';
+      '<div class="ps-ban-stats"><div class="ps-ban-stat"><b>' + preenchidos(m) + '/' + m.indicadores.length + '</b><span>Indicators filled in</span></div><div class="ps-ban-stat"><b>' + m.indicadores.filter(function (id) { return P.item(id, P.chave(m)).evidencias.length; }).length + '</b><span>With evidence</span></div><div class="ps-ban-stat"><b>' + ext + '</b><span>Assistance requests</span></div><div class="ps-ban-stat"><b>' + (P.concluida(m) ? '-' : d + 'd') + '</b><span>Until due</span></div></div></div>';
   };
   var quemAtual = function (m) { var a = P.atribuido(m); return !a ? '<span class="ps-mut">-</span>' : a.tipo === 'pessoa' ? pessHtml(a.nome) : depHtml(a.nome); };
   var podeReatribuir = function (m, usr) { var p = P.passoAtual(m); return !!p && !P.concluida(m) && p.tipo === 'recolha' && P.acompanha(m, usr); };
@@ -499,7 +505,7 @@
     var nExt = S.ext.filter(function (x) { return x.milestone_id === m.id && x.estado !== 'aplicado'; }).length;
     /* Uma so pagina, pela ordem do trabalho: pedido, fontes e calculos, dados, ficheiros, exploracao, qualidade, terceiros, auditoria e conversa */
     var secs = [['dados', decide ? 'Review' : 'Requested data', 0, cartaoTrimestres(m) + (decide ? sepRevisao(m) : P.podePreencher(m, usr) ? sepRecolha(m) : sepLeitura(m)) + cartaoFicheiros(m)],
-      ['evidencias', 'Evidence and quality', 0, sepEvidencias(m)], ['externos', 'External contributions', nExt, sepExternos(m)], ['auditoria', 'Audit', nAud, sepAuditoria(m)], ['conversa', 'Conversation and history', m.comentarios.length, (P.ext.sepConversa ? P.ext.sepConversa(m) : sepConversa(m))]];
+      ['evidencias', 'Evidence and quality', 0, sepEvidencias(m)], ['externos', 'Assistance requests', nExt, sepExternos(m)], ['auditoria', 'Audit', nAud, sepAuditoria(m)], ['conversa', 'Conversation and history', m.comentarios.length, (P.ext.sepConversa ? P.ext.sepConversa(m) : sepConversa(m))]];
     var indice = [['dados', secs[0][1]]].concat(secs.slice(1).map(function (s) { return [s[0], s[1], s[2]]; }));
     var tab = U.msTab[m.id] || 'trabalho', nDados = m.indicadores.filter(function (id) { return P.podeVerIndicador(P.cat(id), usr); }).length;
     var barra = '<div class="ps-mtabs" role="tablist" aria-label="Milestone views">' + [['trabalho', 'Work', ''], ['dados', 'Data store', nDados]].map(function (t) {
@@ -508,7 +514,7 @@
     if (tab === 'dados') return barra + '<div id="mpan-dados" role="tabpanel" aria-labelledby="mtab-dados" class="ps-col">' + sepExplorar(m) + '</div>';
     return barra + '<div id="mpan-trabalho" role="tabpanel" aria-labelledby="mtab-trabalho"><div class="ps-grid-side ps-ms-corrida"><div class="ps-col">' + secs.map(function (s) { return '<section id="sec-' + s[0] + '" class="ps-sec ps-col" aria-label="' + e(s[1]) + '">' + s[3] + '</section>'; }).join('') + barraAcao(m, usr, decide) + '</div>' +
       '<div class="ps-col ps-ms-lado"><nav class="ps-card ps-ms-indice" aria-label="On this page">' + cabCartao('On this page') + '<ul>' + indice.map(function (s) { return '<li><button type="button" class="ps-btn liga" data-a="sep" data-v="' + s[0] + '">' + e(s[1]) + (s[2] ? ' <span class="ps-n">' + s[2] + '</span>' : '') + '</button></li>'; }).join('') + '</ul></nav>' +
-      '<div class="ps-card">' + cabCartao('Details') + '<div class="ps-card-body"><dl class="ps-det"><dt>Company</dt><dd>' + (P.gereTudo(usr) ? '<select id="ms-emp" class="ps-sel" aria-label="Company" data-c="msEmpresa">' + S.ent.map(function (x) { return opt(x.nome, x.nome, m.empresa); }).join('') + '</select>' : e(m.empresa)) + '</dd><dt>Departments</dt><dd>' + editorTags(m, usr) + '</dd><dt>Unit</dt><dd>' + e(m.unidade) + '</dd><dt>Current step</dt><dd>' + e(P.concluida(m) ? 'Completed' : P.passoAtual(m).nome) + '</dd><dt>Assigned to</dt><dd>' + editorAtrib(m, usr) + '</dd><dt>Due</dt><dd>' + e(prazoTxt(m)) + '</dd><dt>Indicators</dt><dd>' + m.indicadores.length + '</dd></dl></div></div></div></div></div>';
+      '<div class="ps-card">' + cabCartao('Details') + '<div class="ps-card-body"><dl class="ps-det"><dt>Company</dt><dd>' + (P.gereTudo(usr) ? '<span class="ps-empr">' + avEmpresa() + '<select id="ms-emp" class="ps-sel" aria-label="Company" data-c="msEmpresa">' + S.ent.map(function (x) { return opt(x.nome, x.nome, m.empresa); }).join('') + '</select></span>' : empHtml(m.empresa)) + '</dd><dt>Departments</dt><dd>' + editorTags(m, usr) + '</dd><dt>Unit</dt><dd>' + e(m.unidade) + '</dd><dt>Current step</dt><dd>' + e(P.concluida(m) ? 'Completed' : P.passoAtual(m).nome) + '</dd><dt>Assigned to</dt><dd>' + editorAtrib(m, usr) + '</dd><dt>Due</dt><dd>' + e(prazoTxt(m)) + '</dd><dt>Indicators</dt><dd>' + m.indicadores.length + '</dd></dl></div></div></div></div></div>';
   };
   /* Barra de acao: fica sempre a vista no fundo do ecra enquanto se trabalha na milestone */
   var barraAcao = function (m, usr, decide) {
@@ -535,34 +541,60 @@
   var linkFicha = function (id, txt) { return '<button type="button" class="ps-btn liga" data-a="ficha" data-v="' + e(id) + '">' + e(txt || P.cat(id).nome) + '</button>'; };
   var marcaAmostra = function (id) { return S.amostra.indexOf(id) > -1 ? ' ' + chip('Sample', 'rev') : ''; };
 
+  /* Requested data na recolha: uma linha simples por indicador, como na grelha. Fontes, definicao, qualidade, evidencia e ajuda abrem-se na seta.
+     Fica aberta por defeito a linha com erro ou alerta, porque pede justificacao. */
+  var rqAberto = function (m, id) {
+    var k = m.id + ':' + id;
+    if (U.rqAberto[k] !== undefined) return U.rqAberto[k];
+    var v = P.validarItem(P.item(id, P.chave(m)));
+    return !!(v.erros.length || v.alertas.length);
+  };
   var sepRecolha = function (m) {
     var usr = u(), rel = U.imp[m.id], calcs = P.calculosMilestone ? P.calculosMilestone(m) : [], comFontes = P.camposMilestone ? P.camposMilestone(m).length > 0 : false, vistos = {};
+    var todosAbertos = m.indicadores.every(function (id) { return rqAberto(m, id); });
     var linhas = m.indicadores.map(function (id) {
-      var c = P.cat(id), it = P.item(id, P.chave(m)), v = P.validarItem(it), ant = P.valorAnterior(id, P.chave(m));
+      var c = P.cat(id), it = P.item(id, P.chave(m)), v = P.validarItem(it), ant = P.valorAnterior(id, P.chave(m)), aberto = rqAberto(m, id);
       var calc = calcs.filter(function (r) { return r.id === id; })[0], emCalc = !!(calc && calc.x && calc.valor !== null && it.daFonte);
-      var fontes = U.dadosVista === 'ind' || !P.fontesDoIndicador ? '' : P.fontesDoIndicador(m, id, vistos);
       var txtBruto = it.rascunho || (it.valor === null ? '' : String(it.valor).replace('.', ','));
       var cls = v.erros.length ? 'erro' : v.alertas.length ? 'alerta' : '';
       var res = v.erros.length ? chip('Error', 'err') : v.alertas.length ? chip(v.alertas.length + ' alert(s)', 'warn') : it.valor !== null ? chip('Valid', 'ok') : chip('To fill in');
-      var recebido = S.ext.filter(function (x) { return x.indicador_id === id && x.milestone_id === m.id && x.estado === 'recebido'; })[0];
-      return '<div class="rq-g' + (fontes ? ' com-f' : '') + (emCalc ? ' calc' : '') + '">' + fontes + '<div class="ps-ind" id="ind-' + e(id) + '"><div class="ps-ind-top"><div class="ps-ind-nome"><button type="button" data-a="ficha" data-v="' + e(id) + '">' + e(c.nome) + '</button><small>' + e(c.unidade_medida) + ', ' + (c.tipo === 'derivado' ? 'Derived' : 'Base data') + ', ' + e(c.perimetro) + (P.esrsDe(id).dps.length ? ', ' + e(P.esrsDe(id).dps[0]) : '') + '</small><span class="ps-ind-desc">' + e(P.esrsDe(id).desc) + '</span>' + (P.formulaTxt ? '<span class="ps-ind-form">ƒ ' + e(P.formulaTxt(id)) + '</span>' : '') + '</div>' +
-        '<div><span class="ps-ind-k">' + e(P.rotAnterior(P.chave(m))) + '</span><span class="ps-num">' + (ant === null || ant === undefined ? '-' : fmtV(id, ant)) + '</span></div>' +
-        (emCalc ? '<div class="ps-ind-campo ps-ind-calc"><span class="ps-ind-k">Value ' + e(P.rotPeriodo(m)) + '</span><span class="ps-calc-v ps-num ' + cls + '" title="Calculated from the source data">' + e(fmtV(id, it.valor)) + '</span></div>' :
-        '<div class="ps-ind-campo"><label class="ps-ind-k" for="v-' + e(id) + '">Value ' + e(P.rotPeriodo(m)) + '</label><input id="v-' + e(id) + '" class="ps-in ps-num ' + cls + '" inputmode="decimal" autocomplete="off" value="' + e(txtBruto) + '" data-c="valor" data-id="' + e(id) + '"' + (v.erros.length ? ' aria-invalid="true" aria-describedby="err-' + e(id) + '"' : '') + '></div>') +
-        '<div><span class="ps-ind-k">Change</span><span class="ps-num">' + (v.variacao === null ? '-' : (v.variacao > 0 ? '+' : '') + P.fmtNum(v.variacao, 1) + '%') + '</span></div><div class="ps-ind-res">' + res + (P.botaoComentarInd ? P.botaoComentarInd(m, id) : '') + '</div></div>' +
-        (emCalc ? '<div class="ps-ind-calc-f"><span class="ps-mono">ƒ ' + e(calc.subst) + '</span> = <b>' + e(fmtV(id, calc.valor)) + '</b><small>Calculated from the source data above. Change those values to change it.</small></div>' : calc && calc.x && comFontes ? '<div class="ps-ind-calc-f falta"><small>Fill in the source data above and this value is calculated, or type it here.</small></div>' : '') +
-        (v.erros.length ? '<div id="err-' + e(id) + '" class="ps-ind-msg ps-mt" role="alert">' + e(v.erros[0]) + '</div>' : '') +
-        (v.alertas.length ? '<div class="ps-ind-just"><ul>' + v.alertas.map(function (a) { return '<li>' + e(a) + '</li>'; }).join('') + '</ul><label class="ps-lab" for="j-' + e(id) + '">Justification (required)</label><textarea id="j-' + e(id) + '" class="ps-ta" data-c="just" data-id="' + e(id) + '">' + e(it.justificacao) + '</textarea></div>' : '') +
-        '<div class="ps-ind-sub">' + campo('q-' + id, 'Data quality', '<select id="q-' + e(id) + '" class="ps-sel" data-c="qual" data-id="' + e(id) + '">' + opt('medido', 'Measured', it.qualidade) + opt('calculado', 'Calculated', it.qualidade) + opt('estimado', 'Estimated', it.qualidade) + '</select>') +
+      var pedidos = S.ext.filter(function (x) { return x.indicador_id === id && x.milestone_id === m.id; });
+      var recebido = pedidos.filter(function (x) { return x.estado === 'recebido'; })[0], pendente = pedidos.filter(function (x) { return x.estado === 'pendente'; })[0];
+      var evTxt = c.evidencia_obrigatoria ? (it.evidencias.length ? '' : '<span class="rq2-b warn">Evidence required</span>') : '';
+      var marcas = (emCalc ? '<span class="rq2-b calc">Calculated</span>' : '') + evTxt + (it.evidencias.length ? '<span class="rq2-b">' + it.evidencias.length + ' evidence</span>' : '') +
+        (it.qualidade === 'estimado' ? '<span class="rq2-b">Estimated</span>' : '') + (recebido ? '<span class="rq2-b ok">Value received</span>' : pendente ? '<span class="rq2-b">Assistance requested</span>' : '');
+      var valor = emCalc ? '<span class="rq2-calc ps-num ' + cls + '" title="Calculated from the source data">ƒ ' + e(fmtV(id, it.valor)) + '</span>'
+        : '<input id="v-' + e(id) + '" class="ps-in ps-num rq2-in ' + cls + '" inputmode="decimal" autocomplete="off" aria-label="Value ' + e(P.rotPeriodo(m) + ', ' + c.nome) + '" placeholder="-" value="' + e(txtBruto) + '" data-c="valor" data-id="' + e(id) + '"' + (v.erros.length ? ' aria-invalid="true" aria-describedby="err-' + e(id) + '"' : '') + '>';
+      var linha = '<div class="rq2-l"><button type="button" class="rq2-seta" data-a="rqAbrir" data-v="' + e(id) + '" aria-expanded="' + aberto + '" aria-controls="rqd-' + e(id) + '" aria-label="' + (aberto ? 'Hide' : 'Show') + ' the details of ' + e(c.nome) + '">' + svg(I.baixo, 16) + '</button>' +
+        '<div class="rq2-nome"><button type="button" class="rq2-n" data-a="ficha" data-v="' + e(id) + '">' + e(c.nome) + '</button><small>' + e(id) + ', ' + e(c.unidade_medida) + marcas + '</small></div>' +
+        '<div class="rq2-c rq2-ant"><span class="rq2-k">' + e(P.rotAnterior(P.chave(m))) + '</span><span class="ps-num">' + (ant === null || ant === undefined ? '-' : e(fmtV(id, ant))) + '</span></div>' +
+        '<div class="rq2-c rq2-val"><span class="rq2-k">Value ' + e(P.rotPeriodo(m)) + '</span>' + valor + '</div>' +
+        '<div class="rq2-c rq2-var"><span class="rq2-k">Change</span><span class="ps-num">' + (v.variacao === null ? '-' : (v.variacao > 0 ? '+' : '') + P.fmtNum(v.variacao, 1) + '%') + '</span></div>' +
+        '<div class="rq2-c rq2-res">' + res + (P.botaoComentarInd ? P.botaoComentarInd(m, id) : '') + '</div></div>' +
+        (v.erros.length ? '<div id="err-' + e(id) + '" class="ps-ind-msg rq2-msg" role="alert">' + e(v.erros[0]) + '</div>' : '');
+      if (!aberto) return '<div class="rq2-it ' + cls + '" id="ind-' + e(id) + '">' + linha + '</div>';
+      /* So as linhas abertas mostram os dados de origem: o primeiro indicador aberto que usa um dado fica com o campo */
+      var fontes = P.fontesDoIndicador ? P.fontesDoIndicador(m, id, vistos) : '';
+      var esrs = P.esrsDe(id);
+      var defin = '<div class="rq2-bl"><h4>Definition</h4>' + (esrs.desc ? '<p class="ps-ind-desc">' + e(esrs.desc) + '</p>' : '') +
+        '<p class="ps-small ps-mut">' + (c.tipo === 'derivado' ? 'Derived' : 'Base data') + ', ' + e(c.perimetro) + (esrs.dps.length ? ', ' + e(esrs.dps[0]) : '') + '</p>' +
+        (P.formulaTxt ? '<p class="ps-ind-form">ƒ ' + e(P.formulaTxt(id)) + '</p>' : '') +
+        (emCalc ? '<p class="rq2-calc-f"><span class="ps-mono">ƒ ' + e(calc.subst) + '</span> = <b>' + e(fmtV(id, calc.valor)) + '</b><small>Calculated from the source data. Change those values to change it.</small></p>' : calc && calc.x && comFontes ? '<p class="ps-small ps-mut">Fill in the source data and this value is calculated, or type it in the line above.</p>' : '') + '</div>';
+      var origem = fontes ? '<div class="rq2-bl"><h4>Source data</h4>' + fontes + '</div>' : '';
+      var just = v.alertas.length ? '<div class="ps-ind-just"><ul>' + v.alertas.map(function (a) { return '<li>' + e(a) + '</li>'; }).join('') + '</ul><label class="ps-lab" for="j-' + e(id) + '">Justification (required)</label><textarea id="j-' + e(id) + '" class="ps-ta" data-c="just" data-id="' + e(id) + '">' + e(it.justificacao) + '</textarea></div>' : '';
+      var qual = '<div class="rq2-ac">' + campo('q-' + id, 'Data quality', '<select id="q-' + e(id) + '" class="ps-sel" data-c="qual" data-id="' + e(id) + '">' + opt('medido', 'Measured', it.qualidade) + opt('calculado', 'Calculated', it.qualidade) + opt('estimado', 'Estimated', it.qualidade) + '</select>') +
         (it.qualidade === 'estimado' ? campo('m-' + id, 'Estimation method (required)', '<input id="m-' + e(id) + '" class="ps-in" value="' + e(it.metodo) + '" data-c="metodo" data-id="' + e(id) + '">') : '') +
-        '<div class="ps-sp"><button type="button" id="e-' + e(id) + '" class="ps-btn peq" data-a="anexar" data-v="' + e(id) + '">Attach evidence</button>' + (c.evidencia_obrigatoria ? (it.evidencias.length ? chip('Evidence attached', 'ok') : chip('Evidence required', 'warn')) : (it.evidencias.length ? chip(it.evidencias.length + ' evidence item(s)', 'ok') : '')) + '<button type="button" class="ps-btn peq" data-a="pedirExt" data-v="' + e(id) + '">Ask an external entity</button></div></div>' +
-        (recebido ? '<div class="ps-aviso ok ps-mt">' + e(recebido.entidade_externa) + ' sent ' + e(fmtV(id, recebido.valor)) + ' ' + e(c.unidade_medida) + '. <button type="button" class="ps-btn peq" data-a="usarExt" data-v="' + e(recebido.id) + '">Use this value</button></div>' : '') + '</div></div>';
+        '<div class="ps-sp"><button type="button" id="e-' + e(id) + '" class="ps-btn peq" data-a="anexar" data-v="' + e(id) + '">Attach evidence</button>' + (c.evidencia_obrigatoria ? (it.evidencias.length ? chip('Evidence attached', 'ok') : chip('Evidence required', 'warn')) : (it.evidencias.length ? chip(it.evidencias.length + ' evidence item(s)', 'ok') : '')) +
+        '<button type="button" class="ps-btn peq" data-a="pedirAjuda" data-v="' + e(id) + '">Request assistance</button></div></div>';
+      var ajuda = recebido ? '<div class="ps-aviso ok">' + e(recebido.entidade_externa) + ' sent ' + e(fmtV(id, recebido.valor)) + ' ' + e(c.unidade_medida) + (recebido.nota ? ': "' + e(recebido.nota) + '"' : '') + '. <button type="button" class="ps-btn peq" data-a="usarExt" data-v="' + e(recebido.id) + '">Use this value</button></div>'
+        : pendente ? '<div class="ps-aviso">Waiting for ' + e(pendente.entidade_externa) + ', due ' + e(P.fmtData(pendente.prazo)) + '.</div>' : '';
+      return '<div class="rq2-it on ' + cls + '" id="ind-' + e(id) + '">' + linha + '<div class="rq2-det" id="rqd-' + e(id) + '"><div class="rq2-det-g' + (origem ? '' : ' um') + '">' + defin + origem + '</div>' + just + qual + ajuda + '</div></div>';
     }).join('');
     return '<div class="ps-card">' + cabCartao('Import file', 'doc') +
       '<div class="ps-drop"><button type="button" class="ps-btn pri" data-a="importar">Import file</button><button type="button" class="ps-btn" data-a="tplExcel">Excel template</button><button type="button" class="ps-btn" data-a="impExemplo">Test with a sample file</button><span class="ps-mut ps-small">Excel (.xlsx) only</span></div>' +
       (rel ? relatorioImport(m, rel) : '') + '</div>' +
       '<div class="ps-card">' + cabCartao('Requested data', 'tarefa', '<div class="ps-sp">' + (P.fontesAcoes ? P.fontesAcoes(m) : '') + ferrDados(m) + '</div>') +
-      (U.dadosVista === 'grid' ? corpoGrelha(m) : (comFontes ? '<div class="rq-leg">' + (U.dadosVista === 'ind' ? '<span>Showing the indicators only. Their source data is in Data and indicators.</span>' : '<span><i class="f"></i>Source data, from the systems or typed</span><span><i class="calc"></i>Indicator calculated from the data above it</span>') + '</div>' : '') + '<div class="rq-lista">' + linhas + '</div>') + '</div>';
+      (U.dadosVista === 'grid' ? corpoGrelha(m) : '<div class="rq2"><div class="rq2-cab"><button type="button" class="ps-btn liga rq2-todos" data-a="rqTodos">' + (todosAbertos ? 'Collapse all' : 'Expand all') + '</button><span>Indicator</span><span class="rq2-dir">' + e(P.rotAnterior(P.chave(m))) + '</span><span class="rq2-dir">Value ' + e(P.rotPeriodo(m)) + '</span><span class="rq2-dir">Change</span><span>Status</span></div>' + linhas + '</div>') + '</div>';
   };
   /* --- Na milestone do ano: o que ja foi reportado nos trimestres ------------ */
   var cartaoTrimestres = function (m) {
@@ -595,7 +627,7 @@
       (gere ? '<div class="ps-form ps-mt ps-fic-novo">' + campo('fp-nome', 'Request another file', '<input id="fp-nome" class="ps-in" placeholder="Nome do ficheiro pedido">') + '<label class="ps-chk"><input id="fp-obr" type="checkbox" checked> Required</label><button type="button" class="ps-btn" data-a="ficPedir">Add to the request</button></div>' : '') + '</div></div>';
   };
   var ferrDados = function (m) {
-    var pode = P.podePreencher(m, u()), vs = pode && P.camposMilestone && P.camposMilestone(m).length ? [['form', 'Data and indicators'], ['ind', 'Indicators only'], ['grid', 'Grid']] : [['form', pode ? 'Form' : 'Table'], ['grid', 'Grid']], at = U.dadosVista === 'ind' && vs.length < 3 ? 'form' : U.dadosVista || 'form';
+    var pode = P.podePreencher(m, u()), vs = [['form', pode ? 'List' : 'Table'], ['grid', 'Grid']], at = U.dadosVista === 'grid' ? 'grid' : 'form';
     return '<div class="ps-sp"><div class="ps-seg" role="group" aria-label="View">' + vs.map(function (v) { return '<button type="button" class="' + (at === v[0] ? 'on' : '') + '" data-a="dadosVista" data-v="' + v[0] + '">' + v[1] + '</button>'; }).join('') + '</div><button type="button" class="ps-btn peq" data-a="dadosExcel">Export to Excel</button></div>';
   };
 
@@ -820,10 +852,18 @@
     var usr = u(), l = S.ext.filter(function (x) { return x.milestone_id === m.id; });
     var pode = P.acompanha(m, usr) && !P.concluida(m);
     var EST = { pendente: ['Pending', 'warn'], recebido: ['Received', 'info'], aplicado: ['Applied', 'ok'] };
-    return '<div class="ps-card">' + cabCartao('External contributions', 'doc', pode ? '<button type="button" class="ps-btn peq" data-a="pedirExt">New request</button>' : '') + '<div class="ps-card-body">' + tabela([{ t: 'Indicator' }, { t: 'Entity' }, { t: 'Request' }, { t: 'Due' }, { t: 'Value' }, { t: 'Status' }], l.map(function (x) {
+    /* Pedidos de ajuda que sao para mim: respondo aqui mesmo, com o valor e uma nota */
+    var meus = l.filter(function (x) { return x.tipo === 'ajuda' && x.para === usr.login && x.estado === 'pendente'; });
+    var form = meus.map(function (x) {
+      var c = P.cat(x.indicador_id);
+      return '<div class="ps-aj-resp"><p><b>' + e(x.pedido_por) + '</b> asked for your help with <b>' + e(c.nome) + '</b>, due ' + e(P.fmtData(x.prazo)) + '.</p><blockquote>' + e(x.descricao) + '</blockquote>' +
+        '<div class="ps-form">' + campo('ajv-' + x.id, 'Value (' + c.unidade_medida + ')', '<input id="ajv-' + e(x.id) + '" class="ps-in ps-num" inputmode="decimal" autocomplete="off">') + campo('ajn-' + x.id, 'Note (optional)', '<input id="ajn-' + e(x.id) + '" class="ps-in" placeholder="Where the value comes from">') + '</div>' +
+        '<button type="button" class="ps-btn pri peq ps-mt" data-a="ajResponder" data-v="' + e(x.id) + '">Send value</button></div>';
+    }).join('');
+    return '<div class="ps-card">' + cabCartao('Assistance requests', 'doc', pode ? '<button type="button" class="ps-btn peq" data-a="pedirAjuda">Request assistance</button>' : '') + '<div class="ps-card-body">' + form + tabela([{ t: 'Indicator' }, { t: 'Asked to' }, { t: 'Message' }, { t: 'Due' }, { t: 'Value' }, { t: 'Status' }], l.map(function (x) {
       var acao = x.estado === 'recebido' && P.podePreencher(m, usr) ? ' <button type="button" class="ps-btn peq" data-a="usarExt" data-v="' + e(x.id) + '">Use this value</button>' : '';
-      return [e(P.cat(x.indicador_id).nome), e(x.entidade_externa), e(x.descricao), e(P.fmtData(x.prazo)), x.valor === null ? '-' : e(fmtV(x.indicador_id, x.valor)), chip(EST[x.estado][0], EST[x.estado][1]) + acao];
-    }), 'No requests to external entities on this milestone yet.') + '</div></div>';
+      return [e(P.cat(x.indicador_id).nome), x.tipo === 'ajuda' ? pessHtml(x.entidade_externa) + (x.pedido_por ? '<br><small class="ps-mut">Asked by ' + e(x.pedido_por) + '</small>' : '') : depHtml(x.entidade_externa), e(x.descricao) + (x.nota ? '<br><small class="ps-mut">Reply: ' + e(x.nota) + '</small>' : ''), e(P.fmtData(x.prazo)), x.valor === null ? '-' : e(fmtV(x.indicador_id, x.valor)), chip(EST[x.estado][0], EST[x.estado][1]) + acao];
+    }), 'No assistance requested on this milestone yet.') + '</div></div>';
   };
   var cartaoPedidos = function (lista) {
     var usr = u();
@@ -997,7 +1037,7 @@
       (S.amostra.length ? '<div class="ps-card ps-mt">' + cabCartao('Sample', 'tarefa') + '<ul class="ps-list">' + S.amostra.map(function (id) { var m = P.msDoIndicador(id); return '<li class="ps-row"><span class="ps-row-txt">' + linkFicha(id) + '<span>' + e(m ? m.nome : '') + '</span></span></li>'; }).join('') + '</ul></div>' : '') +
       '<div class="ps-card ps-mt">' + cabCartao('Milestones', 'doc', '<div class="ps-seg" role="group" aria-label="Filter">' + [['todas', 'All'], ['concluidas', 'Completed'], ['abertos', 'With open requests'], ['amostra', 'In the sample']].map(function (x) { return '<button type="button" class="' + (f === x[0] ? 'on' : '') + '" data-a="audFiltro" data-v="' + x[0] + '">' + x[1] + '</button>'; }).join('') + '</div>') + '<div class="ps-card-body">' + tabela([{ t: 'Milestone' }, { t: 'Company' }, { t: 'Assigned to' }, { t: 'Status' }, { t: 'Approved', dir: 1 }, { t: 'Required evidence', dir: 1 }, { t: 'Estimated', dir: 1 }, { t: 'Restated', dir: 1 }, { t: 'Open requests', dir: 1 }], lista.map(function (m) {
         var ob = m.indicadores.filter(function (id) { return P.cat(id).evidencia_obrigatoria; }), okEv = ob.filter(function (id) { return P.item(id, P.chave(m)).evidencias.length; }).length;
-        return ['<a href="' + rota('Milestone/' + m.id + '?sep=auditoria') + '">' + e(m.nome) + '</a>', e(m.empresa), atribHtml(m), estChip(m), P.concluida(m) ? m.indicadores.length + '/' + m.indicadores.length : '0/' + m.indicadores.length, okEv + '/' + ob.length, m.indicadores.filter(function (id) { return P.item(id, P.chave(m)).qualidade === 'estimado'; }).length, m.indicadores.filter(function (id) { return P.item(id, P.chave(m)).reexpresso; }).length, pedidosDe(m)];
+        return ['<a href="' + rota('Milestone/' + m.id + '?sep=auditoria') + '">' + e(m.nome) + '</a>', empHtml(m.empresa), atribHtml(m), estChip(m), P.concluida(m) ? m.indicadores.length + '/' + m.indicadores.length : '0/' + m.indicadores.length, okEv + '/' + ob.length, m.indicadores.filter(function (id) { return P.item(id, P.chave(m)).qualidade === 'estimado'; }).length, m.indicadores.filter(function (id) { return P.item(id, P.chave(m)).reexpresso; }).length, pedidosDe(m)];
       }), 'No milestones match this filter.') + '</div></div>' +
       '<div class="ps-card ps-mt">' + cabCartao('Information requests', 'ativ') + (S.aud.length ? cartaoPedidos(S.aud) : vazio('No requests yet.')) + '</div>';
   };
@@ -1043,7 +1083,7 @@
   B.externas = function () {
     return '<div class="ps-card">' + cabCartao('External entities: requests and status', 'doc') + '<div class="ps-card-body">' + tabela([{ t: 'Entity' }, { t: 'Indicator' }, { t: 'Milestone' }, { t: 'Company' }, { t: 'Due' }, { t: 'Status' }], S.ext.map(function (x) {
       var cl = { pendente: 'warn', recebido: 'info', aplicado: 'ok' }[x.estado], mx = P.ms(x.milestone_id);
-      return [e(x.entidade_externa), e(P.cat(x.indicador_id).nome), '<a href="' + rota('Milestone/' + x.milestone_id + '?sep=externos') + '">' + e(mx ? mx.nome : x.milestone_id) + '</a>', e(mx ? mx.empresa : '-'), e(P.fmtData(x.prazo)), chip({ pendente: 'Pending', recebido: 'Received', aplicado: 'Applied' }[x.estado], cl)];
+      return [x.tipo === 'ajuda' ? pessHtml(x.entidade_externa) : e(x.entidade_externa), e(P.cat(x.indicador_id).nome), '<a href="' + rota('Milestone/' + x.milestone_id + '?sep=externos') + '">' + e(mx ? mx.nome : x.milestone_id) + '</a>', mx ? empHtml(mx.empresa) : '-', e(P.fmtData(x.prazo)), chip({ pendente: 'Pending', recebido: 'Received', aplicado: 'Applied' }[x.estado], cl)];
     }), 'No requests yet.') + '</div></div>';
   };
   B.wfbase = function () {
@@ -1309,9 +1349,27 @@
     }
     return { t: 'Technical view', s: m.nome, b: b, largo: true };
   };
-  Pn.pedirExt = function (a) {
-    var m = msAtual(), ext = S.users.filter(function (x) { return x.perfil === 'ext'; });
-    return { t: 'Ask an external entity', s: m.nome, b: campo('px-ind', 'Indicator', '<select id="px-ind" class="ps-sel">' + m.indicadores.map(function (id) { return opt(id, P.cat(id).nome, a.id); }).join('') + '</select>') + campo('px-ent', 'Entity', '<select id="px-ent" class="ps-sel">' + ext.map(function (x) { return opt(x.nome); }).join('') + '</select>') + campo('px-desc', 'What is being requested', '<textarea id="px-desc" class="ps-ta"></textarea>') + campo('px-prazo', 'Due date', '<input id="px-prazo" class="ps-in" type="date" value="' + e(P.diasDe(14)) + '">'), p: '<button type="button" class="ps-btn pri" data-a="pxCriar">Create request</button>' };
+  /* Pedir ajuda: qualquer pessoa da empresa pode ser chamada a colaborar num indicador, com uma mensagem para ela */
+  var msgAjuda = function (m, id, login) {
+    var c = P.cat(id), x = login ? P.user(login) : null;
+    return 'Hi' + (x ? ' ' + x.nome.split(' ')[0] : '') + ', could you help me with "' + c.nome + '" (' + c.unidade_medida + ') for ' + m.nome + ', ' + P.rotPeriodo(m) + '? Please add the value in the milestone and attach any supporting document you have.';
+  };
+  Pn.pedirAjuda = function () {
+    var m = msAtual(), usr = u(), a = U.ajuda, q = norm(a.q || '');
+    var todos = S.users.filter(function (x) { return x.perfil !== 'ext' && x.perfil !== 'auditor' && x.login !== usr.login; })
+      .sort(function (x, y) { return (x.unidade === m.unidade ? 0 : 1) - (y.unidade === m.unidade ? 0 : 1) || x.nome.localeCompare(y.nome); });
+    var achados = todos.filter(function (x) { return !q || norm(x.nome + ' ' + (x.unidade || '') + ' ' + x.login).indexOf(q) > -1; });
+    var escolhido = todos.filter(function (x) { return x.login === a.sel; })[0];
+    if (escolhido && achados.indexOf(escolhido) < 0) achados.unshift(escolhido);
+    var op = function (x, i) { return '<label class="ps-atr-op' + (a.sel === x.login ? ' on' : '') + '"><input type="radio" id="aj-p' + i + '" name="aj-sel" data-c="ajSel" value="' + e(x.login) + '"' + (a.sel === x.login ? ' checked' : '') + '>' + avPessoa(x.nome) + '<span>' + e(x.nome) + '<small>' + e((x.unidade || P.PERFIS[x.perfil]) + (x.unidade === m.unidade ? ', same department' : '')) + '</small></span></label>'; };
+    return { t: 'Request assistance', s: m.nome, cls: 'alto',
+      b: '<p class="ps-small ps-mut">Ask anyone in the company to help with an indicator. They get your message, can open this milestone and add the value, and you decide whether to use it.</p>' +
+        campo('aj-ind', 'Indicator', '<select id="aj-ind" class="ps-sel" data-c="ajInd">' + m.indicadores.map(function (id) { return opt(id, P.cat(id).nome, a.ind); }).join('') + '</select>') +
+        '<h4 class="ps-atr-t">Who you are asking</h4>' + campo('aj-busca', 'Search by name or department', '<input id="aj-busca" type="search" class="ps-in" autocomplete="off" value="' + e(a.q || '') + '" data-i="ajBuscaLive">') +
+        '<div class="ps-atr-esc ps-atr-col ps-mt ps-aj-pess" role="radiogroup" aria-label="Who you are asking">' + (achados.length ? achados.map(op).join('') : '<p class="ps-small ps-mut">No one matches.</p>') + '</div>' +
+        '<div class="ps-form ps-mt">' + campo('aj-msg', 'Message' + (escolhido ? ' to ' + escolhido.nome : ''), '<textarea id="aj-msg" class="ps-ta" data-i="ajMsgLive">' + e(a.msg) + '</textarea>') +
+        campo('aj-prazo', 'Due date', '<input id="aj-prazo" class="ps-in" type="date" value="' + e(a.prazo) + '" data-c="ajPrazo">') + '</div>',
+      p: '<span class="ps-sp-flex"></span><button type="button" class="ps-btn" data-a="fecharPainel">Cancel</button><button type="button" class="ps-btn pri" data-a="ajEnviar"' + (a.sel ? '' : ' disabled') + '>Send request' + (escolhido ? ' to ' + e(escolhido.nome.split(' ')[0]) : '') + '</button>' };
   };
   Pn.novoPedAud = function () {
     var apr = S.cat;
@@ -1349,8 +1407,10 @@
     if (mesmo) {
       if (pan.className !== cls) pan.className = cls;
       var hd = pan.querySelector('.ps-pan-h'); if (hd && hd.innerHTML !== cab) hd.innerHTML = cab;
-      var cb = pan.querySelector('.ps-pan-b'), sy = cb.scrollTop;
-      cb.innerHTML = r.b; cb.scrollTop = sy;
+      var cb = pan.querySelector('.ps-pan-b'), sy = cb.scrollTop, abertos = [].map.call(cb.querySelectorAll('details[open]'), function (d) { return d.id; });
+      cb.innerHTML = r.b;
+      abertos.forEach(function (i) { var d = i && document.getElementById(i); if (d) d.open = true; });
+      cb.scrollTop = sy;
       var pe = pan.querySelector('.ps-pan-p');
       if (r.p) { if (!pe) { pe = document.createElement('div'); pe.className = 'ps-pan-p'; pan.appendChild(pe); } if (pe.innerHTML !== r.p) pe.innerHTML = r.p; } else if (pe) pe.remove();
     } else {
@@ -1486,6 +1546,8 @@
     msEmpTodas: function () { U.msEmpTodas = !U.msEmpTodas; R(); },
     msExcel: function () { exportarMilestones(msFiltradas()); },
     dadosVista: function (d) { U.dadosVista = d.v; R(); },
+    rqAbrir: function (d) { var m = msAtual(); U.rqAberto[m.id + ':' + d.v] = !rqAberto(m, d.v); R(); },
+    rqTodos: function () { var m = msAtual(), abrir = !m.indicadores.every(function (id) { return rqAberto(m, id); }); m.indicadores.forEach(function (id) { U.rqAberto[m.id + ':' + id] = abrir; }); R(); },
     dadosExcel: function () { var m = msAtual(); exportarGrelha(cfgDados(m), 'data-request-' + m.id + '-' + m.ano + '.xlsx', 'Data', folhaFicheiros(m)); toast('Excel file exported.', 'ok'); },
     triUsar: function (d) { var r = P.usarTrimestres(msAtual(), u(), d.v ? [d.v] : null); if (r.erro) return toast(r.erro, 'err'); toast(r.n + ' annual value(s) calculated from the quarters' + (r.parciais ? ', ' + r.parciais + ' still year to date.' : '.'), 'ok'); R(); },
     wfHist: function () { var m = msAtual(); U.wfHist[m.id] = !U.wfHist[m.id]; R(); },
@@ -1516,6 +1578,7 @@
     colRelFechar: function () { delete U.colRel[msAtual().id]; R(); },
     irFalta: function (d) {
       if (d.campo !== 'fic' && d.campo !== 'evi') U.dadosVista = 'form';
+      if (d.campo === 'just' || d.campo === 'met') U.rqAberto[msAtual().id + ':' + d.id] = true;
       R();
       var el = document.getElementById({ val: 'v-', just: 'j-', met: 'm-', evi: 'fp-ev:', fic: 'fp-' }[d.campo] + d.id);
       if (el) { el.focus({ preventScroll: true }); el.scrollIntoView({ block: 'center' }); }
@@ -1550,7 +1613,7 @@
       if (r.faltas) {
         toast(r.faltas.length === 1 ? r.faltas[0].msg : r.faltas.length + ' items missing. ' + r.faltas[0].msg, 'err');
         var f = r.faltas[0];
-        if (f.campo !== 'fic' && U.dadosVista === 'grid') { U.dadosVista = 'form'; R(); }
+        if (f.campo !== 'fic') { U.dadosVista = 'form'; if (f.campo !== 'val') U.rqAberto[m.id + ':' + f.id] = true; R(); }
         var el = document.getElementById({ val: 'v-', just: 'j-', met: 'm-', evi: 'e-', fic: 'fp-' }[f.campo] + f.id);
         if (el) el.focus();
         return;
@@ -1560,8 +1623,13 @@
     concluirPasso: function () { var m = msAtual(), t = P.passoAtual(m).tipo, r = P.concluirPasso(m, u(), val('rev-com')); res(r, t === 'parecer' ? 'Opinion given.' : t === 'aprovacao' ? 'Values approved and locked.' : 'Review completed.'); },
     devolver: function () { var r = P.devolver(msAtual(), u(), val('rev-com')); if (r.erro) { toast(r.erro, 'err'); var c = document.getElementById('rev-com'); if (c) c.focus(); return; } U.sep = 'dados'; toast('Milestone returned to the unit.', 'ok'); R(); },
     comentar: function () { var t = val('chat-txt').trim(), m = msAtual(); if (!t) return toast('Write a comment.', 'err'); m.comentarios.push({ autor: u().nome, texto: t, em: new Date().toISOString() }); P.guardar(); R(); },
-    pedirExt: function (d) { abrePainel('pedirExt', { id: d.v }); },
-    pxCriar: function () { var r = P.criarPedidoExterno(msAtual(), val('px-ind'), val('px-ent'), val('px-desc'), val('px-prazo'), u()); if (r.erro) return toast(r.erro, 'err'); U.painel = null; toast('Request created.', 'ok'); R(); },
+    pedirAjuda: function (d) { var m = msAtual(), id = d.v || m.indicadores[0]; U.ajuda = { ind: id, sel: '', q: '', msg: msgAjuda(m, id, ''), editada: false, prazo: P.diasDe(7) }; abrePainel('pedirAjuda'); },
+    ajEnviar: function () {
+      var a = U.ajuda, r = P.pedirAjuda(msAtual(), a.ind, a.sel, a.msg, a.prazo, u());
+      if (r.erro) return toast(r.erro, 'err');
+      U.ajuda = null; U.painel = null; toast('Request sent to ' + r.nome + ', with your message.', 'ok'); R();
+    },
+    ajResponder: function (d) { var x = S.ext.filter(function (y) { return y.id === d.v; })[0]; res(P.responderAjuda(x, val('ajv-' + d.v), val('ajn-' + d.v), u()), 'Value sent. Whoever asked can now use it.'); },
     usarExt: function (d) { var x = S.ext.filter(function (y) { return y.id === d.v; })[0]; res(P.usarExterno(x, u()), 'Value applied to the indicator.'); },
     enviarExt: function (d) { var x = S.ext.filter(function (y) { return y.id === d.v; })[0], fi = document.getElementById('xe-' + d.v), nome = fi && fi.files[0] ? fi.files[0].name : ''; res(P.responderExterno(x, val('xv-' + d.v), nome, u()), 'Value sent.'); },
     reexpressar: function (d) { var r = P.reexpressar(P.msDoIndicador(d.v), d.v, val('rx-val'), val('rx-mot'), u()); res(r, 'Value restated.'); },
@@ -1665,6 +1733,9 @@
     momBusca: function (el) { U.momBusca = el.value; },
     atrMsSel: function (el) { U.atrSel = el.value; },
     atrBusca: function (el) { U.atrBusca = el.value; },
+    ajInd: function (el) { var a = U.ajuda; a.ind = el.value; if (!a.editada) a.msg = msgAjuda(msAtual(), a.ind, a.sel); },
+    ajSel: function (el) { var a = U.ajuda; a.sel = el.value; if (!a.editada) a.msg = msgAjuda(msAtual(), a.ind, a.sel); },
+    ajPrazo: function (el) { U.ajuda.prazo = el.value; },
     indFreq: function (el) {
       var r = P.mudarFrequencia(el.dataset.id, el.value, u());
       if (r.erro) return toast(r.erro, 'err');
@@ -1707,6 +1778,8 @@
   var Live = {
     /* Pesquisa de pessoas no pop-up de atribuicao: filtra enquanto se escreve */
     atrBuscaLive: function (el) { U.atrBusca = el.value; R(); },
+    ajBuscaLive: function (el) { U.ajuda.q = el.value; R(); },
+    ajMsgLive: function (el) { U.ajuda.msg = el.value; U.ajuda.editada = true; },
     mcCor: function (el) { U.marca.cores[el.dataset.id] = el.value; var t = document.getElementById('cor-t-' + el.dataset.id); if (t) t.value = el.value; mudouMarca(); }
   };
 
@@ -1834,6 +1907,6 @@
     }
   };
   /* As paginas de controlo (portal-gestao.js) acrescentam-se aqui */
-  P.ext = { pessHtml: pessHtml, depHtml: depHtml, avPessoa: avPessoa, avEquipa: avEquipa, msAtual: function () { return msAtual(); }, Pn: Pn, abrePainel: function (t, a) { abrePainel(t, a); }, Blocos: Blocos, A: A, C: C, U: U, e: e, svg: svg, I: I, rota: rota, chip: chip, estChip: estChip, cabCartao: cabCartao, vazio: vazio, opt: opt, campo: campo, tabela: tabela, toast: toast, R: R, val: val, res: res, escolherFicheiro: escolherFicheiro, atribHtml: atribHtml, iniciais: iniciais, u: u, fmtV: fmtV, prazoTxt: prazoTxt };
+  P.ext = { pessHtml: pessHtml, depHtml: depHtml, empHtml: empHtml, avPessoa: avPessoa, avEquipa: avEquipa, avEmpresa: avEmpresa, msAtual: function () { return msAtual(); }, Pn: Pn, abrePainel: function (t, a) { abrePainel(t, a); }, Blocos: Blocos, A: A, C: C, U: U, e: e, svg: svg, I: I, rota: rota, chip: chip, estChip: estChip, cabCartao: cabCartao, vazio: vazio, opt: opt, campo: campo, tabela: tabela, toast: toast, R: R, val: val, res: res, escolherFicheiro: escolherFicheiro, atribHtml: atribHtml, iniciais: iniciais, u: u, fmtV: fmtV, prazoTxt: prazoTxt };
   document.addEventListener('DOMContentLoaded', P.iniciar);
 })();
