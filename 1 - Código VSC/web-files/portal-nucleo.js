@@ -548,11 +548,19 @@
   };
 
   /* --- Validacao (secao 7) ----------------------------------------------- */
+  /* Contagens (pessoas, instalacoes, ocorrencias, projetos) so aceitam numeros inteiros.
+     Por omissao, sao inteiros os indicadores em n.º; o campo inteiro do catalogo sobrepoe-se. */
+  P.inteiro = function (c) {
+    if (!c) return false;
+    if (c.inteiro === true || c.inteiro === false) return c.inteiro;
+    return /^(n\.?\s?º|nº|n\.?o|número|number|count)$/i.test(String(c.unidade_medida || '').trim());
+  };
   P.validar = function (c, valor, ano) {
     var r = { erros: [], alertas: [], variacao: null };
     if (valor === null || valor === undefined) return r;
     if (c.unidade_medida === '%') { if (valor < 0 || valor > 100) r.erros.push('Percentage outside 0 to 100.'); }
     else if (valor < 0) r.erros.push('Negative values are not accepted for this indicator.');
+    if (!r.erros.length && P.inteiro(c) && Math.round(valor) !== valor) r.erros.push('Whole numbers only. This indicator counts units, so it cannot have decimals.');
     if (r.erros.length) return r;
     var ant = P.valorAnterior(c.id, ano);
     if (ant !== null && ant !== undefined && ant !== 0) {
@@ -578,9 +586,9 @@
       v.erros.forEach(function (e) { f.push({ id: id, campo: 'val', msg: c.nome + ': ' + e }); });
       if (v.alertas.length && !String(it.justificacao || '').trim()) f.push({ id: id, campo: 'just', msg: c.nome + ': alert justification missing.' });
       if (it.qualidade === 'estimado' && !String(it.metodo || '').trim()) f.push({ id: id, campo: 'met', msg: c.nome + ': estimation method missing.' });
-      if (c.evidencia_obrigatoria && !it.evidencias.length) f.push({ id: id, campo: 'evi', msg: c.nome + ': required evidence missing.' });
+      if (P.evidenciaPrecisa(m, id) && !it.evidencias.length) f.push({ id: id, campo: 'evi', msg: c.nome + ': required evidence missing.' });
     });
-    P.ficheirosPedidos(m).forEach(function (x) { if (x.obrigatorio && !x.indicador && !x.entregues.length) f.push({ id: x.id, campo: 'fic', msg: x.nome + ': requested file missing.' }); });
+    P.ficheirosPedidos(m).forEach(function (x) { if (x.obrigatorio && x.preciso && !x.indicador && !x.entregues.length) f.push({ id: x.id, campo: 'fic', msg: x.nome + ': requested file missing.' }); });
     return f;
   };
 
@@ -704,7 +712,32 @@
       var c = P.cat(id);
       if (c.evidencia_obrigatoria) l.push({ id: 'ev:' + id, nome: 'Evidência de ' + c.nome, motivo: 'Obrigatória para este indicador.', formatos: [], obrigatorio: true, indicador: id, entregues: P.item(id, P.chave(m)).evidencias });
     });
+    l.forEach(function (f) { var p = precisoFicheiro(m, f); f.preciso = p.preciso; f.porque = p.porque; f.faltam = p.faltam; });
     return l;
+  };
+  /* A evidencia obrigatoria so e dispensada quando o valor veio do sistema */
+  /* Valor vindo do sistema: calculado da fonte e sem nenhum dado de origem escrito a mao */
+  P.doSistema = function (m, id) {
+    if (!P.item(id, P.chave(m)).daFonte) return false;
+    var px = (S.puxados || {})[m.id], ed = (px && px.editados) || {}, x = P.expressaoDe ? P.expressaoDe(id) : null;
+    return !(x && P.camposDaFormula(x).some(function (k) { return ed[k]; }));
+  };
+  P.evidenciaPrecisa = function (m, id) { return !!P.cat(id).evidencia_obrigatoria && !P.doSistema(m, id); };
+  /* Um ficheiro so e preciso quando os dados nao chegam do sistema nem foram preenchidos no ecra.
+     Os ficheiros de dados cobrem os indicadores que usam as suas colunas; deixam de ser precisos quando todos tem valor. */
+  var precisoFicheiro = function (m, f) {
+    if (f.indicador) {
+      var it = P.item(f.indicador, P.chave(m));
+      if (P.doSistema(m, f.indicador)) return { preciso: false, porque: 'The value came from the system, so no evidence is needed.', faltam: [] };
+      return { preciso: true, porque: it.valor === null ? 'Required evidence for this indicator.' : 'The value was typed in, so it needs supporting evidence.', faltam: [] };
+    }
+    if (f.proprio) return { preciso: true, porque: f.motivo || 'Requested specifically for this milestone.', faltam: [] };
+    var cols = P.colunasFolha ? P.colunasFolha(m, f) : [], cobre = [];
+    cols.forEach(function (c) { (c.usa || []).forEach(function (id) { if (cobre.indexOf(id) < 0) cobre.push(id); }); });
+    if (!cobre.length) cobre = m.indicadores.slice();
+    var faltam = cobre.filter(function (id) { return P.item(id, P.chave(m)).valor === null; });
+    if (!faltam.length) return { preciso: false, porque: 'All its data already came from the system or was filled in on screen.', faltam: [] };
+    return { preciso: true, porque: faltam.length + ' indicator' + (faltam.length === 1 ? ' has' : 's have') + ' no value from the system or on screen yet.', faltam: faltam };
   };
   P.entregarFicheiro = function (m, pid, nome, u) {
     if (!P.podePreencher(m, u)) return { erro: 'This milestone is not with you right now.' };

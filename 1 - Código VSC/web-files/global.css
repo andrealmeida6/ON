@@ -1603,3 +1603,53 @@ body:has([data-painel]:not([hidden])) .ps-chat-fab,body:has([data-painel]:not([h
 input[type=file]:not(.ps-fic-in){font-size:14px;color:var(--muted)}
 input[type=file]:not(.ps-fic-in)::file-selector-button{margin-right:12px;padding:7px 14px;border:0;border-radius:9px;background:var(--primary);color:#fff;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer}
 input[type=file]:not(.ps-fic-in)::file-selector-button:hover{background:var(--primary-dark)}
+
+/* 32. FICHEIROS PEDIDOS, INTEIROS E TOOLTIP DA FORMULA */
+.fp-regra{display:flex;gap:10px;align-items:flex-start;margin:0 0 14px;padding:10px 12px;border-radius:10px;background:var(--info-50);color:var(--text);font-size:13px;line-height:1.45}
+.fp-regra svg{flex:none;margin-top:1px;color:var(--info)}
+.fp-l{list-style:none;margin:0 0 14px;padding:0;display:grid;gap:8px}
+.fp-it{display:grid;grid-template-columns:auto 1fr auto auto;gap:12px;align-items:center;padding:10px 12px;border:1px solid var(--line);border-left:3px solid var(--warn);border-radius:10px;background:var(--surface)}
+.fp-it.ok{border-left-color:var(--ok);background:var(--ok-50)}
+.fp-it:focus{outline:2px solid var(--secondary);outline-offset:2px}
+.fp-ic{display:inline-grid;place-items:center;width:30px;height:30px;border-radius:8px;background:var(--primary-50);color:var(--primary)}
+.fp-it.ok .fp-ic{background:#fff;color:var(--ok)}
+.fp-txt{display:flex;flex-direction:column;gap:2px;min-width:0}
+.fp-txt small{font-size:12px;color:var(--muted);line-height:1.4}
+.fp-txt .fp-faltam{color:var(--warn)}
+.fp-txt .fp-ent{color:var(--ok);font-weight:600;overflow-wrap:anywhere}
+.fp-fmt{font-size:11px;font-weight:600;letter-spacing:.04em;color:var(--muted)}
+.fp-ac{flex-wrap:wrap;justify-content:flex-end}
+.fp-dz{display:flex;flex-direction:column;align-items:center;gap:6px;padding:22px 16px;border:2px dashed var(--line);border-radius:14px;background:var(--bg);color:var(--muted);text-align:center;font-size:13px;cursor:pointer;transition:border-color .15s,background .15s}
+.fp-dz svg{color:var(--secondary)}
+.fp-dz b{color:var(--text);font-size:14px}
+.fp-dz .ps-btn.liga{display:inline;min-height:0;padding:0;font-weight:600}
+.fp-dz:hover{border-color:var(--secondary);background:var(--primary-50)}
+.fp-dz.sobre{border-color:var(--primary);border-style:solid;background:var(--primary-50);box-shadow:0 0 0 4px var(--primary-50)}
+.fp-fila{margin-top:14px;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+.fp-fila h4{margin:0 0 8px;font-size:13px}
+.fp-fi{display:grid;grid-template-columns:auto minmax(0,1fr) minmax(180px,260px) auto;gap:10px;align-items:center;padding:7px 0;border-top:1px solid var(--line-soft)}
+.fp-fi:first-of-type{border-top:0}
+.fp-fn{display:flex;flex-direction:column;min-width:0;font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fp-fn small{font-weight:400;color:var(--err);white-space:normal}
+.fp-fi.erro .fp-cat{border-color:var(--err)}
+.fp-tirar{width:30px;height:30px;border:0;border-radius:8px;background:none;color:var(--muted);font-size:18px;cursor:pointer}
+.fp-tirar:hover{background:var(--err-50);color:var(--err)}
+.fp-fila-p{display:flex;justify-content:flex-end;gap:8px;margin-top:10px}
+.fp-disp{margin-top:12px;font-size:13px}
+.fp-disp summary{cursor:pointer;color:var(--muted);font-weight:600}
+.fp-disp ul{margin:8px 0 0;padding-left:18px;color:var(--muted);line-height:1.5}
+.fp-disp b{color:var(--text)}
+.fp-nada{margin:0 0 12px}
+.fp-outros{margin:10px 0 0}
+.rq2-nl{display:inline-flex;align-items:center;gap:2px;flex-wrap:wrap}
+.ps-info-f{color:var(--primary);opacity:1}
+.ps-tip.form{max-width:340px;padding:10px 13px;border-radius:10px;box-shadow:var(--sh-md);white-space:normal}
+.ps-tip.form b{display:block;margin-bottom:5px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;opacity:.75}
+.ps-tip.form code{display:block;font-family:var(--mono);font-size:12px;line-height:1.5;overflow-wrap:anywhere}
+@media (max-width:640px){
+  .fp-it{grid-template-columns:auto 1fr}
+  .fp-fmt,.fp-ac{grid-column:2}
+  .fp-ac{justify-content:flex-start}
+  .fp-fi{grid-template-columns:auto minmax(0,1fr) auto}
+  .fp-cat{grid-column:1 / -1;grid-row:2}
+}

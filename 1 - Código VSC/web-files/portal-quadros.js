@@ -106,7 +106,7 @@
           var pt = r.d ? '<i class="rq-pt" aria-hidden="true"></i><span class="ps-sr">Verified. </span>' : '';
           var rot = r.k ? '<button type="button" class="rq-lig" data-a="ficha" data-v="' + e(r.k) + '">' + pt + e(r.r) + '</button>' : pt + e(r.r);
           var cels = ed && !r.k ?
-            '<td class="rq-n"><input class="ps-in ps-num rq-in" id="rq-a-' + e(r.id) + '" aria-label="' + e(r.r + ', ' + (ano - 1)) + '" inputmode="decimal" data-c="rqVal" data-id="' + e(r.id) + '" data-f="ant" value="' + e(v.ant === null ? '' : v.ant) + '"></td><td class="rq-n rq-at"><input class="ps-in ps-num rq-in" id="rq-v-' + e(r.id) + '" aria-label="' + e(r.r + ', ' + ano) + '" inputmode="decimal" data-c="rqVal" data-id="' + e(r.id) + '" data-f="val" value="' + e(v.val === null ? '' : v.val) + '"></td>' :
+            '<td class="rq-n"><input class="ps-in ps-num rq-in" id="rq-a-' + e(r.id) + '" aria-label="' + e(r.r + ', ' + (ano - 1)) + '"'+ (P.inteiro({ unidade_medida: r.u }) ? ' inputmode="numeric" data-int="1"' : ' inputmode="decimal"') + ' data-c="rqVal" data-id="' + e(r.id) + '" data-f="ant" value="' + e(v.ant === null ? '' : v.ant) + '"></td><td class="rq-n rq-at"><input class="ps-in ps-num rq-in" id="rq-v-' + e(r.id) + '" aria-label="' + e(r.r + ', ' + ano) + '"'+ (P.inteiro({ unidade_medida: r.u }) ? ' inputmode="numeric" data-int="1"' : ' inputmode="decimal"') + ' data-c="rqVal" data-id="' + e(r.id) + '" data-f="val" value="' + e(v.val === null ? '' : v.val) + '"></td>' :
             '<td class="rq-n">' + e(num(v.ant, c)) + '</td><td class="rq-n rq-at' + (v.pend ? ' rq-pend' : '') + '">' + e(num(v.val, c)) + '</td>';
           return '<tr class="' + (r.l ? 'rq-l' : '') + '">' + gcel() + '<td class="rq-r">' + rot + '</td><td class="rq-u">' + e(r.u) + '</td>' + cels + '<td class="rq-e" data-ev="' + (ev || 'nd') + '">' + SETA[ev] + '</td></tr>';
         }).join('');
@@ -160,6 +160,7 @@
   C.rqVal = function (el) {
     var t = String(el.value).trim(), x = t === '' ? null : P.lerNumero(t);
     if (t !== '' && x === null) { toast('The value is not numeric.', 'err'); return; }
+    if (x !== null && el.hasAttribute('data-int') && Math.round(x) !== x) { toast('Whole numbers only. This line counts units, so it cannot have decimals.', 'err'); return; }
     var d = S.rq[el.dataset.id] || (S.rq[el.dataset.id] = { ant: null, val: null }), f = el.dataset.f;
     if (d[f] === x) return;
     var rot = (QD.reduce(function (o, q) { return o.concat(linhasDe(q)); }, []).filter(function (r) { return r.id === el.dataset.id; })[0] || {}).r;

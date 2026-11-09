@@ -87,6 +87,9 @@
   Object.keys(EXTRA).forEach(function (k) { var x = EXTRA[k]; CAMPOS[k] = { k: k, db: x[0], tab: x[1], rot: x[2], un: x[3], agreg: x[4], v: x[5] }; });
   var hash = function (s) { var h = 2166136261; for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0) / 4294967295; };
   var unidade = function (f) { if (f.un) return f.un; var c = P.cat(f.ind); return c ? c.unidade_medida : ''; };
+  /* Contagens (pessoas, projetos, ocorrencias) sao sempre inteiras; uma media de contagens pode ter decimais */
+  var campoInt = function (f) { return !!f && f.agreg !== 'media' && P.inteiro(f.ind ? P.cat(f.ind) : { unidade_medida: f.un }); };
+  P.campoInteiro = function (k) { return campoInt(CAMPOS[k]); };
   /* Valor anual de teste de um campo */
   var LIGADOS = { volume_faturado_mm3: ['volume_entrada_mm3', 0.823] };
   var anual = function (k) {
@@ -97,17 +100,18 @@
     var c = P.cat(f.ind), b = c && c.ano_anterior !== null && c.ano_anterior !== undefined ? c.ano_anterior : BASE_SEM[f.ind];
     var v = (b || 0) * (0.97 + hash(k) * 0.09);
     if (c && c.unidade_medida === '%') v = Math.min(v, 100);
-    if (c && c.casas_decimais === 0) v = Math.round(v);
+    if (c && c.casas_decimais === 0 || campoInt(f)) v = Math.round(v);
     return v;
   };
   /* Registos de teste: meses para somas e medias, trimestres para ultimos valores */
   P.registosCampo = function (k, m) {
-    var f = CAMPOS[k], tot = anual(k), n = f.agreg === 'ultimo' ? 4 : 12, l = [], ac = 0;
+    var f = CAMPOS[k], tot = anual(k), n = f.agreg === 'ultimo' ? 4 : 12, l = [], ac = 0, cas = campoInt(f) ? 1 : 10000;
+    if (cas === 1) tot = Math.round(tot);
     for (var i = 0; i < n; i++) {
       var per = n === 4 ? m.ano + '-Q' + (i + 1) : m.ano + '-' + (i < 9 ? '0' : '') + (i + 1), w = 0.9 + hash(k + i) * 0.2, v;
-      if (f.agreg === 'soma') { v = i === n - 1 ? tot - ac : Math.round((tot / n) * w * 10000) / 10000; ac += v; }
+      if (f.agreg === 'soma') { v = i === n - 1 ? tot - ac : Math.round((tot / n) * w * cas) / cas; ac += v; }
       else if (f.agreg === 'media') { v = i === n - 1 ? tot * n - ac : Math.round(Math.min(tot * (0.995 + hash(k + i) * 0.01), unidade(f) === '%' ? 100 : Infinity) * 10000) / 10000; ac += v; }
-      else v = i === n - 1 ? tot : Math.round(tot * (0.96 + i * 0.01) * 10000) / 10000;
+      else v = i === n - 1 ? tot : Math.round(tot * (0.96 + i * 0.01) * cas) / cas;
       l.push({ periodo: per, empresa: m.empresa, valor: v, ref: f.tab.toUpperCase().slice(0, 3) + '-' + m.ano + '-' + String(1 + Math.floor(hash(k + 'r' + i) * 8999)).padStart(4, '0') });
     }
     /* Milestone trimestral: so os meses (ou o fecho) do trimestre */
@@ -260,6 +264,7 @@
     if (!podePuxar(m, usr)) return { erro: 'This milestone is read only for you right now.' };
     var s = String(bruto === null || bruto === undefined ? '' : bruto).trim(), st = estadoFonte(m), v = s === '' ? null : P.lerNumero(s);
     if (s !== '' && v === null) return { erro: 'Enter a number.' };
+    if (v !== null && campoInt(CAMPOS[k]) && Math.round(v) !== v) return { erro: 'Whole numbers only. This data counts units, so it cannot have decimals.' };
     if (v === null) delete st.vals[k]; else st.vals[k] = v;
     (st.editados || (st.editados = {}))[k] = 1;
     P.sincronizarCalculados(m, usr);
@@ -297,7 +302,7 @@
       var orig = v === null ? '' : ed[k] ? '<small class="fd-orig ed" data-fx-ignorar>Typed</small>' : '<small class="fd-orig" data-fx-ignorar>From the system</small>';
       return [e(f.rot), e(unidade(f)), indsDe(m, k),
         '<span class="fd-sis' + (st.ligada ? '' : ' off') + '">' + e(st.txt) + '</span>',
-        pode ? '<span class="fd-val"><input id="fd-' + e(k) + '" class="ps-in ps-num fd-in' + (ed[k] ? ' ed' : '') + '" inputmode="decimal" autocomplete="off" aria-label="' + e(f.rot) + '" value="' + e(v === null ? '' : String(Number(v.toFixed(4))).replace('.', ',')) + '" data-c="fdValor" data-id="' + e(k) + '">' + orig + '</span>'
+        pode ? '<span class="fd-val"><input id="fd-' + e(k) + '" class="ps-in ps-num fd-in' + (ed[k] ? ' ed' : '') + '"' + (campoInt(f) ? ' inputmode="numeric" data-int="1"' : ' inputmode="decimal"') + ' autocomplete="off" aria-label="' + e(f.rot) + '" value="' + e(v === null ? '' : String(Number(v.toFixed(4))).replace('.', ',')) + '" data-c="fdValor" data-id="' + e(k) + '">' + orig + '</span>'
           : (v === null ? '<span class="ps-mut">-</span>' : '<b class="ps-num">' + e(num(v)) + '</b>' + orig)];
     });
     var nota = px && px.em ? 'Last pull ' + P.fmtDataHora(px.em) + ' by ' + px.por + '.' : pode ? 'Pull the data from system or type it in. The indicators below that are calculated from it fill in by themselves.' : 'Data the indicators of this milestone are calculated from.';
@@ -317,7 +322,7 @@
       if (!ja) vistos[k] = id;
       var orig = v === null ? '' : '<small class="fd-orig' + (ed[k] ? ' ed' : '') + '">' + (ed[k] ? 'Typed' : 'From the system') + '</small>';
       var val = ja ? '<span class="rq-f-ref"><b class="ps-num">' + (v === null ? '-' : e(num(v))) + '</b><small>Same value as in ' + e(ja) + ' above</small></span>'
-        : pode ? '<input id="fd-' + e(k) + '" class="ps-in ps-num fd-in' + (ed[k] ? ' ed' : '') + '" inputmode="decimal" autocomplete="off" aria-label="' + e(f.rot) + '" placeholder="-" value="' + e(v === null ? '' : String(Number(v.toFixed(4))).replace('.', ',')) + '" data-c="fdValor" data-id="' + e(k) + '">' + orig
+        : pode ? '<input id="fd-' + e(k) + '" class="ps-in ps-num fd-in' + (ed[k] ? ' ed' : '') + '"' + (campoInt(f) ? ' inputmode="numeric" data-int="1"' : ' inputmode="decimal"') + ' autocomplete="off" aria-label="' + e(f.rot) + '" placeholder="-" value="' + e(v === null ? '' : String(Number(v.toFixed(4))).replace('.', ',')) + '" data-c="fdValor" data-id="' + e(k) + '">' + orig
           : '<b class="ps-num">' + (v === null ? '-' : e(num(v))) + '</b>' + orig;
       return '<div class="rq-f' + (ja ? ' ref' : '') + '"><span class="rq-f-n">' + e(f.rot) + '<small class="' + (st.ligada ? (st.live ? 'live' : 'sync') : 'off') + '">' + e(st.ligada ? 'Source: ' + st.txt : st.txt) + '</small></span><span class="rq-f-u">' + e(unidade(f)) + '</span><span class="rq-f-v">' + val + '</span></div>';
     }).join('') + '</div>';

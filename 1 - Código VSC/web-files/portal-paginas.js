@@ -11,7 +11,7 @@
   var e = function (v) {
     return String(v === null || v === undefined ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; });
   };
-  var U = { rota: { pag: '', arg: '', q: {} }, sep: 'dados', msTab: {}, tipoEd: null, lanc: null, msFiltro: { empresa: '', dep: '', estado: 'todas', esrs: true, minhas: false }, msEmpTodas: false, dadosVista: 'form', rqAberto: {}, colRel: {}, wfHist: {}, exp: {}, msVista: 'lista', entVista: 'board', imp: {}, cal: null, consEsrs: false, histInd: 'A03', audFiltro: 'todas', boTab: 'indicadores', painel: null, menu: null, docNova: false, indBusca: '', marca: null, regraBusca: '', logoEstado: '' };
+  var U = { rota: { pag: '', arg: '', q: {} }, sep: 'dados', msTab: {}, tipoEd: null, lanc: null, msFiltro: { empresa: '', dep: '', estado: 'todas', esrs: true, minhas: false }, msEmpTodas: false, dadosVista: 'form', rqAberto: {}, dzFila: {}, colRel: {}, wfHist: {}, exp: {}, msVista: 'lista', entVista: 'board', imp: {}, cal: null, consEsrs: false, histInd: 'A03', audFiltro: 'todas', boTab: 'indicadores', painel: null, menu: null, docNova: false, indBusca: '', marca: null, regraBusca: '', logoEstado: '' };
 
   /* --- Icones ------------------------------------------------------------ */
   var svg = function (d, t) { return '<svg width="' + (t || 16) + '" height="' + (t || 16) + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + d + '</svg>'; };
@@ -108,6 +108,15 @@
     return P.fmtData(m.prazo) + (d < 0 ? ' (' + Math.abs(d) + ' days ago)' : d === 0 ? ' (today)' : ' (in ' + d + ' days)');
   };
   var fmtV = function (id, v) { return P.fmtNum(v, P.cat(id).casas_decimais); };
+  /* Campos de valor: os indicadores de contagem pedem um numero inteiro (teclado numerico e sem virgula) */
+  var numAttr = function (id) { return P.inteiro(P.cat(id)) ? ' inputmode="numeric" data-int="1"' : ' inputmode="decimal"'; };
+  /* "i" com a formula dos indicadores calculados, num tooltip com titulo e a formula em letra fixa */
+  var infoFormula = function (id, sempre) {
+    var c = P.cat(id), f = P.formulaTxt ? P.formulaTxt(id) : '';
+    if (!f || f === 'Reported value' || (c.tipo !== 'derivado' && !sempre)) return '';
+    var t = c.tipo === 'derivado' ? 'Formula' : 'How it is calculated';
+    return '<button type="button" class="ps-info ps-info-f" data-tip="' + e(f) + '" data-tip-t="' + t + '" aria-label="' + e(t + ': ' + f) + '"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M12 11v6M12 7.5v.01"/></svg></button>';
+  };
   var u = function () { return P.sessao(); };
   var doUtilizador = function (m, usr) { return usr.perfil === 'resp' ? m.unidade === usr.unidade || m.atribuido_a === usr.login : true; };
   var aviso = function (t, cls) { toast(t, cls); };
@@ -511,7 +520,7 @@
     var nAud = S.aud.filter(function (a) { var x = P.msDoIndicador(a.indicador_id, m.ano); return x && x.id === m.id && a.estado !== 'resolvido'; }).length;
     var nExt = S.ext.filter(function (x) { return x.milestone_id === m.id && x.estado !== 'aplicado'; }).length;
     /* Uma so pagina, pela ordem do trabalho: pedido, fontes e calculos, dados, ficheiros, exploracao, qualidade, terceiros, auditoria e conversa */
-    var secs = [['dados', decide ? 'Review' : 'Requested data', 0, cartaoTrimestres(m) + (decide ? sepRevisao(m) : P.podePreencher(m, usr) ? sepRecolha(m) : sepLeitura(m)) + cartaoFicheiros(m)],
+    var secs = [['dados', decide ? 'Review' : 'Requested data', 0, cartaoFicheiros(m) + cartaoTrimestres(m) + (decide ? sepRevisao(m) : P.podePreencher(m, usr) ? sepRecolha(m) : sepLeitura(m))],
       ['evidencias', 'Evidence and quality', 0, sepEvidencias(m)], ['externos', 'Assistance requests', nExt, sepExternos(m)], ['auditoria', 'Audit', nAud, sepAuditoria(m)], ['conversa', 'Conversation and history', m.comentarios.length, (P.ext.sepConversa ? P.ext.sepConversa(m) : sepConversa(m))]];
     var indice = [['dados', secs[0][1]]].concat(secs.slice(1).map(function (s) { return [s[0], s[1], s[2]]; }));
     var tab = U.msTab[m.id] || 'trabalho', nDados = m.indicadores.filter(function (id) { return P.podeVerIndicador(P.cat(id), usr); }).length;
@@ -567,13 +576,13 @@
       var res = v.erros.length ? chip('Error', 'err') : v.alertas.length ? chip(v.alertas.length + ' alert(s)', 'warn') : it.valor !== null ? chip('Valid', 'ok') : chip('To fill in');
       var pedidos = S.ext.filter(function (x) { return x.indicador_id === id && x.milestone_id === m.id; });
       var recebido = pedidos.filter(function (x) { return x.estado === 'recebido'; })[0], pendente = pedidos.filter(function (x) { return x.estado === 'pendente'; })[0];
-      var evTxt = c.evidencia_obrigatoria ? (it.evidencias.length ? '' : '<span class="rq2-b warn">Evidence required</span>') : '';
-      var marcas = (emCalc ? '<span class="rq2-b calc">Calculated</span>' : '') + evTxt + (it.evidencias.length ? '<span class="rq2-b">' + it.evidencias.length + ' evidence</span>' : '') +
+      var evTxt = P.evidenciaPrecisa(m, id) ? (it.evidencias.length ? '' : '<span class="rq2-b warn">Evidence required</span>') : '';
+      var marcas = (emCalc ? '<span class="rq2-b calc">Calculated</span>' : '') + (P.inteiro(c) ? '<span class="rq2-b">Whole number</span>' : '') + evTxt + (it.evidencias.length ? '<span class="rq2-b">' + it.evidencias.length + ' evidence</span>' : '') +
         (it.qualidade === 'estimado' ? '<span class="rq2-b">Estimated</span>' : '') + (recebido ? '<span class="rq2-b ok">Value received</span>' : pendente ? '<span class="rq2-b">Assistance requested</span>' : '');
-      var valor = emCalc ? '<span class="rq2-calc ps-num ' + cls + '" title="Calculated from the source data">ƒ ' + e(fmtV(id, it.valor)) + '</span>'
-        : '<input id="v-' + e(id) + '" class="ps-in ps-num rq2-in ' + cls + '" inputmode="decimal" autocomplete="off" aria-label="Value ' + e(P.rotPeriodo(m) + ', ' + c.nome) + '" placeholder="-" value="' + e(txtBruto) + '" data-c="valor" data-id="' + e(id) + '"' + (v.erros.length ? ' aria-invalid="true" aria-describedby="err-' + e(id) + '"' : '') + '>';
+      var valor = emCalc ? '<span class="rq2-calc ps-num ' + cls + '" title="Calculated from the source data">' + e(fmtV(id, it.valor)) + '</span>'
+        : '<input id="v-' + e(id) + '" class="ps-in ps-num rq2-in ' + cls + '"' + numAttr(id) + ' autocomplete="off" aria-label="Value ' + e(P.rotPeriodo(m) + ', ' + c.nome) + '" placeholder="-" value="' + e(txtBruto) + '" data-c="valor" data-id="' + e(id) + '"' + (v.erros.length ? ' aria-invalid="true" aria-describedby="err-' + e(id) + '"' : '') + '>';
       var linha = '<div class="rq2-l"><button type="button" class="rq2-seta" data-a="rqAbrir" data-v="' + e(id) + '" aria-expanded="' + aberto + '" aria-controls="rqd-' + e(id) + '" aria-label="' + (aberto ? 'Hide' : 'Show') + ' the details of ' + e(c.nome) + '">' + svg(I.baixo, 16) + '</button>' +
-        '<div class="rq2-nome"><button type="button" class="rq2-n" data-a="ficha" data-v="' + e(id) + '">' + e(c.nome) + '</button><small>' + e(id) + ', ' + e(c.unidade_medida) + marcas + '</small></div>' +
+        '<div class="rq2-nome"><span class="rq2-nl"><button type="button" class="rq2-n" data-a="ficha" data-v="' + e(id) + '">' + e(c.nome) + '</button>' + infoFormula(id, emCalc) + '</span><small>' + e(id) + ', ' + e(c.unidade_medida) + marcas + '</small></div>' +
         '<div class="rq2-c rq2-ant"><span class="rq2-k">' + e(P.rotAnterior(P.chave(m))) + '</span><span class="ps-num">' + (ant === null || ant === undefined ? '-' : e(fmtV(id, ant))) + '</span></div>' +
         '<div class="rq2-c rq2-val"><span class="rq2-k">Value ' + e(P.rotPeriodo(m)) + '</span>' + valor + '</div>' +
         '<div class="rq2-c rq2-var"><span class="rq2-k">Change</span><span class="ps-num">' + (v.variacao === null ? '-' : (v.variacao > 0 ? '+' : '') + P.fmtNum(v.variacao, 1) + '%') + '</span></div>' +
@@ -585,13 +594,13 @@
       var esrs = P.esrsDe(id);
       var defin = '<div class="rq2-bl"><h4>Definition</h4>' + (esrs.desc ? '<p class="ps-ind-desc">' + e(esrs.desc) + '</p>' : '') +
         '<p class="ps-small ps-mut">' + (c.tipo === 'derivado' ? 'Derived' : 'Base data') + ', ' + e(c.perimetro) + (esrs.dps.length ? ', ' + e(esrs.dps[0]) : '') + '</p>' +
-        (P.formulaTxt ? '<p class="ps-ind-form">ƒ ' + e(P.formulaTxt(id)) + '</p>' : '') +
-        (emCalc ? '<p class="rq2-calc-f"><span class="ps-mono">ƒ ' + e(calc.subst) + '</span> = <b>' + e(fmtV(id, calc.valor)) + '</b><small>Calculated from the source data. Change those values to change it.</small></p>' : calc && calc.x && comFontes ? '<p class="ps-small ps-mut">Fill in the source data and this value is calculated, or type it in the line above.</p>' : '') + '</div>';
+        (P.formulaTxt ? '<p class="ps-ind-form"><b>Formula:</b> ' + e(P.formulaTxt(id)) + '</p>' : '') +
+        (emCalc ? '<p class="rq2-calc-f"><span class="ps-mono">' + e(calc.subst) + '</span> = <b>' + e(fmtV(id, calc.valor)) + '</b><small>Calculated from the source data. Change those values to change it.</small></p>' : calc && calc.x && comFontes ? '<p class="ps-small ps-mut">Fill in the source data and this value is calculated, or type it in the line above.</p>' : '') + '</div>';
       var origem = fontes ? '<div class="rq2-bl"><h4>Source data</h4>' + fontes + '</div>' : '';
       var just = v.alertas.length ? '<div class="ps-ind-just"><ul>' + v.alertas.map(function (a) { return '<li>' + e(a) + '</li>'; }).join('') + '</ul><label class="ps-lab" for="j-' + e(id) + '">Justification (required)</label><textarea id="j-' + e(id) + '" class="ps-ta" data-c="just" data-id="' + e(id) + '">' + e(it.justificacao) + '</textarea></div>' : '';
       var qual = '<div class="rq2-ac">' + campo('q-' + id, 'Data quality', '<select id="q-' + e(id) + '" class="ps-sel" data-c="qual" data-id="' + e(id) + '">' + opt('medido', 'Measured', it.qualidade) + opt('calculado', 'Calculated', it.qualidade) + opt('estimado', 'Estimated', it.qualidade) + '</select>') +
         (it.qualidade === 'estimado' ? campo('m-' + id, 'Estimation method (required)', '<input id="m-' + e(id) + '" class="ps-in" value="' + e(it.metodo) + '" data-c="metodo" data-id="' + e(id) + '">') : '') +
-        '<div class="ps-sp"><button type="button" id="e-' + e(id) + '" class="ps-btn peq" data-a="anexar" data-v="' + e(id) + '">Attach evidence</button>' + (c.evidencia_obrigatoria ? (it.evidencias.length ? chip('Evidence attached', 'ok') : chip('Evidence required', 'warn')) : (it.evidencias.length ? chip(it.evidencias.length + ' evidence item(s)', 'ok') : '')) +
+        '<div class="ps-sp"><button type="button" id="e-' + e(id) + '" class="ps-btn peq" data-a="anexar" data-v="' + e(id) + '">Attach evidence</button>' + (P.evidenciaPrecisa(m, id) ? (it.evidencias.length ? chip('Evidence attached', 'ok') : chip('Evidence required', 'warn')) : (it.evidencias.length ? chip(it.evidencias.length + ' evidence item(s)', 'ok') : '')) +
         '<button type="button" class="ps-btn peq" data-a="pedirAjuda" data-v="' + e(id) + '">Request assistance</button></div></div>';
       var ajuda = recebido ? '<div class="ps-aviso ok">' + e(recebido.entidade_externa) + ' sent ' + e(fmtV(id, recebido.valor)) + ' ' + e(c.unidade_medida) + (recebido.nota ? ': "' + e(recebido.nota) + '"' : '') + '. <button type="button" class="ps-btn peq" data-a="usarExt" data-v="' + e(recebido.id) + '">Use this value</button></div>'
         : pendente ? '<div class="ps-aviso">Waiting for ' + e(pendente.entidade_externa) + ', due ' + e(P.fmtData(pendente.prazo)) + '.</div>' : '';
@@ -624,14 +633,66 @@
       (faltaT.length ? '<div class="ps-aviso warn">Not yet approved: ' + e(faltaT.join(', ')) + '. Until then, the annual value is year to date.</div>' : '') +
       tabela([{ t: 'Indicator' }].concat(per.map(function (p) { return { t: 'T' + p.t, dir: 1 }; })).concat([{ t: 'Rule' }, { t: 'Year from quarters', dir: 1 }, { t: 'Current', dir: 1 }, { t: '' }]), linhas) + '</div></div>';
   };
-  /* --- Pedido de dados ---------------------------------------------------- */
+  /* --- Ficheiros pedidos ------------------------------------------------------
+     So aparecem os que sao mesmo precisos: um ficheiro deixa de ser pedido quando os dados
+     chegam do sistema ou sao preenchidos no ecra. Larga-se tudo numa area e escolhe-se a categoria de cada ficheiro. */
+  var extDe = function (nome) { return String(nome).split('.').pop().toLowerCase(); };
+  var formatosFic = function (f) { return f && f.formatos.length ? f.formatos : ['xlsx', 'pdf']; };
+  var semAcentos = function (s) { return String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); };
+  var sugerirCat = function (m, nome) {
+    var n = semAcentos(nome), l = P.ficheirosPedidos(m).filter(function (f) { return f.preciso; }), aceita = function (f) { return formatosFic(f).indexOf(extDe(nome)) > -1; };
+    var x = l.filter(function (f) { return f.prefixo && aceita(f) && n.indexOf(f.prefixo) > -1; })[0] ||
+      l.filter(function (f) { return f.indicador && aceita(f) && (new RegExp('(^|[^a-z0-9])' + f.indicador.toLowerCase() + '([^a-z0-9]|$)').test(n) || n.indexOf(semAcentos(P.cat(f.indicador).nome)) > -1); })[0] ||
+      l.filter(function (f) { return !f.entregues.length && aceita(f) && !filaDe(m).some(function (q) { return q.cat === f.id; }); })[0];
+    return x ? x.id : 'geral';
+  };
+  var filaDe = function (m) { return U.dzFila[m.id] || (U.dzFila[m.id] = []); };
+  var juntarFila = function (m, files) {
+    var fila = filaDe(m), fora = [];
+    Array.prototype.forEach.call(files || [], function (f, i) {
+      if (['xlsx', 'pdf'].indexOf(extDe(f.name)) < 0) return fora.push(f.name);
+      fila.push({ k: 'dz' + Date.now() + i, nome: f.name, cat: sugerirCat(m, f.name) });
+    });
+    if (fora.length) toast('Only Excel (.xlsx) or PDF files: ' + fora.join(', ') + ' left out.', 'err');
+    R();
+  };
   var cartaoFicheiros = function (m) {
     var usr = u(), pode = P.podePreencher(m, usr), gere = P.gereTudo(usr) && !P.concluida(m), fics = P.ficheirosPedidos(m);
-    return '<div class="ps-card">' + cabCartao('Requested files', 'doc') + '<div class="ps-card-body">' + tabela([{ t: 'File' }, { t: 'Why it is requested' }, { t: 'Format' }, { t: 'Delivered' }, { t: 'Status' }], fics.map(function (f) {
-      var ent = f.entregues, acao = (P.folhaAcoes ? P.folhaAcoes(m, f, pode) + ' ' : '') + (pode ? '<button type="button" id="fp-' + e(f.id) + '" class="ps-btn peq' + (ent.length ? '' : ' pri') + '" data-a="ficEntregar" data-v="' + e(f.id) + '">' + (ent.length ? 'Add another' : 'Upload') + '</button>' : '') + (gere && f.proprio ? ' <button type="button" class="ps-btn peq err" data-a="ficRetirar" data-v="' + e(f.id) + '">Remove</button>' : '');
-      return [e(f.nome) + (f.obrigatorio ? '' : ' <span class="ps-mut ps-small">(optional)</span>'), e(f.motivo || '-'), e(f.formatos.length ? f.formatos.join(', ') : 'Any'), (ent.length ? ent.map(function (x) { return '<span class="ps-small">' + e(x.ficheiro) + '<br><span class="ps-mut">' + quemHtml(x.por) + (x.origem === 'grid' ? ', filled in on the platform' : '') + '</span></span>'; }).join('<br>') : '<span class="ps-mut">-</span>') + (P.folhaEstado ? P.folhaEstado(m, f) : ''), '<span class="ps-sp">' + (ent.length ? chip('Delivered', 'ok') : f.obrigatorio ? chip('Missing', 'warn') : chip('Optional')) + acao + '</span>'];
-    }), 'No files requested for this milestone.') +
-      (gere ? '<div class="ps-form ps-mt ps-fic-novo">' + campo('fp-nome', 'Request another file', '<input id="fp-nome" class="ps-in" placeholder="Nome do ficheiro pedido">') + '<label class="ps-chk"><input id="fp-obr" type="checkbox" checked> Required</label><button type="button" class="ps-btn" data-a="ficPedir">Add to the request</button></div>' : '') + '</div></div>';
+    var precisos = fics.filter(function (f) { return f.preciso; }), dispensados = fics.filter(function (f) { return !f.preciso; }), fila = pode ? filaDe(m) : [];
+    var gerais = (m.documentos_gerais || []).filter(function (d) { return !d.pedido; });
+    if (!precisos.length && !gere && !fila.length) return '';
+    var porEntregar = precisos.filter(function (f) { return f.obrigatorio && !f.entregues.length; }).length;
+    var cab = precisos.length ? (porEntregar ? chip(porEntregar + ' to upload', 'warn') : chip('All delivered', 'ok')) : chip('None needed', 'ok');
+    var nomesFaltam = function (f) {
+      if (!f.faltam || !f.faltam.length) return '';
+      var n = f.faltam.map(function (id) { return P.cat(id).nome; });
+      return '<small class="fp-faltam">Without value: ' + e(n.slice(0, 3).join(', ')) + (n.length > 3 ? ' and ' + (n.length - 3) + ' more' : '') + '</small>';
+    };
+    var lista = precisos.length ? '<ul class="fp-l">' + precisos.map(function (f) {
+      var ent = f.entregues, ok = ent.length > 0;
+      var acoes = (P.folhaAcoes ? P.folhaAcoes(m, f, pode) : '') + (gere && f.proprio ? '<button type="button" class="ps-btn peq err" data-a="ficRetirar" data-v="' + e(f.id) + '">Remove</button>' : '');
+      return '<li class="fp-it' + (ok ? ' ok' : '') + '" id="fp-' + e(f.id) + '" tabindex="-1"><span class="fp-ic" aria-hidden="true">' + svg(ok ? I.tick : I.doc, 16) + '</span>' +
+        '<div class="fp-txt"><b>' + e(f.nome) + '</b>' + (f.obrigatorio ? '' : ' <span class="ps-mut ps-small">(optional)</span>') +
+        '<small>' + e(f.porque) + '</small>' + nomesFaltam(f) +
+        (ok ? '<small class="fp-ent">' + ent.map(function (x) { return e(x.ficheiro) + (x.origem === 'grid' ? ' (filled in on the platform)' : ''); }).join(', ') + '</small>' : '') + (P.folhaEstado ? P.folhaEstado(m, f) : '') + '</div>' +
+        '<span class="fp-fmt">' + e(formatosFic(f).join(', ').toUpperCase()) + '</span>' +
+        '<span class="ps-sp fp-ac">' + (ok ? chip('Delivered', 'ok') : f.obrigatorio ? chip('Missing', 'warn') : chip('Optional')) + acoes + '</span></li>';
+    }).join('') + '</ul>' : '<p class="ps-mut ps-small fp-nada">No files needed right now: all the data comes from the system or is filled in on screen.</p>';
+    var opcoes = function (x) { return precisos.map(function (f) { return opt(f.id, f.nome, x.cat); }).join('') + opt('geral', 'Other supporting document', x.cat); };
+    var zona = pode && (precisos.length || fila.length) ? '<div class="fp-dz" data-dz="' + e(m.id) + '" data-a="dzEscolher">' + svg(I.upload, 26) +
+      '<b>Drag and drop files here</b><span>or <button type="button" class="ps-btn liga" data-a="dzEscolher">choose files</button>. Excel (.xlsx) or PDF. Then choose the category of each file.</span></div>' : '';
+    var filaHtml = fila.length ? '<div class="fp-fila" aria-label="Files to upload"><h4>To upload (' + fila.length + ')</h4>' + fila.map(function (x) {
+      var alvo = precisos.filter(function (f) { return f.id === x.cat; })[0], mau = formatosFic(alvo).indexOf(extDe(x.nome)) < 0;
+      return '<div class="fp-fi' + (mau ? ' erro' : '') + '"><span class="fp-ic" aria-hidden="true">' + svg(I.doc, 16) + '</span><span class="fp-fn" title="' + e(x.nome) + '">' + e(x.nome) + (mau ? '<small>This category accepts ' + e(formatosFic(alvo).join(', ').toUpperCase()) + ' only.</small>' : '') + '</span>' +
+        '<label class="ps-sr" for="dzc-' + e(x.k) + '">Category of ' + e(x.nome) + '</label><select id="dzc-' + e(x.k) + '" class="ps-sel fp-cat" data-c="dzCat" data-id="' + e(x.k) + '">' + opcoes(x) + '</select>' +
+        '<button type="button" class="fp-tirar" data-a="dzTirar" data-v="' + e(x.k) + '" aria-label="Remove ' + e(x.nome) + '">×</button></div>';
+    }).join('') + '<div class="fp-fila-p"><button type="button" class="ps-btn" data-a="dzLimpar">Clear</button><button type="button" class="ps-btn pri" data-a="dzEnviar">Upload ' + fila.length + ' file' + (fila.length === 1 ? '' : 's') + '</button></div></div>' : '';
+    var disp = dispensados.length ? '<details class="fp-disp"><summary>' + dispensados.length + ' file' + (dispensados.length === 1 ? '' : 's') + ' not needed</summary><ul>' + dispensados.map(function (f) { return '<li><b>' + e(f.nome) + '</b> ' + e(f.porque) + '</li>'; }).join('') + '</ul></details>' : '';
+    var outros = gerais.length ? '<p class="ps-small ps-mut fp-outros">Other documents: ' + gerais.map(function (d) { return e(d.ficheiro); }).join(', ') + '</p>' : '';
+    return '<div class="ps-card fp-card">' + cabCartao('Requested files', 'doc', cab) + '<div class="ps-card-body">' +
+      '<p class="fp-regra">' + svg('<circle cx="12" cy="12" r="9.5"/><path d="M12 11v6M12 7.5v.01"/>', 16) + '<span>Upload files only when the data does not come from the system and is not filled in on screen. As soon as the indicators have a value, the file is no longer needed. Evidence is only waived when the value came from the system.</span></p>' +
+      lista + zona + filaHtml + outros + disp +
+      (gere ? '<div class="ps-form ps-mt ps-fic-novo">' + campo('fp-nome', 'Request another file', '<input id="fp-nome" class="ps-in" placeholder="Name of the requested file">') + '<label class="ps-chk"><input id="fp-obr" type="checkbox" checked> Required</label><button type="button" class="ps-btn" data-a="ficPedir">Add to the request</button></div>' : '') + '</div></div>';
   };
   var ferrDados = function (m) {
     var pode = P.podePreencher(m, u()), vs = [['form', pode ? 'List' : 'Table'], ['grid', 'Grid']], at = U.dadosVista === 'grid' ? 'grid' : 'form';
@@ -656,7 +717,7 @@
           'var': { t: v.variacao === null ? '' : (v.variacao > 0 ? '+' : '') + P.fmtNum(v.variacao, 1), bruto: v.variacao === null ? '' : bruNum(Math.round(v.variacao * 10) / 10), num: v.variacao === null ? null : Math.round(v.variacao * 10) / 10 },
           qual: { t: P.QUALIDADE_TXT[it.qualidade] }, metodo: { t: it.metodo || '', cls: it.qualidade === 'estimado' && !String(it.metodo || '').trim() ? 'falta' : '' },
           just: { t: it.justificacao || '', cls: v.alertas.length && !String(it.justificacao || '').trim() ? 'falta' : '', tip: v.alertas.length && !String(it.justificacao || '').trim() ? 'A justification is required because of the alert.' : '' },
-          evid: { t: evid, cls: c.evidencia_obrigatoria && !evid ? 'falta' : '', tip: c.evidencia_obrigatoria && !evid ? 'Required evidence missing. Upload it in Requested files.' : '' },
+          evid: { t: evid, cls: P.evidenciaPrecisa(m, id) && !evid ? 'falta' : '', tip: P.evidenciaPrecisa(m, id) && !evid ? 'Required evidence missing. Upload it in Requested files.' : '' },
           res: { t: v.erros.length ? 'Error' : v.alertas.length ? 'Alert' : tem ? 'Valid' : 'To fill in', html: v.erros.length ? chip('Error', 'err') : v.alertas.length ? chip(v.alertas.length + ' alert(s)', 'warn') : tem ? chip('Valid', 'ok') : chip('To fill in'), tip: msg }
         } };
       }),
@@ -836,22 +897,22 @@
     var p = P.passoAtual(m), rot = p.tipo === 'parecer' ? 'Give favourable opinion' : p.tipo === 'aprovacao' ? 'Approve and lock' : 'Complete review';
     return '<div class="ps-card">' + cabCartao(p.nome, 'tarefa', ferrDados(m)) + '<div class="ps-card-body">' + (P.fontesHtml ? P.fontesHtml(m) : '') + (U.dadosVista === 'grid' ? corpoGrelha(m) : tabela([{ t: 'Indicator' }, { t: 'Value', dir: 1 }, { t: String(m.ano - 1), dir: 1 }, { t: 'Change', dir: 1 }, { t: 'Alerts and justification' }, { t: 'Quality' }], m.indicadores.map(function (id) {
       var it = P.item(id, P.chave(m)), v = P.validarItem(it), ant = P.valorAnterior(id, P.chave(m));
-      return [linkFicha(id) + (P.botaoComentarInd ? ' ' + P.botaoComentarInd(m, id) : '') + (P.formulaTxt ? '<span class="ps-ind-form">ƒ ' + e(P.formulaTxt(id)) + '</span>' : ''), celValor(m, id) + ' ' + e(P.cat(id).unidade_medida), ant === null || ant === undefined ? '-' : fmtV(id, ant), v.variacao === null ? '-' : (v.variacao > 0 ? '+' : '') + P.fmtNum(v.variacao, 1) + '%', v.alertas.length ? '<span class="ps-small">' + e(v.alertas.join(' ')) + '<br><b>Justification:</b> ' + e(it.justificacao || '-') + '</span>' : chip('No alerts', 'ok'), e(P.QUALIDADE_TXT[it.qualidade])];
+      return [linkFicha(id) + infoFormula(id, true) + (P.botaoComentarInd ? ' ' + P.botaoComentarInd(m, id) : ''), celValor(m, id) + ' ' + e(P.cat(id).unidade_medida), ant === null || ant === undefined ? '-' : fmtV(id, ant), v.variacao === null ? '-' : (v.variacao > 0 ? '+' : '') + P.fmtNum(v.variacao, 1) + '%', v.alertas.length ? '<span class="ps-small">' + e(v.alertas.join(' ')) + '<br><b>Justification:</b> ' + e(it.justificacao || '-') + '</span>' : chip('No alerts', 'ok'), e(P.QUALIDADE_TXT[it.qualidade])];
     }))) + '<div class="ps-mt">' + campo('rev-com', 'Comment (required to return)', '<textarea id="rev-com" class="ps-ta"></textarea>') + '</div></div></div>';
   };
   var sepLeitura = function (m) {
     var msg = P.concluida(m) ? 'Milestone completed. Approved values only change by restatement.' : 'The current step is with ' + P.nomeResp(m, P.passoAtual(m).responsavel) + '. You can view the values.';
     return '<div class="ps-card">' + cabCartao('Requested data', 'doc', ferrDados(m)) + '<div class="ps-card-body"><div class="ps-aviso">' + e(msg) + '</div>' + (P.fontesHtml ? P.fontesHtml(m) : '') + (U.dadosVista === 'grid' ? corpoGrelha(m) : tabela([{ t: 'Indicator' }, { t: 'Value', dir: 1 }, { t: String(m.ano - 1), dir: 1 }, { t: 'Status' }, { t: 'Quality' }], m.indicadores.map(function (id) {
       var est = P.estadoIndicador(m, id), it = P.item(id, P.chave(m)), ant = P.valorAnterior(id, P.chave(m));
-      return [linkFicha(id) + (P.botaoComentarInd ? ' ' + P.botaoComentarInd(m, id) : '') + marcaAmostra(id) + (it.reexpresso ? ' ' + chip('Restated', 'warn') : '') + (P.formulaTxt ? '<span class="ps-ind-form">ƒ ' + e(P.formulaTxt(id)) + '</span>' : ''), celValor(m, id) + ' ' + e(P.cat(id).unidade_medida), ant === null || ant === undefined ? '-' : fmtV(id, ant), chip(est.txt, est.cls), e(P.QUALIDADE_TXT[it.qualidade])];
+      return [linkFicha(id) + infoFormula(id, true) + (P.botaoComentarInd ? ' ' + P.botaoComentarInd(m, id) : '') + marcaAmostra(id) + (it.reexpresso ? ' ' + chip('Restated', 'warn') : ''), celValor(m, id) + ' ' + e(P.cat(id).unidade_medida), ant === null || ant === undefined ? '-' : fmtV(id, ant), chip(est.txt, est.cls), e(P.QUALIDADE_TXT[it.qualidade])];
     }))) + '</div></div>';
   };
   var sepEvidencias = function (m) {
-    var obrig = m.indicadores.filter(function (id) { return P.cat(id).evidencia_obrigatoria; }), comEv = obrig.filter(function (id) { return P.item(id, P.chave(m)).evidencias.length; }).length, usr = u();
+    var obrig = m.indicadores.filter(function (id) { return P.evidenciaPrecisa(m, id); }), comEv = obrig.filter(function (id) { return P.item(id, P.chave(m)).evidencias.length; }).length, usr = u();
     return '<div class="ps-card">' + cabCartao('Evidence and quality', 'doc', chip(comEv + ' of ' + obrig.length + ' required evidence items attached', comEv === obrig.length ? 'ok' : 'warn')) + '<div class="ps-card-body">' +
       tabela([{ t: 'Indicator' }, { t: 'Quality' }, { t: 'Method' }, { t: 'Evidence' }], m.indicadores.map(function (id) {
         var it = P.item(id, P.chave(m)), c = P.cat(id);
-        return [linkFicha(id), e(P.QUALIDADE_TXT[it.qualidade]), e(it.metodo || '-'), (it.evidencias.length ? it.evidencias.map(function (x) { return e(x.ficheiro); }).join(', ') : c.evidencia_obrigatoria ? chip('Required, missing', 'warn') : '-')];
+        return [linkFicha(id), e(P.QUALIDADE_TXT[it.qualidade]), e(it.metodo || '-'), (it.evidencias.length ? it.evidencias.map(function (x) { return e(x.ficheiro); }).join(', ') : P.evidenciaPrecisa(m, id) ? chip('Required, missing', 'warn') : c.evidencia_obrigatoria ? chip('Not needed, from the system', 'ok') : '-')];
       })) + '<h3 class="ps-grupo-t">General milestone documents</h3>' + (m.documentos_gerais.length ? '<ul class="ps-list">' + m.documentos_gerais.map(function (d) { return '<li class="ps-row"><span class="ps-row-ico">' + svg(I.doc, 18) + '</span><span class="ps-row-txt"><b>' + e(d.ficheiro) + '</b><span>' + quemHtml(d.por) + '<span class="ps-q-sep">, </span>' + e(P.fmtDataHora(d.em)) + '</span></span></li>'; }).join('') + '</ul>' : '<p class="ps-mut ps-small">No general documents yet.</p>') +
       (P.acompanha(m, usr) ? '<button type="button" class="ps-btn ps-mt" data-a="anexarGeral">Attach general document</button>' : '') + '</div></div>';
   };
@@ -864,7 +925,7 @@
     var form = meus.map(function (x) {
       var c = P.cat(x.indicador_id);
       return '<div class="ps-aj-resp"><p><b>' + e(x.pedido_por) + '</b> asked for your help with <b>' + e(c.nome) + '</b>, due ' + e(P.fmtData(x.prazo)) + '.</p><blockquote>' + e(x.descricao) + '</blockquote>' +
-        '<div class="ps-form">' + campo('ajv-' + x.id, 'Value (' + c.unidade_medida + ')', '<input id="ajv-' + e(x.id) + '" class="ps-in ps-num" inputmode="decimal" autocomplete="off">') + campo('ajn-' + x.id, 'Note (optional)', '<input id="ajn-' + e(x.id) + '" class="ps-in" placeholder="Where the value comes from">') + '</div>' +
+        '<div class="ps-form">' + campo('ajv-' + x.id, 'Value (' + c.unidade_medida + ')', '<input id="ajv-' + e(x.id) + '" class="ps-in ps-num"' + numAttr(x.indicador_id) + ' autocomplete="off">') + campo('ajn-' + x.id, 'Note (optional)', '<input id="ajn-' + e(x.id) + '" class="ps-in" placeholder="Where the value comes from">') + '</div>' +
         '<button type="button" class="ps-btn pri peq ps-mt" data-a="ajResponder" data-v="' + e(x.id) + '">Send value</button></div>';
     }).join('');
     return '<div class="ps-card">' + cabCartao('Assistance requests', 'doc', pode ? '<button type="button" class="ps-btn peq" data-a="pedirAjuda">Request assistance</button>' : '') + '<div class="ps-card-body">' + form + tabela([{ t: 'Indicator' }, { t: 'Asked to' }, { t: 'Message' }, { t: 'Due' }, { t: 'Value' }, { t: 'Status' }], l.map(function (x) {
@@ -1043,7 +1104,7 @@
       '<div class="ps-sp ps-mt">' + (podeAmostra ? '<button type="button" class="ps-btn pri" data-a="amostra">Select a sample of 5</button>' : '') + '<button type="button" class="ps-btn" data-a="dataRoom">Export data room (Excel)</button>' + (usr.perfil === 'auditor' || usr.perfil === 'admin' ? '<button type="button" class="ps-btn" data-a="novoPedAud">New information request</button>' : '') + '</div>' +
       (S.amostra.length ? '<div class="ps-card ps-mt">' + cabCartao('Sample', 'tarefa') + '<ul class="ps-list">' + S.amostra.map(function (id) { var m = P.msDoIndicador(id); return '<li class="ps-row"><span class="ps-row-txt">' + linkFicha(id) + '<span>' + e(m ? m.nome : '') + '</span></span></li>'; }).join('') + '</ul></div>' : '') +
       '<div class="ps-card ps-mt">' + cabCartao('Milestones', 'doc', '<div class="ps-seg" role="group" aria-label="Filter">' + [['todas', 'All'], ['concluidas', 'Completed'], ['abertos', 'With open requests'], ['amostra', 'In the sample']].map(function (x) { return '<button type="button" class="' + (f === x[0] ? 'on' : '') + '" data-a="audFiltro" data-v="' + x[0] + '">' + x[1] + '</button>'; }).join('') + '</div>') + '<div class="ps-card-body">' + tabela([{ t: 'Milestone' }, { t: 'Company' }, { t: 'Assigned to' }, { t: 'Status' }, { t: 'Approved', dir: 1 }, { t: 'Required evidence', dir: 1 }, { t: 'Estimated', dir: 1 }, { t: 'Restated', dir: 1 }, { t: 'Open requests', dir: 1 }], lista.map(function (m) {
-        var ob = m.indicadores.filter(function (id) { return P.cat(id).evidencia_obrigatoria; }), okEv = ob.filter(function (id) { return P.item(id, P.chave(m)).evidencias.length; }).length;
+        var ob = m.indicadores.filter(function (id) { return P.evidenciaPrecisa(m, id); }), okEv = ob.filter(function (id) { return P.item(id, P.chave(m)).evidencias.length; }).length;
         return ['<a href="' + rota('Milestone/' + m.id + '?sep=auditoria') + '">' + e(m.nome) + '</a>', empHtml(m.empresa), atribHtml(m), estChip(m), P.concluida(m) ? m.indicadores.length + '/' + m.indicadores.length : '0/' + m.indicadores.length, okEv + '/' + ob.length, m.indicadores.filter(function (id) { return P.item(id, P.chave(m)).qualidade === 'estimado'; }).length, m.indicadores.filter(function (id) { return P.item(id, P.chave(m)).reexpresso; }).length, pedidosDe(m)];
       }), 'No milestones match this filter.') + '</div></div>' +
       '<div class="ps-card ps-mt">' + cabCartao('Information requests', 'ativ') + (S.aud.length ? cartaoPedidos(S.aud) : vazio('No requests yet.')) + '</div>';
@@ -1060,7 +1121,7 @@
       return '<div class="ps-card ps-mt">' + cabCartao(m ? m.nome : mid, 'doc') + grupos[mid].map(function (x) {
         var c = P.cat(x.indicador_id), aberto = x.estado === 'pendente';
         return '<div class="ps-ind"><div class="ps-sp-b"><b>' + e(c.nome) + ' (' + e(c.unidade_medida) + ')</b>' + (aberto ? chip('Due ' + P.fmtData(x.prazo), 'warn') : chip('Sent', 'ok')) + '</div><p class="ps-mt">' + e(x.descricao) + '</p>' +
-          (aberto ? '<div class="ps-form ps-mt">' + campo('xv-' + x.id, 'Value', '<input id="xv-' + e(x.id) + '" class="ps-in" inputmode="decimal">') + campo('xe-' + x.id, 'Supporting document (.xlsx, or .pdf for invoices)', ficheiroHtml('xe-' + x.id, P.ACEITA_SUPORTE)) + '</div><button type="button" class="ps-btn pri ps-mt" data-a="enviarExt" data-v="' + e(x.id) + '">Send</button>' :
+          (aberto ? '<div class="ps-form ps-mt">' + campo('xv-' + x.id, 'Value', '<input id="xv-' + e(x.id) + '" class="ps-in"' + numAttr(x.indicador_id) + '>') + campo('xe-' + x.id, 'Supporting document (.xlsx, or .pdf for invoices)', ficheiroHtml('xe-' + x.id, P.ACEITA_SUPORTE)) + '</div><button type="button" class="ps-btn pri ps-mt" data-a="enviarExt" data-v="' + e(x.id) + '">Send</button>' :
             '<p class="ps-mut ps-small ps-mt">Value sent: ' + e(fmtV(x.indicador_id, x.valor)) + (x.evidencia ? ', ' + e(x.evidencia) : '') + ', ' + e(P.fmtDataHora(x.respondido_em)) + '</p>') + '</div>';
       }).join('') + '</div>';
     }).join('');
@@ -1337,7 +1398,7 @@
       '<p class="ps-ficha-desc">' + e(P.esrsDe(id).desc) + '</p>' +
       '<dl class="ps-det"><dt>Year and unit</dt><dd>' + m.ano + ', ' + e(c.unidade_medida) + '</dd><dt>Milestone</dt><dd>' + e(m.nome) + '</dd><dt>Type</dt><dd>' + (c.tipo === 'derivado' ? 'Derived' : 'Base data') + '</dd>' + (c.formula ? '<dt>Formula</dt><dd>' + e(c.formula) + '</dd>' : '') + '<dt>Threshold</dt><dd>' + c.limiar_variacao_pct + '%</dd><dt>Users</dt><dd>' + e(c.utilizado_por.join(', ')) + '</dd><dt>Quality</dt><dd>' + e(P.QUALIDADE_TXT[it.qualidade]) + (it.metodo ? ', ' + e(it.metodo) : '') + '</dd><dt>Evidence</dt><dd>' + (it.evidencias.map(function (x) { return e(x.ficheiro); }).join(', ') || '-') + '</dd><dt>ESRS datapoint</dt><dd>' + (P.esrsDe(id).dps.length ? '<span class="ps-mono">' + e(P.esrsDe(id).dps.join(', ')) + '</span>' : 'Entity-specific') + '</dd><dt>Frameworks</dt><dd>ESRS ' + e(c.esrs_requisito) + (refs ? ' (' + e(MAT_TXT[refs] || refs) + ')' : '') + ', GRI ' + e(c.gri) + '</dd></dl>' +
       '<div><h3 class="ps-grupo-t">Value history</h3>' + (it.versoes.length ? '<ul class="ps-ev ps-sem-pad">' + it.versoes.slice().reverse().map(function (x) { return '<li><b class="ps-num">' + e(fmtV(id, x.valor)) + '</b>, ' + e(x.origem) + (x.motivo ? '. Reason: ' + e(x.motivo) : '') + '<small>' + quemHtml(x.por) + '<span class="ps-q-sep">, </span>' + e(P.fmtDataHora(x.em)) + '</small></li>'; }).join('') + '</ul>' : '<p class="ps-mut ps-small">No values yet.</p>') + '</div>';
-    if (P.concluida(m) && P.podeReexpressar(usr)) b += '<div class="ps-card ps-card-body"><h3 class="ps-grupo-t ps-sem-topo">Restate approved value</h3><div class="ps-form">' + campo('rx-val', 'New value', '<input id="rx-val" class="ps-in" inputmode="decimal">') + campo('rx-mot', 'Reason (required)', '<input id="rx-mot" class="ps-in">') + '</div><button type="button" class="ps-btn pri ps-mt" data-a="reexpressar" data-v="' + e(id) + '">Restate value</button></div>';
+    if (P.concluida(m) && P.podeReexpressar(usr)) b += '<div class="ps-card ps-card-body"><h3 class="ps-grupo-t ps-sem-topo">Restate approved value</h3><div class="ps-form">' + campo('rx-val', 'New value', '<input id="rx-val" class="ps-in"' + numAttr(id) + '>') + campo('rx-mot', 'Reason (required)', '<input id="rx-mot" class="ps-in">') + '</div><button type="button" class="ps-btn pri ps-mt" data-a="reexpressar" data-v="' + e(id) + '">Restate value</button></div>';
     if (usr.perfil === 'auditor' || usr.perfil === 'admin') b += '<div class="ps-card ps-card-body"><h3 class="ps-grupo-t ps-sem-topo">Auditor information request</h3>' + campo('pa-txt', 'What you need to know', '<textarea id="pa-txt" class="ps-ta"></textarea>') + '<button type="button" class="ps-btn ps-mt" data-a="pedidoAud" data-v="' + e(id) + '">Send request</button></div>';
     return { t: c.nome, s: c.id, b: b, p: '<a class="ps-btn" href="' + rota('Milestone/' + m.id) + '" data-a="fecharPainel" data-nao-impedir="1">Open the milestone</a>' };
   };
@@ -1593,6 +1654,28 @@
     ficEntregar: function (d) { var m = msAtual(), pf = P.ficheirosPedidos(m).filter(function (x) { return x.id === d.v; })[0]; escolherFicheiro(pf && pf.tipo ? P.ACEITA_DADOS : P.ACEITA_SUPORTE, function (f) { var r = P.entregarFicheiro(m, d.v, f.name, u()); if (r.erro) return toast(r.erro, 'err'); toast('File delivered.', 'ok'); R(); }); },
     ficPedir: function () { var c = document.getElementById('fp-obr'); var r = P.pedirFicheiro(msAtual(), val('fp-nome'), c && c.checked, u()); res(r, 'File added to the request.'); },
     ficRetirar: function (d) { res(P.retirarPedidoFicheiro(msAtual(), d.v, u()), 'File removed from the request.'); },
+    dzEscolher: function () {
+      var m = msAtual(), i = document.createElement('input');
+      i.type = 'file'; i.multiple = true; i.accept = P.ACEITA_SUPORTE; i.hidden = true;
+      document.body.appendChild(i);
+      i.addEventListener('change', function () { var l = i.files; i.remove(); juntarFila(m, l); });
+      i.click();
+    },
+    dzTirar: function (d) { var m = msAtual(); U.dzFila[m.id] = filaDe(m).filter(function (x) { return x.k !== d.v; }); R(); },
+    dzLimpar: function () { U.dzFila[msAtual().id] = []; R(); },
+    dzEnviar: function () {
+      var m = msAtual(), usr = u(), ok = 0, erros = [], fica = [];
+      if (!P.podePreencher(m, usr)) return toast('This milestone is not with you right now.', 'err');
+      filaDe(m).forEach(function (x) {
+        if (x.cat === 'geral') { m.documentos_gerais.push({ ficheiro: x.nome, por: usr.nome, em: new Date().toISOString() }); P.evento(m, 'Supporting document uploaded: ' + x.nome + '.', usr.nome); ok++; return; }
+        var r = P.entregarFicheiro(m, x.cat, x.nome, usr);
+        if (r.erro) { erros.push(x.nome + ': ' + r.erro); fica.push(x); } else ok++;
+      });
+      U.dzFila[m.id] = fica;
+      P.guardar();
+      if (erros.length) toast((ok ? ok + ' uploaded. ' : '') + erros.join(' '), 'err'); else toast(ok + ' file' + (ok === 1 ? '' : 's') + ' uploaded.', 'ok');
+      R();
+    },
     expDom: function (d) { estadoExp(msAtual()).dom = d.v; R(); },
     expTodos: function () { var x = estadoExp(msAtual()); idsDominio(x.dom).forEach(function (id) { if (x.sel.indexOf(id) < 0) x.sel.push(id); }); R(); },
     expLimpar: function () { estadoExp(msAtual()).sel = []; R(); },
@@ -1703,6 +1786,7 @@
   var mudouMarca = function () { P.aplicarMarca(U.marca); agendar(); };
   var C = {
     valor: function (el) { var m = msAtual(); P.gravarValor(m, el.dataset.id, el.value, u()); },
+    dzCat: function (el) { var x = filaDe(msAtual()).filter(function (y) { return y.k === el.dataset.id; })[0]; if (x) x.cat = el.value; },
     just: function (el) { P.item(el.dataset.id, P.chave(msAtual())).justificacao = el.value; P.guardar(); },
     qual: function (el) { var it = P.item(el.dataset.id, P.chave(msAtual())); it.qualidade = el.value; if (el.value !== 'estimado') it.metodo = ''; P.guardar(); },
     metodo: function (el) { P.item(el.dataset.id, P.chave(msAtual())).metodo = el.value; P.guardar(); },
@@ -1811,8 +1895,15 @@
     var t = ev2.target.closest && ev2.target.closest('[data-tip]');
     if (!t) { if (tip) tip.hidden = true; return; }
     if (!tip) { tip = document.createElement('div'); tip.className = 'ps-tip'; tip.style.position = 'fixed'; document.body.appendChild(tip); }
-    tip.textContent = t.getAttribute('data-tip');
-    tip.classList.toggle('longo', tip.textContent.length > 60);
+    var tit = t.getAttribute('data-tip-t');
+    tip.textContent = '';
+    if (tit) {
+      var h = document.createElement('b'), f = document.createElement('code');
+      h.textContent = tit; f.textContent = t.getAttribute('data-tip');
+      tip.appendChild(h); tip.appendChild(f);
+    } else tip.textContent = t.getAttribute('data-tip');
+    tip.classList.toggle('form', !!tit);
+    tip.classList.toggle('longo', !!tit || tip.textContent.length > 60);
     tip.hidden = false;
     var r = t.getBoundingClientRect();
     var meia = tip.classList.contains('longo') ? 160 : 70;
@@ -1847,6 +1938,19 @@
     document.addEventListener('pointercancel', fimPtr, true);
     document.addEventListener('keydown', function (ev2) {
       if (ev2.key === 'Escape') { if (U.painel) fechaPainel(); else if (U.menu) { U.menu = null; R(); } }
+      /* Contagens: a virgula e o ponto nao entram, o valor e sempre inteiro */
+      if ((ev2.key === ',' || ev2.key === '.') && ev2.target.closest && ev2.target.closest('[data-int]')) { ev2.preventDefault(); toast('Whole numbers only for this indicator.', 'err'); }
+    });
+    /* Area de ficheiros: largar ficheiros em cima junta-os a lista para escolher a categoria */
+    var zonaDe = function (ev2) { return ev2.target.closest && ev2.target.closest('[data-dz]'); };
+    document.addEventListener('dragover', function (ev2) { var z = zonaDe(ev2); if (!z) return; ev2.preventDefault(); ev2.dataTransfer.dropEffect = 'copy'; z.classList.add('sobre'); });
+    document.addEventListener('dragleave', function (ev2) { var z = zonaDe(ev2); if (z && !z.contains(ev2.relatedTarget)) z.classList.remove('sobre'); });
+    document.addEventListener('drop', function (ev2) {
+      var z = zonaDe(ev2);
+      if (!z) return;
+      ev2.preventDefault(); z.classList.remove('sobre');
+      var m = P.ms(z.getAttribute('data-dz'));
+      if (m) juntarFila(m, ev2.dataTransfer.files);
     });
     document.addEventListener('mouseover', mostrarTip);
     document.addEventListener('focusin', mostrarTip);
@@ -1920,6 +2024,6 @@
     }
   };
   /* As paginas de controlo (portal-gestao.js) acrescentam-se aqui */
-  P.ext = { pessHtml: pessHtml, depHtml: depHtml, empHtml: empHtml, avPessoa: avPessoa, avEquipa: avEquipa, avEmpresa: avEmpresa, msAtual: function () { return msAtual(); }, Pn: Pn, abrePainel: function (t, a) { abrePainel(t, a); }, Blocos: Blocos, A: A, C: C, U: U, e: e, svg: svg, I: I, rota: rota, chip: chip, estChip: estChip, cabCartao: cabCartao, vazio: vazio, opt: opt, campo: campo, ficheiroHtml: ficheiroHtml, tabela: tabela, toast: toast, R: R, val: val, res: res, escolherFicheiro: escolherFicheiro, atribHtml: atribHtml, iniciais: iniciais, u: u, fmtV: fmtV, prazoTxt: prazoTxt };
+  P.ext = { pessHtml: pessHtml, depHtml: depHtml, empHtml: empHtml, avPessoa: avPessoa, avEquipa: avEquipa, avEmpresa: avEmpresa, msAtual: function () { return msAtual(); }, Pn: Pn, abrePainel: function (t, a) { abrePainel(t, a); }, Blocos: Blocos, A: A, C: C, U: U, e: e, svg: svg, I: I, rota: rota, chip: chip, estChip: estChip, cabCartao: cabCartao, vazio: vazio, opt: opt, campo: campo, ficheiroHtml: ficheiroHtml, numAttr: numAttr, infoFormula: infoFormula, tabela: tabela, toast: toast, R: R, val: val, res: res, escolherFicheiro: escolherFicheiro, atribHtml: atribHtml, iniciais: iniciais, u: u, fmtV: fmtV, prazoTxt: prazoTxt };
   document.addEventListener('DOMContentLoaded', P.iniciar);
 })();

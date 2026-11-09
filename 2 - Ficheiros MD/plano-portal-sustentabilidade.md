@@ -355,6 +355,27 @@ Pedido do André a 9 de novembro de 2026.
 - Usa-se no envio de valores das entidades externas (Data requests). Os outros uploads da plataforma (Deliver, Import, Attach, evidências, marca e dados) já abriam o seletor a partir de um botão `ps-btn` e ficam iguais.
 - O CSS está na secção 31 de `global.css`. Também estiliza com `::file-selector-button` qualquer `input type=file` nativo que surja no futuro, para manter o mesmo aspeto.
 
+## Requested files no topo, números inteiros e tooltip da fórmula
+
+Pedido do André a 9 de novembro de 2026.
+
+- **Requested files no topo da milestone:** o cartão `cartaoFicheiros(m)` passou para o início de Requested data. Só aparece quando há ficheiros mesmo precisos (o admin vê-o sempre, para poder pedir mais ficheiros).
+- **Quando é preciso um ficheiro** (`P.ficheirosPedidos` põe `preciso`, `porque` e `faltam` em cada ficheiro, em `portal-nucleo.js`):
+  - **Ficheiro de dados:** só é preciso enquanto algum dos indicadores que cobre (pelas colunas da folha) não tiver valor. Assim que os dados chegam do sistema ou são preenchidos no ecrã, deixa de ser pedido.
+  - **Evidência de um indicador:** decisão do André: só fica dispensada quando o valor veio do sistema (`P.doSistema`: calculado da fonte e sem nenhum dado de origem escrito à mão). Se o valor foi digitado, a evidência continua obrigatória. `P.evidenciaPrecisa(m, id)` aplica esta regra na submissão, na lista, na grelha, em Evidence and quality e na Auditoria.
+  - **Ficheiros pedidos à parte** pelo admin: são sempre precisos.
+  - O cartão explica a regra num aviso. Os ficheiros que não são precisos ficam num "N files not needed" fechado, cada um com o motivo.
+- **Área de drag and drop:** larga-se (ou escolhe-se) vários ficheiros de uma vez. Cada um entra numa fila com um dropdown de categoria: um dos ficheiros pedidos ou "Other supporting document". A categoria é sugerida pelo nome do ficheiro (prefixo do tipo, ID ou nome do indicador; senão o primeiro ainda por entregar). Se o formato não servir para a categoria, a linha fica a vermelho. "Upload N files" entrega tudo e deixa na fila só os que falharem. Estado em `U.dzFila`, ações `dzEscolher`, `dzTirar`, `dzLimpar`, `dzEnviar` e `C.dzCat`.
+- **Números inteiros:** `P.inteiro(c)` é verdadeiro para unidades de contagem (n.º, nº, número, number, count) ou quando o catálogo tem `inteiro: true/false`.
+  - **Indicadores inteiros:** A06, A09, R02, P02, C01, P01, P05, P17, N06, N07, N08.
+  - **Ficam com decimais:** A04 (clientes em milhares), C02 (NPS), P12 (horas), valores em €, toneladas e %.
+  - `P.validar` dá o erro "Whole numbers only" em todos os fluxos: ecrã, grelha, importação, pedidos de ajuda, entidades externas, reexpressão e lançamento manual.
+  - Os campos inteiros têm `inputmode="numeric"` e `data-int`, que bloqueia a vírgula e o ponto.
+  - **Dados de origem:** também são inteiros os de contagem (`P.campoInteiro`), exceto médias como o efetivo médio. Os valores de teste puxados do sistema já vêm inteiros.
+  - **Linhas "Number" dos quadros do Report:** também só aceitam inteiros.
+- **Sem "ƒ":** o símbolo foi retirado de todo o lado. Nos indicadores calculados aparece um "i" (`infoFormula`) com um tooltip próprio: título "Formula" e a fórmula em letra mono. Ao expandir a linha, a definição continua a mostrar "Formula:".
+- **CSS:** secção 32 de `global.css` (`.fp-*`, `.rq2-nl`, `.ps-info-f`, `.ps-tip.form`), com versão para telemóvel.
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.
