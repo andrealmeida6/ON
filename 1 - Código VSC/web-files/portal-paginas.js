@@ -566,7 +566,7 @@
     return !!(v.erros.length || v.alertas.length);
   };
   var sepRecolha = function (m) {
-    var usr = u(), rel = U.imp[m.id], calcs = P.calculosMilestone ? P.calculosMilestone(m) : [], comFontes = P.camposMilestone ? P.camposMilestone(m).length > 0 : false, vistos = {};
+    var usr = u(), calcs = P.calculosMilestone ? P.calculosMilestone(m) : [], comFontes = P.camposMilestone ? P.camposMilestone(m).length > 0 : false, vistos = {};
     var todosAbertos = m.indicadores.every(function (id) { return rqAberto(m, id); });
     var linhas = m.indicadores.map(function (id) {
       var c = P.cat(id), it = P.item(id, P.chave(m)), v = P.validarItem(it), ant = P.valorAnterior(id, P.chave(m)), aberto = rqAberto(m, id);
@@ -606,10 +606,7 @@
         : pendente ? '<div class="ps-aviso">Waiting for ' + e(pendente.entidade_externa) + ', due ' + e(P.fmtData(pendente.prazo)) + '.</div>' : '';
       return '<div class="rq2-it on ' + cls + '" id="ind-' + e(id) + '">' + linha + '<div class="rq2-det" id="rqd-' + e(id) + '"><div class="rq2-det-g' + (origem ? '' : ' um') + '">' + defin + origem + '</div>' + just + qual + ajuda + '</div></div>';
     }).join('');
-    return '<div class="ps-card">' + cabCartao('Import file', 'doc') +
-      '<div class="ps-drop"><button type="button" class="ps-btn pri" data-a="importar">Import file</button><button type="button" class="ps-btn" data-a="tplExcel">Excel template</button><button type="button" class="ps-btn" data-a="impExemplo">Test with a sample file</button><span class="ps-mut ps-small">Excel (.xlsx) only</span></div>' +
-      (rel ? relatorioImport(m, rel) : '') + '</div>' +
-      '<div class="ps-card">' + cabCartao('Requested data', 'tarefa', '<div class="ps-sp">' + (P.fontesAcoes ? P.fontesAcoes(m) : '') + ferrDados(m) + '</div>') +
+    return '<div class="ps-card" id="rq-dados">' + cabCartao('Requested data', 'tarefa', '<div class="ps-sp">' + (P.fontesAcoes ? P.fontesAcoes(m) : '') + ferrDados(m) + '</div>') +
       (U.dadosVista === 'grid' ? corpoGrelha(m) : '<div class="rq2"><div class="rq2-cab"><button type="button" class="ps-btn liga rq2-todos" data-a="rqTodos">' + (todosAbertos ? 'Collapse all' : 'Expand all') + '</button><span>Indicator</span><span class="rq2-dir">' + e(P.rotAnterior(P.chave(m))) + '</span><span class="rq2-dir">Value ' + e(P.rotPeriodo(m)) + '</span><span class="rq2-dir">Change</span><span>Status</span></div>' + linhas + '</div>') + '</div>';
   };
   /* --- Na milestone do ano: o que ja foi reportado nos trimestres ------------ */
@@ -656,6 +653,31 @@
     if (fora.length) toast('Only Excel (.xlsx) or PDF files: ' + fora.join(', ') + ' left out.', 'err');
     R();
   };
+  var entregarLargados = function (m, pid, files) {
+    var usr = u(), ok = [], erros = [];
+    Array.prototype.forEach.call(files || [], function (f) {
+      if (['xlsx', 'pdf'].indexOf(extDe(f.name)) < 0) return erros.push(f.name + ': only Excel (.xlsx) or PDF.');
+      var r = P.entregarFicheiro(m, pid, f.name, usr);
+      if (r.erro) erros.push(f.name + ': ' + r.erro); else ok.push(f.name);
+    });
+    if (erros.length) toast((ok.length ? ok.length + ' uploaded. ' : '') + erros.join(' '), 'err'); else if (ok.length) toast(ok.length === 1 ? ok[0] + ' uploaded.' : ok.length + ' files uploaded.', 'ok');
+    R();
+  };
+  /* "Fill in on screen": leva a Requested data e abre os indicadores que o ficheiro cobriria */
+  var irParaDados = function (m, pid) {
+    var f = P.ficheirosPedidos(m).filter(function (x) { return x.id === pid; })[0], ids = f && f.faltam && f.faltam.length ? f.faltam : m.indicadores;
+    U.dadosVista = 'form';
+    ids.forEach(function (id) { U.rqAberto[m.id + ':' + id] = true; });
+    R();
+    setTimeout(function () {
+      var alvo = document.getElementById('ind-' + ids[0]) || document.getElementById('rq-dados');
+      if (!alvo) return;
+      alvo.scrollIntoView({ block: 'center' });
+      ids.forEach(function (id) { var l = document.getElementById('ind-' + id); if (l) { l.classList.remove('rq2-flash'); void l.offsetWidth; l.classList.add('rq2-flash'); } });
+      var inp = document.getElementById('v-' + ids[0]) || alvo.querySelector('input:not([type=hidden]), select');
+      if (inp) inp.focus({ preventScroll: true });
+    }, 0);
+  };
   var cartaoFicheiros = function (m) {
     var usr = u(), pode = P.podePreencher(m, usr), gere = P.gereTudo(usr) && !P.concluida(m), fics = P.ficheirosPedidos(m);
     var precisos = fics.filter(function (f) { return f.preciso; }), dispensados = fics.filter(function (f) { return !f.preciso; }), fila = pode ? filaDe(m) : [];
@@ -669,19 +691,21 @@
       var n = f.faltam.map(function (id) { return P.cat(id).nome; });
       return '<small class="fp-faltam">Without value: ' + e(n.slice(0, 3).join(', ')) + (n.length > 3 ? ' and ' + (n.length - 3) + ' more' : '') + '</small>';
     };
+    var solta = pode && !P.concluida(m);
     var lista = precisos.length ? '<ul class="fp-l">' + precisos.map(function (f) {
       var ent = f.entregues, ok = ent.length > 0;
-      var acoes = (P.folhaAcoes ? P.folhaAcoes(m, f, pode) : '') + (gere && f.proprio ? '<button type="button" class="ps-btn peq err" data-a="ficRetirar" data-v="' + e(f.id) + '">Remove</button>' : '');
-      return '<li class="fp-it' + (ok ? ' ok' : '') + '" id="fp-' + e(f.id) + '" tabindex="-1"><span class="fp-ic" aria-hidden="true">' + svg(ok ? I.tick : I.doc, 16) + '</span>' +
+      var subir = solta ? '<button type="button" class="ps-btn peq" data-a="ficEntregar" data-v="' + e(f.id) + '">' + svg(I.upload, 14) + (ok ? 'Add file' : 'Upload') + '</button>' : '';
+      var acoes = (P.folhaAcoes ? P.folhaAcoes(m, f, pode) : '') + subir + (gere && f.proprio ? '<button type="button" class="ps-btn peq err" data-a="ficRetirar" data-v="' + e(f.id) + '">Remove</button>' : '');
+      return '<li class="fp-it' + (ok ? ' ok' : '') + '" id="fp-' + e(f.id) + '" tabindex="-1"' + (solta ? ' data-dzf="' + e(f.id) + '" data-dz="' + e(m.id) + '"' : '') + '><span class="fp-ic" aria-hidden="true">' + svg(ok ? I.tick : I.doc, 16) + '</span>' +
         '<div class="fp-txt"><b>' + e(f.nome) + '</b>' + (f.obrigatorio ? '' : ' <span class="ps-mut ps-small">(optional)</span>') +
         '<small>' + e(f.porque) + '</small>' + nomesFaltam(f) +
-        (ok ? '<small class="fp-ent">' + ent.map(function (x) { return e(x.ficheiro) + (x.origem === 'grid' ? ' (filled in on the platform)' : ''); }).join(', ') + '</small>' : '') + (P.folhaEstado ? P.folhaEstado(m, f) : '') + '</div>' +
+        (ok ? '<small class="fp-ent">' + ent.map(function (x) { return e(x.ficheiro) + (x.origem === 'grid' ? ' (filled in on the platform)' : ''); }).join(', ') + '</small>' : '') + '</div>' +
         '<span class="fp-fmt">' + e(formatosFic(f).join(', ').toUpperCase()) + '</span>' +
-        '<span class="ps-sp fp-ac">' + (ok ? chip('Delivered', 'ok') : f.obrigatorio ? chip('Missing', 'warn') : chip('Optional')) + acoes + '</span></li>';
-    }).join('') + '</ul>' : '<p class="ps-mut ps-small fp-nada">No files needed right now: all the data comes from the system or is filled in on screen.</p>';
+        '<span class="ps-sp fp-ac">' + (ok ? chip('Delivered', 'ok') : f.obrigatorio ? chip('Missing', 'warn') : chip('Optional')) + acoes + '</span>' +
+        (solta ? '<span class="fp-solta" aria-hidden="true">' + svg(I.upload, 18) + 'Drop to upload as ' + e(f.nome) + '</span>' : '') + '</li>';
+    }).join('') + '</ul>' : '';
     var opcoes = function (x) { return precisos.map(function (f) { return opt(f.id, f.nome, x.cat); }).join('') + opt('geral', 'Other supporting document', x.cat); };
-    var zona = pode && (precisos.length || fila.length) ? '<div class="fp-dz" data-dz="' + e(m.id) + '" data-a="dzEscolher">' + svg(I.upload, 26) +
-      '<b>Drag and drop files here</b><span>or <button type="button" class="ps-btn liga" data-a="dzEscolher">choose files</button>. Excel (.xlsx) or PDF. Then choose the category of each file.</span></div>' : '';
+    var dica = solta && precisos.length ? '<p class="ps-small ps-mut fp-dica">' + svg(I.upload, 14) + 'Drag each file onto its row, or use Upload. Several files at once? Drop them anywhere on this card and choose the category of each one.</p>' : '';
     var filaHtml = fila.length ? '<div class="fp-fila" aria-label="Files to upload"><h4>To upload (' + fila.length + ')</h4>' + fila.map(function (x) {
       var alvo = precisos.filter(function (f) { return f.id === x.cat; })[0], mau = formatosFic(alvo).indexOf(extDe(x.nome)) < 0;
       return '<div class="fp-fi' + (mau ? ' erro' : '') + '"><span class="fp-ic" aria-hidden="true">' + svg(I.doc, 16) + '</span><span class="fp-fn" title="' + e(x.nome) + '">' + e(x.nome) + (mau ? '<small>This category accepts ' + e(formatosFic(alvo).join(', ').toUpperCase()) + ' only.</small>' : '') + '</span>' +
@@ -690,9 +714,9 @@
     }).join('') + '<div class="fp-fila-p"><button type="button" class="ps-btn" data-a="dzLimpar">Clear</button><button type="button" class="ps-btn pri" data-a="dzEnviar">Upload ' + fila.length + ' file' + (fila.length === 1 ? '' : 's') + '</button></div></div>' : '';
     var disp = dispensados.length ? '<details class="fp-disp"><summary>' + dispensados.length + ' file' + (dispensados.length === 1 ? '' : 's') + ' not needed</summary><ul>' + dispensados.map(function (f) { return '<li><b>' + e(f.nome) + '</b> ' + e(f.porque) + '</li>'; }).join('') + '</ul></details>' : '';
     var outros = gerais.length ? '<p class="ps-small ps-mut fp-outros">Other documents: ' + gerais.map(function (d) { return e(d.ficheiro); }).join(', ') + '</p>' : '';
-    return '<div class="ps-card fp-card">' + cabCartao('Requested files', 'doc', cab) + '<div class="ps-card-body">' +
-      '<p class="fp-regra">' + svg('<circle cx="12" cy="12" r="9.5"/><path d="M12 11v6M12 7.5v.01"/>', 16) + '<span>Upload files only when the data does not come from the system and is not filled in on screen. As soon as the indicators have a value, the file is no longer needed. Evidence is only waived when the value came from the system.</span></p>' +
-      lista + zona + filaHtml + outros + disp + '</div></div>';
+    return '<div class="ps-card fp-card"' + (solta ? ' data-dz="' + e(m.id) + '"' : '') + '>' + cabCartao('Requested files', 'doc', cab) + '<div class="ps-card-body">' +
+      '<p class="fp-regra">' + svg('<circle cx="12" cy="12" r="9.5"/><path d="M12 11v6M12 7.5v.01"/>', 16) + '<span>Data goes in under <b>Requested data</b>: it comes from the system or is typed in on screen. Only the files below are needed: data the system could not provide, evidence for values typed in, and files the team asked for. A data file stops being needed once its indicators have a value.</span></p>' +
+      lista + dica + filaHtml + outros + disp + '</div></div>';
   };
   var ferrDados = function (m) {
     var pode = P.podePreencher(m, u()), vs = [['form', pode ? 'List' : 'Table'], ['grid', 'Grid']], at = U.dadosVista === 'grid' ? 'grid' : 'form';
@@ -882,17 +906,6 @@
         return '<li><label><input id="exp-' + e(c.id) + '" type="checkbox" data-c="expSel" data-id="' + e(c.id) + '"' + (x.sel.indexOf(c.id) > -1 ? ' checked' : '') + '><span class="ps-mono">' + e(c.id) + '</span><span class="n">' + e(c.nome) + '</span><span class="v ps-num">' + (pt ? e(fmtV(c.id, pt.v)) + ' <small>' + e(c.unidade_medida) + ', ' + pt.ano + '</small>' : '<small>No value yet</small>') + '</span>' + chip(est.txt, est.cls) + '</label></li>';
       }).join('') + '</ul>' : vazio(dom.ok.length ? 'Nothing matches your search.' : 'You have no access to this layer.')) + '</div></div></div>' +
       '<div class="ps-card">' + cabCartao('Your report (' + cfg.linhas.length + ')', 'ativ', '<button type="button" class="ps-btn peq pri" data-a="expExcel"' + (cfg.linhas.length ? '' : ' disabled') + '>Export to Excel</button>') + '<div class="ps-card-body">' + window.PortalGrelha.html(cfg) + '</div></div>';
-  };
-  var relatorioImport = function (m, rel) {
-    if (rel.erro || rel.erroFormato) return '<div class="ps-card-body"><div class="ps-aviso err" role="alert">' + e(rel.erro || rel.erroFormato) + '</div></div>';
-    var usadas = rel.linhas.filter(function (l) { return l.estado !== 'vazia'; });
-    var nv = usadas.filter(function (l) { return l.estado === 'valida'; }).length, na = usadas.filter(function (l) { return l.estado === 'alerta'; }).length, nr = usadas.filter(function (l) { return l.estado === 'rejeitada'; }).length;
-    return '<div class="ps-card-body"><div class="ps-sp-b"><b>Result of ' + e(rel.nome) + '</b>' + (nv + na ? '<button type="button" class="ps-btn pri" data-a="impAplicar">Apply ' + (nv + na) + ' valid rows</button>' : '') + '</div>' +
-      '<div class="ps-res-tot">' + chip(nv + ' valid', 'ok') + chip(na + ' with alerts', 'warn') + chip(nr + ' with errors', 'err') + chip(rel.emFalta.length + ' missing from the file') + '</div>' +
-      (rel.desconhecidas.length ? '<div class="ps-aviso warn">Unknown columns, ignored: ' + e(rel.desconhecidas.join(', ')) + '</div>' : '') +
-      tabela([{ t: 'Row' }, { t: 'Indicator' }, { t: 'Value' }, { t: 'Result' }, { t: 'Reason' }], usadas.map(function (l) {
-        return ['Row ' + l.n, e(l.indicador), e(l.valor), l.estado === 'valida' ? chip('Valid', 'ok') : l.estado === 'alerta' ? chip('With alert', 'warn') : chip('Rejected', 'err'), e(l.motivos.join(' '))];
-      })) + '</div>';
   };
   var sepRevisao = function (m) {
     var p = P.passoAtual(m), rot = p.tipo === 'parecer' ? 'Give favourable opinion' : p.tipo === 'aprovacao' ? 'Approve and lock' : 'Complete review';
@@ -1586,15 +1599,6 @@
     });
     i.click();
   };
-  P.importarFicheiroM = function (m, file) {
-    return P.lerFicheiro(file).then(function (r) {
-      var rel = r.erro ? { erro: r.erro, nome: r.nome } : P.validarImportacao(m, r.linhas);
-      rel.nome = r.nome;
-      U.imp[m.id] = rel;
-      R();
-      return rel;
-    });
-  };
   var lerJSON = function (file, cb) { var r = new FileReader(); r.onload = function () { try { cb(JSON.parse(r.result)); } catch (x) { toast('The file is not valid JSON.', 'err'); } }; r.readAsText(file); };
 
   /* --- Acoes (clique) ---------------------------------------------------- */
@@ -1663,13 +1667,7 @@
     ficPedirAbrir: function () { abrePainel('pedirFicheiro'); },
     ficPedir: function () { var c = document.getElementById('fp-obr'); var r = P.pedirFicheiro(msAtual(), val('fp-nome'), c && c.checked, u()); if (r.erro) return toast(r.erro, 'err'); U.painel = null; res(r, 'File added to the request.'); },
     ficRetirar: function (d) { res(P.retirarPedidoFicheiro(msAtual(), d.v, u()), 'File removed from the request.'); },
-    dzEscolher: function () {
-      var m = msAtual(), i = document.createElement('input');
-      i.type = 'file'; i.multiple = true; i.accept = P.ACEITA_SUPORTE; i.hidden = true;
-      document.body.appendChild(i);
-      i.addEventListener('change', function () { var l = i.files; i.remove(); juntarFila(m, l); });
-      i.click();
-    },
+    ficIrDados: function (d) { irParaDados(msAtual(), d.v); },
     dzTirar: function (d) { var m = msAtual(); U.dzFila[m.id] = filaDe(m).filter(function (x) { return x.k !== d.v; }); R(); },
     dzLimpar: function () { U.dzFila[msAtual().id] = []; R(); },
     dzEnviar: function () {
@@ -1701,9 +1699,6 @@
     schemaDesc: function () { var m = msAtual(); P.descarregar('schema-' + m.id + '.json', JSON.stringify(P.jsonSchema(m), null, 2), 'application/json'); },
     tplExcel: function () { P.templateExcel(msAtual()); },
     tplCsv: function () { P.templateCSV(msAtual()); },
-    importar: function () { var m = msAtual(); escolherFicheiro(P.ACEITA_DADOS, function (f) { P.importarFicheiroM(m, f); }); },
-    impExemplo: function () { var m = msAtual(), rel = P.validarImportacao(m, P.exemploImportacao(m)); rel.nome = 'exemplo-com-erros.xlsx'; U.imp[m.id] = rel; R(); },
-    impAplicar: function () { var m = msAtual(), rel = U.imp[m.id], n = P.aplicarImportacao(m, rel, rel.nome, u()); delete U.imp[m.id]; toast(n + ' rows applied.', 'ok'); R(); },
     anexar: function (d) { var m = msAtual(), it = P.item(d.v, P.chave(m)); escolherFicheiro('', function (f) { P.anexar(it, f.name, u()); P.evento(m, 'Evidence attached to ' + P.cat(d.v).nome + ': ' + f.name + '.', u().nome); P.guardar(); toast('Evidence attached.', 'ok'); R(); }); },
     anexarGeral: function () { var m = msAtual(), usr = u(); escolherFicheiro('', function (f) { m.documentos_gerais.push({ ficheiro: f.name, por: usr.nome, em: new Date().toISOString() }); P.evento(m, 'General document attached: ' + f.name + '.', usr.nome); P.guardar(); toast('Document attached.', 'ok'); R(); }); },
     submeter: function () {
@@ -1959,7 +1954,10 @@
       if (!z) return;
       ev2.preventDefault(); z.classList.remove('sobre');
       var m = P.ms(z.getAttribute('data-dz'));
-      if (m) juntarFila(m, ev2.dataTransfer.files);
+      if (!m) return;
+      /* Largado em cima de uma linha: entrega logo nesse pedido, sem escolher categoria */
+      if (z.hasAttribute('data-dzf')) return entregarLargados(m, z.getAttribute('data-dzf'), ev2.dataTransfer.files);
+      juntarFila(m, ev2.dataTransfer.files);
     });
     document.addEventListener('mouseover', mostrarTip);
     document.addEventListener('focusin', mostrarTip);

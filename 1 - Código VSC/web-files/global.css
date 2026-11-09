@@ -1619,13 +1619,14 @@ input[type=file]:not(.ps-fic-in)::file-selector-button:hover{background:var(--pr
 .fp-txt .fp-ent{color:var(--ok);font-weight:600;overflow-wrap:anywhere}
 .fp-fmt{font-size:11px;font-weight:600;letter-spacing:.04em;color:var(--muted)}
 .fp-ac{flex-wrap:wrap;justify-content:flex-end}
-.fp-dz{display:flex;flex-direction:column;align-items:center;gap:6px;padding:22px 16px;border:2px dashed var(--line);border-radius:14px;background:var(--bg);color:var(--muted);text-align:center;font-size:13px;cursor:pointer;transition:border-color .15s,background .15s}
-.fp-dz svg{color:var(--secondary)}
-.fp-dz b{color:var(--text);font-size:14px}
-.fp-dz .ps-btn.liga{display:inline;min-height:0;padding:0;font-weight:600}
-.fp-dz:hover{border-color:var(--secondary);background:var(--primary-50)}
-.fp-dz.sobre{border-color:var(--primary);border-style:solid;background:var(--primary-50);box-shadow:0 0 0 4px var(--primary-50)}
-.fp-fila{margin-top:14px;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+.fp-it{position:relative}
+.fp-solta{position:absolute;inset:-1px;display:none;align-items:center;justify-content:center;gap:8px;border:2px solid var(--primary);border-radius:10px;background:color-mix(in srgb,var(--primary-50) 92%,transparent);color:var(--primary);font-size:13px;font-weight:700;pointer-events:none}
+.fp-it.sobre .fp-solta{display:flex}
+.fp-card.sobre{outline:2px dashed var(--secondary);outline-offset:-6px;background:var(--primary-50)}
+.fp-dica{display:flex;align-items:center;gap:7px;margin:0}
+.fp-dica svg{flex:none;color:var(--secondary)}
+.rq2-flash{animation:rq2-flash 1.6s ease-out}
+@keyframes rq2-flash{0%,30%{box-shadow:0 0 0 3px var(--secondary);background:var(--primary-50)}100%{box-shadow:0 0 0 0 transparent}}.fp-fila{margin-top:14px;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
 .fp-fila h4{margin:0 0 8px;font-size:13px}
 .fp-fi{display:grid;grid-template-columns:auto minmax(0,1fr) minmax(180px,260px) auto;gap:10px;align-items:center;padding:7px 0;border-top:1px solid var(--line-soft)}
 .fp-fi:first-of-type{border-top:0}
@@ -1639,7 +1640,6 @@ input[type=file]:not(.ps-fic-in)::file-selector-button:hover{background:var(--pr
 .fp-disp summary{cursor:pointer;color:var(--muted);font-weight:600}
 .fp-disp ul{margin:8px 0 0;padding-left:18px;color:var(--muted);line-height:1.5}
 .fp-disp b{color:var(--text)}
-.fp-nada{margin:0 0 12px}
 .fp-outros{margin:10px 0 0}
 .rq2-nl{display:inline-flex;align-items:center;gap:2px;flex-wrap:wrap}
 .ps-info-f{color:var(--primary);opacity:1}

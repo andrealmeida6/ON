@@ -312,11 +312,11 @@
     };
   };
 
-  /* Botoes e estado na tabela de ficheiros pedidos */
+  /* Botoes e estado na tabela de ficheiros pedidos. Preencher no ecra leva a Requested data, o unico sitio onde se escrevem valores */
   P.folhaAcoes = function (m, ped, pode) {
     if (ped.indicador || !P.colunasFolha(m, ped).length) return '';
-    var st = P.estadoFolha(m, ped), viaGrelha = ped.entregues.some(function (x) { return x.origem === 'grid'; });
-    if (pode) return '<button type="button" id="fh-' + e(ped.id) + '" class="ps-btn peq' + (ped.entregues.length ? '' : ' pri') + '" data-a="fhAbrir" data-v="' + e(ped.id) + '">' + (viaGrelha ? 'Edit data' : temFolha(m, ped.id) ? 'Continue filling in' : 'Fill in here') + '</button>';
+    var viaGrelha = ped.entregues.some(function (x) { return x.origem === 'grid'; });
+    if (pode) return '<button type="button" id="fh-' + e(ped.id) + '" class="ps-btn peq pri" data-a="ficIrDados" data-v="' + e(ped.id) + '">Fill in on screen</button>';
     return viaGrelha ? '<button type="button" class="ps-btn peq" data-a="fhAbrir" data-v="' + e(ped.id) + '">View data</button>' : '';
   };
   P.folhaEstado = function (m, ped) {

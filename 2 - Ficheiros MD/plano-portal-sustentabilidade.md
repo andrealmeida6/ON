@@ -365,7 +365,7 @@ Pedido do André a 9 de novembro de 2026.
   - **Evidência de um indicador:** decisão do André: só fica dispensada quando o valor veio do sistema (`P.doSistema`: calculado da fonte e sem nenhum dado de origem escrito à mão). Se o valor foi digitado, a evidência continua obrigatória. `P.evidenciaPrecisa(m, id)` aplica esta regra na submissão, na lista, na grelha, em Evidence and quality e na Auditoria.
   - **Ficheiros pedidos à parte** pelo admin: são sempre precisos.
   - O cartão explica a regra num aviso. Os ficheiros que não são precisos ficam num "N files not needed" fechado, cada um com o motivo.
-- **Área de drag and drop:** larga-se (ou escolhe-se) vários ficheiros de uma vez. Cada um entra numa fila com um dropdown de categoria: um dos ficheiros pedidos ou "Other supporting document". A categoria é sugerida pelo nome do ficheiro (prefixo do tipo, ID ou nome do indicador; senão o primeiro ainda por entregar). Se o formato não servir para a categoria, a linha fica a vermelho. "Upload N files" entrega tudo e deixa na fila só os que falharem. Estado em `U.dzFila`, ações `dzEscolher`, `dzTirar`, `dzLimpar`, `dzEnviar` e `C.dzCat`.
+- **Área de drag and drop:** (atualizado mais abaixo, em "Uma só forma de introduzir dados") larga-se vários ficheiros de uma vez. Cada um entra numa fila com um dropdown de categoria: um dos ficheiros pedidos ou "Other supporting document". A categoria é sugerida pelo nome do ficheiro (prefixo do tipo, ID ou nome do indicador; senão o primeiro ainda por entregar). Se o formato não servir para a categoria, a linha fica a vermelho. "Upload N files" entrega tudo e deixa na fila só os que falharem. Estado em `U.dzFila`, ações `dzEscolher`, `dzTirar`, `dzLimpar`, `dzEnviar` e `C.dzCat`.
 - **Números inteiros:** `P.inteiro(c)` é verdadeiro para unidades de contagem (n.º, nº, número, number, count) ou quando o catálogo tem `inteiro: true/false`.
   - **Indicadores inteiros:** A06, A09, R02, P02, C01, P01, P05, P17, N06, N07, N08.
   - **Ficam com decimais:** A04 (clientes em milhares), C02 (NPS), P12 (horas), valores em €, toneladas e %.
@@ -375,6 +375,16 @@ Pedido do André a 9 de novembro de 2026.
   - **Linhas "Number" dos quadros do Report:** também só aceitam inteiros.
 - **Sem "ƒ":** o símbolo foi retirado de todo o lado. Nos indicadores calculados aparece um "i" (`infoFormula`) com um tooltip próprio: título "Formula" e a fórmula em letra mono. Ao expandir a linha, a definição continua a mostrar "Formula:".
 - **CSS:** secção 32 de `global.css` (`.fp-*`, `.rq2-nl`, `.ps-info-f`, `.ps-tip.form`), com versão para telemóvel.
+
+## Uma só forma de introduzir dados
+
+Pedido do André a 9 de novembro de 2026. Havia demasiadas formas de pôr dados na milestone: escrever em Requested data, puxar do sistema, o cartão Import file (com "Test with a sample file"), a área de drag and drop e a folha "Fill in here". Ficou assim:
+
+- **Valores:** entram só em **Requested data**. Ou vêm do sistema ("Pull data from system") ou são escritos no ecrã, na lista ou na grelha. A grelha aceita colar do Excel. "Request assistance" continua para pedir ajuda a alguém.
+- **Ficheiros:** entram só em **Requested files**. É um ficheiro por linha pedida, entregue por "Upload" ou largando o ficheiro em cima da linha (`data-dzf`, `entregarLargados`). Ao arrastar por cima, a linha mostra "Drop to upload as …" (`.fp-solta`). Se se largarem vários ficheiros noutro sítio do cartão, vão para a fila com o dropdown de categoria. A área tracejada grande e "choose files" (`dzEscolher`) saíram.
+- **"Fill in here" passou a "Fill in on screen"** (`ficIrDados`, `irParaDados`). Já não abre a folha mensal: vai para Requested data, muda para a vista List e abre e destaca (`.rq2-flash`) os indicadores sem valor que o ficheiro cobriria. O cursor fica no primeiro. Quem só lê continua a ver "View data" nas entregas antigas feitas pela folha.
+- **Removido:** o cartão Import file (Import file, Excel template, Test with a sample file), o relatório de importação (`relatorioImport`, `impAplicar`) e `P.importarFicheiroM`. O template Excel continua no painel técnico.
+- O aviso do cartão explica a regra: os dados entram em Requested data e só são precisos os ficheiros listados.
 
 ## O que falta para produção
 
