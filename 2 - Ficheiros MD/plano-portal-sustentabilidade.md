@@ -359,7 +359,7 @@ Pedido do André a 9 de novembro de 2026.
 
 Pedido do André a 9 de novembro de 2026.
 
-- **Requested files no topo da milestone:** o cartão `cartaoFicheiros(m)` passou para o início de Requested data. Só aparece quando há ficheiros mesmo precisos (o admin vê-o sempre, para poder pedir mais ficheiros).
+- **Requested files no topo da milestone:** o cartão `cartaoFicheiros(m)` passou para o início de Requested data. Só aparece quando há ficheiros mesmo precisos (ou ficheiros largados à espera de envio), para todos os perfis, admin incluído. Para pedir um ficheiro novo, o admin usa o botão "Request a file" na barra de Requested data, que abre um pop-up (`Pn.pedirFicheiro`) com o nome e "Required". Assim que o pedido é adicionado, o cartão aparece no topo.
 - **Quando é preciso um ficheiro** (`P.ficheirosPedidos` põe `preciso`, `porque` e `faltam` em cada ficheiro, em `portal-nucleo.js`):
   - **Ficheiro de dados:** só é preciso enquanto algum dos indicadores que cobre (pelas colunas da folha) não tiver valor. Assim que os dados chegam do sistema ou são preenchidos no ecrã, deixa de ser pedido.
   - **Evidência de um indicador:** decisão do André: só fica dispensada quando o valor veio do sistema (`P.doSistema`: calculado da fonte e sem nenhum dado de origem escrito à mão). Se o valor foi digitado, a evidência continua obrigatória. `P.evidenciaPrecisa(m, id)` aplica esta regra na submissão, na lista, na grelha, em Evidence and quality e na Auditoria.

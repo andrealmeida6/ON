@@ -660,9 +660,10 @@
     var usr = u(), pode = P.podePreencher(m, usr), gere = P.gereTudo(usr) && !P.concluida(m), fics = P.ficheirosPedidos(m);
     var precisos = fics.filter(function (f) { return f.preciso; }), dispensados = fics.filter(function (f) { return !f.preciso; }), fila = pode ? filaDe(m) : [];
     var gerais = (m.documentos_gerais || []).filter(function (d) { return !d.pedido; });
-    if (!precisos.length && !gere && !fila.length) return '';
+    /* So aparece quando ha mesmo ficheiros a carregar, para todos os perfis; o admin pede ficheiros pelo botao "Request a file" */
+    if (!precisos.length && !fila.length) return '';
     var porEntregar = precisos.filter(function (f) { return f.obrigatorio && !f.entregues.length; }).length;
-    var cab = precisos.length ? (porEntregar ? chip(porEntregar + ' to upload', 'warn') : chip('All delivered', 'ok')) : chip('None needed', 'ok');
+    var cab = '<span class="ps-sp">' + (precisos.length ? (porEntregar ? chip(porEntregar + ' to upload', 'warn') : chip('All delivered', 'ok')) : '') + '</span>';
     var nomesFaltam = function (f) {
       if (!f.faltam || !f.faltam.length) return '';
       var n = f.faltam.map(function (id) { return P.cat(id).nome; });
@@ -691,12 +692,12 @@
     var outros = gerais.length ? '<p class="ps-small ps-mut fp-outros">Other documents: ' + gerais.map(function (d) { return e(d.ficheiro); }).join(', ') + '</p>' : '';
     return '<div class="ps-card fp-card">' + cabCartao('Requested files', 'doc', cab) + '<div class="ps-card-body">' +
       '<p class="fp-regra">' + svg('<circle cx="12" cy="12" r="9.5"/><path d="M12 11v6M12 7.5v.01"/>', 16) + '<span>Upload files only when the data does not come from the system and is not filled in on screen. As soon as the indicators have a value, the file is no longer needed. Evidence is only waived when the value came from the system.</span></p>' +
-      lista + zona + filaHtml + outros + disp +
-      (gere ? '<div class="ps-form ps-mt ps-fic-novo">' + campo('fp-nome', 'Request another file', '<input id="fp-nome" class="ps-in" placeholder="Name of the requested file">') + '<label class="ps-chk"><input id="fp-obr" type="checkbox" checked> Required</label><button type="button" class="ps-btn" data-a="ficPedir">Add to the request</button></div>' : '') + '</div></div>';
+      lista + zona + filaHtml + outros + disp + '</div></div>';
   };
   var ferrDados = function (m) {
     var pode = P.podePreencher(m, u()), vs = [['form', pode ? 'List' : 'Table'], ['grid', 'Grid']], at = U.dadosVista === 'grid' ? 'grid' : 'form';
-    return '<div class="ps-sp"><div class="ps-seg" role="group" aria-label="View">' + vs.map(function (v) { return '<button type="button" class="' + (at === v[0] ? 'on' : '') + '" data-a="dadosVista" data-v="' + v[0] + '">' + v[1] + '</button>'; }).join('') + '</div><button type="button" class="ps-btn peq" data-a="dadosExcel">Export to Excel</button></div>';
+    var pedir = P.gereTudo(u()) && !P.concluida(m) ? '<button type="button" class="ps-btn peq" data-a="ficPedirAbrir">' + svg(I.upload, 14) + 'Request a file</button>' : '';
+    return '<div class="ps-sp">' + pedir + '<div class="ps-seg" role="group" aria-label="View">' + vs.map(function (v) { return '<button type="button" class="' + (at === v[0] ? 'on' : '') + '" data-a="dadosVista" data-v="' + v[0] + '">' + v[1] + '</button>'; }).join('') + '</div><button type="button" class="ps-btn peq" data-a="dadosExcel">Export to Excel</button></div>';
   };
 
   /* --- Grelha de dados ---------------------------------------------------- */
@@ -1439,6 +1440,13 @@
         campo('aj-prazo', 'Due date', '<input id="aj-prazo" class="ps-in" type="date" value="' + e(a.prazo) + '" data-c="ajPrazo">') + '</div>',
       p: '<span class="ps-sp-flex"></span><button type="button" class="ps-btn" data-a="fecharPainel">Cancel</button><button type="button" class="ps-btn pri" data-a="ajEnviar"' + (a.sel ? '' : ' disabled') + '>Send request' + (escolhido ? ' to ' + e(escolhido.nome.split(' ')[0]) : '') + '</button>' };
   };
+  Pn.pedirFicheiro = function () {
+    var m = msAtual();
+    return { t: 'Request a file', s: m.nome,
+      b: '<p class="ps-small ps-mut">Ask for a file that is not covered by the system or the screen, for example a signed declaration. It appears under Requested files at the top of the milestone until it is delivered.</p>' +
+        '<div class="ps-form">' + campo('fp-nome', 'Name of the requested file', '<input id="fp-nome" class="ps-in">') + '<label class="ps-chk"><input id="fp-obr" type="checkbox" checked> Required</label></div>',
+      p: '<span class="ps-sp-flex"></span><button type="button" class="ps-btn" data-a="fecharPainel">Cancel</button><button type="button" class="ps-btn pri" data-a="ficPedir">Add to the request</button>' };
+  };
   Pn.novoPedAud = function () {
     var apr = S.cat;
     return { t: 'New information request', b: campo('na-ind', 'Indicator', '<select id="na-ind" class="ps-sel">' + apr.map(function (c) { return opt(c.id, c.nome); }).join('') + '</select>') + campo('na-txt', 'What you need to know', '<textarea id="na-txt" class="ps-ta"></textarea>'), p: '<button type="button" class="ps-btn pri" data-a="naCriar">Send request</button>' };
@@ -1652,7 +1660,8 @@
       if (el) { el.focus({ preventScroll: true }); el.scrollIntoView({ block: 'center' }); }
     },
     ficEntregar: function (d) { var m = msAtual(), pf = P.ficheirosPedidos(m).filter(function (x) { return x.id === d.v; })[0]; escolherFicheiro(pf && pf.tipo ? P.ACEITA_DADOS : P.ACEITA_SUPORTE, function (f) { var r = P.entregarFicheiro(m, d.v, f.name, u()); if (r.erro) return toast(r.erro, 'err'); toast('File delivered.', 'ok'); R(); }); },
-    ficPedir: function () { var c = document.getElementById('fp-obr'); var r = P.pedirFicheiro(msAtual(), val('fp-nome'), c && c.checked, u()); res(r, 'File added to the request.'); },
+    ficPedirAbrir: function () { abrePainel('pedirFicheiro'); },
+    ficPedir: function () { var c = document.getElementById('fp-obr'); var r = P.pedirFicheiro(msAtual(), val('fp-nome'), c && c.checked, u()); if (r.erro) return toast(r.erro, 'err'); U.painel = null; res(r, 'File added to the request.'); },
     ficRetirar: function (d) { res(P.retirarPedidoFicheiro(msAtual(), d.v, u()), 'File removed from the request.'); },
     dzEscolher: function () {
       var m = msAtual(), i = document.createElement('input');
