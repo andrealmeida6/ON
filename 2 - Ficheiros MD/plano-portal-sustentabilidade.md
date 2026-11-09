@@ -386,6 +386,22 @@ Pedido do André a 9 de novembro de 2026. Havia demasiadas formas de pôr dados 
 - **Removido:** o cartão Import file (Import file, Excel template, Test with a sample file), o relatório de importação (`relatorioImport`, `impAplicar`) e `P.importarFicheiroM`. O template Excel continua no painel técnico.
 - O aviso do cartão explica a regra: os dados entram em Requested data e só são precisos os ficheiros listados.
 
+### Um só cartão e assistente de importação de Excel
+
+Pedido do André a 9 de novembro de 2026: juntar Requested files e Requested data no mesmo cartão e criar um assistente para importar Excel.
+
+- **Cartão único** (`#rq-dados`, `sepRecolha`) com dois separadores (`abaRecolha`, `irAba`, estado em `U.rqAba`):
+  - **Fill in on screen:** lista ou grelha de Requested data, com a contagem "N of M to fill in". Largar um Excel neste painel abre o assistente. Largar outro ficheiro manda-o para a fila de ficheiros e muda de separador.
+  - **Upload files:** é `cartaoFicheiros(m, true)`. Mostra as linhas dos ficheiros pedidos (largar em cima entrega) ou "No file is required…". Por baixo fica a zona **Other files** (`.fp-outra`, `fpOutros`), onde se põem outros documentos de suporte.
+  - "Fill in on screen" numa linha de ficheiro, os erros ao submeter e a fila de ficheiros mudam sozinhos para o separador certo.
+  - Fora da recolha (leitura ou revisão), o cartão de ficheiros continua separado como antes.
+- **Import from Excel** (`Pn.importar`, `wzAbrir`) tem 4 passos:
+  1. **Choose the file:** zona de largar ou botão. O template Excel está disponível aqui.
+  2. **Pick the columns:** escolhe-se a folha e a linha dos cabeçalhos, e clica-se na pré-visualização para dizer qual é a coluna do indicador e qual é a do valor. O assistente deteta tudo sozinho: a folha com mais correspondências, a linha de cabeçalhos, a coluna do indicador por ID ou nome e a coluna do valor pelo ano da milestone, evitando o ano anterior.
+  3. **Match the indicators:** cada indicador mostra a linha encontrada (pode-se trocar) e o estado: Ready, Check (alerta), Must be a whole number, Not a number, Empty ou Not in file. Só se incluem os que têm um valor válido. Os indicadores calculados a partir de dados de origem ficam de fora.
+  4. **Review and fill in:** mostra os valores novos, os substituídos e os que ficam iguais, os alertas e a opção "Keep file as supporting document". "Fill in N values" grava os valores com origem "import from Excel", regista o evento, muda para o separador do ecrã e destaca as linhas.
+- **CSS:** secção 33 de `global.css` (`.rq-aba*`, `.rq-pan*`, `.fp-emb`, `.fp-outra*`, `.wz-*`), com versão para telemóvel.
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.

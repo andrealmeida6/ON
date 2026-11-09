@@ -18,8 +18,9 @@
   var I = {
     tick: '<path d="M20 6L9 17l-5-5"/>', doc: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>',
     tarefa: '<path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"/>', cal: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
-    ativ: '<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>', relogio: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 2"/>', voltar: '<path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/>', upload: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><path d="M12 3v12"/>', cima: '<polyline points="18 15 12 9 6 15"/>', baixo: '<polyline points="6 9 12 15 18 9"/>', lixo: '<path d="M3 6h18M8 6V4h8v2M6 6l1 15h10l1-15"/>'
-  };
+    ativ: '<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>', relogio: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 2"/>', voltar: '<path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/>', upload: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><path d="M12 3v12"/>',     cima: '<polyline points="18 15 12 9 6 15"/>', baixo: '<polyline points="6 9 12 15 18 9"/>', lixo: '<path d="M3 6h18M8 6V4h8v2M6 6l1 15h10l1-15"/>',
+        tabela: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/>', lapis: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>', seta: '<path d="M5 12h14M13 6l6 6-6 6"/>'
+      };
 
   /* --- Componentes ------------------------------------------------------- */
   var rota = function (r) {
@@ -520,7 +521,8 @@
     var nAud = S.aud.filter(function (a) { var x = P.msDoIndicador(a.indicador_id, m.ano); return x && x.id === m.id && a.estado !== 'resolvido'; }).length;
     var nExt = S.ext.filter(function (x) { return x.milestone_id === m.id && x.estado !== 'aplicado'; }).length;
     /* Uma so pagina, pela ordem do trabalho: pedido, fontes e calculos, dados, ficheiros, exploracao, qualidade, terceiros, auditoria e conversa */
-    var secs = [['dados', decide ? 'Review' : 'Requested data', 0, cartaoFicheiros(m) + cartaoTrimestres(m) + (decide ? sepRevisao(m) : P.podePreencher(m, usr) ? sepRecolha(m) : sepLeitura(m))],
+    var recolhe = !decide && P.podePreencher(m, usr);
+    var secs = [['dados', decide ? 'Review' : 'Requested data', 0, (recolhe ? '' : cartaoFicheiros(m)) + cartaoTrimestres(m) + (decide ? sepRevisao(m) : recolhe ? sepRecolha(m) : sepLeitura(m))],
       ['evidencias', 'Evidence and quality', 0, sepEvidencias(m)], ['externos', 'Assistance requests', nExt, sepExternos(m)], ['auditoria', 'Audit', nAud, sepAuditoria(m)], ['conversa', 'Conversation and history', m.comentarios.length, (P.ext.sepConversa ? P.ext.sepConversa(m) : sepConversa(m))]];
     var indice = [['dados', secs[0][1]]].concat(secs.slice(1).map(function (s) { return [s[0], s[1], s[2]]; }));
     var tab = U.msTab[m.id] || 'trabalho', nDados = m.indicadores.filter(function (id) { return P.podeVerIndicador(P.cat(id), usr); }).length;
@@ -606,9 +608,28 @@
         : pendente ? '<div class="ps-aviso">Waiting for ' + e(pendente.entidade_externa) + ', due ' + e(P.fmtData(pendente.prazo)) + '.</div>' : '';
       return '<div class="rq2-it on ' + cls + '" id="ind-' + e(id) + '">' + linha + '<div class="rq2-det" id="rqd-' + e(id) + '"><div class="rq2-det-g' + (origem ? '' : ' um') + '">' + defin + origem + '</div>' + just + qual + ajuda + '</div></div>';
     }).join('');
-    return '<div class="ps-card" id="rq-dados">' + cabCartao('Requested data', 'tarefa', '<div class="ps-sp">' + (P.fontesAcoes ? P.fontesAcoes(m) : '') + ferrDados(m) + '</div>') +
-      (U.dadosVista === 'grid' ? corpoGrelha(m) : '<div class="rq2"><div class="rq2-cab"><button type="button" class="ps-btn liga rq2-todos" data-a="rqTodos">' + (todosAbertos ? 'Collapse all' : 'Expand all') + '</button><span>Indicator</span><span class="rq2-dir">' + e(P.rotAnterior(P.chave(m))) + '</span><span class="rq2-dir">Value ' + e(P.rotPeriodo(m)) + '</span><span class="rq2-dir">Change</span><span>Status</span></div>' + linhas + '</div>') + '</div>';
+    var vistaLista = '<div class="rq2"><div class="rq2-cab"><button type="button" class="ps-btn liga rq2-todos" data-a="rqTodos">' + (todosAbertos ? 'Collapse all' : 'Expand all') + '</button><span>Indicator</span><span class="rq2-dir">' + e(P.rotAnterior(P.chave(m))) + '</span><span class="rq2-dir">Value ' + e(P.rotPeriodo(m)) + '</span><span class="rq2-dir">Change</span><span>Status</span></div>' + linhas + '</div>';
+    /* Um so cartao: os valores entram no separador do ecra, os ficheiros no separador de upload */
+    var tab = abaRecolha(m), aberta = !P.concluida(m);
+    var porPreencher = m.indicadores.filter(function (id) { return P.item(id, P.chave(m)).valor === null; }).length;
+    var fpFalta = P.ficheirosPedidos(m).filter(function (f) { return f.preciso && f.obrigatorio && !f.entregues.length; }).length, fpTotal = P.ficheirosPedidos(m).filter(function (f) { return f.preciso; }).length;
+    var importar = aberta ? '<button type="button" class="ps-btn peq" data-a="wzAbrir">' + svg(I.tabela, 14) + 'Import from Excel</button>' : '';
+    var pedir = P.gereTudo(usr) && aberta ? '<button type="button" class="ps-btn peq" data-a="ficPedirAbrir">' + svg(I.upload, 14) + 'Request a file</button>' : '';
+    var abas = [['ecra', I.lapis, 'Fill in on screen', porPreencher ? porPreencher + ' of ' + m.indicadores.length + ' to fill in' : 'All ' + m.indicadores.length + ' filled in', porPreencher ? 'warn' : 'ok'],
+      ['fic', I.upload, 'Upload files', fpTotal ? (fpFalta ? fpFalta + ' to upload' : 'All delivered') : 'None required, other files welcome', fpFalta ? 'warn' : 'ok']];
+    var barraAbas = '<div class="rq-abas" role="tablist" aria-label="How to enter the data">' + abas.map(function (a) {
+      return '<button type="button" role="tab" id="rqa-' + a[0] + '" aria-selected="' + (tab === a[0]) + '" aria-controls="rqp-' + a[0] + '" class="rq-aba' + (tab === a[0] ? ' on' : '') + '" data-a="rqAba" data-v="' + a[0] + '"' + (a[0] === 'fic' && aberta ? ' data-dz="' + e(m.id) + '"' : '') + '>' +
+        '<span class="rq-aba-ic" aria-hidden="true">' + svg(a[1], 18) + '</span><span class="rq-aba-t"><b>' + a[2] + '</b><small class="' + a[4] + '">' + e(a[3]) + '</small></span></button>';
+    }).join('') + '</div>';
+    var painelEcra = '<div class="rq-pan" role="tabpanel" id="rqp-ecra" aria-labelledby="rqa-ecra"' + (aberta ? ' data-dzx="' + e(m.id) + '"' : '') + '>' +
+      '<div class="rq-barra"><p class="ps-small ps-mut">' + (aberta ? 'Type each value, paste from Excel in the grid, or drop an Excel file here to import it.' : 'This milestone is closed.') + '</p>' + ferrEcra(m) + '</div>' +
+      (U.dadosVista === 'grid' ? corpoGrelha(m) : vistaLista) + (aberta ? '<div class="rq-solta-x" aria-hidden="true">' + svg(I.tabela, 26) + '<b>Drop the Excel to import its values</b><small>You choose what goes where before anything is saved.</small></div>' : '') + '</div>';
+    var painelFic = '<div class="rq-pan rq-pan-fic" role="tabpanel" id="rqp-fic" aria-labelledby="rqa-fic"' + (aberta ? ' data-dz="' + e(m.id) + '"' : '') + '>' + cartaoFicheiros(m, true) + '</div>';
+    return '<div class="ps-card rq-uni" id="rq-dados">' + cabCartao('Requested data', 'tarefa', '<div class="ps-sp">' + (P.fontesAcoes ? P.fontesAcoes(m) : '') + importar + pedir + '</div>') +
+      barraAbas + (tab === 'fic' ? painelFic : painelEcra) + '</div>';
   };
+  var abaRecolha = function (m) { return (U.rqAba || {})[m.id] || 'ecra'; };
+  var irAba = function (m, aba) { U.rqAba = U.rqAba || {}; U.rqAba[m.id] = aba; };
   /* --- Na milestone do ano: o que ja foi reportado nos trimestres ------------ */
   var cartaoTrimestres = function (m) {
     if (P.trimestral(m)) return '';
@@ -651,6 +672,7 @@
       fila.push({ k: 'dz' + Date.now() + i, nome: f.name, cat: sugerirCat(m, f.name) });
     });
     if (fora.length) toast('Only Excel (.xlsx) or PDF files: ' + fora.join(', ') + ' left out.', 'err');
+    irAba(m, 'fic');
     R();
   };
   var entregarLargados = function (m, pid, files) {
@@ -667,6 +689,7 @@
   var irParaDados = function (m, pid) {
     var f = P.ficheirosPedidos(m).filter(function (x) { return x.id === pid; })[0], ids = f && f.faltam && f.faltam.length ? f.faltam : m.indicadores;
     U.dadosVista = 'form';
+    irAba(m, 'ecra');
     ids.forEach(function (id) { U.rqAberto[m.id + ':' + id] = true; });
     R();
     setTimeout(function () {
@@ -678,12 +701,13 @@
       if (inp) inp.focus({ preventScroll: true });
     }, 0);
   };
-  var cartaoFicheiros = function (m) {
+  /* embutido: corpo do separador "Upload files" dentro de Requested data, sempre com a zona para outros ficheiros */
+  var cartaoFicheiros = function (m, embutido) {
     var usr = u(), pode = P.podePreencher(m, usr), gere = P.gereTudo(usr) && !P.concluida(m), fics = P.ficheirosPedidos(m);
     var precisos = fics.filter(function (f) { return f.preciso; }), dispensados = fics.filter(function (f) { return !f.preciso; }), fila = pode ? filaDe(m) : [];
     var gerais = (m.documentos_gerais || []).filter(function (d) { return !d.pedido; });
-    /* So aparece quando ha mesmo ficheiros a carregar, para todos os perfis; o admin pede ficheiros pelo botao "Request a file" */
-    if (!precisos.length && !fila.length) return '';
+    /* Fora da recolha so aparece quando ha mesmo ficheiros a carregar; o admin pede ficheiros pelo botao "Request a file" */
+    if (!embutido && !precisos.length && !fila.length) return '';
     var porEntregar = precisos.filter(function (f) { return f.obrigatorio && !f.entregues.length; }).length;
     var cab = '<span class="ps-sp">' + (precisos.length ? (porEntregar ? chip(porEntregar + ' to upload', 'warn') : chip('All delivered', 'ok')) : '') + '</span>';
     var nomesFaltam = function (f) {
@@ -705,7 +729,7 @@
         (solta ? '<span class="fp-solta" aria-hidden="true">' + svg(I.upload, 18) + 'Drop to upload as ' + e(f.nome) + '</span>' : '') + '</li>';
     }).join('') + '</ul>' : '';
     var opcoes = function (x) { return precisos.map(function (f) { return opt(f.id, f.nome, x.cat); }).join('') + opt('geral', 'Other supporting document', x.cat); };
-    var dica = solta && precisos.length ? '<p class="ps-small ps-mut fp-dica">' + svg(I.upload, 14) + 'Drag each file onto its row, or use Upload. Several files at once? Drop them anywhere on this card and choose the category of each one.</p>' : '';
+    var dica = solta && precisos.length && !embutido ? '<p class="ps-small ps-mut fp-dica">' + svg(I.upload, 14) + 'Drag each file onto its row, or use Upload. Several files at once? Drop them anywhere on this card and choose the category of each one.</p>' : '';
     var filaHtml = fila.length ? '<div class="fp-fila" aria-label="Files to upload"><h4>To upload (' + fila.length + ')</h4>' + fila.map(function (x) {
       var alvo = precisos.filter(function (f) { return f.id === x.cat; })[0], mau = formatosFic(alvo).indexOf(extDe(x.nome)) < 0;
       return '<div class="fp-fi' + (mau ? ' erro' : '') + '"><span class="fp-ic" aria-hidden="true">' + svg(I.doc, 16) + '</span><span class="fp-fn" title="' + e(x.nome) + '">' + e(x.nome) + (mau ? '<small>This category accepts ' + e(formatosFic(alvo).join(', ').toUpperCase()) + ' only.</small>' : '') + '</span>' +
@@ -714,6 +738,13 @@
     }).join('') + '<div class="fp-fila-p"><button type="button" class="ps-btn" data-a="dzLimpar">Clear</button><button type="button" class="ps-btn pri" data-a="dzEnviar">Upload ' + fila.length + ' file' + (fila.length === 1 ? '' : 's') + '</button></div></div>' : '';
     var disp = dispensados.length ? '<details class="fp-disp"><summary>' + dispensados.length + ' file' + (dispensados.length === 1 ? '' : 's') + ' not needed</summary><ul>' + dispensados.map(function (f) { return '<li><b>' + e(f.nome) + '</b> ' + e(f.porque) + '</li>'; }).join('') + '</ul></details>' : '';
     var outros = gerais.length ? '<p class="ps-small ps-mut fp-outros">Other documents: ' + gerais.map(function (d) { return e(d.ficheiro); }).join(', ') + '</p>' : '';
+    if (embutido) {
+      var titulo = precisos.length ? '<div class="fp-tit"><h3>Requested files</h3>' + cab + '</div>' +
+        (solta ? '<p class="ps-small ps-mut fp-dica">' + svg(I.upload, 14) + 'Drag each file onto its row, or use Upload.</p>' : '') : '<p class="fp-zero">' + svg(I.tick, 16) + 'No file is required for this milestone. The data goes in on screen.</p>';
+      var zona = solta ? '<div class="fp-outra" data-dz="' + e(m.id) + '"><span class="fp-outra-ic" aria-hidden="true">' + svg(I.upload, 22) + '</span><span class="fp-outra-t"><b>Other files</b><small>Drop any other supporting document here, for example a signed declaration or an invoice. Excel or PDF.</small></span>' +
+        '<button type="button" class="ps-btn" data-a="fpOutros">Choose files</button></div>' : '';
+      return '<div class="fp-emb">' + titulo + lista + zona + filaHtml + outros + disp + '</div>';
+    }
     return '<div class="ps-card fp-card"' + (solta ? ' data-dz="' + e(m.id) + '"' : '') + '>' + cabCartao('Requested files', 'doc', cab) + '<div class="ps-card-body">' +
       '<p class="fp-regra">' + svg('<circle cx="12" cy="12" r="9.5"/><path d="M12 11v6M12 7.5v.01"/>', 16) + '<span>Data goes in under <b>Requested data</b>: it comes from the system or is typed in on screen. Only the files below are needed: data the system could not provide, evidence for values typed in, and files the team asked for. A data file stops being needed once its indicators have a value.</span></p>' +
       lista + dica + filaHtml + outros + disp + '</div></div>';
@@ -722,6 +753,10 @@
     var pode = P.podePreencher(m, u()), vs = [['form', pode ? 'List' : 'Table'], ['grid', 'Grid']], at = U.dadosVista === 'grid' ? 'grid' : 'form';
     var pedir = P.gereTudo(u()) && !P.concluida(m) ? '<button type="button" class="ps-btn peq" data-a="ficPedirAbrir">' + svg(I.upload, 14) + 'Request a file</button>' : '';
     return '<div class="ps-sp">' + pedir + '<div class="ps-seg" role="group" aria-label="View">' + vs.map(function (v) { return '<button type="button" class="' + (at === v[0] ? 'on' : '') + '" data-a="dadosVista" data-v="' + v[0] + '">' + v[1] + '</button>'; }).join('') + '</div><button type="button" class="ps-btn peq" data-a="dadosExcel">Export to Excel</button></div>';
+  };
+  var ferrEcra = function (m) {
+    var at = U.dadosVista === 'grid' ? 'grid' : 'form';
+    return '<div class="ps-sp"><div class="ps-seg" role="group" aria-label="View">' + [['form', 'List'], ['grid', 'Grid']].map(function (v) { return '<button type="button" class="' + (at === v[0] ? 'on' : '') + '" data-a="dadosVista" data-v="' + v[0] + '">' + v[1] + '</button>'; }).join('') + '</div><button type="button" class="ps-btn peq" data-a="dadosExcel">Export to Excel</button></div>';
   };
 
   /* --- Grelha de dados ---------------------------------------------------- */
@@ -1460,6 +1495,188 @@
         '<div class="ps-form">' + campo('fp-nome', 'Name of the requested file', '<input id="fp-nome" class="ps-in">') + '<label class="ps-chk"><input id="fp-obr" type="checkbox" checked> Required</label></div>',
       p: '<span class="ps-sp-flex"></span><button type="button" class="ps-btn" data-a="fecharPainel">Cancel</button><button type="button" class="ps-btn pri" data-a="ficPedir">Add to the request</button>' };
   };
+  /* --- Importar Excel: assistente em quatro passos ---------------------------
+     Le o Excel no browser, deixa escolher a folha e as colunas, liga cada indicador a uma linha e so grava no fim. */
+  var WZ_PASSOS = ['Choose the file', 'Pick the columns', 'Match the indicators', 'Review and fill in'];
+  var wzNovo = function (m) { return { ms: m.id, passo: 1, nome: '', folhas: [], f: 0, cab: -1, colId: -1, colVal: -1, papel: 'id', mapa: {}, incl: {}, guardar: true, aLer: false, erro: '' }; };
+  var wzEsc = function (s) { return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); };
+  var wzLetra = function (i) { var s = ''; i++; while (i) { var r = (i - 1) % 26; s = String.fromCharCode(65 + r) + s; i = Math.floor((i - 1) / 26); } return s; };
+  var wzNum = function (v) { if (typeof v === 'number') return isFinite(v) ? Math.round(v * 1e10) / 1e10 : null; var s = P.limparColado(v); return s === '' ? null : P.lerNumero(s); };
+  var wzCel = function (v) { return v === undefined || v === null ? '' : typeof v === 'number' ? P.fmtNum(v, Math.min(2, (String(v).split('.')[1] || '').length)) : String(v); };
+  var wzFolha = function (w) { return w.folhas[w.f] || { nome: '', mat: [] }; };
+  var wzNCols = function (w) { return Math.min(20, wzFolha(w).mat.reduce(function (a, l) { return Math.max(a, l.length); }, 0)); };
+  var wzLinhas = function (w) { return wzFolha(w).mat.map(function (l, i) { return { i: i, l: l }; }).slice(w.cab + 1).filter(function (x) { return x.l.some(function (c) { return String(c).trim(); }); }); };
+  /* Os calculados a partir das fontes nao se importam: o valor vem das fontes */
+  var wzIds = function (m) {
+    var calcs = P.calculosMilestone ? P.calculosMilestone(m) : [];
+    return m.indicadores.filter(function (id) { var it = P.item(id, P.chave(m)), c = calcs.filter(function (r) { return r.id === id; })[0]; return !(c && c.x && c.valor !== null && it.daFonte); });
+  };
+  /* Reconhece o indicador pelo ID ou pelo nome, mesmo dentro de um texto maior ("A01 - Employees") */
+  var wzAchar = function (txt, ids) {
+    var k = norm(txt);
+    if (!k || k.length > 160) return null;
+    var x = ids.filter(function (id) { return norm(id) === k || norm(P.cat(id).nome) === k; })[0];
+    if (x) return x;
+    x = ids.filter(function (id) { return new RegExp('(^|[^a-z0-9])' + wzEsc(norm(id)) + '([^a-z0-9]|$)').test(k); })[0];
+    if (x) return x;
+    return ids.filter(function (id) { var n = norm(P.cat(id).nome); return n.length > 5 && (k.indexOf(n) > -1 || (k.length > 8 && n.indexOf(k) > -1)); })[0] || null;
+  };
+  var wzValor = function (w, id) { var r = w.mapa[id]; if (r === undefined || w.colVal < 0) return undefined; return (wzFolha(w).mat[r] || [])[w.colVal]; };
+  var wzCheck = function (w, m, id) {
+    var bruto = wzValor(w, id), c = P.cat(id);
+    if (w.mapa[id] === undefined) return { ok: false, txt: 'Not in the file', cls: '' };
+    if (bruto === undefined || String(bruto).trim() === '') return { ok: false, txt: 'Empty cell', cls: 'warn' };
+    var n = wzNum(bruto);
+    if (n === null) return { ok: false, txt: 'Not a number', cls: 'err' };
+    if (P.inteiro(c) && Math.round(n) !== n) return { ok: false, n: n, txt: 'Must be a whole number', cls: 'err' };
+    var v = P.validar(c, n, P.chave(m));
+    if (v.erros.length) return { ok: false, n: n, txt: v.erros[0], cls: 'err' };
+    return { ok: true, n: n, alerta: v.alertas[0] || '', cls: v.alertas.length ? 'warn' : 'ok', txt: v.alertas.length ? 'Check' : 'Ready' };
+  };
+  var wzMapear = function (w, m) {
+    var ids = wzIds(m);
+    w.mapa = {}; w.incl = {};
+    if (w.colId < 0) return;
+    /* Se a coluna escolhida nao tiver o indicador, procura-o nos outros textos da linha */
+    wzLinhas(w).forEach(function (x) {
+      var id = wzAchar(x.l[w.colId], ids);
+      if (!id) x.l.forEach(function (cel, i) { if (!id && i !== w.colVal && typeof cel === 'string' && wzNum(cel) === null) id = wzAchar(cel, ids); });
+      if (id && w.mapa[id] === undefined) w.mapa[id] = x.i;
+    });
+    ids.forEach(function (id) { w.incl[id] = wzCheck(w, m, id).ok; });
+  };
+  var wzColunas = function (w, m) {
+    var ids = wzIds(m), linhas = wzLinhas(w), nc = wzNCols(w), cab = w.cab > -1 ? wzFolha(w).mat[w.cab] : [], hits = [], nums = [], c;
+    for (c = 0; c < nc; c++) {
+      hits[c] = linhas.filter(function (x) { return wzAchar(x.l[c], ids); }).length;
+      var cheias = linhas.filter(function (x) { return String(x.l[c] === undefined ? '' : x.l[c]).trim(); });
+      nums[c] = cheias.length ? cheias.filter(function (x) { return wzNum(x.l[c]) !== null; }).length / cheias.length : 0;
+    }
+    w.colId = -1;
+    hits.forEach(function (h, i) { if (h && (w.colId < 0 || h > hits[w.colId])) w.colId = i; });
+    /* O valor: a coluna com o ano do periodo ou "Value" no cabecalho, depois a primeira coluna com numeros a direita */
+    var pontos = function (h) { var k = norm(h); if (!k) return 0; return (k.indexOf(String(m.ano)) > -1 ? 2 : 0) + (/(^|\s)(value|valor)(\s|$)/.test(k) ? 1 : 0) - (k.indexOf(String(m.ano - 1)) > -1 ? 3 : 0); };
+    w.colVal = -1;
+    var melhor = 0;
+    for (c = 0; c < nc; c++) if (c !== w.colId && nums[c] >= 0.5 && pontos(cab[c]) > melhor) { melhor = pontos(cab[c]); w.colVal = c; }
+    for (c = w.colId + 1; c < nc && w.colVal < 0; c++) if (nums[c] >= 0.5) w.colVal = c;
+    for (c = 0; c < nc && w.colVal < 0; c++) if (c !== w.colId && nums[c] >= 0.5) w.colVal = c;
+    w.papel = w.colId < 0 ? 'id' : 'val';
+    wzMapear(w, m);
+  };
+  var wzDetetar = function (w, m) {
+    var mat = wzFolha(w).mat, ids = wzIds(m);
+    w.cab = -1;
+    for (var r = 0; r < Math.min(10, mat.length); r++) {
+      if (mat[r].some(function (c) { return wzAchar(c, ids); })) break;
+      if (mat[r].filter(function (c) { return typeof c === 'string' && c.trim() && wzNum(c) === null; }).length >= 2) { w.cab = r; break; }
+    }
+    wzColunas(w, m);
+  };
+  var wzLer = function (file) {
+    var w = U.wiz, m = P.ms(w.ms);
+    if (['xlsx', 'xls', 'csv'].indexOf(extDe(file.name)) < 0) { w.erro = file.name + ' is not an Excel file. Use .xlsx, .xls or .csv.'; return R(); }
+    if (!window.XLSX) { w.erro = 'The Excel library did not load.'; return R(); }
+    w.erro = ''; w.aLer = true; R();
+    var r = new FileReader();
+    r.onerror = function () { w.aLer = false; w.erro = 'The file could not be read.'; R(); };
+    r.onload = function () {
+      try {
+        var wb = window.XLSX.read(new Uint8Array(r.result), { type: 'array' });
+        w.folhas = wb.SheetNames.map(function (n) { return { nome: n, mat: window.XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1, defval: '', raw: true, blankrows: true }).slice(0, 500) }; }).filter(function (f) { return f.mat.length; });
+        w.aLer = false;
+        if (!w.folhas.length) { w.erro = 'The file has no data.'; return R(); }
+        w.nome = file.name;
+        /* Abre na folha onde se reconhecem mais indicadores */
+        var ids = wzIds(m), max = -1;
+        w.folhas.forEach(function (f, i) { var n = f.mat.filter(function (l) { return l.some(function (c) { return wzAchar(c, ids); }); }).length; if (n > max) { max = n; w.f = i; } });
+        wzDetetar(w, m);
+        w.passo = 2;
+        R();
+      } catch (x) { w.aLer = false; w.erro = 'The file could not be read: ' + x.message; R(); }
+    };
+    r.readAsArrayBuffer(file);
+  };
+  var wzAbrir = function (m, file) { U.wiz = wzNovo(m); abrePainel('importar'); if (file) wzLer(file); };
+  Pn.importar = function () {
+    var w = U.wiz, m = P.ms(w.ms), ids = wzIds(m), b = '', p = '';
+    var passos = '<ol class="wz-passos">' + WZ_PASSOS.map(function (t, i) {
+      var n = i + 1;
+      return '<li class="' + (n < w.passo ? 'feito' : n === w.passo ? 'on' : '') + '"' + (n === w.passo ? ' aria-current="step"' : '') + '><span class="wz-n">' + (n < w.passo ? svg(I.tick, 13) : n) + '</span><span class="wz-pt">' + t + '</span></li>';
+    }).join('') + '</ol>';
+    var voltar = '<button type="button" class="ps-btn" data-a="wzPasso" data-v="' + (w.passo - 1) + '">Back</button><span class="ps-sp-flex"></span>';
+    if (w.passo === 1) {
+      b = '<div class="wz-drop' + (w.aLer ? ' aler' : '') + '" data-dzx="' + e(m.id) + '"><span class="wz-drop-ic" aria-hidden="true">' + svg(I.tabela, 30) + '</span>' +
+        '<b>' + (w.aLer ? 'Reading the file...' : 'Drop your Excel file here') + '</b><span class="ps-small ps-mut">or</span><button type="button" class="ps-btn pri" data-a="wzEscolher">' + svg(I.upload, 14) + 'Choose a file</button>' +
+        '<small>XLSX, XLS or CSV. Any layout with one row per indicator works.</small></div>' + (w.erro ? '<div class="ps-aviso err" role="alert">' + e(w.erro) + '</div>' : '') +
+        '<ol class="wz-como">' + [[I.tabela, 'Pick the columns', 'Show where the indicators and the values are.'], [I.seta, 'Match the indicators', 'They are matched for you. Fix any that are wrong.'], [I.tick, 'Review and fill in', 'Nothing is saved until you confirm.']].map(function (x) {
+          return '<li><span aria-hidden="true">' + svg(x[0], 18) + '</span><b>' + x[1] + '</b><small>' + x[2] + '</small></li>';
+        }).join('') + '</ol>' +
+        '<p class="ps-small ps-mut wz-tpl">No file yet? <button type="button" class="ps-btn liga" data-a="tplExcel">Download a template with these indicators</button></p>';
+      p = '<span class="ps-sp-flex"></span><button type="button" class="ps-btn" data-a="fecharPainel">Cancel</button>';
+    } else if (w.passo === 2) {
+      var f = wzFolha(w), mat = f.mat, nc = wzNCols(w), cols = [], achadas = Object.keys(w.mapa).length, porLinha = {};
+      for (var c = 0; c < nc; c++) cols.push(c);
+      Object.keys(w.mapa).forEach(function (id) { porLinha[w.mapa[id]] = id; });
+      var nomeCol = function (i) { var h = w.cab > -1 ? String(mat[w.cab][i] === undefined ? '' : mat[w.cab][i]).trim() : ''; return 'Column ' + wzLetra(i) + (h ? ', ' + h : ''); };
+      var clsCol = function (i) { return i === w.colId ? 'wz-cid' : i === w.colVal ? 'wz-cval' : ''; };
+      var papelTxt = w.papel === 'id' ? 'indicator' : 'value';
+      var folhas = w.folhas.length > 1 ? '<div class="wz-folhas"><span class="ps-lab">Sheet</span><div class="ps-seg" role="group" aria-label="Sheet">' + w.folhas.map(function (x, i) { return '<button type="button" class="' + (i === w.f ? 'on' : '') + '" data-a="wzFolha" data-v="' + i + '">' + e(x.nome) + '</button>'; }).join('') + '</div></div>' : '';
+      var papeis = '<div class="wz-papeis">' + [['id', 1, 'Column with the indicators', 'Names or IDs, for example ' + P.cat(m.indicadores[0]).nome, w.colId], ['val', 2, 'Column with the values', 'The ' + P.rotPeriodo(m) + ' figures', w.colVal]].map(function (x) {
+        return '<button type="button" class="wz-papel wz-p-' + x[0] + (w.papel === x[0] ? ' on' : '') + (x[4] > -1 ? ' feito' : '') + '" data-a="wzPapel" data-v="' + x[0] + '" aria-pressed="' + (w.papel === x[0]) + '"><span class="wz-n">' + (x[4] > -1 ? svg(I.tick, 13) : x[1]) + '</span><span class="wz-pt"><b>' + x[2] + '</b><small>' + e(x[4] > -1 ? nomeCol(x[4]) : x[3]) + '</small></span></button>';
+      }).join('') + '</div>';
+      var th = '<tr><th class="wz-rn" scope="col"><span class="ps-sr">Row</span></th>' + cols.map(function (i) {
+        return '<th scope="col" class="' + clsCol(i) + '"><button type="button" class="wz-colb" data-a="wzCol" data-v="' + i + '" aria-label="Use column ' + wzLetra(i) + ' as the ' + papelTxt + ' column">' + wzLetra(i) + (i === w.colId ? '<em>Indicators</em>' : i === w.colVal ? '<em>Values</em>' : '') + '</button></th>';
+      }).join('') + '</tr>';
+      var corpo = mat.slice(0, 15).map(function (l, r) {
+        var ok = porLinha[r] !== undefined;
+        return '<tr class="' + (r === w.cab ? 'wz-hd' : ok ? 'wz-ok' : '') + '"><th scope="row" class="wz-rn">' + (ok ? svg(I.tick, 11) : '') + (r + 1) + '</th>' + cols.map(function (i) {
+          return '<td class="' + clsCol(i) + (typeof l[i] === 'number' ? ' ps-num' : '') + '" data-a="wzCol" data-v="' + i + '">' + e(wzCel(l[i])) + '</td>';
+        }).join('') + '</tr>';
+      }).join('');
+      b = folhas + papeis +
+        '<div class="wz-prev-cab"><p class="wz-dica">' + svg('<circle cx="12" cy="12" r="9.5"/><path d="M12 11v6M12 7.5v.01"/>', 15) + '<span>Click any column to use it as the <b>' + papelTxt + '</b> column.</span></p>' +
+        '<label class="wz-cab" for="wz-cab">Headings in <select id="wz-cab" class="ps-sel" data-c="wzCab">' + opt('-1', 'No headings', String(w.cab)) + mat.slice(0, 10).map(function (l, i) { return opt(String(i), 'Row ' + (i + 1), String(w.cab)); }).join('') + '</select></label></div>' +
+        '<div class="wz-prev" tabindex="0" role="region" aria-label="Preview of the sheet ' + e(f.nome) + '"><table class="wz-t"><thead>' + th + '</thead><tbody>' + corpo + '</tbody></table></div>' +
+        '<p class="wz-res ' + (achadas ? 'ok' : 'warn') + '">' + svg(achadas ? I.tick : '<circle cx="12" cy="12" r="9.5"/><path d="M12 8v5M12 16.5v.01"/>', 15) + (w.colId < 0 ? 'Choose the column with the indicators.' : achadas + ' of ' + ids.length + ' indicators recognised in this sheet' + (w.colVal < 0 ? '. Now choose the column with the values.' : '.')) + (mat.length > 15 ? ' <span class="ps-mut">Preview of the first 15 of ' + mat.length + ' rows.</span>' : '') + '</p>';
+      p = voltar + '<button type="button" class="ps-btn pri" data-a="wzPasso" data-v="3"' + (w.colId > -1 && w.colVal > -1 ? '' : ' disabled') + '>Next: match the indicators</button>';
+    } else if (w.passo === 3) {
+      var linhas = wzLinhas(w), feitas = ids.filter(function (id) { return w.mapa[id] !== undefined; }).length, sel = ids.filter(function (id) { return w.incl[id]; }).length;
+      var opcoes = function (id) {
+        return '<option value="-1">Not in the file</option>' + linhas.map(function (x) {
+          var t = String(x.l[w.colId] === undefined ? '' : x.l[w.colId]).trim() || String(x.l.filter(function (cel, i) { return i !== w.colVal && typeof cel === 'string' && cel.trim(); })[0] || '(empty)').trim(), v = x.l[w.colVal];
+          return '<option value="' + x.i + '"' + (w.mapa[id] === x.i ? ' selected' : '') + '>Row ' + (x.i + 1) + ': ' + e(t.slice(0, 48)) + (String(v === undefined ? '' : v).trim() !== '' ? ' (' + e(wzCel(v)) + ')' : '') + '</option>';
+        }).join('');
+      };
+      var lista = ids.map(function (id) {
+        var c = P.cat(id), ch = wzCheck(w, m, id);
+        return '<div class="wz-m' + (w.incl[id] ? ' on' : '') + (w.mapa[id] === undefined ? ' fora' : '') + '"><input type="checkbox" class="wz-chk" id="wzi-' + e(id) + '" data-c="wzIncl" data-id="' + e(id) + '"' + (w.incl[id] ? ' checked' : '') + (ch.ok ? '' : ' disabled') + '>' +
+          '<label class="wz-mi" for="wzi-' + e(id) + '"><b>' + e(c.nome) + '</b><small>' + e(id) + ', ' + e(c.unidade_medida) + (P.inteiro(c) ? ', whole number' : '') + '</small></label>' +
+          '<span class="wz-seta" aria-hidden="true">' + svg(I.seta, 16) + '</span>' +
+          '<select class="ps-sel wz-sel" data-c="wzLinha" data-id="' + e(id) + '" aria-label="Row of the file for ' + e(c.nome) + '">' + opcoes(id) + '</select>' +
+          '<div class="wz-mv"><b class="ps-num">' + (ch.ok ? e(fmtV(id, ch.n)) : w.mapa[id] !== undefined && String(wzValor(w, id) === undefined ? '' : wzValor(w, id)).trim() !== '' ? e(wzCel(wzValor(w, id))) : '-') + '</b><span class="wz-st ' + ch.cls + '"' + (ch.alerta ? ' data-tip="' + e(ch.alerta) + '" tabindex="0"' : '') + '>' + e(ch.txt) + '</span></div></div>';
+      }).join('');
+      var fora = m.indicadores.length - ids.length;
+      b = '<div class="wz-prog"><div class="ps-sp-b"><span><b>' + feitas + ' of ' + ids.length + '</b> indicators matched to ' + e(w.nome) + '</span><span class="ps-sp"><button type="button" class="ps-btn liga" data-a="wzTodos">Select all ready</button><button type="button" class="ps-btn liga" data-a="wzNenhum">Clear</button></span></div>' +
+        '<progress class="wz-pr" max="' + ids.length + '" value="' + feitas + '" aria-label="Indicators matched"></progress></div>' +
+        '<div class="wz-ml">' + lista + '</div>' + (fora ? '<p class="ps-small ps-mut">' + fora + ' indicator' + (fora === 1 ? ' is' : 's are') + ' calculated from the source data and ' + (fora === 1 ? 'is' : 'are') + ' not imported.</p>' : '');
+      p = voltar + '<button type="button" class="ps-btn pri" data-a="wzPasso" data-v="4"' + (sel ? '' : ' disabled') + '>Next: review ' + sel + ' value' + (sel === 1 ? '' : 's') + '</button>';
+    } else {
+      var esc = ids.filter(function (id) { return w.incl[id] && wzCheck(w, m, id).ok; }), novos = 0, subst = 0, iguais = 0, alertas = 0;
+      var tab = tabela([{ t: 'Indicator' }, { t: 'Now', dir: 1 }, { t: 'From the file', dir: 1 }, { t: '' }], esc.map(function (id) {
+        var c = P.cat(id), it = P.item(id, P.chave(m)), ch = wzCheck(w, m, id), atual = it.valor;
+        if (atual === null) novos++; else if (atual === ch.n) iguais++; else subst++;
+        if (ch.alerta) alertas++;
+        return [e(c.nome) + '<br><small class="ps-mut">' + e(id) + ', ' + e(c.unidade_medida) + '</small>', atual === null ? '<span class="ps-mut">Empty</span>' : '<span class="ps-num' + (atual !== ch.n ? ' wz-velho' : '') + '">' + e(fmtV(id, atual)) + '</span>',
+          '<b class="ps-num">' + e(fmtV(id, ch.n)) + '</b>', atual === null ? chip('New', 'ok') : atual === ch.n ? chip('Same') : chip('Replaces', 'warn')];
+      }));
+      b = '<div class="wz-kpis"><div class="wz-k ok"><b>' + novos + '</b><span>New values</span></div><div class="wz-k warn"><b>' + subst + '</b><span>Values replaced</span></div><div class="wz-k"><b>' + iguais + '</b><span>Unchanged</span></div></div>' +
+        (alertas ? '<div class="ps-aviso warn">' + alertas + ' value' + (alertas === 1 ? ' differs' : 's differ') + ' a lot from last year. After importing, add a justification on screen.</div>' : '') + tab +
+        '<label class="ps-chk wz-guardar"><input type="checkbox" data-c="wzGuardar"' + (w.guardar ? ' checked' : '') + '> Keep ' + e(w.nome) + ' as a supporting document of this milestone</label>';
+      p = voltar + '<button type="button" class="ps-btn pri" data-a="wzAplicar"' + (esc.length ? '' : ' disabled') + '>' + svg(I.tick, 14) + 'Fill in ' + esc.length + ' value' + (esc.length === 1 ? '' : 's') + '</button>';
+    }
+    return { t: 'Import from Excel', s: m.nome + ', ' + P.rotPeriodo(m), largo: true, cls: 'alto wz', b: passos + '<div class="wz-corpo">' + b + '</div>', p: p };
+  };
   Pn.novoPedAud = function () {
     var apr = S.cat;
     return { t: 'New information request', b: campo('na-ind', 'Indicator', '<select id="na-ind" class="ps-sel">' + apr.map(function (c) { return opt(c.id, c.nome); }).join('') + '</select>') + campo('na-txt', 'What you need to know', '<textarea id="na-txt" class="ps-ta"></textarea>'), p: '<button type="button" class="ps-btn pri" data-a="naCriar">Send request</button>' };
@@ -1658,6 +1875,7 @@
     colRelFechar: function () { delete U.colRel[msAtual().id]; R(); },
     irFalta: function (d) {
       if (d.campo !== 'fic' && d.campo !== 'evi') U.dadosVista = 'form';
+      irAba(msAtual(), d.campo === 'fic' || d.campo === 'evi' ? 'fic' : 'ecra');
       if (d.campo === 'just' || d.campo === 'met') U.rqAberto[msAtual().id + ':' + d.id] = true;
       R();
       var el = document.getElementById({ val: 'v-', just: 'j-', met: 'm-', evi: 'fp-ev:', fic: 'fp-' }[d.campo] + d.id);
@@ -1668,6 +1886,43 @@
     ficPedir: function () { var c = document.getElementById('fp-obr'); var r = P.pedirFicheiro(msAtual(), val('fp-nome'), c && c.checked, u()); if (r.erro) return toast(r.erro, 'err'); U.painel = null; res(r, 'File added to the request.'); },
     ficRetirar: function (d) { res(P.retirarPedidoFicheiro(msAtual(), d.v, u()), 'File removed from the request.'); },
     ficIrDados: function (d) { irParaDados(msAtual(), d.v); },
+    rqAba: function (d) { irAba(msAtual(), d.v); R(); },
+    fpOutros: function () {
+      var m = msAtual(), i = document.createElement('input');
+      i.type = 'file'; i.multiple = true; i.accept = '.xlsx,.pdf'; i.hidden = true;
+      document.body.appendChild(i);
+      i.addEventListener('change', function () { var fs = i.files; i.remove(); if (fs && fs.length) juntarFila(m, fs); });
+      i.click();
+    },
+    wzAbrir: function () { wzAbrir(msAtual()); },
+    wzEscolher: function () { escolherFicheiro('.xlsx,.xls,.csv', wzLer); },
+    wzPasso: function (d) { var w = U.wiz, n = +d.v; if (n < 1) return; w.passo = n; R(); },
+    wzFolha: function (d) { var w = U.wiz; w.f = +d.v; wzDetetar(w, P.ms(w.ms)); R(); },
+    wzPapel: function (d) { U.wiz.papel = d.v; R(); },
+    wzCol: function (d) {
+      var w = U.wiz, c = +d.v;
+      if (w.papel === 'id') { w.colId = c; if (w.colVal === c) w.colVal = -1; if (w.colVal < 0) w.papel = 'val'; } else { w.colVal = c; if (w.colId === c) { w.colId = -1; w.papel = 'id'; } }
+      wzMapear(w, P.ms(w.ms)); R();
+    },
+    wzTodos: function () { var w = U.wiz, m = P.ms(w.ms); wzIds(m).forEach(function (id) { w.incl[id] = wzCheck(w, m, id).ok; }); R(); },
+    wzNenhum: function () { U.wiz.incl = {}; R(); },
+    wzAplicar: function () {
+      var w = U.wiz, m = P.ms(w.ms), usr = u();
+      if (!P.podePreencher(m, usr)) return toast('This milestone is not with you right now.', 'err');
+      var ids = wzIds(m).filter(function (id) { return w.incl[id] && wzCheck(w, m, id).ok; });
+      ids.forEach(function (id) { P.gravarValor(m, id, String(wzCheck(w, m, id).n), usr, 'import from Excel'); });
+      P.evento(m, ids.length + ' value' + (ids.length === 1 ? '' : 's') + ' imported from ' + w.nome + '.', usr.nome);
+      if (w.guardar) m.documentos_gerais.push({ ficheiro: w.nome, por: usr.nome, em: new Date().toISOString() });
+      P.guardar();
+      U.wiz = null; U.painel = null; U.dadosVista = 'form'; irAba(m, 'ecra');
+      toast(ids.length + ' value' + (ids.length === 1 ? '' : 's') + ' filled in from ' + w.nome + '.', 'ok');
+      R();
+      setTimeout(function () {
+        var l0 = ids.length && document.getElementById('ind-' + ids[0]);
+        if (l0) l0.scrollIntoView({ block: 'center' });
+        ids.forEach(function (id) { var l = document.getElementById('ind-' + id); if (l) { l.classList.remove('rq2-flash'); void l.offsetWidth; l.classList.add('rq2-flash'); } });
+      }, 0);
+    },
     dzTirar: function (d) { var m = msAtual(); U.dzFila[m.id] = filaDe(m).filter(function (x) { return x.k !== d.v; }); R(); },
     dzLimpar: function () { U.dzFila[msAtual().id] = []; R(); },
     dzEnviar: function () {
@@ -1707,7 +1962,7 @@
       if (r.faltas) {
         toast(r.faltas.length === 1 ? r.faltas[0].msg : r.faltas.length + ' items missing. ' + r.faltas[0].msg, 'err');
         var f = r.faltas[0];
-        if (f.campo !== 'fic') { U.dadosVista = 'form'; if (f.campo !== 'val') U.rqAberto[m.id + ':' + f.id] = true; R(); }
+        if (f.campo !== 'fic') { U.dadosVista = 'form'; irAba(m, 'ecra'); if (f.campo !== 'val') U.rqAberto[m.id + ':' + f.id] = true; R(); } else { irAba(m, 'fic'); R(); }
         var el = document.getElementById({ val: 'v-', just: 'j-', met: 'm-', evi: 'e-', fic: 'fp-' }[f.campo] + f.id);
         if (el) el.focus();
         return;
@@ -1791,6 +2046,10 @@
   var C = {
     valor: function (el) { var m = msAtual(); P.gravarValor(m, el.dataset.id, el.value, u()); },
     dzCat: function (el) { var x = filaDe(msAtual()).filter(function (y) { return y.k === el.dataset.id; })[0]; if (x) x.cat = el.value; },
+    wzCab: function (el) { var w = U.wiz; w.cab = +el.value; wzMapear(w, P.ms(w.ms)); },
+    wzLinha: function (el) { var w = U.wiz, m = P.ms(w.ms), id = el.dataset.id, r = +el.value; if (r < 0) delete w.mapa[id]; else w.mapa[id] = r; w.incl[id] = wzCheck(w, m, id).ok; },
+    wzIncl: function (el) { U.wiz.incl[el.dataset.id] = el.checked; },
+    wzGuardar: function (el) { U.wiz.guardar = el.checked; },
     just: function (el) { P.item(el.dataset.id, P.chave(msAtual())).justificacao = el.value; P.guardar(); },
     qual: function (el) { var it = P.item(el.dataset.id, P.chave(msAtual())); it.qualidade = el.value; if (el.value !== 'estimado') it.metodo = ''; P.guardar(); },
     metodo: function (el) { P.item(el.dataset.id, P.chave(msAtual())).metodo = el.value; P.guardar(); },
@@ -1946,18 +2205,24 @@
       if ((ev2.key === ',' || ev2.key === '.') && ev2.target.closest && ev2.target.closest('[data-int]')) { ev2.preventDefault(); toast('Whole numbers only for this indicator.', 'err'); }
     });
     /* Area de ficheiros: largar ficheiros em cima junta-os a lista para escolher a categoria */
-    var zonaDe = function (ev2) { return ev2.target.closest && ev2.target.closest('[data-dz]'); };
+    var zonaDe = function (ev2) { return ev2.target.closest && ev2.target.closest('[data-dz],[data-dzx]'); };
     document.addEventListener('dragover', function (ev2) { var z = zonaDe(ev2); if (!z) return; ev2.preventDefault(); ev2.dataTransfer.dropEffect = 'copy'; z.classList.add('sobre'); });
     document.addEventListener('dragleave', function (ev2) { var z = zonaDe(ev2); if (z && !z.contains(ev2.relatedTarget)) z.classList.remove('sobre'); });
     document.addEventListener('drop', function (ev2) {
       var z = zonaDe(ev2);
       if (!z) return;
       ev2.preventDefault(); z.classList.remove('sobre');
-      var m = P.ms(z.getAttribute('data-dz'));
+      var m = P.ms(z.getAttribute('data-dz') || z.getAttribute('data-dzx')), fs = ev2.dataTransfer.files;
       if (!m) return;
+      /* No ecra ou no assistente, um Excel abre a importacao; qualquer outro ficheiro vai para o separador de upload */
+      if (z.hasAttribute('data-dzx')) {
+        var xl = fs.length === 1 && ['xlsx', 'xls', 'csv'].indexOf(extDe(fs[0].name)) > -1;
+        if (xl) return U.wiz && U.painel && U.painel.tipo === 'importar' ? wzLer(fs[0]) : wzAbrir(m, fs[0]);
+        if (U.painel && U.painel.tipo === 'importar') { U.wiz.erro = 'Drop one Excel file (.xlsx, .xls or .csv).'; return R(); }
+      }
       /* Largado em cima de uma linha: entrega logo nesse pedido, sem escolher categoria */
-      if (z.hasAttribute('data-dzf')) return entregarLargados(m, z.getAttribute('data-dzf'), ev2.dataTransfer.files);
-      juntarFila(m, ev2.dataTransfer.files);
+      if (z.hasAttribute('data-dzf')) return entregarLargados(m, z.getAttribute('data-dzf'), fs);
+      juntarFila(m, fs);
     });
     document.addEventListener('mouseover', mostrarTip);
     document.addEventListener('focusin', mostrarTip);
