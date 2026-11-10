@@ -43,11 +43,7 @@
   /* --- Dados iniciais ---------------------------------------------------------- */
   /* [pais, detencao, metodo, instalacoes, NACE, incluida] */
   var PERIMETRO = {
-    'Sede do grupo': ['Portugal', 100, 'mae', 1, '70.10', true], 'Serviços ambientais': ['Portugal', 100, 'integral', 3, '38.11', true], 'Concessão Vale': ['Portugal', 100, 'integral', 4, '36.00', true],
-    'Concessão Rio': ['Portugal', 50, 'proporcional', 3, '36.00', true], 'Concessão Litoral Centro': ['Portugal', 100, 'integral', 2, '36.00', true], 'Concessão Planalto': ['Portugal', 100, 'integral', 2, '36.00', true],
-    'Laboratório central': ['Portugal', 100, 'integral', 1, '71.20', true], 'Manutenção industrial': ['Portugal', 100, 'integral', 2, '33.20', true], 'Serviços urbanos': ['Portugal', 80, 'integral', 5, '38.11', true],
-    'Tratamento de efluentes': ['Portugal', 100, 'integral', 3, '37.00', true], 'Concessão Costa': ['Portugal', 49, 'proporcional', 2, '36.00', true], 'Concessão Norte': ['Portugal', 49, 'proporcional', 2, '36.00', true],
-    'Concessão Sul': ['Portugal', 33, 'equivalencia', 1, '36.00', false], 'Concessão Foz': ['Portugal', 49, 'proporcional', 1, '36.00', true], 'Concessão Serra': ['Portugal', 30, 'equivalencia', 1, '36.00', false], 'Agrupamento Algarve': ['Portugal', 49, 'proporcional', 2, '36.00', true]
+    'Entidade A': ['Portugal', 100, 'mae', 2, '70.10', true], 'Entidade B': ['Portugal', 100, 'integral', 3, '36.00', true]
   };
   P.METODOS = { mae: 'Parent company', integral: 'Full', proporcional: 'Proportional', equivalencia: 'Equity method' };
   P.AGREGACOES = { soma: 'Sum', media: 'Weighted average', ultimo: 'Latest value' };

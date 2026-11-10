@@ -444,6 +444,20 @@ Pedido do André a 10 de novembro de 2026.
 - O botão de confirmação é vermelho ("Yes, clear the data") e Cancel não apaga nada.
 - **CSS:** secção 36 de `global.css` (`.ps-conf*`, `.ps-btn.err.cheio`).
 
+### Backoffice no avatar e só duas empresas
+
+Pedido do André a 10 de novembro de 2026.
+
+- **Barra de topo:** deixa de ter o menu Administration. A barra fica com Home, My tasks, Monitoring, Data, Reporting e Control.
+- **Avatar:** o menu do avatar tem agora uma área **Backoffice** com Backoffice, KPI assignment e Companies and perimeter. Só aparece a quem tem acesso a essas páginas, ou seja, ao administrador e à equipa de sustentabilidade. Nessas páginas, o avatar fica marcado.
+- **Empresas:** os dados de demonstração passam a ter só a **Entidade A** (empresa-mãe) e a **Entidade B** (integral, 100%). As milestones repartem-se entre as duas.
+- **Dados guardados no browser:** `VERSAO_DADOS` subiu para 10, por isso os dados de demonstração voltam a ser carregados. Isto apaga o que foi feito no mockup nesse browser, em ambos os ambientes.
+- **Supabase:**
+  - `011_esg_entidades_a_b.sql` cria as duas empresas e as regras de introdução, passa as milestones e os documentos para a Entidade A e apaga as outras empresas.
+  - `007_esg_dados_demonstracao.sql` foi gerado de novo com os nomes novos.
+  - Ordem: 010, 011, 007.
+- **CSS:** secção 37 de `global.css`.
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.

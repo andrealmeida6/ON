@@ -64,7 +64,7 @@
     atrib: 'esg_assign', regrasEnt: 'esg_entity_rules', fatores: 'esg_factors', apis: 'esg_connections', evg: 'esg_config_log', selos: 'esg_seals',
     kpim: 'esg_kpi_master', puxados: 'esg_source_pulls', periodos: 'esg_periods', relatorios: 'esg_reports', tipos: 'esg_data_types', dpdec: 'esg_dp_decisions', gloss: 'esg_glossary', rq: 'esg_report_tables', doc: 'esg_report_doc', defs: 'esg_definitions', saidas: 'esg_outputs'
   };
-  var VERSAO_DADOS = 9;
+  var VERSAO_DADOS = 10;
   var S = (P.S = {});
   var memoria = {};
   /* Ambiente de testes: as mesmas pessoas, empresas, indicadores e configuracao, sem milestones nem valores.
@@ -151,11 +151,8 @@
     ['S2', 'Trabalhadores na cadeia de valor', 'por avaliar', ''], ['S3', 'Comunidades afetadas', 'por avaliar', ''],
     ['S4', 'Consumidores e utilizadores finais', 'material', 'Prioridade "Clientes, consumidores e utilizadores finais".'], ['G1', 'Conduta empresarial', 'por avaliar', '']
   ];
-  var ENTIDADES = [
-    ['Sede do grupo', 1, 1], ['Serviços ambientais', 1, 1], ['Concessão Vale', 1, 1], ['Concessão Rio', 1, 1], ['Concessão Litoral Centro', 1, 1], ['Concessão Planalto', 1, 1],
-    ['Laboratório central', 1, 1], ['Manutenção industrial', 1, 1], ['Serviços urbanos', 1, 1], ['Tratamento de efluentes', 1, 1],
-    ['Concessão Costa', 1, 0], ['Concessão Norte', 1, 0], ['Concessão Sul', 1, 0], ['Concessão Foz', 1, 0], ['Concessão Serra', 1, 0], ['Agrupamento Algarve', 1, 0]
-  ];
+  /* Para ja so duas empresas (pedido do André, 10 de novembro de 2026) */
+  var ENTIDADES = [['Entidade A', 1, 1], ['Entidade B', 1, 1]];
   var JANELAS = [
     ['Recolha mensal de operação e energia', 'Água e saneamento', [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], 1, 10], ['Revisão mensal', 'Governance', [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], 11, 15],
     ['Recolha trimestral de pessoas, segurança e compras', 'Pessoas', [1, 4, 7, 10], 1, 20], ['Recolha anual de formação, ética, comunidade e NPS', 'Comunidade e cliente', [1, 2], 1, 28],
@@ -361,9 +358,9 @@
       { indicador_id: 'E06', nome: 'Emissões diretas de GHG (Âmbito 1), Net Zero', valor_meta: 0, ano_meta: 2050, sentido: 'descer', unidade: 'tCO2e' }
     ];
     S.docs = [
-      { id: 'D1', tipo: 'eletricidade', fornecedor: 'Comercializador de eletricidade', periodo: 'Set 2026', instalacao: 'ETA Central', entidade: 'Concessão Vale', consumo: 412300, valor_sem_iva: 49476, iva: 11379.48, percentagem_renovavel: 100, centro_custo: 'CC-1200', leitura_telemetria: 409850, estado: 'distribuída' },
+      { id: 'D1', tipo: 'eletricidade', fornecedor: 'Comercializador de eletricidade', periodo: 'Set 2026', instalacao: 'ETA Central', entidade: 'Entidade A', consumo: 412300, valor_sem_iva: 49476, iva: 11379.48, percentagem_renovavel: 100, centro_custo: 'CC-1200', leitura_telemetria: 409850, estado: 'distribuída' },
       { id: 'D2', tipo: 'eletricidade', fornecedor: 'Comercializador de eletricidade', periodo: 'Out 2026', instalacao: 'ETAR Sul', entidade: 'Tratamento de efluentes', consumo: 298400, valor_sem_iva: 35808, iva: 8235.84, percentagem_renovavel: 100, centro_custo: 'CC-1310', leitura_telemetria: 268000, estado: 'em conferência' },
-      { id: 'D3', tipo: 'água', fornecedor: 'Entidade gestora em alta', periodo: 'Out 2026', instalacao: 'Reservatório Norte', entidade: 'Concessão Rio', consumo: 185200, valor_sem_iva: 74080, iva: 4444.8, percentagem_renovavel: null, centro_custo: 'CC-2050', leitura_telemetria: 183900, estado: 'em conferência' },
+      { id: 'D3', tipo: 'água', fornecedor: 'Entidade gestora em alta', periodo: 'Out 2026', instalacao: 'Reservatório Norte', entidade: 'Entidade B', consumo: 185200, valor_sem_iva: 74080, iva: 4444.8, percentagem_renovavel: null, centro_custo: 'CC-2050', leitura_telemetria: 183900, estado: 'em conferência' },
       { id: 'D4', tipo: 'combustível', fornecedor: 'Cartões de combustível', periodo: 'Out 2026', instalacao: 'Frota de recolha', entidade: 'Serviços urbanos', consumo: 18420, valor_sem_iva: 27630, iva: 6354.9, percentagem_renovavel: 0, centro_custo: 'CC-3100', leitura_telemetria: null, estado: 'distribuída' }
     ];
     S.items = {};
@@ -374,7 +371,7 @@
       M15: { i: 3, d: 14 }, M16: { i: 0, d: 18 }, M17: { i: 0, d: 12 }, M18: { i: 5, d: -38 }, M19: { i: 5, d: -60 },
       M20: { i: 0, d: 42 }, M21: { i: 0, d: 45 }, M22: { i: 0, d: 48 }, M23: { i: 0, d: 42 }, M24: { i: 0, d: 50 }, M25: { i: 0, d: 55 }
     };
-    var EMPRESAS_DEMO = ['Sede do grupo', 'Concessão Vale', 'Concessão Rio', 'Serviços ambientais'];
+    var EMPRESAS_DEMO = ['Entidade A', 'Entidade B'];
     var pessoaDe = function (un) { var x = UTILIZADORES.filter(function (l) { return l[2] === 'resp' && l[3] === un; })[0]; return x || null; };
     var nomeDe = function (un) { var x = pessoaDe(un); return x ? x[1] : 'Equipa de sustentabilidade'; };
     /* Uma milestone por trimestre para o que e mensal ou trimestral, uma para o ano para o resto,

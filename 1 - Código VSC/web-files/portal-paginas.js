@@ -210,7 +210,7 @@
     var badge = document.querySelector('[data-campo="sino-n"]');
     if (badge) { badge.textContent = notifs.length; badge.hidden = !notifs.length; }
     var av = document.querySelector('[data-campo="avatar"]');
-    if (av) { av.textContent = iniciais(usr.nome); av.title = usr.nome; }
+    if (av) { av.textContent = iniciais(usr.nome); av.title = usr.nome; av.classList.toggle('on', ['Backoffice', 'Atribuicao', 'Perimetro'].indexOf(pag) > -1); }
     var c = document.querySelector('[data-campo="ciclo"]');
     if (c) c.textContent = S.ciclo.ano;
     var bnav = document.querySelector('[data-bnav]');
@@ -227,7 +227,10 @@
           ? '<button class="ps-menu-it" type="button" data-a="ambienteLimpar">Clear test environment</button><button class="ps-menu-it" type="button" data-a="ambientePrincipal">Back to main environment</button>'
           : '<button class="ps-menu-it" type="button" data-a="ambienteTeste">Open test environment</button>';
         if (usr.perfil === 'admin') amb = '<button class="ps-menu-it" type="button" data-a="marcaAbrir">Brand<small>Logo, name and colours</small></button>' + amb;
-        menu.innerHTML = '<div class="ps-menu-head"><b>' + e(usr.nome) + '</b>' + e(P.PERFIS[usr.perfil]) + (usr.unidade ? ': ' + e(usr.unidade) : '') + '</div><div class="ps-menu-sec"><button class="ps-menu-it" type="button" data-a="sair">' + (P.online() ? 'Sign out' : 'Switch profile') + '</button>' + amb + '</div>';
+        /* A administracao nao tem separador na barra de topo: fica aqui, na area Backoffice do avatar */
+        var bo = [['Backoffice', 'Backoffice', 'Indicators, milestones, workflow and settings'], ['Atribuicao', 'KPI assignment', 'Who submits, reviews and validates each KPI'], ['Perimetro', 'Companies and perimeter', 'Group companies, ownership and consolidation']].filter(function (x) { return per.indexOf(x[0]) > -1; });
+        var boHtml = bo.length ? '<div class="ps-menu-tit">Backoffice</div><div class="ps-menu-sec ps-menu-bo">' + bo.map(function (x) { return '<a class="ps-menu-it' + (pag === x[0] ? ' on' : '') + '" href="' + rota(x[0]) + '" data-a="fecharMenu"' + (pag === x[0] ? ' aria-current="page"' : '') + '>' + e(x[1]) + '<small>' + e(x[2]) + '</small></a>'; }).join('') + '</div>' : '';
+        menu.innerHTML = '<div class="ps-menu-head"><b>' + e(usr.nome) + '</b>' + e(P.PERFIS[usr.perfil]) + (usr.unidade ? ': ' + e(usr.unidade) : '') + '</div>' + boHtml + '<div class="ps-menu-sec' + (bo.length ? ' ps-menu-sep' : '') + '"><button class="ps-menu-it" type="button" data-a="sair">' + (P.online() ? 'Sign out' : 'Switch profile') + '</button>' + amb + '</div>';
       }
     }
   };
