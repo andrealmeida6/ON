@@ -422,6 +422,16 @@ Pedido do André a 10 de novembro de 2026, com base em erros encontrados em test
   - Mostra na página o que foi usado e as linhas que não foram aplicadas, com o motivo.
 - **CSS:** secção 34 de `global.css`.
 
+### Alertas na linha de Requested data, sem abrir a linha
+
+Pedido do André a 10 de novembro de 2026.
+
+- **Antes:** depois de Pull data from system, cada indicador com alerta abria sozinho os detalhes, e o cartão ficava muito comprido.
+- **Agora:** as linhas com alerta ficam fechadas. Na coluna Status, o alerta aparece como um ícone com o número de alertas (`alertaHtml`, `.rq2-al`). Ao passar o rato ou o foco por cima do ícone, a tooltip mostra o texto do alerta e diz se falta a justificação.
+- **Justificação:** escreve-se ao abrir a seta da linha. Se faltar ao submeter, a linha abre sozinha e o cursor vai para o campo.
+- **Erros:** uma linha com erro continua a abrir sozinha (`rqAberto`).
+- **CSS:** secção 35 de `global.css`.
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.

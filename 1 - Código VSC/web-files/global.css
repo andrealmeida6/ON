@@ -1835,3 +1835,9 @@ button.ps-est-i:hover{border-color:rgba(255,255,255,.4);background:rgba(255,255,
   .ps-est-v{font-size:30px}
   .ps-off-p{grid-template-columns:1fr}
 }
+
+/* 35. ALERTA NA LINHA DE REQUESTED DATA: icone com o texto na tooltip, sem abrir a linha */
+.rq2-al{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:999px;background:var(--warn-50);color:var(--warn);font-size:12px;cursor:help}
+.rq2-al.ok{background:var(--neutro-50);color:var(--muted)}
+.rq2-al:hover,.rq2-al:focus-visible{background:color-mix(in srgb,var(--warn) 16%,#fff)}
+.rq2-al.ok:hover,.rq2-al.ok:focus-visible{background:var(--line-soft)}

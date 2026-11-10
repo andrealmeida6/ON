@@ -589,12 +589,18 @@
   var marcaAmostra = function (id) { return S.amostra.indexOf(id) > -1 ? ' ' + chip('Sample', 'rev') : ''; };
 
   /* Requested data na recolha: uma linha simples por indicador, como na grelha. Fontes, definicao, qualidade, evidencia e ajuda abrem-se na seta.
-     Fica aberta por defeito a linha com erro ou alerta, porque pede justificacao. */
+     So a linha com erro abre sozinha. Um alerta (por exemplo depois de Pull data from system) fica no icone da linha, com o texto na tooltip, e a justificacao escreve-se ao abrir a seta. */
   var rqAberto = function (m, id) {
     var k = m.id + ':' + id;
     if (U.rqAberto[k] !== undefined) return U.rqAberto[k];
     var v = P.validarItem(P.item(id, P.chave(m)));
-    return !!(v.erros.length || v.alertas.length);
+    return !!v.erros.length;
+  };
+  var ICO_ALERTA = '<path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/>';
+  var alertaHtml = function (m, id, v, it) {
+    var falta = !String(it.justificacao || '').trim();
+    var txt = v.alertas.join(' ') + (falta ? ' Open the row to write the justification.' : ' Justified: ' + String(it.justificacao).trim());
+    return '<span class="rq2-al' + (falta ? '' : ' ok') + '" tabindex="0" role="img" aria-label="' + e(v.alertas.length + ' alert(s). ' + txt) + '" data-tip="' + e(txt) + '">' + svg(ICO_ALERTA, 15) + '<b>' + v.alertas.length + '</b></span>';
   };
   var sepRecolha = function (m) {
     var usr = u(), calcs = P.calculosMilestone ? P.calculosMilestone(m) : [], comFontes = P.camposMilestone ? P.camposMilestone(m).length > 0 : false, vistos = {};
@@ -604,7 +610,7 @@
       var calc = calcs.filter(function (r) { return r.id === id; })[0], emCalc = !!(calc && calc.x && calc.valor !== null && it.daFonte);
       var txtBruto = it.rascunho || (it.valor === null ? '' : String(it.valor).replace('.', ','));
       var cls = v.erros.length ? 'erro' : v.alertas.length ? 'alerta' : '';
-      var res = v.erros.length ? chip('Error', 'err') : v.alertas.length ? chip(v.alertas.length + ' alert(s)', 'warn') : it.valor !== null ? chip('Valid', 'ok') : chip('To fill in');
+      var res = v.erros.length ? chip('Error', 'err') : v.alertas.length ? alertaHtml(m, id, v, it) : it.valor !== null ? chip('Valid', 'ok') : chip('To fill in');
       var pedidos = S.ext.filter(function (x) { return x.indicador_id === id && x.milestone_id === m.id; });
       var recebido = pedidos.filter(function (x) { return x.estado === 'recebido'; })[0], pendente = pedidos.filter(function (x) { return x.estado === 'pendente'; })[0];
       var evTxt = P.evidenciaPrecisa(m, id) ? (it.evidencias.length ? '' : '<span class="rq2-b warn">Evidence required</span>') : '';
