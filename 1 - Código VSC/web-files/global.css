@@ -1841,3 +1841,18 @@ button.ps-est-i:hover{border-color:rgba(255,255,255,.4);background:rgba(255,255,
 .rq2-al.ok{background:var(--neutro-50);color:var(--muted)}
 .rq2-al:hover,.rq2-al:focus-visible{background:color-mix(in srgb,var(--warn) 16%,#fff)}
 .rq2-al.ok:hover,.rq2-al.ok:focus-visible{background:var(--line-soft)}
+
+/* 36. POP-UP DE CONFIRMACAO (Clear source data) */
+[data-painel] .ps-pan.conf{width:min(500px,calc(100vw - 32px))}
+.ps-conf{display:flex;gap:16px;align-items:flex-start}
+.ps-conf-ic{flex:none;width:52px;height:52px;border-radius:16px;display:grid;place-items:center;background:var(--err-50);color:var(--err)}
+.ps-conf p{font-size:14px}
+.ps-conf p + *{margin-top:10px}
+.ps-conf-l{margin:10px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px}
+.ps-conf-l li{display:flex;gap:8px;align-items:baseline;padding:8px 12px;border-radius:10px;background:var(--neutro-50);font-size:13px}
+.ps-conf-l b{font-size:15px;color:var(--err);font-variant-numeric:tabular-nums}
+.ps-conf-ind{margin:10px 0 0;padding-left:18px;font-size:12.5px;color:var(--muted);max-height:150px;overflow:auto}
+.ps-conf .ps-small{margin-top:12px}
+.ps-btn.err.cheio{background:var(--err);border-color:var(--err);color:#fff}
+.ps-btn.err.cheio:hover{background:color-mix(in srgb,var(--err) 85%,#000)}
+@media(max-width:820px){[data-painel] .ps-pan.conf{top:auto;bottom:0;left:0;height:auto;max-height:90vh;border-radius:18px 18px 0 0}}

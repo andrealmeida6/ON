@@ -381,7 +381,23 @@
   A.fdAbrir = function () { X.abrePainel('puxar', {}); };
   A.pxTodos = function (d, el) { var ds = document.querySelectorAll('.px-ind'), abrir = [].some.call(ds, function (x) { return !x.open; }); [].forEach.call(ds, function (x) { x.open = abrir; }); el.textContent = abrir ? 'Collapse all' : 'Expand all'; };
   A.fdAplicar = function () { var m = X.msAtual(), r = P.aplicarPuxar(m, u()); if (r.erro) return toast(r.erro, 'err'); X.U.painel = null; toast(r.campos + ' values filled in, ' + r.indicadores + ' indicator(s) calculated. You can still change them.', 'ok'); R(); };
-  A.fdLimpar = function () { var m = X.msAtual(); if (!window.confirm('Clear the source data of this milestone? The values calculated from it are emptied too.')) return; var r = P.limparFontes(m, u()); if (r.erro) return toast(r.erro, 'err'); toast('Source data cleared.', 'ok'); R(); };
+  /* Clear source data: pop-up de confirmacao com o que vai ser apagado, em vez do confirm do navegador */
+  X.Pn.limparFontes = function () {
+    var m = X.msAtual(), px = (S.puxados || {})[m.id], nCampos = px ? Object.keys(px.vals || {}).length : 0;
+    var calc = m.indicadores.filter(function (id) { var it = P.item(id, P.chave(m)); return it && it.daFonte && it.valor !== null; });
+    var lista = calc.slice(0, 6).map(function (id) { return '<li>' + e(P.cat(id).nome) + '</li>'; }).join('') + (calc.length > 6 ? '<li>and ' + (calc.length - 6) + ' more</li>' : '');
+    return {
+      t: 'Clear source data?', s: m.nome, cls: 'conf',
+      b: '<div class="ps-conf"><span class="ps-conf-ic" aria-hidden="true">' + X.svg('<path d="M3 6h18M8 6V4h8v2M6 6l1 15h10l1-15"/><path d="M10 11v6M14 11v6"/>', 26) + '</span><div>' +
+        '<p><b>Are you sure?</b> The source data of this milestone will be deleted.</p>' +
+        '<ul class="ps-conf-l"><li><b>' + nCampos + '</b> source data field(s) pulled from the system or typed in</li><li><b>' + calc.length + '</b> indicator value(s) calculated from them will be emptied</li></ul>' +
+        (calc.length ? '<ul class="ps-conf-ind">' + lista + '</ul>' : '') +
+        '<p class="ps-small ps-mut">Values you typed in yourself stay as they are. This cannot be undone, but you can pull the data from the system again.</p></div></div>',
+      p: '<span class="ps-sp-flex"></span><button type="button" class="ps-btn" data-a="fecharPainel">Cancel</button><button type="button" class="ps-btn err cheio" data-a="fdLimparSim">Yes, clear the data</button>'
+    };
+  };
+  A.fdLimpar = function () { X.abrePainel('limparFontes', {}); };
+  A.fdLimparSim = function () { var m = X.msAtual(), r = P.limparFontes(m, u()); X.U.painel = null; if (r.erro) { R(); return toast(r.erro, 'err'); } toast('Source data cleared' + (r.n ? ', ' + r.n + ' calculated value(s) emptied' : '') + '.', 'ok'); R(); };
   X.C.fdValor = function (el) { var r = P.definirFonte(X.msAtual(), el.dataset.id, el.value, u()); if (r.erro) toast(r.erro, 'err'); };
   /* Compatibilidade: o pull direto continua a existir para as folhas dos pedidos */
   A.fdPuxar = A.fdAbrir;

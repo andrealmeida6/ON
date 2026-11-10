@@ -432,6 +432,18 @@ Pedido do André a 10 de novembro de 2026.
 - **Erros:** uma linha com erro continua a abrir sozinha (`rqAberto`).
 - **CSS:** secção 35 de `global.css`.
 
+### Confirmação do Clear source data
+
+Pedido do André a 10 de novembro de 2026.
+
+- **Antes:** o botão Clear source data usava o `confirm` do browser.
+- **Agora:** abre um pop-up próprio (`Pn.limparFontes`, `fdLimparSim`) com o título "Clear source data?". O pop-up pergunta se o utilizador tem a certeza e diz que os dados vão ser apagados:
+  - quantos dados de origem há, vindos do sistema ou escritos à mão;
+  - quantos valores calculados ficam vazios, com a lista dos indicadores.
+- Os valores escritos à mão ficam como estão.
+- O botão de confirmação é vermelho ("Yes, clear the data") e Cancel não apaga nada.
+- **CSS:** secção 36 de `global.css` (`.ps-conf*`, `.ps-btn.err.cheio`).
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.
