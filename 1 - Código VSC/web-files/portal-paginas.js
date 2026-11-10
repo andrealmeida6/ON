@@ -172,7 +172,7 @@
     var base = ['Inicio', 'Milestones', 'Milestone', 'Timeline', 'Consolidado', 'Documentos', 'Evidencias', 'Calculos', 'Relatorio', 'Saidas', 'Kpis', 'Historico', 'Auditoria'];
     if (usr.perfil !== 'auditor') base.push('Dados');
     if (P.gereTudo(usr) || usr.perfil === 'auditor') base.push('Aprovacoes', 'Estado', 'Trilho');
-    if (P.gereTudo(usr)) base.push('Atribuicao', 'Perimetro', 'Backoffice');
+    if (P.gereTudo(usr)) base.push('Backoffice');
     return base;
   };
   /* O botao da timeline so aparece a quem tem a pagina */
@@ -210,7 +210,7 @@
     var badge = document.querySelector('[data-campo="sino-n"]');
     if (badge) { badge.textContent = notifs.length; badge.hidden = !notifs.length; }
     var av = document.querySelector('[data-campo="avatar"]');
-    if (av) { av.textContent = iniciais(usr.nome); av.title = usr.nome; av.classList.toggle('on', ['Backoffice', 'Atribuicao', 'Perimetro'].indexOf(pag) > -1); }
+    if (av) { av.textContent = iniciais(usr.nome); av.title = usr.nome; av.classList.toggle('on', pag === 'Backoffice'); }
     var c = document.querySelector('[data-campo="ciclo"]');
     if (c) c.textContent = S.ciclo.ano;
     var bnav = document.querySelector('[data-bnav]');
@@ -228,8 +228,8 @@
           : '<button class="ps-menu-it" type="button" data-a="ambienteTeste">Open test environment</button>';
         if (usr.perfil === 'admin') amb = '<button class="ps-menu-it" type="button" data-a="marcaAbrir">Brand<small>Logo, name and colours</small></button>' + amb;
         /* A administracao nao tem separador na barra de topo: fica aqui, na area Backoffice do avatar */
-        var bo = [['Backoffice', 'Backoffice', 'Indicators, milestones, workflow and settings'], ['Atribuicao', 'KPI assignment', 'Who submits, reviews and validates each KPI'], ['Perimetro', 'Companies and perimeter', 'Group companies, ownership and consolidation']].filter(function (x) { return per.indexOf(x[0]) > -1; });
-        var boHtml = bo.length ? '<div class="ps-menu-tit">Backoffice</div><div class="ps-menu-sec ps-menu-bo">' + bo.map(function (x) { return '<a class="ps-menu-it' + (pag === x[0] ? ' on' : '') + '" href="' + rota(x[0]) + '" data-a="fecharMenu"' + (pag === x[0] ? ' aria-current="page"' : '') + '>' + e(x[1]) + '<small>' + e(x[2]) + '</small></a>'; }).join('') + '</div>' : '';
+        var bo = per.indexOf('Backoffice') > -1 ? [['indicadores', 'Indicators', 'KPIs, owners, companies, Excel and tasks'], ['perimetro', 'Companies and perimeter', 'Group companies, ownership and consolidation'], ['utilizadores', 'Settings', 'Users, periods, workflow and the rest']] : [];
+        var boHtml = bo.length ? '<div class="ps-menu-tit">Backoffice</div><div class="ps-menu-sec ps-menu-bo">' + bo.map(function (x) { var on = pag === 'Backoffice' && (x[0] === U.boTab || (x[0] === 'utilizadores' && ['indicadores', 'milestones', 'perimetro'].indexOf(U.boTab) < 0)); return '<a class="ps-menu-it' + (on ? ' on' : '') + '" href="' + rota('Backoffice?tab=' + x[0]) + '" data-a="fecharMenu"' + (on ? ' aria-current="page"' : '') + '>' + e(x[1]) + '<small>' + e(x[2]) + '</small></a>'; }).join('') + '</div>' : '';
         menu.innerHTML = '<div class="ps-menu-head"><b>' + e(usr.nome) + '</b>' + e(P.PERFIS[usr.perfil]) + (usr.unidade ? ': ' + e(usr.unidade) : '') + '</div>' + boHtml + '<div class="ps-menu-sec' + (bo.length ? ' ps-menu-sep' : '') + '"><button class="ps-menu-it" type="button" data-a="sair">' + (P.online() ? 'Sign out' : 'Switch profile') + '</button>' + amb + '</div>';
       }
     }
@@ -1215,10 +1215,20 @@
   };
 
   /* --- Backoffice -------------------------------------------------------- */
-  var BO = [['indicadores', 'Indicators and milestones'], ['momentos', 'Reporting moments'], ['lancar', 'Launch milestones'], ['periodos', 'Reporting periods'], ['materialidade', 'Materiality and frameworks'], ['utilizadores', 'Users and profiles'], ['externas', 'External entities'], ['wfbase', 'Base workflow'], ['calendario', 'Calendar'], ['regras', 'Validation rules'], ['areas', 'Data consumer areas'], ['entidades', 'Companies'], ['departamentos', 'Departments'], ['dados', 'Data and storage']];
+  /* Backoffice por grupos. Indicators e a pagina unica dos KPIs (portal-indicadores.js): caracteristicas, responsaveis, empresas, Excel e envio de tasks.
+     KPI assignment e Companies and perimeter deixaram de ser paginas e vivem aqui. */
+  var BO_GRUPOS = [
+    ['Indicators', [['indicadores', 'Indicators'], ['milestones', 'Tasks sent']]],
+    ['Organisation', [['perimetro', 'Companies and perimeter'], ['departamentos', 'Departments'], ['utilizadores', 'Users and profiles'], ['externas', 'External entities']]],
+    ['Reporting set-up', [['periodos', 'Reporting periods'], ['momentos', 'Reporting moments'], ['lancar', 'Launch by department'], ['wfbase', 'Base workflow'], ['calendario', 'Calendar'], ['materialidade', 'Materiality and frameworks']]],
+    ['Platform', [['areas', 'Data consumer areas'], ['dados', 'Data and storage']]]
+  ];
+  var BO = []; BO_GRUPOS.forEach(function (g) { g[1].forEach(function (t) { BO.push(t); }); });
   var B = {};
   Blocos['backoffice'] = function () {
-    return '<div class="ps-bo"><nav class="ps-bo-tabs" aria-label="Backoffice sections">' + BO.map(function (t) { return '<button type="button" class="ps-bo-tab ' + (U.boTab === t[0] ? 'on' : '') + '" data-a="boTab" data-v="' + t[0] + '"' + (U.boTab === t[0] ? ' aria-current="true"' : '') + '>' + e(t[1]) + '</button>'; }).join('') + '</nav><div class="ps-col">' + B[U.boTab]() + '</div></div>';
+    if (!B[U.boTab] || !BO.some(function (t) { return t[0] === U.boTab; })) U.boTab = 'indicadores';
+    var nav = BO_GRUPOS.map(function (g) { return '<div class="ps-bo-grp"><span class="ps-bo-gt">' + e(g[0]) + '</span>' + g[1].map(function (t) { return '<button type="button" class="ps-bo-tab ' + (U.boTab === t[0] ? 'on' : '') + '" data-a="boTab" data-v="' + t[0] + '"' + (U.boTab === t[0] ? ' aria-current="true"' : '') + '>' + e(t[1]) + '</button>'; }).join('') + '</div>'; }).join('');
+    return '<div class="ps-bo' + (U.boTab === 'indicadores' ? ' ps-bo-largo' : '') + '"><nav class="ps-bo-tabs" aria-label="Backoffice sections">' + nav + '</nav><div class="ps-col">' + B[U.boTab]() + '</div></div>';
   };
   var MAT_TXT = { material: 'Material', 'não material': 'Not material', 'por avaliar': 'To assess' };
   B.materialidade = function () {
@@ -1244,14 +1254,11 @@
   B.wfbase = function () {
     return '<div class="ps-card">' + cabCartao('Base workflow', 'ativ', '<button type="button" class="ps-btn peq" data-a="abrirWfBase">Change base workflow</button>') + '<div class="ps-card-body">' + tabela([{ t: 'Step' }, { t: 'Type' }, { t: 'Owner' }], S.wfbase.map(function (p, i) { return [(i + 1) + '. ' + e(p.nome), e(P.TIPOS_PASSO[p.tipo]), e(P.nomeResp(null, p.responsavel))]; })) + '<p class="ps-mut ps-small ps-mt">Applies to new milestones. When saving, you can also apply it to those not yet started and not adjusted.</p></div></div>';
   };
-  B.indicadores = function () {
-    var q = U.indBusca.toLowerCase(), l = S.cat.filter(function (c) { return !q || (c.nome + ' ' + c.id + ' ' + c.unidade_negocio).toLowerCase().indexOf(q) > -1; });
-    return '<div class="ps-card">' + cabCartao('Indicators (' + S.cat.length + ')', 'doc') + '<div class="ps-card-body">' + campo('ind-busca', 'Search', '<input id="ind-busca" class="ps-in" value="' + e(U.indBusca) + '" data-c="indBusca">') + '<div class="ps-mt">' + tabela([{ t: 'Indicator' }, { t: 'Unit' }, { t: 'Department' }, { t: 'Type' }, { t: 'Frequency' }, { t: 'Table' }, { t: 'Required evidence', info: 'When ticked, whoever fills in this indicator must attach a supporting document (an Excel file, or a PDF such as an invoice). The milestone cannot be submitted until it is attached, it shows as a required file in the milestone, and it goes into the evidence package for the auditor.' }], l.map(function (c) {
-      var freqs = P.FREQUENCIAS.some(function (f) { return f[0] === c.periodicidade; }) ? P.FREQUENCIAS : P.FREQUENCIAS.concat([[c.periodicidade, PERIODO_TXT[c.periodicidade] || c.periodicidade]]);
-      return [linkFicha(c.id, c.id + ' ' + c.nome), e(c.unidade_medida), depHtml(c.unidade_negocio), c.tipo === 'derivado' ? 'Derived' : 'Base',
-        '<select id="fq-' + e(c.id) + '" class="ps-sel" aria-label="Frequency of ' + e(c.nome) + '" data-c="indFreq" data-id="' + e(c.id) + '">' + freqs.map(function (f) { return opt(f[0], f[1], c.periodicidade); }).join('') + '</select>', e(QUADRO_TXT[c.quadro] || c.quadro), '<label class="ps-chk"><input id="evo-' + e(c.id) + '" type="checkbox" data-c="evObrig" data-id="' + e(c.id) + '"' + (c.evidencia_obrigatoria ? ' checked' : '') + '><span class="ps-sr">Required evidence for ' + e(c.nome) + '</span></label>'];
-    }), 'No indicators found.') + '</div></div></div>' +
-      '<div class="ps-card">' + cabCartao('Milestones (' + P.msCiclo().length + ')', 'tarefa') + '<div class="ps-card-body">' + tabela([{ t: 'Milestone' }, { t: 'Company' }, { t: 'Assigned to' }, { t: 'Indicators', dir: 1 }, { t: 'Due' }, { t: 'Status' }], P.msCiclo().map(function (m) {
+  /* A pagina dos indicadores esta em portal-indicadores.js; aqui fica a lista das tasks (milestones) ja enviadas */
+  B.indicadores = function () { return vazio('The indicators page did not load.'); };
+  B.perimetro = function () { return (Blocos['perimetro'] ? Blocos['perimetro']() : '') + B.entidades(); };
+  B.milestones = function () {
+    return '<div class="ps-card">' + cabCartao('Milestones (' + P.msCiclo().length + ')', 'tarefa') + '<div class="ps-card-body">' + tabela([{ t: 'Milestone' }, { t: 'Company' }, { t: 'Assigned to' }, { t: 'Indicators', dir: 1 }, { t: 'Due' }, { t: 'Status' }], P.msCiclo().map(function (m) {
         return ['<a href="' + rota('Milestone/' + m.id) + '">' + e(m.nome) + '</a>', '<select id="bo-emp-' + e(m.id) + '" class="ps-sel" aria-label="Company of ' + e(m.nome) + '" data-c="msEmpresa" data-id="' + e(m.id) + '">' + S.ent.map(function (x) { return opt(x.nome, x.nome, m.empresa); }).join('') + '</select>', P.concluida(m) || P.passoAtual(m).tipo !== 'recolha' ? atribHtml(m) : '<select id="bo-atr-' + e(m.id) + '" class="ps-sel" aria-label="Assigned to, ' + e(m.nome) + '" data-c="msAtrib" data-id="' + e(m.id) + '">' + opt('', m.unidade + ' (department)', m.atribuido_a || '') + P.atribuiveis(m).map(function (x) { return opt(x.login, x.nome, m.atribuido_a || ''); }).join('') + '</select>', m.indicadores.length, '<input id="pz-' + e(m.id) + '" class="ps-in" type="date" aria-label="Due date of ' + e(m.nome) + '" value="' + e(m.prazo) + '" data-c="msPrazo" data-id="' + e(m.id) + '">', estChip(m)];
       })) + '</div></div>';
   };
@@ -1778,6 +1785,9 @@
       arg = q.id || '';
     }
     if (!P.online() && q.perfil && P.user(q.perfil)) P.entrar(q.perfil);
+    /* KPI assignment e Companies and perimeter passaram a separadores do Backoffice: os links antigos continuam a funcionar */
+    if (pag === 'Atribuicao') { pag = 'Backoffice'; q.tab = 'indicadores'; }
+    if (pag === 'Perimetro') { pag = 'Backoffice'; q.tab = 'perimetro'; }
     var usr = u(), per = paginasPermitidas(usr);
     if (per.indexOf(pag) < 0 || (pag === 'Milestone' && !P.ms(arg))) pag = usr ? (usr.perfil === 'ext' ? 'Pedidos' : pag === 'Milestone' ? 'Milestones' : 'Inicio') : 'Entrada';
     return { pag: pag, arg: arg, q: q };
@@ -1828,6 +1838,7 @@
     if (U.rota.pag === 'Milestones' && U.rota.q.periodo !== undefined) U.msFiltro.periodo = U.rota.q.periodo;
     var empRota = U.rota.pag === 'Milestones' && U.rota.q.empresa ? S.ent.filter(function (x) { return x.id === U.rota.q.empresa; })[0] : null;
     U.msFiltro.empresa = empRota ? empRota.nome : '';
+    if (U.rota.pag === 'Backoffice' && U.rota.q.tab) U.boTab = U.rota.q.tab;
     if (U.rota.q.sep) U.sep = U.rota.q.sep;
     else if (ant !== novo) U.sep = 'dados';
     U.menu = null; U.painel = null;
@@ -2340,6 +2351,6 @@
     }
   };
   /* As paginas de controlo (portal-gestao.js) acrescentam-se aqui */
-  P.ext = { pessHtml: pessHtml, depHtml: depHtml, empHtml: empHtml, avPessoa: avPessoa, avEquipa: avEquipa, avEmpresa: avEmpresa, msAtual: function () { return msAtual(); }, Pn: Pn, abrePainel: function (t, a) { abrePainel(t, a); }, Blocos: Blocos, A: A, C: C, U: U, e: e, svg: svg, I: I, rota: rota, chip: chip, estChip: estChip, cabCartao: cabCartao, vazio: vazio, opt: opt, campo: campo, ficheiroHtml: ficheiroHtml, numAttr: numAttr, infoFormula: infoFormula, tabela: tabela, toast: toast, R: R, val: val, res: res, escolherFicheiro: escolherFicheiro, atribHtml: atribHtml, iniciais: iniciais, u: u, fmtV: fmtV, prazoTxt: prazoTxt };
+  P.ext = { B: B, linkFicha: linkFicha, PERIODO_TXT: PERIODO_TXT, fechaPainel: function () { fechaPainel(); }, pessHtml: pessHtml, depHtml: depHtml, empHtml: empHtml, avPessoa: avPessoa, avEquipa: avEquipa, avEmpresa: avEmpresa, msAtual: function () { return msAtual(); }, Pn: Pn, abrePainel: function (t, a) { abrePainel(t, a); }, Blocos: Blocos, A: A, C: C, U: U, e: e, svg: svg, I: I, rota: rota, chip: chip, estChip: estChip, cabCartao: cabCartao, vazio: vazio, opt: opt, campo: campo, ficheiroHtml: ficheiroHtml, numAttr: numAttr, infoFormula: infoFormula, tabela: tabela, toast: toast, R: R, val: val, res: res, escolherFicheiro: escolherFicheiro, atribHtml: atribHtml, iniciais: iniciais, u: u, fmtV: fmtV, prazoTxt: prazoTxt };
   document.addEventListener('DOMContentLoaded', P.iniciar);
 })();

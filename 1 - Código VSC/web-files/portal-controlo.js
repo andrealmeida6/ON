@@ -55,7 +55,7 @@
     if (!S.dpdec) S.dpdec = {};
     if (!S.gloss) S.gloss = {};
     if (!S.puxados) S.puxados = {};
-    (S.cat || []).forEach(function (c) { var k = P.esrsDe(c.id); c.esrs_requisito = k.dr || c.esrs || 'Setorial'; });
+    (S.cat || []).forEach(function (c) { var k = P.esrsDe(c.id); c.esrs_requisito = c.dr_proprio || k.dr || c.esrs || 'Setorial'; });
     if (P.garantirQuadros) P.garantirQuadros();
   };
   P.ligacoesBase = function () {

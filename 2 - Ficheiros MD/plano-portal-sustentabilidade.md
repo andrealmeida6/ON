@@ -458,6 +458,44 @@ Pedido do André a 10 de novembro de 2026.
   - Ordem: 010, 011, 007.
 - **CSS:** secção 37 de `global.css`.
 
+### Backoffice por grupos e página única dos indicadores
+
+Pedido do André a 10 de novembro de 2026: KPI assignment e Companies and perimeter dentro do Backoffice, e uma única página, simples e prática, para gerir os indicadores, com Excel no layout do ficheiro `TEMPLATE_ESG KPIs (1).xlsx` e envio de tasks.
+
+**Backoffice**
+
+- **Grupos** (`BO_GRUPOS`): Indicators (Indicators, Tasks sent), Organisation (Companies and perimeter, Departments, Users and profiles, External entities), Reporting set-up (Reporting periods, Reporting moments, Launch by department, Base workflow, Calendar, Materiality and frameworks) e Platform (Data consumer areas, Data and storage).
+- **Páginas removidas:** as web pages `Atribuicao` e `Perimetro` e os seus snippets. Os links antigos abrem o separador certo do Backoffice (`lerRota`). O separador abre-se por `Backoffice?tab=...`.
+- **Companies and perimeter** é agora um separador, que junta o perímetro e a lista de empresas (`B.perimetro`).
+- **KPI assignment** deixou de existir como página: quem reporta, revê e valida define-se em cada indicador. Os separadores Validation rules e Companies foram absorvidos (o limiar está no indicador).
+- **Avatar:** a área Backoffice tem três atalhos: Indicators, Companies and perimeter e Settings.
+
+**Página Indicators** (`portal-indicadores.js`, `B.indicadores`)
+
+- **Lista:** uma linha por indicador, com o responsável (pessoa ou departamento), a empresa que reporta, as empresas abrangidas e o estado da task no período escolhido. Tem pesquisa, filtros e cinco cartões clicáveis (ativos, sem pessoa, não enviados, tasks abertas, aprovados).
+- **Painel do indicador** (`Pn.indEd`): tudo num sítio, por secções: Identification, Responsibility, Companies, Characteristics, ESRS reference, Controls, Availability, Disclosure e histórico de alterações. Serve para editar e para criar.
+- **Responsável:** uma pessoa ou o grupo, que é o departamento inteiro (`P.responsavelInd`; grupo quando `S.atrib[id].submete` está vazio). Quem reporta não pode rever nem validar.
+- **Empresas:** Companies covered (`c.empresas`, as empresas cujos dados o indicador inclui) e Reporting company (`c.reporta`, a empresa que tem de reportar e recebe a task).
+- **Limite do modelo:** cada indicador tem um valor por período. Com várias empresas abrangidas, o valor entra por empresa (Data entry ou Excel offline, "One row per company") e é junto pela agregação do indicador. Não há uma task por empresa para o mesmo indicador.
+- **Editar vários** (`Pn.indLote`): departamento, responsável, revisor, validador, empresa que reporta, frequência, limiar, evidência e estado.
+- **Enviar tasks** (`Pn.indEnviar`, `P.planoEnvio`, `P.enviarTarefas`): escolhe-se o período e o prazo e vê-se o que vai ser enviado antes de enviar. Há uma task por empresa que reporta e responsável. Junta-se a uma task aberta igual, se existir. Os inativos e os já enviados ficam de fora, com o motivo.
+- **Lembretes** (`P.lembrarTarefas`): ficam no histórico da task e nas notificações de quem a tem. Não há envio por email.
+- **Indicadores inativos** (`c.ativo`): ficam no histórico, mas não são enviados.
+- **Registo:** cada alteração fica no registo de configuração (`P.eventoGlobal`), com o valor anterior e o novo.
+
+**Excel**
+
+- **Exportar** (`exportar`, com a biblioteca ExcelJS em `exceljs.min.js`): segue o modelo. Tem título, faixa de cor por grupo, explicação de cada coluna em amarelo, cabeçalhos, linhas alternadas, colunas de leitura a cinzento, painéis fixos, filtro, listas de valores nas células (folha oculta `Lists`), 60 linhas em branco para indicadores novos e a folha "How to use".
+- **Colunas:** as do modelo (KPI Name, KPI Description, ESRS Topic, ESRS DR, IG3 ID, Company Topic, Disclosure Type, Data Type, Unit, Calculation, Reporting Frequency, Data collection frequency, Data Aggregation Type, KPI Scope, Responsible Department, Responsible Person, Available, Source / System, Control Description, Disclosure of KPI, Report Use), mais KPI ID, Status, Decimals, Reviewer, Validator, Companies covered, Reporting company, Change threshold e Evidence required.
+- **Importar** (`analisar`, `Pn.indImp`): aceita o ficheiro exportado e o modelo de datapoints. Encontra a folha e a linha dos cabeçalhos, e mostra antes de gravar o que muda (valor antigo e novo), o que é novo, o que fica igual e os erros por linha.
+- **Modelo de datapoints ESRS:** as linhas aplicam-se ao indicador que o datapoint alimenta e só mudam o que a empresa preenche. Os datapoints sem indicador ficam de fora, com aviso.
+
+**Ideias tiradas das críticas ao Workiva** (ver a tabela mais abaixo): tudo numa página, com menos cliques; edição em lote; pré-visualização antes de enviar ou importar; estado das tasks à vista; lembretes; ida e volta simples com o Excel; registo de alterações.
+
+**Supabase:** `012_esg_indicadores_config.sql` acrescenta a coluna `config` (jsonb) aos indicadores. Correr depois do 011.
+
+**CSS:** secção 38 de `global.css`.
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.

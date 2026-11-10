@@ -62,7 +62,7 @@
     var ativ = P.trilho().filter(function (x) { return !empV || (x.m && x.m.empresa === empV); }).sort(function (a, b) { return a.em < b.em ? 1 : a.em > b.em ? -1 : 0; }).slice(0, 5);
     var podeAdmin = P.gereTudo(usr), podeTrilho = podeAdmin || usr.perfil === 'auditor';
     return '<div class="ps-card ps-vista"><div class="ps-vista-e"><span class="ps-lab">Data view</span><div class="ps-seg2" role="group"><button type="button" class="' + (empV ? '' : 'on') + '" data-a="visaoModo" data-v="consolidado">Consolidated</button><button type="button" class="' + (empV ? 'on' : '') + '" data-a="visaoModo" data-v="empresa">By company</button></div>' +
-      (empV ? '<label class="ps-sr" for="vis-empV">Company</label><select id="vis-empV" class="ps-sel" data-c="visaoEmp">' + S.ent.map(function (x) { return opt(x.nome, x.nome, empV); }).join('') + '</select>' : '') + '</div><div class="ps-vista-d ps-small ps-mut">' + (empV ? 'Showing what this company reports, at 100%.' : inc + ' of ' + S.ent.length + ' companies in the consolidation. Full at 100%, proportional by ownership, equity method excluded.') + (podeAdmin ? ' <a href="' + rota('Perimetro') + '">Set the perimeter</a>' : '') + '</div></div>' +
+      (empV ? '<label class="ps-sr" for="vis-empV">Company</label><select id="vis-empV" class="ps-sel" data-c="visaoEmp">' + S.ent.map(function (x) { return opt(x.nome, x.nome, empV); }).join('') + '</select>' : '') + '</div><div class="ps-vista-d ps-small ps-mut">' + (empV ? 'Showing what this company reports, at 100%.' : inc + ' of ' + S.ent.length + ' companies in the consolidation. Full at 100%, proportional by ownership, equity method excluded.') + (podeAdmin ? ' <a href="' + rota('Backoffice?tab=perimetro') + '">Set the perimeter</a>' : '') + '</div></div>' +
       '<div class="ps-tiles ps-mt">' + TILES.map(function (id) { return tile(id, empV); }).join('') + '</div>' +
       '<div class="ps-grid-vis ps-mt"><div class="ps-card">' + cabCartao('Completeness by ESRS standard', 'tarefa', '<div class="ps-leg"><span><i class="a"></i>Approved</span><span><i class="r"></i>Reported</span><span><i></i>Missing</span></div>') + '<div class="ps-card-body">' + completude(empV) + '</div></div>' +
       '<div class="ps-col"><div class="ps-card">' + cabCartao('Pending approval', 'ativ', podeTrilho ? '<a class="ps-small" href="' + rota('Aprovacoes') + '">See all (' + pend.length + ')</a>' : '') + '<ul class="ps-list">' + (pend.length ? pend.slice(0, 4).map(function (m) { return '<li><a class="ps-row" href="' + rota((podeTrilho ? 'Aprovacoes?ms=' : 'Milestone/') + m.id) + '"><span class="ps-row-txt"><b>' + e(m.nome) + '</b><span>' + emp(m.empresa) + ', ' + m.indicadores.length + ' indicators</span></span>' + estChip(m) + '</a></li>'; }).join('') : '<li>' + vazio('Nothing waiting for approval.') + '</li>') + '</ul></div>' +
@@ -104,9 +104,9 @@
       campo('est-dono', 'Owner', '<select id="est-dono" class="ps-sel" data-c="estF" data-id="dono">' + opt('', 'All', f.dono) + Object.keys(donos).map(function (k) { return opt(k, donos[k].nome, f.dono); }).join('') + '</select>') + '</div>' +
       '<div class="ps-mt">' + pills('estTab', [['todos', 'All', base.length], ['falta', 'Missing', n('falta')], ['atraso', 'Overdue', n('atraso')], ['curso', 'In progress', n('curso')], ['aprovacao', 'In approval', n('aprovacao')], ['aprovado', 'Approved', n('aprovado')]], f.estado) + '</div><div class="ps-mt">' +
       tabela([{ t: 'KPI' }, { t: 'Period' }, { t: 'Perimeter' }, { t: 'Assigned to' }, { t: 'Deadline' }, { t: 'Status' }], lista.map(function (x) {
-        return ['<a href="' + rota('Milestone/' + x.m.id) + '">' + e(x.c.nome) + '</a><br><small class="ps-mut">' + e(P.esrsDe(x.c.id).dps[0] || x.c.esrs_requisito || 'No ESRS') + ', ' + e(x.m.periodicidade) + '</small>', P.tagPer(x.m) || e(P.rotPeriodo(x.m)), emp(x.m.empresa), pessoa(x.d), '<span class="ps-nowrap">' + e(X.prazoTxt(x.m)) + '</span>', chip(x.s.txt, x.s.cls)];
+        return ['<a href="' + rota('Milestone/' + x.m.id) + '">' + e(x.c.nome) + '</a><br><small class="ps-mut">' + e(P.esrsDe(x.c.id).dps[0] || x.c.esrs_requisito || 'No ESRS') + ', ' + e(x.m.periodicidade) + '</small>', P.tagPer(x.m) || e(P.rotPeriodo(x.m)), emp(x.m.empresa), x.d ? pessoa(x.d) : X.depHtml(P.donoIndicador(x.c.id)), '<span class="ps-nowrap">' + e(X.prazoTxt(x.m)) + '</span>', chip(x.s.txt, x.s.cls)];
       }), 'No KPI matches these filters.') + '</div></div></div>' +
-      '<div class="ps-col"><div class="ps-card">' + cabCartao('Missing by owner', 'tarefa') + '<ul class="ps-list">' + (porDono.length ? porDono.map(function (o) { return '<li class="ps-row"><span class="ps-row-txt"><b>' + e(o.x.nome) + '</b><span>' + e(o.x.unidade || P.PERFIS[o.x.perfil]) + '</span></span><span class="ps-sp">' + (o.falta ? chip(o.falta + ' missing', 'warn') : '') + (o.atraso ? chip(o.atraso + ' overdue', 'err') : '') + '</span></li>'; }).join('') : '<li>' + vazio('Nothing missing.') + '</li>') + '</ul>' + (P.gereTudo(u()) ? '<div class="ps-card-body ps-small"><a href="' + rota('Atribuicao') + '">Manage assignments</a></div>' : '') + '</div>' +
+      '<div class="ps-col"><div class="ps-card">' + cabCartao('Missing by owner', 'tarefa') + '<ul class="ps-list">' + (porDono.length ? porDono.map(function (o) { return '<li class="ps-row"><span class="ps-row-txt"><b>' + e(o.x.nome) + '</b><span>' + e(o.x.unidade || P.PERFIS[o.x.perfil]) + '</span></span><span class="ps-sp">' + (o.falta ? chip(o.falta + ' missing', 'warn') : '') + (o.atraso ? chip(o.atraso + ' overdue', 'err') : '') + '</span></li>'; }).join('') : '<li>' + vazio('Nothing missing.') + '</li>') + '</ul>' + (P.gereTudo(u()) ? '<div class="ps-card-body ps-small"><a href="' + rota('Backoffice?tab=indicadores') + '">Manage assignments</a></div>' : '') + '</div>' +
       '<div class="ps-card">' + cabCartao('Next due dates', 'cal') + '<ul class="ps-list">' + (prox.length ? prox.map(function (m) { return '<li><a class="ps-row" href="' + rota('Milestone/' + m.id) + '"><span class="ps-row-txt"><b>' + e(m.nome) + '</b><span>' + emp(m.empresa) + '</span></span><b class="ps-nowrap ps-small">' + e(P.fmtDataAno(m.prazo)) + '</b></a></li>'; }).join('') : '<li>' + vazio('No upcoming due dates.') + '</li>') + '</ul></div></div></div>';
   };
   C.estF = function (el) { U.est[el.dataset.id] = el.value; };
@@ -248,7 +248,7 @@
   };
   var msDe = function () { return U.de.id && U.de.ms ? P.ms(U.de.ms) : null; };
   A.deTab = function (d) { U.de.tab = d.v; R(); };
-  A.deRegras = function () { U.boTab = 'regras'; };
+  A.deRegras = function () { U.boTab = 'indicadores'; };
   C.deNorma = function (el) { U.de.norma = el.value; U.de.id = ''; };
   C.deId = function (el) { var p = el.value.split('|'), m = P.ms(p[0]); if (m) carregarDe({ id: p[1], m: m }); };
   C.deVal = function (el) { U.de.valor = el.value; };
@@ -260,7 +260,7 @@
   C.deLinha = function (el) { U.de.linhas[+el.dataset.id][el.dataset.f] = el.value; };
   /* Quem reporta o grupo empresa a empresa: uma linha por empresa do perimetro, sem as escrever a mao */
   A.deEmpresas = function () {
-    var d = U.de, ja = {}, grupo = P.empresasGrupo();
+    var d = U.de, ja = {}, grupo = P.empresasInd(P.cat(d.id));
     d.linhas.forEach(function (l) { ja[String(l.local).trim()] = l; });
     var outras = d.linhas.filter(function (l) { var n = String(l.local).trim(); return n && String(l.valor).trim() && !grupo.some(function (x) { return x.nome === n; }); });
     d.linhas = grupo.map(function (x) { return ja[x.nome] || { local: x.nome, doc: '', valor: '', peso: '' }; }).concat(outras);
@@ -423,160 +423,6 @@
   C.calcQtd = function (el) { var n = P.lerNumero(el.value), f = S.fatores.filter(function (x) { return x.id === el.dataset.id; })[0]; if (n === null || n < 0) return toast('The quantity must be a number that is not negative.', 'err'); f.qtd = n; P.guardar(); };
   C.calcFator = function (el) { var f = S.fatores.filter(function (x) { return x.id === el.dataset.id; })[0], r = P.alterarFator(f, el.value, S.ciclo.ano, u()); if (r.erro) toast(r.erro, 'err'); };
   A.calcAplicar = function () { res(P.aplicarCalculo(u()), 'Result written to the milestone, with the factors used.'); };
-
-  /* --- Atribuicao de KPIs ------------------------------------------------------------------ */
-  U.atr = { rasc: null, q: '', empresa: '' };
-  var pessoasAtr = function (papel) { return S.users.filter(function (x) { return papel === 'valida' ? x.perfil === 'esg' || x.perfil === 'admin' : x.perfil === 'resp' || x.perfil === 'esg'; }); };
-  Blocos['atribuicao'] = function () {
-    var f = U.atr;
-    if (!f.rasc) f.rasc = JSON.parse(JSON.stringify(S.atrib));
-    var conf = P.conflitosAtrib(f.rasc), q = f.q.toLowerCase(), mudou = JSON.stringify(f.rasc) !== JSON.stringify(S.atrib);
-    var lista = catCiclo().filter(function (c) { return (!q || (c.nome + ' ' + c.id + ' ' + c.esrs_requisito).toLowerCase().indexOf(q) > -1) && (!f.empresa || P.msDoIndicador(c.id).empresa === f.empresa); });
-    var sel = function (c, papel, rot) {
-      var a = f.rasc[c.id] || (f.rasc[c.id] = { submete: '', reve: '', valida: '' }), mau = papel !== 'submete' && a.submete === a[papel];
-      return '<select id="at-' + papel + '-' + e(c.id) + '" class="ps-sel' + (mau ? ' erro' : '') + '" aria-label="' + e(rot + ', ' + c.nome) + '" data-c="atrSel" data-id="' + e(c.id) + '" data-f="' + papel + '">' + pessoasAtr(papel).map(function (x) { return opt(x.login, x.nome, a[papel]); }).join('') + '</select>' + (mau ? '<small class="ps-txt-err">Same person submits and approves</small>' : '');
-    };
-    var carga = S.users.filter(function (x) { return x.perfil === 'resp' || x.perfil === 'esg'; }).map(function (x) {
-      var s = 0, r = 0, v = 0; Object.keys(f.rasc).forEach(function (k) { var a = f.rasc[k]; if (a.submete === x.login) s++; if (a.reve === x.login) r++; if (a.valida === x.login) v++; });
-      return '<li class="ps-row"><span class="ps-av s" aria-hidden="true">' + e(iniciais(x.nome)) + '</span><span class="ps-row-txt"><b>' + e(x.nome) + '</b><span>' + e(x.unidade || P.PERFIS[x.perfil]) + '</span><span class="ps-carga">' + s + ' submit, ' + r + ' review, ' + v + ' validate</span></span></li>';
-    }).join('');
-    return '<div class="ps-filtros ps-sp"><button type="button" class="ps-btn" data-a="atrExportar">Export matrix (Excel)</button><button type="button" class="ps-btn" data-a="atrImportar" title="The exported matrix or a KPI master file (.xlsx, .xls or .csv)">Import matrix or KPI master</button><button type="button" class="ps-btn pri" data-a="atrGuardar"' + (conf.length ? ' disabled' : '') + '>Save assignments</button>' + (mudou ? chip('Unsaved changes', 'warn') : '') + '</div>' +
-      relImportAtr() +
-      (conf.length ? '<div class="ps-aviso err" role="alert">Segregation of duties: ' + conf.length + ' KPI(s) with the same person submitting and approving (' + e(conf.slice(0, 6).join(', ')) + '). Correct this before saving.</div>' : '') +
-      '<div class="ps-grid-side ps-grid-side-l"><div class="ps-card"><div class="ps-card-body"><div class="ps-form">' + campo('at-q', 'Search', '<input id="at-q" class="ps-in" data-c="atrF" data-id="q" value="' + e(f.q) + '">') + campo('at-emp', 'Company', '<select id="at-emp" class="ps-sel" data-c="atrF" data-id="empresa">' + opt('', 'All', f.empresa) + S.ent.filter(function (x) { return cicloMs().some(function (m) { return m.empresa === x.nome; }); }).map(function (x) { return opt(x.nome, x.nome, f.empresa); }).join('') + '</select>') + '</div><div class="ps-mt">' +
-      tabela([{ t: 'KPI' }, { t: 'Company' }, { t: 'Submits (data owner)' }, { t: 'Reviews (1st level)' }, { t: 'Validates (ESG)' }], lista.map(function (c) {
-        var a = f.rasc[c.id];
-        return { attrs: P.conflitoAtrib(a) ? 'class="ps-l-err"' : '', celulas: [e(c.nome) + '<br><small class="ps-mut">' + e(c.esrs_requisito || c.id) + ', ' + e(P.msDoIndicador(c.id).periodicidade) + '</small>', emp(P.msDoIndicador(c.id).empresa), sel(c, 'submete', 'Submits'), sel(c, 'reve', 'Reviews'), sel(c, 'valida', 'Validates')] };
-      }), 'No KPI matches these filters.') + '</div></div></div>' +
-      '<div class="ps-card">' + cabCartao('People and workload', 'tarefa') + '<ul class="ps-list">' + carga + '</ul><p class="ps-card-body ps-small ps-mut">The assignment sets who owns each KPI in Reporting status. Who can act on a milestone still follows the department of the workflow step.</p></div></div>';
-  };
-  C.atrSel = function (el) { U.atr.rasc[el.dataset.id][el.dataset.f] = el.value; };
-  C.atrF = function (el) { U.atr[el.dataset.id] = el.value; };
-  A.atrGuardar = function () { var r = P.guardarAtrib(U.atr.rasc, u()); if (r.erro) return toast(r.erro, 'err'); U.atr.rasc = null; toast('Assignments saved. The change is in the audit trail.', 'ok'); R(); };
-  A.atrExportar = function () {
-    var nome = function (l) { var x = P.user(l); return x ? x.nome : l; };
-    P.escreverFolhas('kpi-assignment-' + S.ciclo.ano + '.xlsx', { assignment: catCiclo().map(function (c) { var a = (U.atr.rasc || S.atrib)[c.id]; return { indicator_id: c.id, kpi: c.nome, company: P.msDoIndicador(c.id).empresa, submits: nome(a.submete), reviews: nome(a.reve), validates: nome(a.valida) }; }) });
-  };
-  /* Importar a matriz: aceita o ficheiro exportado e tambem um ficheiro master do cliente.
-     Procura a folha e a linha dos cabecalhos, reconhece as colunas pelo nome e identifica cada KPI
-     pelo ID da plataforma, pelo ID ESRS ou pelo nome. So muda os papeis que vierem preenchidos. */
-  var normTxt = function (t) { return String(t === null || t === undefined ? '' : t).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim(); };
-  var COLS_ATR = {
-    id: { t: 'KPI ID', exato: ['indicator id', 'indicator', 'kpi id', 'id kpi', 'platform kpi', 'kpi code', 'indicator code', 'codigo', 'code', 'id do indicador', 'indicador id', 'id'], tem: ['platform kpi', 'indicator id', 'kpi id'] },
-    nome: { t: 'KPI name', exato: ['kpi', 'kpi name', 'indicator name', 'nome', 'nome do indicador', 'indicador', 'name'], tem: [] },
-    submete: { t: 'Submits', exato: ['submits', 'submitter', 'submits data owner', 'data owner', 'owner', 'responsible person', 'responsavel', 'responsible', 'assigned to', 'submete', 'reporter'], tem: ['responsible person', 'submits', 'data owner', 'submitter'] },
-    reve: { t: 'Reviews', exato: ['reviews', 'reviewer', 'reviews 1st level', 'review', 'revisor', 'reve', '1st level review'], tem: ['reviews', 'reviewer', '1st level'] },
-    valida: { t: 'Validates', exato: ['validates', 'validator', 'validates esg', 'approver', 'approves', 'valida', 'validacao', 'validation'], tem: ['validates', 'validator', 'approver'] },
-    dep: { t: 'Department', exato: ['department', 'responsible department', 'departamento', 'unidade', 'business unit', 'area'], tem: ['responsible department'] }
-  };
-  var lerCabecalhos = function (cab) {
-    var cols = {}, usadas = {}, h = cab.map(normTxt);
-    var achar = function (k, modo) {
-      if (cols[k] !== undefined) return;
-      var d = COLS_ATR[k];
-      /* Os nomes vao por ordem de preferencia: Platform KPI ganha a uma coluna ID com o numero da linha */
-      var lista = modo === 'exato' ? d.exato : d.tem;
-      for (var q = 0; q < lista.length; q++) {
-        for (var i = 0; i < h.length; i++) {
-          if (usadas[i] || !h[i]) continue;
-          if (modo === 'exato' ? h[i] === lista[q] : h[i].indexOf(lista[q]) > -1) { cols[k] = i; usadas[i] = 1; return; }
-        }
-      }
-    };
-    ['submete', 'reve', 'valida', 'dep', 'id', 'nome'].forEach(function (k) { achar(k, 'exato'); });
-    ['submete', 'reve', 'valida', 'dep', 'id'].forEach(function (k) { achar(k, 'tem'); });
-    return cols;
-  };
-  var analisarAtrib = function (livro, d) {
-    var melhor = null;
-    livro.folhas.forEach(function (f) {
-      for (var r = 0; r < Math.min(20, f.aoa.length); r++) {
-        var cols = lerCabecalhos(f.aoa[r] || []), papeis = ['submete', 'reve', 'valida', 'dep'].filter(function (k) { return cols[k] !== undefined; }).length, temKpi = cols.id !== undefined || cols.nome !== undefined;
-        var pont = (temKpi ? 10 : 0) + papeis;
-        if (!melhor || pont > melhor.pont) melhor = { pont: pont, folha: f, linha: r, cols: cols, temKpi: temKpi, papeis: papeis };
-      }
-    });
-    var rel = { nome: livro.nome, ok: 0, kpis: [], sem: 0, mal: [], cols: [] };
-    if (!melhor || !melhor.temKpi || !melhor.papeis) {
-      rel.erro = !melhor || !melhor.temKpi ? 'No column identifies the KPI. Use a column named KPI ID, indicator_id or Platform KPI (or the KPI name).' : 'No column says who submits, reviews or validates. Use columns named Submits, Reviews and Validates (or Responsible person, Responsible department).';
-      return rel;
-    }
-    var c = melhor.cols, cab = melhor.folha.aoa[melhor.linha];
-    rel.folha = melhor.folha.nome; rel.linhaCab = melhor.linha + 1;
-    Object.keys(COLS_ATR).forEach(function (k) { if (c[k] !== undefined) rel.cols.push(COLS_ATR[k].t + ' = "' + String(cab[c[k]]).trim() + '"'); });
-    var porNome = {}, porEsrs = {};
-    S.cat.forEach(function (x) { porNome[normTxt(x.nome)] = x.id; P.esrsDe(x.id).dps.forEach(function (dp) { (porEsrs[normTxt(dp)] = porEsrs[normTxt(dp)] || []).push(x.id); }); });
-    var kpisDe = function (lin) {
-      var out = [], desc = [];
-      if (c.id !== undefined) String(lin[c.id] === undefined ? '' : lin[c.id]).split(/[;,\n|]+/).map(function (t) { return t.trim(); }).filter(Boolean).forEach(function (t) {
-        var x = S.cat.filter(function (y) { return y.id.toLowerCase() === t.toLowerCase(); })[0];
-        if (x) out.push(x.id); else if (porEsrs[normTxt(t)]) out = out.concat(porEsrs[normTxt(t)]); else if (porNome[normTxt(t)]) out.push(porNome[normTxt(t)]); else desc.push(t);
-      });
-      if (!out.length && c.nome !== undefined && porNome[normTxt(lin[c.nome])]) out.push(porNome[normTxt(lin[c.nome])]);
-      /* Com coluna de ID, uma linha sem ID e um datapoint sem KPI da plataforma: salta-se */
-      var semNada = !out.length && !desc.length && (c.id !== undefined || !String(lin[c.nome] || '').trim());
-      if (!out.length && !desc.length && c.id === undefined && String(lin[c.nome] || '').trim()) desc.push(String(lin[c.nome]).trim());
-      return { ids: out.filter(function (x, i) { return out.indexOf(x) === i; }), desc: desc, vazio: semNada };
-    };
-    var pessoa = function (t, papel) {
-      var v = normTxt(t);
-      if (!v) return null;
-      var ok = pessoasAtr(papel);
-      var x = ok.filter(function (y) { return normTxt(y.login) === v || normTxt(y.nome) === v || (y.email && normTxt(y.email) === v); })[0];
-      if (!x) x = ok.filter(function (y) { return y.perfil === 'resp' && normTxt(y.unidade) === v; })[0];
-      if (!x && /sustainab|sustentab|esg/.test(v)) x = ok.filter(function (y) { return y.perfil === 'esg'; })[0];
-      if (!x && /admin/.test(v)) x = ok.filter(function (y) { return y.perfil === 'admin'; })[0];
-      return x || false;
-    };
-    for (var r = melhor.linha + 1; r < melhor.folha.aoa.length; r++) {
-      var lin = melhor.folha.aoa[r], n = r + 1, k = kpisDe(lin);
-      if (k.vazio) { rel.sem++; continue; }
-      if (!k.ids.length) { rel.mal.push({ n: n, t: 'KPI not found: ' + k.desc.join(', ') + '.' }); continue; }
-      /* Uma celula com varios KPIs ("A01; A03") pode trazer uma pessoa por KPI, pela mesma ordem */
-      var novo = k.ids.map(function () { return {}; }), erros = [];
-      [['submete', 'Submits'], ['reve', 'Reviews'], ['valida', 'Validates']].forEach(function (pp) {
-        var bruto = c[pp[0]] !== undefined ? lin[c[pp[0]]] : '';
-        if (pp[0] === 'submete' && !String(bruto || '').trim() && c.dep !== undefined) bruto = lin[c.dep];
-        if (!String(bruto || '').trim()) return;
-        var partes = String(bruto).split(/\s*;\s*/).filter(Boolean), porKpi = partes.length > 1 && partes.length === k.ids.length;
-        k.ids.forEach(function (id, q) {
-          var t = porKpi ? partes[q] : String(bruto).trim(), x = pessoa(t, pp[0]);
-          if (x) novo[q][pp[0]] = x.login; else if (!q || porKpi) erros.push(pp[1] + ' "' + t + '" is not a person who can ' + pp[1].toLowerCase().replace(/s$/, '') + '.');
-        });
-      });
-      if (!novo.some(function (o) { return Object.keys(o).length; })) { rel.mal.push({ n: n, t: erros.join(' ') || 'No person filled in.' }); continue; }
-      k.ids.forEach(function (id, q) {
-        if (!Object.keys(novo[q]).length) return;
-        var a = d[id] || (d[id] = { submete: '', reve: '', valida: '' });
-        Object.keys(novo[q]).forEach(function (pp) { a[pp] = novo[q][pp]; });
-        if (rel.kpis.indexOf(id) < 0) rel.kpis.push(id);
-      });
-      rel.ok++;
-      if (erros.length) rel.mal.push({ n: n, t: 'Applied in part. ' + erros.join(' ') });
-    }
-    return rel;
-  };
-  A.atrImportar = function () {
-    X.escolherFicheiro('.xlsx,.xls,.csv', function (f) {
-      P.lerLivro(f).then(function (livro) {
-        if (livro.erro) { U.atr.imp = { nome: livro.nome, erro: livro.erro, cols: [], mal: [] }; return R(); }
-        var d = JSON.parse(JSON.stringify(U.atr.rasc || S.atrib)), rel = analisarAtrib(livro, d);
-        if (!rel.erro) U.atr.rasc = d;
-        U.atr.imp = rel;
-        toast(rel.erro ? 'The file could not be used. See the details on the page.' : rel.kpis.length + ' KPI(s) updated from ' + rel.nome + '. Check and save.', rel.erro ? 'err' : 'ok'); R();
-      });
-    });
-  };
-  A.atrImpFechar = function () { U.atr.imp = null; R(); };
-  var relImportAtr = function () {
-    var x = U.atr.imp;
-    if (!x) return '';
-    var fechar = '<button type="button" class="ps-x" data-a="atrImpFechar" aria-label="Close">×</button>';
-    if (x.erro) return '<div class="ps-aviso err ps-imp-atr" role="alert"><div class="ps-sp-b"><b>' + e(x.nome) + '</b>' + fechar + '</div><p>' + e(x.erro) + '</p><p class="ps-small">Tip: Export matrix gives a file in the expected format. A KPI master works too, as long as it has a KPI column (Platform KPI, KPI ID or KPI name) and a Responsible person or Responsible department column.</p></div>';
-    return '<div class="ps-aviso ' + (x.mal.length ? 'warn' : 'ok') + ' ps-imp-atr" role="status"><div class="ps-sp-b"><b>' + e(x.nome) + ': ' + x.kpis.length + ' KPI(s) updated from ' + x.ok + ' row(s)</b>' + fechar + '</div>' +
-      '<p class="ps-small">Sheet "' + e(x.folha) + '", headers in row ' + x.linhaCab + '. Columns used: ' + e(x.cols.join(', ')) + '.' + (x.sem ? ' ' + x.sem + ' row(s) without a platform KPI were skipped.' : '') + ' Nothing is saved until you click Save assignments.</p>' +
-      (x.mal.length ? '<details class="ps-mt"><summary>' + x.mal.length + ' row(s) not applied or applied in part</summary><ul class="ps-small">' + x.mal.slice(0, 60).map(function (m) { return '<li>Row ' + m.n + ': ' + e(m.t) + '</li>'; }).join('') + (x.mal.length > 60 ? '<li>…</li>' : '') + '</ul></details>' : '') + '</div>';
-  };
 
   /* --- Empresas e perimetro ------------------------------------------------------------------ */
   U.per = { sel: '' };

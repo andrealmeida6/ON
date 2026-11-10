@@ -219,6 +219,8 @@
   /* Quem entrega o indicador: o departamento do plano, ou o dono no catalogo */
   P.donoIndicador = function (id) {
     var pl = (window.PORTAL_PLANO || []).filter(function (x) { return x.indicadores.indexOf(id) > -1; })[0], c = P.cat(id);
+    /* O departamento escolhido na pagina Indicators do Backoffice ganha ao plano de origem */
+    if (c && c.unidade_reporte) return c.unidade_reporte;
     return pl ? pl.unidade : c ? c.unidade_negocio : '';
   };
   P.entregasPadrao = function (id) {
@@ -700,6 +702,108 @@
     });
     if (criadas.length) guardar();
     return { criadas: criadas, ignoradas: ignoradas };
+  };
+
+  /* --- Indicadores geridos no Backoffice: empresas, responsavel e envio de tasks ---- */
+  /* Empresas abrangidas pelo indicador (por omissao, todo o perimetro do grupo) e empresa que o reporta */
+  P.empresasInd = function (c) {
+    var l = c && c.empresas && c.empresas.length ? S.ent.filter(function (x) { return c.empresas.indexOf(x.id) > -1; }) : [];
+    return l.length ? l : S.ent.filter(function (x) { return x.perimetro_grupo; });
+  };
+  P.reportaInd = function (c) {
+    var x = c && c.reporta ? S.ent.filter(function (y) { return y.id === c.reporta; })[0] : null;
+    if (x) return x;
+    var m = c ? S.ms.filter(function (y) { return y.indicadores.indexOf(c.id) > -1; }).sort(function (a, b) { return a.prazo < b.prazo ? 1 : -1; })[0] : null;
+    return (m && S.ent.filter(function (y) { return y.nome === m.empresa; })[0]) || P.empresasInd(c)[0] || S.ent[0] || null;
+  };
+  P.indAtivo = function (c) { return !!c && c.ativo !== false; };
+  /* Responsavel: uma pessoa (quem submete na atribuicao) ou o grupo, que e o departamento inteiro */
+  P.responsavelInd = function (id) {
+    var a = (S.atrib || {})[id], x = a && a.submete ? P.user(a.submete) : null, dep = P.donoIndicador(id);
+    return x ? { tipo: 'pessoa', login: x.login, nome: x.nome, dep: dep } : { tipo: 'grupo', login: '', nome: dep, dep: dep };
+  };
+  /* Task de um indicador num periodo: a milestone desse periodo que o tem (sem as consolidacoes) */
+  P.tarefaInd = function (id, pid) { var l = S.ms.filter(function (m) { return m.periodo === pid && m.indicadores.indexOf(id) > -1; }); return l.filter(function (m) { return !m.consolida; })[0] || l[0] || null; };
+  P.estadoTarefaInd = function (id, pid) {
+    var m = P.tarefaInd(id, pid);
+    if (!m) return { cod: 'nao', txt: 'Not sent', cls: '', m: null };
+    if (P.concluida(m)) return { cod: 'feito', txt: 'Approved', cls: 'ok', m: m };
+    var p = P.passoAtual(m), it = P.item(id, P.chave(m));
+    if (p.tipo !== 'recolha') return { cod: 'revisao', txt: 'In review', cls: 'rev', m: m };
+    if (m.devolvida) return { cod: 'aberta', txt: 'Returned', cls: 'err', m: m };
+    if (P.diasAte(m.prazo) < 0) return { cod: 'atraso', txt: 'Overdue', cls: 'err', m: m };
+    return it && it.valor !== null ? { cod: 'aberta', txt: 'Filled in', cls: 'info', m: m } : { cod: 'aberta', txt: 'Sent', cls: 'warn', m: m };
+  };
+  /* O que o envio vai fazer, sem gravar: um grupo por empresa que reporta, departamento e pessoa */
+  P.planoEnvio = function (ids, pid) {
+    var per = P.periodo(pid), grupos = {}, fora = [];
+    ids.forEach(function (id) {
+      var c = P.cat(id);
+      if (!c) return;
+      if (!P.indAtivo(c)) return fora.push({ id: id, t: 'inactive' });
+      var ja = P.tarefaInd(id, pid);
+      if (ja) return fora.push({ id: id, t: 'already sent in ' + ja.nome });
+      var emp = P.reportaInd(c), r = P.responsavelInd(id);
+      if (!emp) return fora.push({ id: id, t: 'no reporting company' });
+      if (!r.dep) return fora.push({ id: id, t: 'no responsible department' });
+      var k = emp.id + '|' + r.dep + '|' + r.login, g = grupos[k] || (grupos[k] = { empresa: emp, dep: r.dep, resp: r, ids: [], ms: null });
+      g.ids.push(id);
+    });
+    var l = Object.keys(grupos).map(function (k) { return grupos[k]; });
+    l.forEach(function (g) {
+      /* Junta-se a uma task aberta do mesmo departamento, empresa e pessoa; senao cria-se uma nova */
+      g.ms = S.ms.filter(function (m) { return m.periodo === pid && !m.consolida && m.unidade === g.dep && m.empresa === g.empresa.nome && (m.atribuido_a || '') === g.resp.login && !P.concluida(m) && P.passoAtual(m).tipo === 'recolha'; })[0] || null;
+    });
+    return { per: per, grupos: l, fora: fora, n: l.reduce(function (a, g) { return a + g.ids.length; }, 0) };
+  };
+  P.enviarTarefas = function (cfg, u) {
+    if (!P.gereTudo(u)) return { erro: 'No permission.' };
+    var per = P.periodo(cfg.periodo);
+    if (!per) return { erro: 'Choose a reporting period.' };
+    var pl = P.planoEnvio(cfg.ids || [], cfg.periodo), prazo = cfg.prazo || per.fecho, ch = per.tipo === 'trimestre' ? per.id : per.ano, criadas = 0, juntas = 0;
+    if (!pl.n) return { erro: 'Nothing to send: the selected indicators are inactive or were already sent for ' + per.nome + '.' };
+    var num = S.ms.reduce(function (mx, m) { var n = parseInt(String(m.id).replace(/^M/, ''), 10); return isNaN(n) ? mx : Math.max(mx, n); }, 0);
+    pl.grupos.forEach(function (g) {
+      var m = g.ms;
+      if (m) {
+        g.ids.forEach(function (i) { m.indicadores.push(i); });
+        ev(m, g.ids.length + ' indicator(s) added from the Backoffice: ' + g.ids.join(', ') + '.', u.nome);
+        juntas++;
+      } else {
+        num++;
+        var id = 'M' + String(num).padStart(2, '0') + (per.tipo === 'trimestre' ? '-T' + per.t : '');
+        while (P.ms(id)) id += 'b';
+        m = {
+          id: id, nome: (per.tipo === 'trimestre' ? 'Entrega T' + per.t + ' ' + per.ano : 'Entrega anual ' + per.ano) + ' de ' + g.dep + (g.resp.tipo === 'pessoa' ? ', ' + g.resp.nome : ''), ano: per.ano, periodo: per.id, consolida: false,
+          empresa: g.empresa.nome, departamentos: [g.dep], atribuido_a: g.resp.login || null, ficheiros_pedidos: [], unidade: g.dep,
+          periodicidade: per.tipo === 'trimestre' ? 'Trimestral' : 'Anual', prazo: prazo, indicadores: g.ids.slice(), passos: passosDe(WF_BASE()), passo_atual: 0, devolvida: false, workflow_ajustado: false,
+          documentos_gerais: [], comentarios: [], eventos: []
+        };
+        S.ms.push(m);
+        ev(m, 'Task sent from the Backoffice for ' + per.nome + ', due ' + prazo + '.', u.nome, 'criada');
+        if (g.resp.tipo === 'pessoa') ev(m, 'Assigned to ' + g.resp.nome + '.', u.nome);
+        criadas++;
+      }
+      if (cfg.nota && String(cfg.nota).trim()) ev(m, 'Note to the assignee: ' + String(cfg.nota).trim(), u.nome);
+      g.ids.forEach(function (i) { if (!S.items[ch + ':' + i]) S.items[ch + ':' + i] = novoItem(i, ch, m.id, P.cat(i).tipo); else S.items[ch + ':' + i].milestone_id = m.id; });
+    });
+    if (P.eventoGlobal) P.eventoGlobal('Tasks sent for ' + per.nome + ': ' + pl.n + ' indicator(s) in ' + (criadas + juntas) + ' task(s).', u.nome, 'Creation');
+    guardar();
+    return { ok: true, n: pl.n, criadas: criadas, juntas: juntas, fora: pl.fora };
+  };
+  /* Lembrete: fica no historico da task e na conversa de quem a tem */
+  P.lembrarTarefas = function (ids, pid, u) {
+    if (!P.gereTudo(u)) return { erro: 'No permission.' };
+    var vistos = {}, n = 0;
+    ids.forEach(function (id) {
+      var m = P.tarefaInd(id, pid);
+      if (!m || vistos[m.id] || P.concluida(m) || P.passoAtual(m).tipo !== 'recolha') return;
+      vistos[m.id] = 1; n++;
+      m.lembrado_em = agora();
+      ev(m, 'Reminder sent by the Backoffice: due ' + m.prazo + '.', u.nome);
+    });
+    if (n) guardar();
+    return { ok: true, n: n };
   };
 
   P.ficheirosPedidos = function (m) {
@@ -1373,7 +1477,8 @@
         var base = { milestone_id: m.id, indicator_id: id, indicator_name: c.nome, perimeter: m.empresa, period: P.rotPeriodo(m), deadline: m.prazo, entity: m.empresa, value: fmt(it.valor), unit: c.unidade_medida, prior_value: fmt(ant), threshold_pct: c.limiar_variacao_pct, justification: it.justificacao || '', data_quality: ({ medido: 'measured', calculado: 'calculated', estimado: 'estimated' })[it.qualidade] || 'measured', estimation_method: it.metodo || '', evidence_ref: '', source_system: it.fonte || '' };
         if (!porEmpresa) { dados.push(base); return; }
         var ents = it.entradas || [];
-        P.empresasGrupo().forEach(function (x) {
+        /* As empresas sao as que o indicador abrange (Backoffice, Indicators); por omissao, o perimetro do grupo */
+        P.empresasInd(c).forEach(function (x) {
           var l = {}; Object.keys(base).forEach(function (k) { l[k] = base[k]; });
           var e0 = ents.filter(function (y) { return y.local === x.nome; })[0];
           l.entity = x.nome; l.value = e0 ? e0.valor : ''; l.justification = ''; l.prior_value = '';
@@ -1556,6 +1661,7 @@
         if (est.cod === 'devolvida') add('err', m.nome + ' was returned', 'Correct and resubmit', r);
         if (est.cod === 'atraso') add('err', m.nome + ' is overdue', 'Due ' + P.fmtData(m.prazo), r);
         if (est.cod === 'recolha' && P.diasAte(m.prazo) <= 5) add('warn', m.nome + ' due soon', 'Due ' + P.fmtData(m.prazo), r);
+        if (minha && m.lembrado_em && (est.cod === 'recolha' || est.cod === 'atraso' || est.cod === 'devolvida') && (Date.now() - new Date(m.lembrado_em).getTime()) < 7 * 86400000) add('warn', 'Reminder: ' + m.nome, 'The sustainability team asked for this, due ' + P.fmtData(m.prazo), r);
       }
       if (P.esperaPor(m, u) && ['revisao', 'parecer', 'aprovacao'].indexOf(est.cod) > -1) add('info', m.nome + ' awaiting decision', P.passoAtual(m).nome, r);
     });

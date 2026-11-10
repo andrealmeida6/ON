@@ -8,6 +8,7 @@
 (function () {
   'use strict';
   var B = (window.PortalBackend = {});
+  var CONFIG_IND = ['ativo', 'empresas', 'reporta', 'unidade_reporte', 'desc_propria', 'subtema_proprio', 'dr_proprio', 'divulgacao_tipo', 'tipo_dado', 'criado_backoffice'];
   var CFG = window.PORTAL_BACKEND || null;
   B.ativo = !!CFG;
   B.configurar = function (c) { CFG = c; B.ativo = true; };
@@ -97,7 +98,7 @@
     var esrs = function (id) { return window.Portal && window.Portal.esrsDe ? window.Portal.esrsDe(id) : { rel: 'especifico', dps: [] }; };
     S.cat.forEach(function (c) {
       var k = esrs(c.id);
-      por('esg_indicadores', c.id, { id: c.id, nome: c.nome, unidade_medida: c.unidade_medida, tema: c.tema, quadro: c.quadro, unidade_negocio: c.unidade_negocio, tipo: c.tipo, formula: nulo(c.formula), periodicidade: c.periodicidade, momentos: c.momentos || null, perimetro: c.perimetro, limiar_variacao_pct: c.limiar_variacao_pct, evidencia_obrigatoria: !!c.evidencia_obrigatoria, regras_coerencia: c.regras_coerencia || [], esrs: nulo(c.esrs), esrs_requisito: nulo(c.esrs_requisito), gri: nulo(c.gri), utilizado_por: c.utilizado_por || [], novo_esrs: !!c.novo_esrs, casas_decimais: c.casas_decimais, valor_base_anterior: c.ano_anterior === undefined ? null : c.ano_anterior, descricao: nulo(k.desc), subtema: nulo(k.sub), agregacao: nulo(k.agreg), esrs_ligacao: k.rel, esrs_datapoints: k.dps || [], esrs_nota: nulo(k.nota) });
+      por('esg_indicadores', c.id, { id: c.id, nome: c.nome, unidade_medida: c.unidade_medida, tema: c.tema, quadro: c.quadro, unidade_negocio: c.unidade_negocio, tipo: c.tipo, formula: nulo(c.formula), periodicidade: c.periodicidade, momentos: c.momentos || null, perimetro: c.perimetro, limiar_variacao_pct: c.limiar_variacao_pct, evidencia_obrigatoria: !!c.evidencia_obrigatoria, regras_coerencia: c.regras_coerencia || [], esrs: nulo(c.esrs), esrs_requisito: nulo(c.esrs_requisito), gri: nulo(c.gri), utilizado_por: c.utilizado_por || [], novo_esrs: !!c.novo_esrs, casas_decimais: c.casas_decimais, valor_base_anterior: c.ano_anterior === undefined ? null : c.ano_anterior, descricao: nulo(k.desc), subtema: nulo(k.sub), agregacao: nulo(k.agreg), esrs_ligacao: k.rel, esrs_datapoints: k.dps || [], esrs_nota: nulo(k.nota), config: CONFIG_IND.reduce(function (o, f) { if (c[f] !== undefined) o[f] = c[f]; return o; }, {}) });
     });
     S.wfbase.forEach(function (p, i) { por('esg_workflow_base', i + 1, { ordem: i + 1, nome: p.nome, tipo: p.tipo, responsavel: p.responsavel }); });
     S.ent.forEach(function (x) { por('esg_entidades', x.id, { id: x.id, nome: x.nome, perimetro_grupo: !!x.perimetro_grupo, perimetro_maioritario: !!x.perimetro_maioritario, pais: nulo(x.pais), detencao: x.detencao === undefined ? null : x.detencao, metodo: nulo(x.metodo), instalacoes: x.instalacoes === undefined ? null : x.instalacoes, nace: nulo(x.nace), nipc: nulo(x.nipc), moeda: nulo(x.moeda) }); });
@@ -155,6 +156,8 @@
       var o = Object.assign({}, c);
       o.ano_anterior = c.valor_base_anterior; delete o.valor_base_anterior;
       o.esrs = c.esrs || ''; o.esrs_requisito = c.esrs_requisito || ''; o.gri = c.gri || '';
+      /* Campos geridos em Backoffice, Indicators (empresas, estado, departamento que reporta e textos proprios) */
+      var cfg = c.config || {}; delete o.config; CONFIG_IND.forEach(function (f) { if (cfg[f] !== undefined) o[f] = cfg[f]; });
       return o;
     });
     S.wfbase = d.esg_workflow_base.map(function (p) { return { nome: p.nome, tipo: p.tipo, responsavel: p.responsavel }; });
