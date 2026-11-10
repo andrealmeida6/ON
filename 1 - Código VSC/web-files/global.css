@@ -1792,3 +1792,46 @@ input[type=file]:not(.ps-fic-in)::file-selector-button:hover{background:var(--pr
   .wz-sel{grid-column:2 / -1}
   .wz-mv{grid-column:2 / -1;align-items:flex-start;text-align:left}
 }
+/* 34. HOME: REPORTING STATUS, MY TASKS, EXCEL OFFLINE E IMPORTACAO DA MATRIZ */
+/* Progresso no hero: a mesma conta do Reporting status, por KPI */
+.ps-glass.ps-est-h{display:block}
+.ps-est-c{padding:18px 20px;border-radius:16px;border:1px solid rgba(255,255,255,.18);background:linear-gradient(160deg,rgba(255,255,255,.14),rgba(255,255,255,.04));color:#fff}
+.ps-est-t{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.ps-est-l{display:block;font-size:12.5px;font-weight:600;color:color-mix(in srgb,#fff 85%,var(--primary))}
+.ps-est-v{display:flex;align-items:baseline;gap:8px;font-size:38px;font-weight:700;letter-spacing:-1.2px;line-height:1;margin-top:6px;font-variant-numeric:tabular-nums}
+.ps-est-v small{font-size:13px;font-weight:600;letter-spacing:0;color:color-mix(in srgb,#fff 80%,var(--primary))}
+.ps-est-t .ps-gk-cta{border:0;cursor:pointer}
+.ps-est-bar{display:flex;height:10px;border-radius:999px;overflow:hidden;background:rgba(255,255,255,.16);margin-top:16px}
+.ps-est-bar i{display:block;height:100%}
+.ps-est-c .a{background:#7FE0BE}.ps-est-c .v{background:#C9BEFF}.ps-est-c .c{background:#9BDCFA}.ps-est-c .f{background:#FFD08A}.ps-est-c .x{background:#FF8FA8}
+.ps-est-n{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin-top:14px}
+.ps-est-i{display:flex;flex-direction:column;gap:2px;padding:8px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06);color:#fff;text-align:left;font-size:12px;font-weight:600;min-width:0}
+button.ps-est-i{cursor:pointer;transition:border-color .18s,background .18s}
+button.ps-est-i:hover{border-color:rgba(255,255,255,.4);background:rgba(255,255,255,.12)}
+.ps-est-i i{width:8px;height:8px;border-radius:50%}
+.ps-est-i span{color:color-mix(in srgb,#fff 85%,var(--primary));white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ps-est-i b{font-size:20px;line-height:1.1;font-variant-numeric:tabular-nums}
+.ps-est-s{display:block;margin-top:10px;font-size:12px;color:color-mix(in srgb,#fff 75%,var(--primary))}
+/* My tasks: uma linha por KPI e periodo */
+.ps-tar-k{display:flex;flex-direction:column;gap:2px;min-width:0}
+.ps-tar-k > a:first-child{font-weight:600}
+.ps-tar-cta{align-self:flex-start;margin-top:4px;font-size:12px;font-weight:700;text-decoration:none;color:var(--primary);background:var(--primary-50);padding:3px 9px;border-radius:999px}
+.ps-tar-cta:hover{background:var(--primary-100)}
+/* Excel offline */
+.ps-off-p{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;counter-reset:off}
+.ps-off-p li{counter-increment:off;display:flex;flex-direction:column;gap:3px;padding:12px 14px;border-radius:12px;background:var(--neutro-50);font-size:12.5px}
+.ps-off-p li b{font-size:13.5px}
+.ps-off-p li b::before{content:counter(off) ". ";color:var(--primary)}
+.ps-off-p li span{color:var(--muted)}
+.ps-off .ps-chk{align-items:flex-start}
+.ps-off-res{padding:14px;border:1px solid var(--line);border-radius:12px}
+/* Resultado da importacao da matriz de atribuicao */
+.ps-imp-atr p{margin-top:6px}
+.ps-imp-atr .ps-x{width:28px;height:28px;font-size:15px}
+.ps-imp-atr ul{margin:6px 0 0;padding-left:18px;max-height:220px;overflow:auto}
+.ps-imp-atr summary{cursor:pointer;font-weight:600}
+@media (max-width:720px){
+  .ps-est-n{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .ps-est-v{font-size:30px}
+  .ps-off-p{grid-template-columns:1fr}
+}

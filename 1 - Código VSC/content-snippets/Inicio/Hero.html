@@ -5,20 +5,8 @@
       <div class="ps-hero-lock" data-marca-c="hero"></div>
       <div class="ps-hero-ola"><span data-campo="hero-ola"></span></div>
     </div>
-    <div class="ps-glass">
-      <a class="ps-gk dest" href="/milestones/" data-kpi-rota="Milestones?minhas=1">
-        <div><div class="ps-gk-l"><i></i>Waiting on you</div><div class="ps-gk-v" data-campo="kpi-pend">-</div></div>
-        <span class="ps-gk-cta">View now →</span>
-      </a>
-      <a class="ps-gk ps-gk-err" href="/milestones/" data-kpi-rota="Milestones">
-        <div class="ps-gk-l"><i></i>Overdue</div><div class="ps-gk-v" data-campo="kpi-atraso">-</div>
-      </a>
-      <a class="ps-gk ps-gk-rev" href="/milestones/" data-kpi-rota="Milestones">
-        <div class="ps-gk-l"><i></i>In review or approval</div><div class="ps-gk-v" data-campo="kpi-rev">-</div>
-      </a>
-      <a class="ps-gk ps-gk-ok dest" href="/milestones/" data-kpi-rota="Milestones">
-        <div><div class="ps-gk-l"><i></i>Completed</div><div class="ps-gk-v" data-campo="kpi-conc">-</div></div>
-      </a>
+    <div class="ps-glass ps-est-h">
+      {% include 'bloco-dinamico' id: 'inicio-estado' %}
     </div>
   </div>
 </section>

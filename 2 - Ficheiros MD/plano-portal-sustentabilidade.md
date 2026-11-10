@@ -402,6 +402,26 @@ Pedido do André a 9 de novembro de 2026: juntar Requested files e Requested dat
   4. **Review and fill in:** mostra os valores novos, os substituídos e os que ficam iguais, os alertas e a opção "Keep file as supporting document". "Fill in N values" grava os valores com origem "import from Excel", regista o evento, muda para o separador do ecrã e destaca as linhas.
 - **CSS:** secção 33 de `global.css` (`.rq-aba*`, `.rq-pan*`, `.fp-emb`, `.fp-outra*`, `.wz-*`), com versão para telemóvel.
 
+### Home com Reporting status e My tasks, Excel offline e importação da matriz
+
+Pedido do André a 10 de novembro de 2026, com base em erros encontrados em teste.
+
+- **Home, topo:** os quatro cartões de milestones deram lugar ao progresso do **Reporting status** (bloco `inicio-estado`, dentro do snippet `Inicio/Hero`). A conta é a mesma da página Reporting status, por KPI: Approved, In approval, In progress, Missing e Overdue, com uma barra. Cada número abre a página já filtrada (`iniEstado`). Quem contribui vê só os seus KPIs.
+- **My tasks** (bloco `inicio-tarefas`) substitui "Milestones waiting on you". É uma tabela com uma linha por KPI e período: KPI, Period, Perimeter, Assigned to, Deadline e Status. Usa Perimeter e não Company, porque o perímetro pode ser uma unidade de negócio. A gestão alterna entre Mine e Everyone.
+- **Removido:** o cartão Upcoming deliveries (`inicio-entregas`, `entVista`), que repetia a mesma informação.
+- **Separador My tasks:** o antigo separador Milestones do cabeçalho e da navegação móvel chama-se agora My tasks e abre `Milestones?minhas=1` (`data-nav-q`). Com esse filtro, o título da página também passa a My tasks. A web page continua a chamar-se Milestones.
+- **Tabelas de milestones e KPIs:** o período tem coluna própria, e Company passa a Perimeter e Due a Deadline. Aplica-se a `COLS_MS`, ao Reporting status, a Approvals e à exportação.
+- **Data entry, justificação:** a lista de data points juntava o mesmo KPI do trimestre e do ano. O ecrã validava contra uma milestone e o Save value contra outra, e por isso pedia "Write the justification." com o valor dentro do limiar. A escolha passa a ser o par milestone e KPI (`U.de.ms`). O período mostrado é o da milestone e a comparação é feita com o período anterior certo.
+- **Excel offline** (`P.folhasOffline`, painel `offline`, separador Excel upload do Data entry): descarrega os KPIs em recolha com a pessoa, no formato do import e já com os valores gravados, para preencher fora da plataforma e carregar de novo. As linhas que não mudaram são ignoradas e não geram versão.
+- **Um valor por empresa:** a opção "One row per company" põe no ficheiro uma linha por empresa do perímetro do grupo. Ao importar, as linhas são juntas pela regra do indicador e o valor de cada empresa fica guardado como entrada (`juntarPorEmpresa`). Na entrada manual, o botão "One row per company" faz o mesmo. A entrada com vários valores está disponível em todos os KPIs, com a agregação do indicador quando a empresa não tem regra própria.
+- **KPI assignment, importação:** aceitava apenas as colunas exatas do export. Passa a aceitar o export da matriz, o KPI master (Platform KPI, Responsible person e Responsible department) e ficheiros do cliente em .xlsx, .xls ou .csv (`P.lerLivro`, `analisarAtrib`):
+  - Encontra sozinha a folha e a linha dos cabeçalhos, mesmo com linhas de título por cima.
+  - Identifica o KPI pelo ID, pelo ID ESRS ou pelo nome.
+  - Reconhece as pessoas pelo nome, pelo login ou pelo departamento.
+  - Só altera os papéis que vêm preenchidos.
+  - Mostra na página o que foi usado e as linhas que não foram aplicadas, com o motivo.
+- **CSS:** secção 34 de `global.css`.
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.

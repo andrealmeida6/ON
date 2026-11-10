@@ -11,7 +11,7 @@
   var e = function (v) {
     return String(v === null || v === undefined ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; });
   };
-  var U = { rota: { pag: '', arg: '', q: {} }, sep: 'dados', msTab: {}, tipoEd: null, lanc: null, msFiltro: { empresa: '', dep: '', estado: 'todas', esrs: true, minhas: false }, msEmpTodas: false, dadosVista: 'form', rqAberto: {}, dzFila: {}, colRel: {}, wfHist: {}, exp: {}, msVista: 'lista', entVista: 'board', imp: {}, cal: null, consEsrs: false, histInd: 'A03', audFiltro: 'todas', boTab: 'indicadores', painel: null, menu: null, docNova: false, indBusca: '', marca: null, regraBusca: '', logoEstado: '' };
+  var U = { rota: { pag: '', arg: '', q: {} }, sep: 'dados', msTab: {}, tipoEd: null, lanc: null, msFiltro: { empresa: '', dep: '', estado: 'todas', esrs: true, minhas: false }, msEmpTodas: false, dadosVista: 'form', rqAberto: {}, dzFila: {}, colRel: {}, wfHist: {}, exp: {}, msVista: 'lista', imp: {}, cal: null, consEsrs: false, histInd: 'A03', audFiltro: 'todas', boTab: 'indicadores', painel: null, menu: null, docNova: false, indBusca: '', marca: null, regraBusca: '', logoEstado: '' };
 
   /* --- Icones ------------------------------------------------------------ */
   var svg = function (d, t) { return '<svg width="' + (t || 16) + '" height="' + (t || 16) + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + d + '</svg>'; };
@@ -36,7 +36,8 @@
   };
   var rotaEmp = function (nome) { var x = S.ent.filter(function (y) { return y.nome === nome; })[0]; return rota('Milestones' + (x ? '?empresa=' + encodeURIComponent(x.id) : '')); };
   /* A mesma regra em todas as tabelas de milestones: empresa e a quem esta atribuida */
-  var COLS_MS = [{ t: 'Milestone' }, { t: 'Company' }, { t: 'Assigned to' }, { t: 'Due' }, { t: 'Status' }];
+  /* Perimeter e nao Company: o perimetro pode ser uma empresa ou uma unidade de negocio. O periodo tem coluna propria, para ler melhor. */
+  var COLS_MS = [{ t: 'Milestone' }, { t: 'Period' }, { t: 'Perimeter' }, { t: 'Assigned to' }, { t: 'Deadline' }, { t: 'Status' }];
   /* Periodo de reporte e relatorios que a milestone alimenta */
   var tagPer = function (m) { var p = P.periodo(m.periodo); return p ? '<span class="ps-per' + (p.tipo === 'ano' ? ' ano' : '') + '" title="Reporting period ' + e(P.fmtData(p.ini)) + ' to ' + e(P.fmtData(p.fim)) + '">' + e(p.nome) + '</span>' : ''; };
   var tagsRel = function (m, max) {
@@ -48,8 +49,9 @@
   /* No telemovel a linha vira cartao: titulo e estado em cima, empresa, responsavel e prazo numa linha por baixo */
   var linhaTabMs = function (m) {
     var a = P.atribuido(m);
-    return { attrs: 'class="ps-tr-ms"', celulas: ['<div class="ps-ms-cel"><div class="ps-ms-cel-t"><a href="' + rota('Milestone/' + m.id) + '">' + e(m.nome) + '</a><span class="ps-so-mob">' + estChip(m) + '</span></div>' + tagsMs(m, 3) +
-      '<span class="ps-so-mob ps-ms-meta">' + empHtml(m.empresa) + (a ? ', ' + e(a.nome) : '') + ', due ' + e(prazoTxt(m)) + '</span></div>', empHtml(m.empresa), atribHtml(m), '<span class="ps-nowrap">' + e(prazoTxt(m)) + '</span>', estChip(m)] };
+    var rels = tagsRel(m, 3);
+    return { attrs: 'class="ps-tr-ms"', celulas: ['<div class="ps-ms-cel"><div class="ps-ms-cel-t"><a href="' + rota('Milestone/' + m.id) + '">' + e(m.nome) + '</a><span class="ps-so-mob">' + estChip(m) + '</span></div>' + (rels ? '<span class="ps-per-l">' + rels + '</span>' : '') +
+      '<span class="ps-so-mob ps-ms-meta">' + e(P.rotPeriodo(m)) + ', ' + empHtml(m.empresa) + (a ? ', ' + e(a.nome) : '') + ', due ' + e(prazoTxt(m)) + '</span></div>', tagPer(m) || '<span class="ps-mut">-</span>', empHtml(m.empresa), atribHtml(m), '<span class="ps-nowrap">' + e(prazoTxt(m)) + '</span>', estChip(m)] };
   };
   var chip = function (txt, cls) { return '<span class="ps-chip ' + (cls || '') + '">' + e(txt) + '</span>'; };
   var estChip = function (m) { var s = P.estadoMs(m); return chip(s.txt, s.cls); };
@@ -189,7 +191,7 @@
       var n = a.getAttribute('data-nav');
       a.hidden = per.indexOf(n) < 0;
       a.classList.toggle('on', ativaNav(pag) === n);
-      a.setAttribute('href', rota(n));
+      a.setAttribute('href', rota(n + (a.getAttribute('data-nav-q') ? '?' + a.getAttribute('data-nav-q') : '')));
       if (ativaNav(pag) === n) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
     });
     var nPend = pendentesDe(usr).length;
@@ -260,56 +262,78 @@
   };
 
   /* --- Inicio ------------------------------------------------------------ */
-  var contagens = function (usr) {
-    var todas = P.msCiclo().filter(function (m) { return doUtilizador(m, usr); }), n = { pend: pendentesDe(usr).length, atraso: 0, rev: 0, conc: 0 };
-    todas.forEach(function (m) {
-      var c = P.estadoMs(m).cod;
-      if (c === 'atraso') n.atraso++;
-      if (['revisao', 'parecer', 'aprovacao'].indexOf(c) > -1) n.rev++;
-      if (c === 'concluida') n.conc++;
+  /* Acoes da Home: juntam-se a A quando A existe (mais abaixo) */
+  var AI = {};
+  /* Progresso do reporte por KPI, o mesmo do Reporting status. Quem contribui ve so os seus KPIs. */
+  var EST_KPI = [['aprovado', 'Approved', 'a'], ['aprovacao', 'In approval', 'v'], ['curso', 'In progress', 'c'], ['falta', 'Missing', 'f'], ['atraso', 'Overdue', 'x']];
+  var kpisEstado = function (usr) {
+    return S.cat.filter(function (c) {
+      var m = P.msDoIndicador(c.id);
+      if (!m || !P.item(c.id)) return false;
+      if (P.gereTudo(usr) || usr.perfil === 'auditor') return true;
+      var d = P.dono(c.id);
+      return (d && d.login === usr.login) || m.unidade === usr.unidade;
     });
-    return n;
   };
-  var linhaMs = function (m, cta) {
-    var ico = P.estadoMs(m).cls === 'err' ? 'err' : '';
-    return '<li><a class="ps-row" href="' + rota('Milestone/' + m.id) + '"><span class="ps-row-ico ' + ico + '">' + svg(I.doc, 18) + '</span><span class="ps-row-txt"><b>' + e(m.nome) + '</b><span>' + tagPer(m) + ' ' + empHtml(m.empresa) + ', ' + e(passoTxt(m)) + ', due ' + e(prazoTxt(m)) + '</span></span>' + estChip(m) + (cta ? '<span class="ps-row-cta">' + e(cta) + '</span>' : '') + '</a></li>';
-  };
-  var ctaPasso = function (m) { var p = P.passoAtual(m); return !p ? '' : p.tipo === 'recolha' ? 'Fill in' : p.tipo === 'parecer' ? 'Give opinion' : p.tipo === 'aprovacao' ? 'Approve' : 'Review'; };
   var pintarHero = function () {
-    var usr = u(), n = contagens(usr), set = function (k, v) { var el = document.querySelector('[data-campo="' + k + '"]'); if (el) el.textContent = v; };
+    var usr = u(), set = function (k, v) { var el = document.querySelector('[data-campo="' + k + '"]'); if (el) el.textContent = v; };
     var h = new Date().getHours();
     set('hero-ola', (h < 13 ? 'Good morning' : h < 20 ? 'Good afternoon' : 'Good evening') + ', ' + usr.nome);
-    set('kpi-pend', n.pend); set('kpi-atraso', n.atraso); set('kpi-rev', n.rev); set('kpi-conc', n.conc);
-    document.querySelectorAll('[data-kpi-rota]').forEach(function (a) { a.setAttribute('href', rota(a.getAttribute('data-kpi-rota'))); });
   };
-  Blocos['inicio-pendentes'] = function () {
-    var l = pendentesDe(u()), mostrar = l.slice(0, 5);
-    return '<div class="ps-dock">' + cabCartao('Milestones waiting on you', 'tarefa', '<a class="ps-btn liga" href="' + rota('Milestones?minhas=1') + '">View all (' + l.length + ')</a>') +
-      (mostrar.length ? '<ul class="ps-list">' + mostrar.map(function (m) { return linhaMs(m); }).join('') + '</ul>' : vazio('Nothing waiting on you.')) + '</div>';
+  Blocos['inicio-estado'] = function () {
+    var usr = u(), l = kpisEstado(usr), n = {}, tot = l.length, vePag = paginasPermitidas(usr).indexOf('Estado') > -1;
+    EST_KPI.forEach(function (x) { n[x[0]] = 0; });
+    l.forEach(function (c) { n[P.estadoKpi(c.id).cod]++; });
+    var pct = function (v) { return tot ? (v / tot) * 100 : 0; }, feito = Math.round(pct(n.aprovado));
+    var item = function (x) {
+      var dentro = '<i class="' + x[2] + '"></i><span>' + e(x[1]) + '</span><b>' + n[x[0]] + '</b>';
+      return vePag ? '<button type="button" class="ps-est-i" data-a="iniEstado" data-v="' + x[0] + '">' + dentro + '</button>' : '<span class="ps-est-i">' + dentro + '</span>';
+    };
+    return '<div class="ps-est-c"><div class="ps-est-t"><div><span class="ps-est-l">Reporting status ' + e(S.ciclo.ano) + (P.gereTudo(usr) || usr.perfil === 'auditor' ? '' : ', your KPIs') + '</span><b class="ps-est-v">' + feito + '%<small>approved</small></b></div>' +
+      (vePag ? '<button type="button" class="ps-gk-cta" data-a="iniEstado" data-v="todos">Open status →</button>' : '') + '</div>' +
+      '<div class="ps-est-bar" role="img" aria-label="' + e(EST_KPI.map(function (x) { return x[1] + ' ' + n[x[0]]; }).join(', ') + ', of ' + tot + ' data points') + '">' + EST_KPI.map(function (x) { return n[x[0]] ? '<i class="' + x[2] + '" style="width:' + pct(n[x[0]]) + '%"></i>' : ''; }).join('') + '</div>' +
+      '<div class="ps-est-n">' + EST_KPI.map(item).join('') + '</div><small class="ps-est-s">' + tot + ' data points in the ' + e(S.ciclo.ano) + ' cycle</small></div>';
   };
-  Blocos['inicio-entregas'] = function () {
-    var usr = u(), cols = [['Overdue', [], 'atraso'], ['Next 7 days', [], ''], ['8 to 21 days', [], ''], ['Expiring in more than 21 days', [], '']], todas = [];
-    P.msCiclo().forEach(function (m) {
-      var p = P.passoAtual(m);
-      if (!p || p.tipo !== 'recolha') return;
-      var d = P.diasAte(m.prazo);
-      cols[d < 0 ? 0 : d <= 7 ? 1 : d <= 21 ? 2 : 3][1].push(m);
-      todas.push(m);
-    });
-    var porPrazo = function (a, b) { return a.prazo < b.prazo ? -1 : 1; };
-    var dir = '<div class="ps-sp"><div class="ps-seg" role="group" aria-label="View"><button type="button" class="' + (U.entVista === 'board' ? 'on' : '') + '" data-a="entVista" data-v="board">Board</button><button type="button" class="' + (U.entVista === 'tabela' ? 'on' : '') + '" data-a="entVista" data-v="tabela">Table</button></div>' + botaoTl('Reporting timeline') + '<a class="ps-btn liga" href="' + rota('Milestones') + '">View all milestones</a></div>';
-    var corpo;
-    if (U.entVista === 'tabela') {
-      corpo = '<div class="ps-card-body">' + tabela(COLS_MS, todas.sort(porPrazo).map(linhaTabMs), 'No upcoming deliveries.') + '</div>';
-    } else {
-      corpo = '<div class="ps-tl">' + cols.map(function (c) {
-        c[1].sort(porPrazo);
-        return '<div class="ps-tl-col ' + c[2] + '"><h4>' + e(c[0]) + ' <span class="ps-n">' + c[1].length + '</span></h4>' + (c[1].length ? c[1].slice(0, 6).map(function (m) {
-          return '<a class="ps-tl-it" href="' + rota('Milestone/' + m.id) + '"><b>' + e(m.nome) + '</b><small>' + tagPer(m) + ' ' + empHtml(m.empresa) + ', ' + e(P.fmtData(m.prazo)) + '</small>' + (P.esperaPor(m, usr) ? '<span class="ps-tl-tag">with you</span>' : '') + '</a>';
-        }).join('') + (c[1].length > 6 ? '<a class="ps-btn liga" href="' + rota('Milestones') + '">' + (c[1].length - 6) + ' more</a>' : '') : '<div class="ps-mut ps-small">Nothing here.</div>') + '</div>';
-      }).join('') + '</div>';
+  AI.iniEstado = function (d) { U.est = U.est || {}; U.est.norma = ''; U.est.empresa = ''; U.est.dono = ''; U.est.estado = d.v; P.irPara('Estado'); };
+
+  /* My tasks: uma linha por KPI e periodo do que espera por mim. A gestao pode ver tambem o que esta em aberto com toda a gente. */
+  var estadoTarefa = function (m, id) {
+    var p = P.passoAtual(m);
+    if (!p) return { txt: 'Completed', cls: 'ok' };
+    if (p.tipo === 'recolha') {
+      if (m.devolvida) return { txt: 'Returned', cls: 'err' };
+      var it = P.item(id, P.chave(m)), vazio2 = !it || (it.valor === null && !it.rascunho);
+      if (P.diasAte(m.prazo) < 0) return { txt: vazio2 ? 'Overdue' : 'Overdue, to submit', cls: 'err' };
+      return vazio2 ? { txt: 'To fill in', cls: '' } : { txt: 'Filled in, to submit', cls: 'info' };
     }
-    return '<div class="ps-card">' + cabCartao('Upcoming deliveries', 'cal', dir) + corpo + '</div>';
+    var s = P.estadoMs(m);
+    return { txt: s.txt, cls: s.cls };
+  };
+  var ctaPasso = function (m) { var p = P.passoAtual(m); return !p ? '' : p.tipo === 'recolha' ? 'Fill in' : p.tipo === 'parecer' ? 'Give opinion' : p.tipo === 'aprovacao' ? 'Approve' : 'Review'; };
+  var abertas = function () { return P.msCiclo().filter(function (m) { return !P.concluida(m) && m.periodicidade !== 'Novos dados ESRS'; }); };
+  Blocos['inicio-tarefas'] = function () {
+    var usr = u(), minhas = pendentesDe(usr), gere = P.gereTudo(usr), todas = gere ? abertas() : [], nKpis = function (l) { return l.reduce(function (a, m) { return a + m.indicadores.length; }, 0); };
+    if (!U.tarEsc) U.tarEsc = minhas.length || !gere ? 'minhas' : 'todas';
+    var esc = gere ? U.tarEsc : 'minhas', lista = (esc === 'todas' ? todas : minhas).slice().sort(function (a, b) { return a.prazo < b.prazo ? -1 : a.prazo > b.prazo ? 1 : 0; });
+    var linhas = [];
+    lista.forEach(function (m) { m.indicadores.forEach(function (id) { linhas.push({ m: m, id: id, c: P.cat(id) }); }); });
+    var mostrar = U.tarTodas ? linhas : linhas.slice(0, 12);
+    var offline = lista.filter(function (m) { return P.podePreencher(m, usr); });
+    var dir = '<div class="ps-sp">' + (gere ? '<div class="ps-seg" role="group" aria-label="Whose tasks"><button type="button" class="' + (esc === 'minhas' ? 'on' : '') + '" data-a="tarEsc" data-v="minhas">Mine <span class="n">' + nKpis(minhas) + '</span></button><button type="button" class="' + (esc === 'todas' ? 'on' : '') + '" data-a="tarEsc" data-v="todas">Everyone <span class="n">' + nKpis(todas) + '</span></button></div>' : '') +
+      '<button type="button" class="ps-btn peq" data-a="tarOffline"' + (offline.length ? '' : ' disabled title="Nothing in collection with you in this list"') + '>Excel (offline)</button>' + botaoTl('Timeline') + '</div>';
+    var cols = [{ t: 'KPI' }, { t: 'Period' }, { t: 'Perimeter' }, { t: 'Assigned to' }, { t: 'Deadline' }, { t: 'Status' }];
+    var corpo = mostrar.length ? '<div class="ps-card-body">' + tabela(cols, mostrar.map(function (x) {
+      var st = estadoTarefa(x.m, x.id), cta = P.podeAgir(x.m, usr) ? ctaPasso(x.m) : '', esrs = x.c.esrs_requisito ? '<small class="ps-mut">' + e(x.c.esrs_requisito) + ', ' + e(x.m.nome) + '</small>' : '<small class="ps-mut">' + e(x.m.nome) + '</small>';
+      return { attrs: 'class="ps-tr-tar"', celulas: ['<div class="ps-tar-k"><a href="' + rota('Milestone/' + x.m.id) + '">' + e(x.c.nome) + '</a>' + esrs + (cta ? '<a class="ps-tar-cta" href="' + rota('Milestone/' + x.m.id) + '">' + e(cta) + ' →</a>' : '') + '</div>', tagPer(x.m) || e(P.rotPeriodo(x.m)), empHtml(x.m.empresa), atribHtml(x.m), '<span class="ps-nowrap">' + e(prazoTxt(x.m)) + '</span>', chip(st.txt, st.cls)] };
+    })) + (linhas.length > 12 ? '<div class="ps-sp ps-mt"><button type="button" class="ps-btn liga" data-a="tarTodas">' + (U.tarTodas ? 'Show fewer' : 'Show all ' + linhas.length + ' tasks') + '</button><a class="ps-btn liga" href="' + rota('Milestones' + (esc === 'minhas' ? '?minhas=1' : '')) + '">Open by milestone</a></div>' : '') + '</div>'
+      : vazio(esc === 'minhas' ? 'Nothing waiting on you.' + (gere ? ' Switch to Everyone to follow the open tasks.' : '') : 'No open tasks.');
+    return '<div class="ps-dock">' + cabCartao('My tasks', 'tarefa', dir) + corpo + '</div>';
+  };
+  AI.tarEsc = function (d) { U.tarEsc = d.v; U.tarTodas = false; R(); };
+  AI.tarTodas = function () { U.tarTodas = !U.tarTodas; R(); };
+  AI.tarOffline = function () {
+    var usr = u(), lista = (P.gereTudo(usr) && U.tarEsc === 'todas' ? abertas() : pendentesDe(usr)).filter(function (m) { return P.podePreencher(m, usr); });
+    if (P.abrirOffline) P.abrirOffline(lista.map(function (m) { return m.id; }));
   };
   var classeCal = function (m) { var c = P.estadoMs(m).cod; return c === 'concluida' ? 'ok' : (c === 'atraso' || c === 'devolvida') ? 'err' : (c === 'revisao' || c === 'parecer' || c === 'aprovacao') ? 'rev' : ''; };
   var janelasDoDia = function (a, me, d) { return S.janelas.filter(function (j) { return j.meses.indexOf(me + 1) > -1 && d >= j.dia_inicio && d <= j.dia_fim; }); };
@@ -440,9 +464,9 @@
     return calendario(P.msCiclo().filter(function (m) { return !f.empresa || m.empresa === f.empresa; }), 'calm-');
   };
   var exportarMilestones = function (lista) {
-    var linhas = [['Milestone', 'Company', 'Assigned to', 'Due', 'Status']].concat(lista.map(function (m) { var a = P.atribuido(m); return [m.nome, m.empresa, a ? a.nome : '', m.prazo, P.estadoMs(m).txt]; }));
+    var linhas = [['Milestone', 'Period', 'Perimeter', 'Assigned to', 'Deadline', 'Status']].concat(lista.map(function (m) { var a = P.atribuido(m); return [m.nome, P.rotPeriodo(m), m.empresa, a ? a.nome : '', m.prazo, P.estadoMs(m).txt]; }));
     var wb = window.XLSX.utils.book_new(), ws = window.XLSX.utils.aoa_to_sheet(linhas);
-    ws['!cols'] = [{ wch: 48 }, { wch: 26 }, { wch: 32 }, { wch: 12 }, { wch: 18 }];
+    ws['!cols'] = [{ wch: 48 }, { wch: 12 }, { wch: 26 }, { wch: 32 }, { wch: 12 }, { wch: 18 }];
     window.XLSX.utils.book_append_sheet(wb, ws, 'Milestones');
     window.XLSX.writeFile(wb, 'milestones.xlsx');
     toast('Excel file exported.', 'ok');
@@ -1754,6 +1778,12 @@
     pintarCabecalho();
     pintarMarca();
     if (pag === 'Inicio') pintarHero();
+    /* Aberta pelo separador My tasks, a pagina mostra o que espera por mim */
+    if (pag === 'Milestones') {
+      var tt = document.querySelector('[data-campo="ms-titulo"]'), ts = document.querySelector('[data-campo="ms-sub"]');
+      if (tt) tt.textContent = U.msFiltro.minhas ? 'My tasks' : 'Milestones';
+      if (ts) ts.textContent = U.msFiltro.minhas ? 'Deliveries waiting on you. Untick Waiting on me to see every milestone.' : 'Choose a company to see its deliveries.';
+    }
     var sec = document.querySelector('[data-pagina="' + pag + '"]');
     if (sec) sec.querySelectorAll('[data-bloco]').forEach(function (b) {
       var f = Blocos[b.getAttribute('data-bloco')];
@@ -1942,7 +1972,6 @@
     expTodos: function () { var x = estadoExp(msAtual()); idsDominio(x.dom).forEach(function (id) { if (x.sel.indexOf(id) < 0) x.sel.push(id); }); R(); },
     expLimpar: function () { estadoExp(msAtual()).sel = []; R(); },
     expExcel: function () { var m = msAtual(); exportarGrelha(cfgRelatorio(m), 'report-' + m.id + '-' + m.ano + '.xlsx', 'Report'); toast('Report exported to Excel.', 'ok'); },
-    entVista: function (d) { U.entVista = d.v; R(); },
     msTagDel: function (d) { var m = msAtual(); m.departamentos = m.departamentos.filter(function (x) { return x !== d.v; }); P.evento(m, 'Department tag removed: ' + d.v + '.', u().nome); P.guardar(); R(); },
     msTab: function (d) { U.msTab[msAtual().id] = d.v; R(); window.scrollTo(0, Math.min(window.scrollY, (document.querySelector('.ps-mtabs') || { offsetTop: 0 }).offsetTop - 80)); },
     sep: function (d) { U.sep = d.v; var s = document.getElementById('sec-' + d.v); if (s) setTimeout(function () { s.scrollIntoView({ block: 'start' }); }, 0); },
@@ -2040,6 +2069,7 @@
     dadosImportar: function () { if (P.online()) return toast('Data lives in the database and is not replaced from a file.', 'err'); escolherFicheiro('.json', function (f) { lerJSON(f, function (o) { var er = P.importarTudo(o); if (er) return toast(er, 'err'); toast('Data imported.', 'ok'); U.marca = null; R(); }); }); },
     dadosRepor: function () { if (P.online()) return toast('Data is not reset from the browser.', 'err'); if (!window.confirm('Reset the data? All changes made in this browser will be lost.')) return; P.reporDemonstracao(); P.aplicarMarca(); U.marca = null; U.imp = {}; toast('Data reset.', 'ok'); R(); }
   };
+  Object.keys(AI).forEach(function (k) { A[k] = AI[k]; });
 
   /* --- Campos (mudanca) -------------------------------------------------- */
   var mudouMarca = function () { P.aplicarMarca(U.marca); agendar(); };

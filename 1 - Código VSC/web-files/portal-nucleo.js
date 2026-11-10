@@ -1148,6 +1148,8 @@
   var COLS = ['milestone_id', 'indicator_id', 'indicator_name', 'entity', 'period', 'value', 'unit', 'justification', 'source_system', 'evidence_ref', 'data_quality', 'estimation_method'];
   var OBRIG = ['milestone_id', 'indicator_id', 'period', 'value', 'unit'];
   P.COLS_IMPORT = COLS;
+  /* Colunas so de leitura do ficheiro offline: ajudam a preencher e sao ignoradas ao importar */
+  var COLS_INFO = ['perimeter', 'period_name', 'deadline', 'prior_value', 'threshold_pct', 'status'];
   var lerCSV = function (texto) {
     var t = texto.replace(/^﻿/, ''), primeira = t.split(/\r?\n/)[0] || '';
     var sep = (primeira.match(/;/g) || []).length >= (primeira.match(/,/g) || []).length ? ';' : ',';
@@ -1194,6 +1196,54 @@
       if (ext === 'xlsx') r.readAsArrayBuffer(file); else r.readAsText(file, 'utf-8');
     });
   };
+  /* Livro inteiro: cada folha como lista de linhas (celulas em bruto), para detetar cabecalhos fora da linha 1.
+     Aceita .xlsx, .xls e .csv, porque os ficheiros master chegam em qualquer um. */
+  P.lerLivro = function (file) {
+    var nome = file.name, ext = (nome.split('.').pop() || '').toLowerCase();
+    return new Promise(function (ok) {
+      if (['xlsx', 'xls', 'csv'].indexOf(ext) < 0) return ok({ nome: nome, erro: 'Format not supported. Use an Excel file (.xlsx, .xls) or .csv.' });
+      if (!window.XLSX) return ok({ nome: nome, erro: 'The Excel library did not load.' });
+      var r = new FileReader();
+      r.onerror = function () { ok({ nome: nome, erro: 'The file could not be read.' }); };
+      r.onload = function () {
+        try {
+          var wb = ext === 'csv' ? window.XLSX.read(String(r.result).replace(/^﻿/, ''), { type: 'string' }) : window.XLSX.read(new Uint8Array(r.result), { type: 'array' });
+          ok({ nome: nome, folhas: wb.SheetNames.map(function (n) { return { nome: n, aoa: window.XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1, defval: '', blankrows: true }) }; }) });
+        } catch (e) { ok({ nome: nome, erro: 'Invalid file: ' + e.message }); }
+      };
+      if (ext === 'csv') r.readAsText(file, 'utf-8'); else r.readAsArrayBuffer(file);
+    });
+  };
+  /* O periodo pode vir como o ano, o id do periodo (2026-T1) ou o nome (T1 2026) */
+  var periodoAceite = function (m, v) { var s = String(v === undefined || v === null ? '' : v).trim().toLowerCase(); return [String(m.ano), String(m.periodo || ''), P.rotPeriodo(m)].some(function (x) { return x && x.toLowerCase() === s; }); };
+  P.periodoAceite = periodoAceite;
+  /* Varias linhas do mesmo indicador com empresas diferentes: uma por empresa, juntas pela regra do indicador */
+  var ENT_TOTAL = ['', 'consolidado', 'consolidated', 'total', 'group', 'grupo'];
+  var juntarPorEmpresa = function (m, linhas) {
+    var porId = {}, ordem = [];
+    linhas.forEach(function (l, i) {
+      var id = String(l.indicator_id === undefined ? '' : l.indicator_id).trim();
+      if (!porId[id]) { porId[id] = []; ordem.push(id); }
+      porId[id].push({ l: l, i: i });
+    });
+    var saida = [];
+    ordem.forEach(function (id) {
+      var g = porId[id], ents = g.map(function (x) { return String(x.l.entity || '').trim(); });
+      var separada = g.length > 1 && ents.every(function (x) { return ENT_TOTAL.indexOf(x.toLowerCase()) < 0; }) && ents.filter(function (x, k) { return ents.indexOf(x) === k; }).length === ents.length;
+      if (!separada) { g.forEach(function (x) { saida.push({ l: x.l, ns: [x.i] }); }); return; }
+      var cheias = g.filter(function (x) { return String(x.l.value === undefined || x.l.value === null ? '' : x.l.value).trim() !== ''; });
+      var base = {}; Object.keys(g[0].l).forEach(function (k) { base[k] = g[0].l[k]; });
+      var agreg = P.regraEnt && P.regraEnt(m.empresa, id).multi ? P.regraEnt(m.empresa, id).agreg : P.agregacao(id);
+      var ent = cheias.map(function (x) { return { local: String(x.l.entity).trim(), doc: String(x.l.evidence_ref || '').trim(), valor: String(x.l.value).trim(), peso: agreg === 'media' ? '1' : '' }; });
+      var mal = ent.filter(function (x) { return lerNumero(x.valor) === null; });
+      base.entity = ents.join(', ');
+      base.value = !cheias.length ? '' : mal.length ? mal[0].valor : P.agregar ? P.agregar(ent, agreg) : '';
+      base.justification = g.map(function (x) { return String(x.l.justification || '').trim(); }).filter(Boolean).join(' ');
+      base.evidence_ref = (cheias.filter(function (x) { return String(x.l.evidence_ref || '').trim(); })[0] || { l: {} }).l.evidence_ref || '';
+      saida.push({ l: base, ns: g.map(function (x) { return x.i; }), entradas: cheias.length && !mal.length ? ent : null, agreg: agreg, nEnt: g.length });
+    });
+    return saida;
+  };
   P.validarImportacao = function (m, linhas) {
     var rel = { linhas: [], desconhecidas: [], erroFormato: null, emFalta: [] };
     if (!linhas || !linhas.length) { rel.erroFormato = 'The file has no data rows.'; return rel; }
@@ -1201,11 +1251,12 @@
     linhas.forEach(function (l) { Object.keys(l).forEach(function (k) { cols[k] = 1; }); });
     var falta = OBRIG.filter(function (c) { return !cols[c]; });
     if (falta.length) { rel.erroFormato = 'Required columns missing: ' + falta.join(', ') + '.'; return rel; }
-    rel.desconhecidas = Object.keys(cols).filter(function (c) { return COLS.indexOf(c) < 0; });
-    var vistos = {};
-    linhas.forEach(function (l, i) {
+    rel.desconhecidas = Object.keys(cols).filter(function (c) { return COLS.indexOf(c) < 0 && COLS_INFO.indexOf(c) < 0; });
+    var vistos = {}, juntas = juntarPorEmpresa(m, linhas);
+    juntas.forEach(function (jx) {
+      var l = jx.l, i = jx.ns[0];
       var id = String(l.indicator_id === undefined ? '' : l.indicator_id).trim();
-      var r = { n: i + 2, indicador: id, valor: l.value, estado: 'valida', motivos: [], dados: l };
+      var r = { n: i + 2, ns: jx.ns.map(function (k) { return k + 2; }), indicador: id, valor: l.value, estado: 'valida', motivos: [], dados: l, entradas: jx.entradas || null, agreg: jx.agreg, nEnt: jx.nEnt || 0 };
       var sem = l.value === '' || l.value === null || l.value === undefined;
       if (sem && m.indicadores.indexOf(id) > -1 && !vistos[id]) { r.estado = 'vazia'; rel.linhas.push(r); return; }
       var rej = function (t) { r.estado = 'rejeitada'; r.motivos.push(t); };
@@ -1216,7 +1267,7 @@
       var c = P.cat(id), n = lerNumero(l.value);
       /* 3. Tipos, ano e unidades */
       if (n === null) rej('value must be numeric.');
-      if (String(l.period).trim() !== String(m.ano)) rej('period must be ' + m.ano + '.');
+      if (!periodoAceite(m, l.period)) rej('period must be ' + P.rotPeriodo(m) + '.');
       if (c && String(l.unit).trim() !== c.unidade_medida) rej('unit must be ' + c.unidade_medida + '.');
       var q = String(l.data_quality || '').trim() || 'measured';
       if (['measured', 'calculated', 'estimated'].indexOf(q) < 0) rej('data_quality must be measured, calculated or estimated.');
@@ -1232,11 +1283,14 @@
           r.motivos = v.alertas.slice();
           if (!String(l.justification || '').trim()) r.motivos.push('justification missing: fill it in before submitting.');
         }
+        /* O ficheiro offline vem com os valores ja gravados: o que nao mudou nao gera versao nova */
+        var mesmasEnt = !r.entradas || JSON.stringify((it.entradas || []).map(function (x) { return [x.local, lerNumero(x.valor)]; })) === JSON.stringify(r.entradas.map(function (x) { return [x.local, lerNumero(x.valor)]; }));
+        if ((r.estado === 'valida' || r.estado === 'alerta') && it.valor === Number(n.toFixed(c.casas_decimais)) && mesmasEnt && !String(l.justification || '').trim() && !String(l.evidence_ref || '').trim()) r.estado = 'igual';
       }
       if (id) vistos[id] = 1;
       rel.linhas.push(r);
     });
-    rel.emFalta = m.indicadores.filter(function (id) { return !rel.linhas.some(function (r) { return r.indicador === id && (r.estado === 'valida' || r.estado === 'alerta'); }); });
+    rel.emFalta = m.indicadores.filter(function (id) { return !rel.linhas.some(function (r) { return r.indicador === id && (r.estado === 'valida' || r.estado === 'alerta' || r.estado === 'igual'); }); });
     return rel;
   };
   P.aplicarImportacao = function (m, rel, ficheiro, u) {
@@ -1244,7 +1298,11 @@
     rel.linhas.forEach(function (r) {
       if (r.estado !== 'valida' && r.estado !== 'alerta') return;
       var l = r.dados, it = P.item(r.indicador, P.chave(m));
-      P.gravarValor(m, r.indicador, l.value, u, 'file import ' + ficheiro);
+      if (r.entradas && P.gravarEntradas) {
+        var nv = it.versoes.length;
+        P.gravarEntradas(m, r.indicador, r.entradas, r.agreg, u);
+        if (it.versoes.length > nv) it.versoes[it.versoes.length - 1].origem = 'file import ' + ficheiro + ': ' + r.entradas.length + ' companies';
+      } else { it.entradas = []; P.gravarValor(m, r.indicador, l.value, u, 'file import ' + ficheiro); }
       it.qualidade = QUAL[String(l.data_quality || '').trim() || 'measured'];
       it.metodo = String(l.estimation_method || '').trim();
       if (String(l.justification || '').trim()) it.justificacao = String(l.justification).trim();
@@ -1304,6 +1362,35 @@
         return { indicador: id, nome: c.nome, unidade: c.unidade_medida, ano_anterior: ant === null || ant === undefined ? '' : ant, limiar_pct: c.limiar_variacao_pct, evidencia_obrigatoria: c.evidencia_obrigatoria ? 'Yes' : 'No', regra: 'period = ' + m.ano + '; unit as stated; numeric value; justification required when there is an alert; estimation_method required when data_quality is estimated.' };
       })
     };
+  };
+  /* Ficheiro offline dos KPIs de uma pessoa: o formato do import, ja com o que esta gravado.
+     porEmpresa: uma linha por empresa do perimetro do grupo, para quem reporta o grupo inteiro empresa a empresa. */
+  P.empresasGrupo = function () { return S.ent.filter(function (x) { return x.perimetro_grupo; }); };
+  P.folhasOffline = function (lista, porEmpresa) {
+    var dados = [], instr = [], fmt = function (v) { return v === null || v === undefined ? '' : v; };
+    lista.forEach(function (m) {
+      m.indicadores.forEach(function (id) {
+        var c = P.cat(id), it = P.item(id, P.chave(m)), ant = P.valorAnterior(id, P.chave(m));
+        var base = { milestone_id: m.id, indicator_id: id, indicator_name: c.nome, perimeter: m.empresa, period: P.rotPeriodo(m), deadline: m.prazo, entity: m.empresa, value: fmt(it.valor), unit: c.unidade_medida, prior_value: fmt(ant), threshold_pct: c.limiar_variacao_pct, justification: it.justificacao || '', data_quality: ({ medido: 'measured', calculado: 'calculated', estimado: 'estimated' })[it.qualidade] || 'measured', estimation_method: it.metodo || '', evidence_ref: '', source_system: it.fonte || '' };
+        if (!porEmpresa) { dados.push(base); return; }
+        var ents = it.entradas || [];
+        P.empresasGrupo().forEach(function (x) {
+          var l = {}; Object.keys(base).forEach(function (k) { l[k] = base[k]; });
+          var e0 = ents.filter(function (y) { return y.local === x.nome; })[0];
+          l.entity = x.nome; l.value = e0 ? e0.valor : ''; l.justification = ''; l.prior_value = '';
+          dados.push(l);
+        });
+      });
+      instr.push({ milestone_id: m.id, milestone: m.nome, perimeter: m.empresa, period: P.rotPeriodo(m), deadline: m.prazo, indicators: m.indicadores.length });
+    });
+    var ajuda = [
+      { step: 1, what: 'Fill in the value column. Leave a row empty if you have no value yet.' },
+      { step: 2, what: 'Do not change milestone_id, indicator_id, period or unit. They tell the platform where each value goes.' },
+      { step: 3, what: 'If the change against prior_value is above threshold_pct, write a justification.' },
+      { step: 4, what: porEmpresa ? 'Each indicator has one row per company. The platform adds them up (or takes the latest value or the average, as the indicator says) and keeps the value of each company.' : 'For estimated values, set data_quality to estimated and describe the estimation_method.' },
+      { step: 5, what: 'Upload the file in Home, My tasks, Excel (offline), or in Data entry, Excel upload. Rows that did not change are skipped.' }
+    ];
+    return { dados: dados, milestones: instr, instructions: ajuda };
   };
   P.templateExcel = function (m) { return escreverLivro('template-' + m.id + '-' + m.ano + '.xlsx', P.folhasTemplate(m)); };
   P.paraCSV = function (linhas) {
