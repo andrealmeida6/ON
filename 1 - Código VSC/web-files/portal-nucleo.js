@@ -116,7 +116,7 @@
   var DEPARTAMENTOS = ['Operações', 'Qualidade e Laboratório', 'Comercial e Relação com o Cliente', 'Ambiente, Saúde e Segurança', 'Recursos Humanos', 'Financeira', 'Jurídico e Compliance', 'Compras', 'Frota', 'Sistemas de Informação', 'I&D, CSR e ESG'];
   /* Os departamentos geridos no backoffice sao as unidades de negocio */
   Object.defineProperty(P, 'UNIDADES', { get: function () { return (S.deps || []).map(function (d) { return d.nome; }); } });
-  P.MARCA_BASE = { nome: 'Record to Report (R2R)', subtitulo: '', logotipo: '', cores: { primary: '#00338D', secondary: '#0091DA', accent: '#1E49E2', bg: '#F4F7FC', text: '#0C233C' } };
+  P.MARCA_BASE = { nome: 'ESG Data Hub', subtitulo: '', logotipo: '', cores: { primary: '#00338D', secondary: '#0091DA', accent: '#1E49E2', bg: '#F4F7FC', text: '#0C233C' } };
   P.PALETAS = [
     { nome: 'Blue', cores: { primary: '#00338D', secondary: '#0091DA', accent: '#1E49E2', bg: '#F4F7FC', text: '#0C233C' } },
     { nome: 'Teal', cores: { primary: '#0B4F6C', secondary: '#01A7A3', accent: '#0F7C8F', bg: '#F2F8F9', text: '#10282F' } },
@@ -489,6 +489,8 @@
     if ((S.apis || []).length && !S.apis.some(function (a) { return a.db; }) && P.ligacoesBase) S.apis = P.ligacoesBase();
     /* O sistema de RH passou a estar ligado; so fica por ligar se o administrador o mudou */
     (S.apis || []).forEach(function (a) { if (a.id === 'api2' && a.estado === 'pendente' && !a.mudado) a.estado = 'ligada'; });
+    /* A plataforma passou a chamar-se ESG Data Hub: a marca gravada com o nome antigo acompanha a mudanca */
+    if (S.marca && /^(Record to Report \(R2R\)|Portal de Sustentabilidade)$/.test(S.marca.nome || '')) { S.marca.nome = P.MARCA_BASE.nome; escrever(CHAVES.marca, S.marca); }
     if (P.garantirEsrs) P.garantirEsrs();
   };
   /* Gera os dados de demonstracao sem tocar no armazenamento: serve o carregamento inicial do Supabase */

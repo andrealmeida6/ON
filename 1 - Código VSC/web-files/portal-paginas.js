@@ -136,8 +136,13 @@
 
   /* --- Marca ------------------------------------------------------------- */
   var nomeMarca = function () { return (S.marca && S.marca.nome) || P.MARCA_BASE.nome; };
-  /* A sigla entre parenteses, se existir, e o monograma: Record to Report (R2R) da R2R */
-  var sigla = function (n) { var x = /\(([^)]+)\)/.exec(n || ''); return x ? x[1] : iniciais(n || 'P').toUpperCase(); };
+  /* Monograma: a sigla entre parenteses, se existir (Record to Report (R2R) da R2R); senao, as iniciais das palavras com maiuscula (ESG Data Hub da EDH) */
+  var sigla = function (n) {
+    var x = /\(([^)]+)\)/.exec(n || '');
+    if (x) return x[1];
+    var p = String(n || '').split(/\s+/).filter(function (w) { return /^[A-ZÀ-Ý]/.test(w); });
+    return p.length > 1 && p.length <= 4 ? p.map(function (w) { return w[0]; }).join('') : iniciais(n || 'P').toUpperCase();
+  };
   var monograma = function () { return '<span class="ps-marca-mono" aria-hidden="true">' + e(sigla(nomeMarca())) + '</span>'; };
   var logoOuMono = function () {
     return S.marca.logotipo ? '<img src="' + e(S.marca.logotipo) + '" alt="' + e(nomeMarca()) + '" data-logo>' : monograma();

@@ -21,7 +21,7 @@ Estado a 7 de novembro de 2026. A especificação funcional está em `especifica
 | Empresas | Sem nomes de empresas. As entidades são fictícias e o sistema de origem de exemplo é "ERP" | Indicação do André |
 | Reguladores | ERSAR e APA mantêm-se, pela sigla | Decisão do André. São entidades públicas, não empresas. Os relatórios do setor usam a sigla ERSAR |
 
-| Nome | Record to Report (R2R), em vez de Portal de Sustentabilidade | Indicação do André, 4 de novembro de 2026 |
+| Nome | ESG Data Hub, em vez de Record to Report (R2R) e, antes, Portal de Sustentabilidade | Indicação do André, 10 de novembro de 2026 |
 | Língua | A plataforma (títulos, botões, mensagens, registos automáticos) está em inglês. O que se gere e escreve nas milestones fica em português: nomes de milestones, indicadores, passos, departamentos, empresas, comentários | Indicação do André |
 | Home | Sem ciclo e sem data. As próximas entregas têm vista em board e em tabela, e um link para todas as milestones | Indicação do André. O ciclo gere-se no backoffice |
 | Pendentes | Deixa de ser separador. O separador Milestones tem o contador e o filtro "Waiting on me" | Indicação do André |
@@ -36,7 +36,7 @@ Estado a 7 de novembro de 2026. A especificação funcional está em `especifica
 - **Fundo azul:** o logótipo fica sobre um fundo branco, porque um logótipo escuro ou com fundo próprio não se veria.
 - **Cores:** cinco cores configuráveis. Todos os tons derivados (hero, botões, cartões) calculam-se a partir delas. Os estados (aprovado, alerta, erro) são fixos, para manterem o significado.
 - **Contraste:** o backoffice avisa quando a cor principal ou a do texto ficam abaixo de 4,5:1.
-- **Por omissão:** paleta azul e nome "Record to Report (R2R)", sem logótipo. O monograma usa a sigla entre parênteses.
+- **Por omissão:** paleta azul e nome "ESG Data Hub", sem logótipo. O monograma usa a sigla entre parênteses, se existir; senão, as iniciais das palavras com maiúscula (EDH). Uma marca gravada com um dos nomes antigos passa sozinha ao novo nome, no navegador e na base de dados (`supabase/010_esg_nome_plataforma.sql`). Uma marca personalizada fica como está.
 
 ## Estrutura
 
