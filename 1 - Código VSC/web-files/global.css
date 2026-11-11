@@ -2346,3 +2346,6 @@ tr.rev-pend>td:first-child{box-shadow:inset 3px 0 0 var(--rev)}
 .fat-val{margin:0;font-size:13.5px}
 .fat-val small{display:block;color:var(--muted);font-size:12px;margin-top:2px}
 
+/* 68. DOCUMENTS: PASTA DO SHAREPOINT DE CADA FICHEIRO */
+.dc-sp{display:flex;align-items:center;gap:4px;margin-top:3px;color:var(--muted);font-size:11px;cursor:help;max-width:420px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dc-sp svg{flex:none}

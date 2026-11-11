@@ -256,7 +256,8 @@
   X.A.fatFechar = function () { U.fat = null; U.painel = null; R(); };
   /* Guardar so como documento: a fatura e os valores lidos ficam no documento, sem mexer em indicadores */
   var registoDoc = function (F, usr) {
-    return { id: 'ev' + Date.now() + Math.random().toString(36).slice(2, 5), ficheiro: F.nome, por: usr.nome, em: new Date().toISOString(), fid: F.fid, fatura: F.d };
+    var mS = F.ms ? P.ms(F.ms) : null;
+    return { id: 'ev' + Date.now() + Math.random().toString(36).slice(2, 5), ficheiro: F.nome, por: usr.nome, em: new Date().toISOString(), fid: F.fid, fatura: F.d, tipoDoc: 'Invoice', sp: P.pastaSP ? P.pastaSP(mS, F.ind && mS ? [F.ind] : []) : '' };
   };
   X.A.fatGuardarSo = function () {
     var F = U.fat, usr = u(), m = F.ms ? P.ms(F.ms) : (F.pref.ms ? P.ms(F.pref.ms) : null);

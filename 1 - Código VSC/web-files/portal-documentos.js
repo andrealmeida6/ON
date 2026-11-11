@@ -67,9 +67,10 @@
       campo('dc-tipo', 'Type', '<select id="dc-tipo" class="ps-sel" data-c="docsF" data-id="tipo">' + opt('', 'All', f.tipo) + opt('evidencia', 'KPI evidence', f.tipo) + opt('task', 'Task documents', f.tipo) + opt('pedido', 'Requested files', f.tipo) + opt('fatura', 'Invoices read', f.tipo) + opt('solto', 'Not linked yet', f.tipo) + '</select>') + '</div>';
     var linhas = l.slice(0, f.ver).map(function (d) {
       var kp = d.kpis.length ? d.kpis.map(function (id) { return '<a class="dc-kpi" href="' + rota('Milestone/' + d.m.id + '?ind=' + encodeURIComponent(id)) + '" title="' + e(P.cat(id).nome) + '">' + e(id) + '</a>'; }).join('') + '<small class="ps-mut ps-blk">' + e(d.kpis.length === 1 ? P.cat(d.kpis[0]).nome : d.kpis.length + ' indicators') + '</small>' : '<span class="ps-mut">-</span>';
-      return [P.fichHtml(d.x, '', d.m) + resumoFatura(d.fatura), kp, d.m ? '<a href="' + rota('Milestone/' + d.m.id) + '">' + e(d.m.nome) + '</a><small class="ps-mut ps-blk">' + e(P.rotPeriodo(d.m)) + '</small>' : '<span class="ps-mut">-</span>', d.m ? empHtml(d.m.empresa) : '-', e(TIPO_TXT[d.tipo] || d.tipo), '<span class="ps-nowrap">' + e(d.em ? P.fmtData(d.em) : '-') + '</span><small class="ps-mut ps-blk">' + e(d.por || '') + '</small>'];
+      var sp = d.x.sp || (P.pastaSP ? P.pastaSP(d.m, d.kpis) : ''), spCurto = sp.split('/').slice(-3).join(' / ');
+      return [P.fichHtml(d.x, '', d.m) + resumoFatura(d.fatura) + (sp ? '<small class="dc-sp" tabindex="0" data-tip="' + e('SharePoint: ' + P.SP.site + ' / ' + sp) + '">' + svg('<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>', 12) + e('… / ' + spCurto) + '</small>' : ''), kp, d.m ? '<a href="' + rota('Milestone/' + d.m.id) + '">' + e(d.m.nome) + '</a><small class="ps-mut ps-blk">' + e(P.rotPeriodo(d.m)) + '</small>' : '<span class="ps-mut">-</span>', d.m ? empHtml(d.m.empresa) : '-', e(TIPO_TXT[d.tipo] || d.tipo), '<span class="ps-nowrap">' + e(d.em ? P.fmtData(d.em) : '-') + '</span><small class="ps-mut ps-blk">' + e(d.por || '') + '</small>'];
     });
-    return topo + '<div class="ps-card ps-mt">' + cabCartao('All documents you can access (' + l.length + ')', 'doc', '<div class="ps-sp"><button type="button" class="ps-btn" data-a="pacExcel">Auditor package (Excel)</button><button type="button" class="ps-btn pri" data-a="docsUpload">' + svg(I.upload, 14) + 'Upload document</button></div>') +
+    return topo + '<div class="ps-card ps-mt">' + cabCartao('All documents you can access (' + l.length + ')', 'doc', '<div class="ps-sp">' + (P.gereTudo(usr) && P.exportarEsqueletoSP ? '<button type="button" class="ps-btn" data-a="spEsqueleto" data-tip="The SharePoint folder structure: one folder per company, topic, KPI and period, and the metadata columns. For the Power Automate flow that stores the files.">SharePoint folders (Excel)</button>' : '') + '<button type="button" class="ps-btn" data-a="pacExcel">Auditor package (Excel)</button><button type="button" class="ps-btn pri" data-a="docsUpload">' + svg(I.upload, 14) + 'Upload document</button></div>') +
       '<div class="ps-card-body">' + filtros + '<div class="ps-mt">' + tabela([{ t: 'Document' }, { t: 'KPIs' }, { t: 'Task' }, { t: 'Company' }, { t: 'Type' }, { t: 'Uploaded' }], linhas, todos.length ? 'No document matches the search.' : 'No documents yet. Upload one, or attach evidence in a task.') + '</div>' +
       (l.length > f.ver ? '<div class="ps-sp ps-mt"><button type="button" class="ps-btn liga" data-a="docsMais">Show ' + Math.min(100, l.length - f.ver) + ' more</button></div>' : '') + '</div></div>';
   };
@@ -77,6 +78,7 @@
   X.Live.docsQ = function (el) { U.docs.q = el.value; U.docs.ver = 50; clearTimeout(tBusca); tBusca = setTimeout(R, 180); };
   X.C.docsF = function (el) { U.docs[el.dataset.id] = el.value; U.docs.ver = 50; R(); };
   X.A.docsMais = function () { U.docs.ver += 100; R(); };
+  X.A.spEsqueleto = function () { P.exportarEsqueletoSP(); toast('SharePoint folder structure exported (' + P.esqueletoSP().length + ' folders).', 'ok'); };
 
   /* --- Upload: ficheiro, task e indicadores; fatura opcional ------------------------------- */
   /* Tasks onde a pessoa pode juntar documentos: as que estao abertas e a que tem acesso para editar */
@@ -111,9 +113,9 @@
       F.inds.forEach(function (id) { P.anexar(P.item(id, P.chave(m)), nome, usr, fid); });
       P.evento(m, 'Document uploaded in Documents and linked to ' + F.inds.join(', ') + ': ' + nome + '.', usr.nome);
     } else if (m) {
-      (m.documentos_gerais = m.documentos_gerais || []).push({ ficheiro: nome, por: usr.nome, em: quando, fid: fid });
+      (m.documentos_gerais = m.documentos_gerais || []).push({ ficheiro: nome, por: usr.nome, em: quando, fid: fid, sp: P.pastaSP ? P.pastaSP(m, []) : '' });
       P.evento(m, 'Document uploaded in Documents: ' + nome + '.', usr.nome);
-    } else (S.docs = S.docs || []).push({ id: 'dc' + Date.now(), ficheiro: nome, por: usr.nome, em: quando, fid: fid, solto: true });
+    } else (S.docs = S.docs || []).push({ id: 'dc' + Date.now(), ficheiro: nome, por: usr.nome, em: quando, fid: fid, solto: true, sp: P.pastaSP ? P.pastaSP(null, []) : '' });
     P.guardar(); U.up = null; U.painel = null;
     toast(nome + (m ? ' linked to ' + (F.inds.length ? F.inds.join(', ') : 'the task') : ' saved. Link it to a task when you know which one') + '.', 'ok'); R();
   };

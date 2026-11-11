@@ -1424,7 +1424,8 @@
     guardar();
     return { ok: true, nome: r.x.ficheiro };
   };
-  P.anexar = function (it, nome, u, fid) { var x = { id: 'ev' + Date.now() + Math.random().toString(36).slice(2, 5), ficheiro: nome, por: u.nome, em: agora() }; if (fid) x.fid = fid; it.evidencias.push(x); guardar(); };
+  /* x.sp: a pasta do SharePoint para onde o flow leva o ficheiro (fica fixa desde o upload) */
+  P.anexar = function (it, nome, u, fid) { var x = { id: 'ev' + Date.now() + Math.random().toString(36).slice(2, 5), ficheiro: nome, por: u.nome, em: agora() }; if (fid) x.fid = fid; if (P.pastaSP) x.sp = P.pastaSP(it.milestone_id ? P.ms(it.milestone_id) : null, [it.id]); it.evidencias.push(x); guardar(); };
 
   /* --- Contributos externos (secao 9) ------------------------------------ */
   P.criarPedidoExterno = function (m, indId, entidade, descricao, prazo, u) {

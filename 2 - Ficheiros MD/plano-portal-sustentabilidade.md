@@ -1232,6 +1232,55 @@ Pedido do André a 11 de novembro de 2026.
   - A nota de cada tile diz "Sum of N companies, each at 100%" ou "Average of…".
   - Com uma só empresa, é igual a By company.
 
+### Ficheiros no SharePoint: estrutura de pastas e flows para a migração
+
+Pedido do André a 11 de novembro de 2026. Hoje os ficheiros ficam no browser (IndexedDB) e, no ambiente de testes, no Supabase. Em Power Pages, os binários passam para o SharePoint através de flows. A estrutura fica já definida, para cada ficheiro saber desde o upload para onde vai.
+
+**Onde ficam:** site **ESG Data Hub**, biblioteca de documentos **Reporting** (`P.SP` em `web-files/portal-sharepoint.js`).
+
+```
+Reporting/
+  2026/
+    Entidade A/
+      Energia e clima/
+        E01 - Consumo de eletricidade/
+          T1/  T2/  T3/  T4/            <- evidências e faturas do KPI nesse período
+        E03 - Eletricidade de fontes renováveis/
+          Ano/
+      Água e saneamento/
+        A01 - Água entrada no sistema/
+          T1/ … T4/
+      _Task documents/
+        Operações/
+          T1/ … T4/  Ano/               <- documentos da task sem KPI (ficheiros pedidos, gerais)
+    Entidade B/
+      …
+    _To classify/                       <- carregados sem task, para ligar depois
+```
+
+- **Regras** (`P.pastaSP`, `P.pastaKpiSP`):
+  - Ano / Empresa / Tema da empresa / "Código - Nome do KPI" / Período (T1 a T4 ou Ano).
+  - Um ficheiro de vários KPIs fica uma vez, na pasta do primeiro. Os outros ficam na coluna de metadados **KPIs**, para se encontrarem por pesquisa e por vistas.
+  - Os nomes são limpos dos caracteres que o SharePoint não aceita (`" * : < > ? / \ | # % & { } ~`) e encurtados para não passar o limite de 400 caracteres do caminho.
+- **Cada ficheiro guarda o caminho** (`x.sp`) no momento do upload: evidências (`P.anexar`), documentos de task, faturas lidas e documentos por classificar. Assim não muda de sítio se depois se renomear um KPI ou uma empresa.
+- **Em Documents**, cada documento mostra a pasta, com o caminho completo na tooltip.
+- **Botão "SharePoint folders (Excel)"** em Documents, para a equipa de sustentabilidade e o administrador (`P.esqueletoSP`, `P.exportarEsqueletoSP`):
+  - folha *Folders*: todas as pastas do ano (com os dados de demonstração são 292), uma por empresa abrangida, tema, KPI e período (pelos momentos de reporte do KPI), mais as pastas de task por departamento e a de classificar;
+  - folha *Metadata columns*: as colunas a criar na biblioteca.
+- **Colunas de metadados da biblioteca:** KPIs, Task ID, Company, Reporting period, Document type, Uploaded by, Uploaded in platform, Platform file ID e Invoice data (JSON, com os campos de `esquema-fatura-energia.json`).
+  - As pastas são para navegar; as colunas são para filtrar, criar vistas e dar permissões por empresa.
+
+**Flows a criar na migração (Power Automate):**
+1. **Criar o esqueleto** (no arranque de cada ciclo e quando se cria um KPI ou uma empresa): lê a lista de pastas (a mesma lógica de `P.esqueletoSP`, a partir das tabelas do Dataverse) e, para cada caminho, usa a ação *Create new folder* do SharePoint. A ação cria a hierarquia toda e não falha se a pasta já existir.
+2. **Guardar cada ficheiro carregado** (gatilho: linha criada na tabela de ficheiros/anexos do Dataverse, a partir da evidência, do documento da task ou da fatura):
+   1. calcula ou lê o caminho guardado no registo (`sp`);
+   2. *Create file* no SharePoint, nessa pasta, com o binário;
+   3. preenche as colunas de metadados (*Update file properties*);
+   4. grava no registo do Dataverse o link do ficheiro no SharePoint e o ID do item;
+   5. opcional: apaga o binário do Dataverse, para poupar armazenamento, e a plataforma passa a abrir o ficheiro pelo link do SharePoint.
+3. **Mover quando se reclassifica:** quando um documento de "_To classify" é ligado a uma task ou KPI, *Move file* para a pasta nova e atualiza as colunas.
+4. **Permissões:** grupos por empresa (leitura) e a equipa de sustentabilidade (edição). Os auditores ficam só com leitura. As pastas do ano fechado passam a só leitura no fecho do ciclo.
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.
