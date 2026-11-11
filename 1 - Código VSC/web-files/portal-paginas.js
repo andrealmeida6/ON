@@ -344,7 +344,6 @@
     if (P.abrirOffline) P.abrirOffline(lista.map(function (m) { return m.id; }));
   };
   var classeCal = function (m) { var c = P.estadoMs(m).cod; return c === 'concluida' ? 'ok' : (c === 'atraso' || c === 'devolvida') ? 'err' : (c === 'revisao' || c === 'parecer' || c === 'aprovacao') ? 'rev' : ''; };
-  var janelasDoDia = function (a, me, d) { return S.janelas.filter(function (j) { return j.meses.indexOf(me + 1) > -1 && d >= j.dia_inicio && d <= j.dia_fim; }); };
   var calendario = function (lista, pref) {
     var hoje = new Date();
     if (!U.cal) U.cal = { ano: hoje.getFullYear(), mes: hoje.getMonth(), dia: hoje.getDate() };
@@ -356,18 +355,17 @@
     for (var i = 0; i < desloc; i++) cel += '<div></div>';
     for (var d = 1; d <= n; d++) {
       var ms = porDia[iso(d)] || [], cl = ['ps-cal-d'];
-      if (janelasDoDia(a, me, d).length) cl.push('jan');
       if (iso(d) === P.hojeISO()) cl.push('hoje');
       if (d === U.cal.dia) cl.push('sel');
       cel += '<button type="button" id="' + pref + d + '" class="' + cl.join(' ') + '" data-a="calDia" data-v="' + d + '" aria-label="' + d + ', ' + ms.length + ' deadlines"' + (d === U.cal.dia ? ' aria-pressed="true"' : '') + '>' + d + (ms.length ? '<span class="pts">' + ms.slice(0, 3).map(function (m) { return '<i class="' + classeCal(m) + '"></i>'; }).join('') + '</span>' : '') + '</button>';
     }
-    var ds = U.cal.dia, msDia = porDia[iso(ds)] || [], jan = janelasDoDia(a, me, ds);
+    /* O calendario so mostra milestones pelo prazo. As janelas de reporte (Revisao mensal, Recolha mensal...) ficam em Backoffice, Calendar. */
+    var ds = U.cal.dia, msDia = porDia[iso(ds)] || [];
     var nomeMes = new Intl.DateTimeFormat('en-GB', { month: 'long', year: 'numeric' }).format(prim);
     return '<aside class="ps-cal ps-fundo-marca" aria-label="Calendar"><div class="ps-cal-h"><h2>Calendar</h2><div class="ps-cal-nav"><button type="button" data-a="calMes" data-v="-1" aria-label="Previous month">‹</button><button type="button" data-a="calHoje">Today</button><button type="button" data-a="calMes" data-v="1" aria-label="Next month">›</button></div></div>' +
       '<div class="ps-cal-mes">' + e(nomeMes) + '</div><div class="ps-cal-g">' + cel + '</div>' +
       '<div class="ps-cal-leg"><span><i></i>In collection</span><span><i class="err"></i>Overdue or returned</span><span><i class="rev"></i>In review</span><span><i class="ok"></i>Completed</span></div>' +
       '<div class="ps-cal-det"><h3>' + e(P.fmtDataAno(iso(ds))) + '</h3>' +
-      (jan.length ? jan.map(function (j) { return '<div class="ps-cal-jan" style="--c:' + e(P.TEMAS[j.tema] || '#888') + '"><i></i>' + e(j.nome) + '</div>'; }).join('') : '') +
       (msDia.length ? msDia.map(function (m) { return '<a href="' + rota('Milestone/' + m.id) + '">' + e(m.nome) + '</a>'; }).join('') : '<div class="ps-mut">No milestones due on this day.</div>') + '</div></aside>';
   };
   Blocos['inicio-calendario'] = function () { return calendario(P.msCiclo(), 'cal-'); };

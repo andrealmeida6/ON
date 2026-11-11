@@ -551,6 +551,14 @@ Pedido do André a 11 de novembro de 2026.
 - **Timeline:** é a terceira vista da página (By indicator, By department, Timeline), com a timeline dos períodos e das entregas externas, para se ver onde estamos e o que já foi lançado. A timeline mostra o grupo todo, mesmo com uma empresa escolhida.
 - **CSS:** secção 41 de `global.css`.
 
+### Calendário só com milestones
+
+Pedido do André a 11 de novembro de 2026.
+
+- **O problema:** o calendário (Home e Milestones) mostrava as janelas de reporte do Backoffice, Calendar ("Revisão mensal", "Recolha mensal de operação e energia"). Esses dias apareciam destacados e com o nome da janela, mesmo sem nenhuma milestone com prazo. Não era um erro de dados: as janelas eram desenhadas de propósito.
+- **Agora:** o calendário só mostra milestones pelo prazo, com os pontos coloridos e a lista do dia. As janelas continuam a existir e a editar-se em Backoffice, Calendar.
+- **Código:** removidos `janelasDoDia` e o destaque `.jan` do `calendario`. O estilo `.ps-cal-jan` deixou de ser usado.
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.
