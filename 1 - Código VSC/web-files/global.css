@@ -2025,3 +2025,18 @@ button.ps-est-i:hover{border-color:rgba(255,255,255,.4);background:rgba(255,255,
 .ki-t .ki-c .fx-th{display:contents}
 .ki-t .ki-c .fx-b{display:none}
 .ki-tl{min-width:0}
+
+/* 42. TASKS: FILTROS E FOLHA DE REPORTE (portal-tarefas.js) */
+.tf-filtros{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
+.tf-filtros .ps-sel{width:auto;min-width:170px;flex:0 1 230px}
+.tf-busca{flex:1 1 240px;min-width:200px}
+.tf-busca .ps-in{width:100%}
+.tf-abrir{display:inline-flex;align-items:center;gap:6px}
+.tf-res{display:flex;flex-wrap:wrap;align-items:center;gap:8px 18px;padding:10px 14px;border-radius:12px;background:var(--surface);border:1px solid var(--line);font-size:12.5px;color:var(--muted)}
+.tf-res-b{display:flex;align-items:center;gap:8px;color:var(--text)}
+.tf-res-b b{font-size:15px}
+.tf-barra{display:inline-block;width:140px;height:8px;border-radius:999px;background:var(--neutro-50);overflow:hidden}
+.tf-barra i{display:block;height:100%;background:var(--ok);border-radius:999px}
+.tf-pan .ps-pan-b{background:var(--bg)}
+.tf-pan .ps-gr-tw{max-height:min(520px,56vh)}
+.ps-gr-t td.tf-outro{color:var(--rev);font-weight:600}

@@ -319,24 +319,7 @@
   };
   var ctaPasso = function (m) { var p = P.passoAtual(m); return !p ? '' : p.tipo === 'recolha' ? 'Fill in' : p.tipo === 'parecer' ? 'Give opinion' : p.tipo === 'aprovacao' ? 'Approve' : 'Review'; };
   var abertas = function () { return P.msCiclo().filter(function (m) { return !P.concluida(m) && m.periodicidade !== 'Novos dados ESRS'; }); };
-  Blocos['inicio-tarefas'] = function () {
-    var usr = u(), minhas = pendentesDe(usr), gere = P.gereTudo(usr), todas = gere ? abertas() : [], nKpis = function (l) { return l.reduce(function (a, m) { return a + m.indicadores.length; }, 0); };
-    if (!U.tarEsc) U.tarEsc = minhas.length || !gere ? 'minhas' : 'todas';
-    var esc = gere ? U.tarEsc : 'minhas', lista = (esc === 'todas' ? todas : minhas).slice().sort(function (a, b) { return a.prazo < b.prazo ? -1 : a.prazo > b.prazo ? 1 : 0; });
-    var linhas = [];
-    lista.forEach(function (m) { m.indicadores.forEach(function (id) { linhas.push({ m: m, id: id, c: P.cat(id) }); }); });
-    var mostrar = U.tarTodas ? linhas : linhas.slice(0, 12);
-    var offline = lista.filter(function (m) { return P.podePreencher(m, usr); });
-    var dir = '<div class="ps-sp">' + (gere ? '<div class="ps-seg" role="group" aria-label="Whose tasks"><button type="button" class="' + (esc === 'minhas' ? 'on' : '') + '" data-a="tarEsc" data-v="minhas">Mine <span class="n">' + nKpis(minhas) + '</span></button><button type="button" class="' + (esc === 'todas' ? 'on' : '') + '" data-a="tarEsc" data-v="todas">Everyone <span class="n">' + nKpis(todas) + '</span></button></div>' : '') +
-      '<button type="button" class="ps-btn peq" data-a="tarOffline"' + (offline.length ? '' : ' disabled title="Nothing in collection with you in this list"') + '>Excel (offline)</button>' + botaoTl('Timeline') + '</div>';
-    var cols = [{ t: 'KPI' }, { t: 'Period' }, { t: 'Perimeter' }, { t: 'Assigned to' }, { t: 'Deadline' }, { t: 'Status' }];
-    var corpo = mostrar.length ? '<div class="ps-card-body">' + tabela(cols, mostrar.map(function (x) {
-      var st = estadoTarefa(x.m, x.id), cta = P.podeAgir(x.m, usr) ? ctaPasso(x.m) : '', esrs = x.c.esrs_requisito ? '<small class="ps-mut">' + e(x.c.esrs_requisito) + ', ' + e(x.m.nome) + '</small>' : '<small class="ps-mut">' + e(x.m.nome) + '</small>';
-      return { attrs: 'class="ps-tr-tar"', celulas: ['<div class="ps-tar-k"><a href="' + rota('Milestone/' + x.m.id) + '">' + e(x.c.nome) + '</a>' + esrs + (cta ? '<a class="ps-tar-cta" href="' + rota('Milestone/' + x.m.id) + '">' + e(cta) + ' →</a>' : '') + '</div>', tagPer(x.m) || e(P.rotPeriodo(x.m)), empHtml(x.m.empresa), atribHtml(x.m), '<span class="ps-nowrap">' + e(prazoTxt(x.m)) + '</span>', chip(st.txt, st.cls)] };
-    })) + (linhas.length > 12 ? '<div class="ps-sp ps-mt"><button type="button" class="ps-btn liga" data-a="tarTodas">' + (U.tarTodas ? 'Show fewer' : 'Show all ' + linhas.length + ' tasks') + '</button><a class="ps-btn liga" href="' + rota('Milestones' + (esc === 'minhas' ? '?minhas=1' : '')) + '">Open by milestone</a></div>' : '') + '</div>'
-      : vazio(esc === 'minhas' ? 'Nothing waiting on you.' + (gere ? ' Switch to Everyone to follow the open tasks.' : '') : 'No open tasks.');
-    return '<div class="ps-dock">' + cabCartao('Tasks', 'tarefa', dir) + corpo + '</div>';
-  };
+  /* O cartao Tasks (filtros e folha de reporte) esta em portal-tarefas.js */
   AI.tarEsc = function (d) { U.tarEsc = d.v; U.tarTodas = false; R(); };
   AI.tarTodas = function () { U.tarTodas = !U.tarTodas; R(); };
   AI.tarOffline = function () {
@@ -2415,6 +2398,6 @@
     }
   };
   /* As paginas de controlo (portal-gestao.js) acrescentam-se aqui */
-  P.ext = { Live: Live, Blocos2: Blocos, B: B, linkFicha: linkFicha, PERIODO_TXT: PERIODO_TXT, fechaPainel: function () { fechaPainel(); }, pessHtml: pessHtml, depHtml: depHtml, empHtml: empHtml, avPessoa: avPessoa, avEquipa: avEquipa, avEmpresa: avEmpresa, msAtual: function () { return msAtual(); }, Pn: Pn, abrePainel: function (t, a) { abrePainel(t, a); }, Blocos: Blocos, A: A, C: C, U: U, e: e, svg: svg, I: I, rota: rota, chip: chip, estChip: estChip, cabCartao: cabCartao, vazio: vazio, opt: opt, campo: campo, ficheiroHtml: ficheiroHtml, numAttr: numAttr, infoFormula: infoFormula, tabela: tabela, toast: toast, R: R, val: val, res: res, escolherFicheiro: escolherFicheiro, atribHtml: atribHtml, iniciais: iniciais, u: u, fmtV: fmtV, prazoTxt: prazoTxt };
+  P.ext = { aplicarDados: function (m, l, o) { return aplicarDados(m, l, o); }, estadoTarefa: estadoTarefa, ctaPasso: ctaPasso, pendentesDe: pendentesDe, abertas: abertas, tagPer: tagPer, bruNum: bruNum, botaoTl: botaoTl, Live: Live, Blocos2: Blocos, B: B, linkFicha: linkFicha, PERIODO_TXT: PERIODO_TXT, fechaPainel: function () { fechaPainel(); }, pessHtml: pessHtml, depHtml: depHtml, empHtml: empHtml, avPessoa: avPessoa, avEquipa: avEquipa, avEmpresa: avEmpresa, msAtual: function () { return msAtual(); }, Pn: Pn, abrePainel: function (t, a) { abrePainel(t, a); }, Blocos: Blocos, A: A, C: C, U: U, e: e, svg: svg, I: I, rota: rota, chip: chip, estChip: estChip, cabCartao: cabCartao, vazio: vazio, opt: opt, campo: campo, ficheiroHtml: ficheiroHtml, numAttr: numAttr, infoFormula: infoFormula, tabela: tabela, toast: toast, R: R, val: val, res: res, escolherFicheiro: escolherFicheiro, atribHtml: atribHtml, iniciais: iniciais, u: u, fmtV: fmtV, prazoTxt: prazoTxt };
   document.addEventListener('DOMContentLoaded', P.iniciar);
 })();

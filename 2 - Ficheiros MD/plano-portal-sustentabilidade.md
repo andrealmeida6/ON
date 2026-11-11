@@ -559,6 +559,27 @@ Pedido do André a 11 de novembro de 2026.
 - **Agora:** o calendário só mostra milestones pelo prazo, com os pontos coloridos e a lista do dia. As janelas continuam a existir e a editar-se em Backoffice, Calendar.
 - **Código:** removidos `janelasDoDia` e o destaque `.jan` do `calendario`. O estilo `.ps-cal-jan` deixou de ser usado.
 
+### Tasks: filtros e folha de reporte tipo Excel
+
+Pedido do André a 11 de novembro de 2026: filtrar as tasks por indicador e por grupo de indicadores, e abrir um ecrã tipo Excel para reportar tudo, vendo o que já foi reportado e por quem.
+
+- **Módulo:** `portal-tarefas.js` substitui o bloco `inicio-tarefas` de `portal-paginas.js`. As funções partilhadas vêm por `P.ext` (`aplicarDados`, `estadoTarefa`, `pendentesDe`, `abertas`).
+- **Filtros no cartão Tasks:**
+  - Pesquisa por indicador (nome, ID, ESRS, descrição, milestone, empresa, período). Filtra enquanto se escreve.
+  - Grupo de indicadores: por norma ESRS ou por tema da empresa, com contagem.
+  - Estado: To report, Overdue, Filled in to submit, In review or approval ou Approved.
+  - Os filtros por coluna continuam.
+- **Folha de reporte** (`Pn.tarFolha`, botão "Open as spreadsheet"): todas as tasks filtradas numa grelha (`portal-grelha.js`), com uma linha por KPI e período.
+  - **Colunas:** ID, Indicator, Group, Period, Perimeter, Unit, Prior period, Value, Change %, Data quality, Justification, Status, Entered by, Entered on e Deadline.
+  - **Edição:** Value, Data quality e Justification editam-se nas linhas em recolha com a pessoa (`P.podePreencher`). As outras linhas são só de leitura. Dá para escrever, colar um bloco do Excel (Ctrl+V) e anular (Ctrl+Z).
+  - **Gravação:** a mesma da grelha da milestone, por milestone (`aplicarDados`), com as mesmas validações, alertas e versões.
+  - **Quem e quando:** "Entered by" e "Entered on" vêm da última versão do valor. A tooltip mostra o histórico da célula (últimas cinco versões, com quem, quando, o valor e a origem: escrito, colado, importado, do sistema). Os valores inseridos por outra pessoa aparecem destacados.
+  - **Resumo:** quantos estão reportados (com barra), quantos a pessoa pode preencher, quantos são só de leitura e quantos foram inseridos por outra pessoa.
+  - **Export to Excel** da grelha.
+- **Ideia tirada do Workiva:** uma folha única para recolher dados, com o histórico e o autor de cada célula, em vez de abrir formulário a formulário.
+
+**CSS:** secção 42 de `global.css`.
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.
