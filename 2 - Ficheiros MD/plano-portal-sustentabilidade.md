@@ -644,6 +644,22 @@ Pedido do André a 11 de novembro de 2026: dentro da milestone, depois de anexar
 - **Limite:** o conteúdo fica no browser onde foi carregado. Em produção vai para o armazenamento de documentos (Supabase Storage ou SharePoint), com hash e antivírus (ponto 4 de "O que falta para produção"), e o `fid` passa a ser o caminho do ficheiro.
 - **CSS:** secção 45 de `global.css`.
 
+### Evidência automática quando o dado vem do sistema
+
+Pedido do André a 11 de novembro de 2026: quando o valor vem do sistema, a evidência deve ser o próprio registo da extração, com a query, o timestamp e um pop-up com o que foi aplicado.
+
+- **Registo da extração** (`P.aplicarPuxar` em `portal-fontes.js`): cada aplicação do Pull data from system cria um registo `EXT-<milestone>-<código>` em `S.puxados[m].extracoes`, com os 12 últimos. O registo guarda:
+  - timestamp ao segundo e quem extraiu;
+  - empresa e período;
+  - por cada dado: o sistema e o estado da ligação no momento (Live, ou a data da última atualização), a tabela e a coluna, os filtros (código da empresa, ano, períodos contabilísticos), a agregação, a **query** executada, os registos lidos com as referências de origem e o valor agregado;
+  - por cada indicador preenchido: a fórmula, a substituição com os dados extraídos e o resultado;
+  - um **hash SHA-256** de tudo, que mostra se o registo foi alterado.
+- **Ligação ao indicador:** cada indicador calculado a partir do pull fica com `it.extracao`. A evidência só vale enquanto o valor vier mesmo do sistema (`P.extracaoDe` usa `P.doSistema`). Se alguém escrever à mão um dado de origem, a ligação deixa de contar. Clear source data apaga-a.
+- **Pop-up "Applied from the system":** abre logo depois de aplicar o pull. Mostra o ID, quando, quem, os sistemas e o hash, o que foi aplicado em cada indicador e as queries executadas, cada uma com os registos lidos. Botão **Download extract (JSON)**.
+- **Botão "System extract":** aparece com a data junto às evidências da linha do indicador, em Evidence and quality e nas Approvals. Abre o mesmo pop-up, filtrado a esse indicador e às suas queries.
+- **Evidência obrigatória:** continua dispensada quando o valor vem do sistema. O registo da extração é a evidência para o auditor.
+- **CSS:** secção 46 de `global.css`.
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.

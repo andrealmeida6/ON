@@ -255,10 +255,26 @@
     var st = estadoFonte(m), regs = 0, dbs = {};
     l.forEach(function (x) { st.vals[x.k] = x.novo; delete (st.editados || {})[x.k]; regs += x.registos; dbs[x.db] = 1; });
     st.em = new Date().toISOString(); st.por = usr.nome; st.registos = regs;
+    /* Registo da extracao: e a evidencia de que o valor veio do sistema (query, filtros, registos lidos, quando e por quem) */
+    var ext = { id: 'EXT-' + m.id + '-' + Date.now().toString(36).toUpperCase(), em: st.em, por: usr.nome, ms: m.id, empresa: m.empresa, periodo: P.rotPeriodo(m), consultas: l.map(function (x) {
+      var t = tecnico(m, x.k), es = P.estadoSistema(x.db), regsK = P.registosCampo(x.k, m);
+      return { k: x.k, rot: x.f.rot, un: unidade(x.f), db: x.db, sistema: DBS[x.db], estado: es.txt, dadosDe: es.em || st.em, live: !!es.live, tab: t.tab, col: t.col, filtros: 'Company code ' + t.cod + ' (' + m.empresa + '), fiscal year ' + m.ano + ', posting periods ' + t.per, agreg: AGREG[x.f.agreg], query: t.q, registos: regsK.length, valor: x.novo, refs: regsK.map(function (r) { return { periodo: r.periodo, valor: r.valor, ref: r.ref }; }) };
+    }), indicadores: [] };
     var n = P.sincronizarCalculados(m, usr);
+    P.calculosMilestone(m).forEach(function (r) {
+      var it = P.item(r.id, P.chave(m));
+      if (!r.x || r.valor === null || !it.daFonte) return;
+      var ks = P.camposDaFormula(r.x).filter(function (k) { return CAMPOS[k]; });
+      if (!ks.some(function (k) { return ext.consultas.some(function (q) { return q.k === k; }); })) return;
+      ext.indicadores.push({ id: r.id, formula: P.formulaTxt(r.id), x: r.x, subst: r.subst, valor: r.valor, campos: ks });
+      it.extracao = ext.id;
+    });
+    ext.hash = P.sha256 ? P.sha256(JSON.stringify({ c: ext.consultas, i: ext.indicadores, em: ext.em, por: ext.por })) : '';
+    st.extracoes = (st.extracoes || []).concat([ext]).slice(-12);
+    st.ultimaExt = ext.id;
     P.evento(m, 'Data pulled from system (' + Object.keys(dbs).map(function (b) { return P.estadoSistema(b).txt; }).filter(function (t, i, a) { return a.indexOf(t) === i; }).join(', ') + '): ' + l.length + ' data items, ' + n + ' indicator(s) calculated.', usr.nome);
     P.guardar();
-    return { campos: l.length, indicadores: n };
+    return { campos: l.length, indicadores: n, ext: ext.id };
   };
   P.definirFonte = function (m, k, bruto, usr) {
     if (!podePuxar(m, usr)) return { erro: 'This milestone is read only for you right now.' };
@@ -274,6 +290,7 @@
   P.limparFontes = function (m, usr) {
     if (!podePuxar(m, usr)) return { erro: 'This milestone is read only for you right now.' };
     if (S.puxados) delete S.puxados[m.id];
+    m.indicadores.forEach(function (id) { var it = P.item(id, P.chave(m)); if (it) delete it.extracao; });
     var n = P.sincronizarCalculados(m, usr);
     P.evento(m, 'Source data cleared' + (n ? '; ' + n + ' calculated value(s) emptied' : '') + '.', usr.nome);
     P.guardar();
@@ -380,7 +397,48 @@
   };
   A.fdAbrir = function () { X.abrePainel('puxar', {}); };
   A.pxTodos = function (d, el) { var ds = document.querySelectorAll('.px-ind'), abrir = [].some.call(ds, function (x) { return !x.open; }); [].forEach.call(ds, function (x) { x.open = abrir; }); el.textContent = abrir ? 'Collapse all' : 'Expand all'; };
-  A.fdAplicar = function () { var m = X.msAtual(), r = P.aplicarPuxar(m, u()); if (r.erro) return toast(r.erro, 'err'); X.U.painel = null; toast(r.campos + ' values filled in, ' + r.indicadores + ' indicator(s) calculated. You can still change them.', 'ok'); R(); };
+  A.fdAplicar = function () { var m = X.msAtual(), r = P.aplicarPuxar(m, u()); if (r.erro) return toast(r.erro, 'err'); toast(r.campos + ' values filled in, ' + r.indicadores + ' indicator(s) calculated. You can still change them.', 'ok'); X.abrePainel('extracao', { ms: m.id, ext: r.ext, aplicado: true }); };
+  /* --- Evidencia do sistema --------------------------------------------------------- */
+  P.extracaoDe = function (m, id) {
+    var st = (S.puxados || {})[m.id], it = P.item(id, P.chave(m));
+    if (!st || !it || !it.extracao || !P.doSistema(m, id)) return null;
+    return (st.extracoes || []).filter(function (x) { return x.id === it.extracao; })[0] || null;
+  };
+  P.extracaoHtml = function (m, id) {
+    var x = P.extracaoDe(m, id);
+    return x ? '<button type="button" class="fc-sys" data-a="extAbrir" data-v="' + e(m.id + '|' + id) + '" title="Evidence: the value came straight from the system">' + X.svg('<ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/>', 13) + 'System extract<small>' + e(P.fmtDataHora(x.em)) + '</small></button>' : '';
+  };
+  var segundos = function (iso) { var d = new Date(iso); return P.fmtDataHora(iso) + ':' + String(d.getSeconds()).padStart(2, '0'); };
+  X.Pn.extracao = function (a) {
+    var m = P.ms(a.ms), st = (S.puxados || {})[a.ms] || {}, x = (st.extracoes || []).filter(function (y) { return y.id === a.ext; })[0];
+    if (!m || !x) return { t: 'System extract', b: '<div class="ps-aviso warn">This extract is no longer available: the source data of the milestone was cleared or pulled again.</div>', p: '<span class="ps-sp-flex"></span><button type="button" class="ps-btn" data-a="fecharPainel">Close</button>' };
+    var inds = a.id ? x.indicadores.filter(function (i) { return i.id === a.id; }) : x.indicadores;
+    var ks = []; inds.forEach(function (i) { i.campos.forEach(function (k) { if (ks.indexOf(k) < 0) ks.push(k); }); });
+    var cons = a.id ? x.consultas.filter(function (q) { return ks.indexOf(q.k) > -1; }) : x.consultas;
+    var sistemas = []; cons.forEach(function (q) { var t = q.sistema + ': ' + (q.live ? 'live' : 'data as of ' + P.fmtDataHora(q.dadosDe)); if (sistemas.indexOf(t) < 0) sistemas.push(t); });
+    var dl = [['Extract ID', '<span class="ps-mono">' + e(x.id) + '</span>'], ['Extracted on', '<b>' + e(segundos(x.em)) + '</b>'], ['Extracted by', e(x.por)], ['Company and period', e(x.empresa + ', ' + x.periodo)], ['Systems', sistemas.map(e).join('<br>')],
+      ['Integrity', x.hash ? '<span class="ps-mono" title="SHA-256 of the queries, the records read and the results">SHA-256 ' + e(x.hash.slice(0, 16)) + '…</span>' : '-']];
+    var indHtml = inds.map(function (i) {
+      var c = P.cat(i.id), it = P.item(i.id, P.chave(m)), mudou = it && it.valor !== null && Math.abs(it.valor - i.valor) > 1e-9;
+      return '<div class="ex-ind"><div class="ex-ind-h"><b>' + e(i.id + ' ' + c.nome) + '</b><span class="ex-v">' + e(fmtV(i.id, i.valor)) + ' <small>' + e(c.unidade_medida) + '</small></span></div>' +
+        (i.x !== i.campos[0] ? '<div class="ex-f"><span class="ps-mut">Formula</span> ' + e(i.formula) + '<br><span class="ps-mut">With the extracted data</span> <span class="ps-mono">' + e(i.subst) + ' = ' + e(fmtV(i.id, i.valor)) + '</span></div>' : '<div class="ex-f ps-mut">' + e(i.formula) + '</div>') +
+        (mudou ? '<div class="ps-aviso warn">The value in the platform is now ' + e(fmtV(i.id, it.valor)) + '. It was changed after this extract.</div>' : '') + '</div>';
+    }).join('');
+    var consHtml = cons.map(function (q, n) {
+      return '<details class="ex-q"' + (cons.length === 1 ? ' open' : '') + '><summary><span><b>' + e(q.rot) + '</b><small>' + e(q.sistema + ', ' + q.tab) + '</small></span><span class="ex-v">' + e(P.fmtNum(q.valor, Math.abs(q.valor) < 10 ? 3 : 2)) + ' <small>' + e(q.un) + '</small></span></summary>' +
+        '<dl class="px-dl"><dt>Filters</dt><dd>' + e(q.filtros) + '</dd><dt>Aggregation</dt><dd>' + e(q.agreg) + '</dd><dt>Records read</dt><dd>' + q.registos + '</dd><dt>Source status</dt><dd>' + e(q.estado) + '</dd></dl>' +
+        '<pre class="px-sql ps-mono" aria-label="Query for ' + e(q.rot) + '">' + e(q.query) + '</pre>' +
+        '<div class="ex-refs"><span class="ps-lab">Records read</span>' + tabela([{ t: 'Period' }, { t: 'Source reference' }, { t: 'Value', dir: 1 }], q.refs.map(function (r) { return [e(r.periodo), '<span class="ps-mono">' + e(r.ref) + '</span>', e(P.fmtNum(r.valor, Math.abs(r.valor) < 10 ? 3 : 2))]; })) + '</div></details>';
+    }).join('');
+    return { t: a.aplicado ? 'Applied from the system' : 'System extract', s: m.nome + (a.id ? ', ' + a.id : ''), largo: true, cls: 'alto ex-pan',
+      b: '<div class="ex-topo"><span class="ex-topo-ic" aria-hidden="true">' + X.svg('<path d="M20 6 9 17l-5-5"/>', 20) + '</span><div><b>' + (a.aplicado ? inds.length + ' indicator(s) filled in straight from the system.' : 'This value came straight from the system.') + '</b><span>This extract is the evidence: the queries, the records read and when they were read. No document needs to be attached. It goes into the auditor package.</span></div></div>' +
+        '<dl class="ex-dl">' + dl.map(function (d) { return '<dt>' + d[0] + '</dt><dd>' + d[1] + '</dd>'; }).join('') + '</dl>' +
+        (indHtml ? '<h3 class="ps-grupo-t">' + (a.aplicado ? 'What was applied' : 'Value') + '</h3><div class="ex-inds">' + indHtml + '</div>' : '') +
+        '<h3 class="ps-grupo-t">Queries run (' + cons.length + ')</h3>' + consHtml,
+      p: '<button type="button" class="ps-btn" data-a="extJson" data-v="' + e(a.ms + '|' + x.id) + '">Download extract (JSON)</button><span class="ps-sp-flex"></span><button type="button" class="ps-btn pri" data-a="fecharPainel">Close</button>' };
+  };
+  A.extAbrir = function (d) { var p = d.v.split('|'), m = P.ms(p[0]), x = m ? P.extracaoDe(m, p[1]) : null; if (!x) return toast('This value no longer comes from a system extract.', 'err'); X.abrePainel('extracao', { ms: m.id, ext: x.id, id: p[1] }); };
+  A.extJson = function (d) { var p = d.v.split('|'), st = (S.puxados || {})[p[0]] || {}, x = (st.extracoes || []).filter(function (y) { return y.id === p[1]; })[0]; if (x) P.descarregar(x.id + '.json', JSON.stringify(x, null, 2), 'application/json'); };
   /* Clear source data: pop-up de confirmacao com o que vai ser apagado, em vez do confirm do navegador */
   X.Pn.limparFontes = function () {
     var m = X.msAtual(), px = (S.puxados || {})[m.id], nCampos = px ? Object.keys(px.vals || {}).length : 0;

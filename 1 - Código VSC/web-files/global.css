@@ -2077,3 +2077,31 @@ button.ps-est-i:hover{border-color:rgba(255,255,255,.4);background:rgba(255,255,
 .fc-l{display:flex;flex-wrap:wrap;align-items:center;gap:2px 4px}
 .rq2-ev{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line)}
 .rq2-ev .ps-lab{margin:0 8px 0 0}
+
+/* 46. EVIDENCIA DO SISTEMA: REGISTO DA EXTRACAO */
+.fc-sys{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;margin:1px 6px 1px 0;border:1px solid color-mix(in srgb,var(--ok) 35%,#fff);border-radius:999px;background:var(--ok-50);color:var(--ok);font:inherit;font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle}
+.fc-sys small{font-weight:500;color:color-mix(in srgb,var(--ok) 75%,#000)}
+.fc-sys:hover{border-color:var(--ok)}
+.ex-pan .ps-pan-b{background:var(--bg)}
+.ex-topo{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border-radius:12px;background:var(--ok-50);color:var(--ok)}
+.ex-topo > div{display:flex;flex-direction:column;gap:2px}
+.ex-topo span:not(.ex-topo-ic){font-size:12.5px;color:var(--text)}
+.ex-topo-ic{flex:none;width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:var(--ok);color:#fff}
+.ex-dl{display:grid;grid-template-columns:150px minmax(0,1fr);gap:6px 14px;margin:0;padding:12px 14px;border-radius:12px;background:var(--surface);border:1px solid var(--line);font-size:13px}
+.ex-dl dt{color:var(--muted);font-weight:600}
+.ex-dl dd{margin:0}
+.ex-inds{display:flex;flex-direction:column;gap:8px}
+.ex-ind{padding:10px 14px;border-radius:12px;background:var(--surface);border:1px solid var(--line)}
+.ex-ind-h,.ex-q summary{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.ex-v{font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.ex-v small{font-weight:500;color:var(--muted)}
+.ex-f{margin-top:6px;font-size:12.5px;line-height:1.5}
+.ex-q{padding:10px 14px;border-radius:12px;background:var(--surface);border:1px solid var(--line)}
+.ex-q + .ex-q{margin-top:8px}
+.ex-q summary{cursor:pointer;list-style:none}
+.ex-q summary span:first-child{display:flex;flex-direction:column}
+.ex-q summary small{font-size:12px;color:var(--muted)}
+.ex-q[open] summary{margin-bottom:10px}
+.ex-refs{margin-top:10px}
+.ex-refs .ps-tw{max-height:220px;overflow:auto}
+@media (max-width:720px){.ex-dl{grid-template-columns:1fr}}
