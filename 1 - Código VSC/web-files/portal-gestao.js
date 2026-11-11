@@ -20,7 +20,7 @@
   var variacaoTxt = function (v) { return v === null || v === undefined ? '-' : (v > 0 ? '+' : '') + P.fmtNum(v, 1) + '%'; };
 
   /* --- Visao geral ------------------------------------------------------------ */
-  U.visao = { modo: 'consolidado', empresa: '' };
+  U.visao = { modo: 'consolidado', empresa: '', per: '', agr: 'esrs' };
   var TILES = ['E06', 'E01', 'P02', 'N05'];
   var tile = function (id, empresa) {
     var c = P.cat(id), r = P.valorConsolidado(id, empresa), m = r.m, it = P.item(id), ant = P.valorAnterior(id, S.ciclo.ano), est = P.estadoKpi(id);
@@ -29,24 +29,56 @@
     var nota = r.fora ? 'Reported by ' + (m ? m.empresa : 'another company') : !it || it.valor === null ? 'Not reported yet' : !empresa && r.peso === 0 ? m.empresa + ' is outside the consolidation' : !empresa && !r.racio && r.peso !== 1 ? 'Counted at ' + P.fmtNum(r.peso * 100, 0) + '%, ' + m.empresa : (m ? m.empresa : '');
     return '<div class="ps-tile"><div class="ps-tile-t"><span>' + e(c.nome) + '</span>' + cod(c) + '</div><div class="ps-tile-v"><b>' + e(val2) + '</b> <small>' + e(c.unidade_medida) + '</small></div><div class="ps-tile-s">' + (dif === null || r.fora ? '' : '<span>' + (dif < 0 ? '▼ ' : dif > 0 ? '▲ ' : '') + e(P.fmtNum(Math.abs(dif), 1)) + '% vs ' + (S.ciclo.ano - 1) + '</span>') + '<span>' + e(nota) + '</span></div><div class="ps-tile-e">' + chip(est.txt, est.cls) + '</div></div>';
   };
-  var completude = function (empresa) {
-    return S.mat.map(function (x) {
-      var cs = catCiclo().filter(function (c) { if (c.esrs !== x.norma) return false; return !empresa || P.msDoIndicador(c.id).empresa === empresa; });
-      var titulo = '<span class="ps-cp-t"><b>' + e(x.norma) + '</b> ' + e(x.tema) + '</span>';
-      if (x.avaliacao === 'não material') return '<div class="ps-cp">' + titulo + '<span class="ps-cp-b"></span><span class="ps-cp-v ps-mut">Not material</span></div>';
-      if (!cs.length) return '<div class="ps-cp">' + titulo + '<span class="ps-cp-b"></span><span class="ps-cp-v ps-mut">No indicators</span></div>';
-      var ap = cs.filter(function (c) { return P.estadoKpi(c.id).cod === 'aprovado'; }).length, rep = cs.filter(function (c) { return P.estadoKpi(c.id).cod !== 'aprovado' && P.item(c.id).valor !== null; }).length;
-      var pct = function (n) { return (n / cs.length) * 100; };
-      return '<div class="ps-cp" data-tip="' + e(x.norma + ': ' + ap + ' approved, ' + rep + ' reported, ' + (cs.length - ap - rep) + ' missing, of ' + cs.length) + '" tabindex="0">' + titulo + '<span class="ps-cp-b"><i class="a" style="width:' + pct(ap) + '%"></i><i class="r" style="width:' + pct(rep) + '%"></i></span><span class="ps-cp-v">' + Math.round(pct(ap + rep)) + '%</span></div>';
+  /* Pontos de dados da vista: periodo de reporte e empresa. Sao os mesmos do Reporting status (P.pontosCiclo). */
+  var pontosVista = function (empresa, per) {
+    return P.pontosCiclo(function (m) { return (!per || m.periodo === per) && (!empresa || m.empresa === empresa); });
+  };
+  /* Grupos de indicadores: normas ESRS (com a materialidade) ou temas da empresa */
+  var gruposVista = function (agr) {
+    if (agr === 'tema') { var t = []; S.cat.forEach(function (c) { if (c.tema && t.indexOf(c.tema) < 0) t.push(c.tema); }); return t.sort().map(function (x) { return { k: x, t: '', d: x, teste: function (c) { return c.tema === x; } }; }); }
+    return S.mat.map(function (x) { return { k: x.norma, t: x.norma, d: x.tema, nm: x.avaliacao === 'não material', teste: function (c) { return c.esrs === x.norma; } }; });
+  };
+  var contaPontos = function (l) {
+    var ap = l.filter(function (x) { return x.s.cod === 'aprovado'; }).length;
+    var rep = l.filter(function (x) { return x.s.cod !== 'aprovado'; }).filter(function (x) { var it = P.item(x.id, P.chave(x.m)); return it && it.valor !== null; }).length;
+    return { tot: l.length, ap: ap, rep: rep, falta: l.length - ap - rep, pct: l.length ? Math.round(((ap + rep) / l.length) * 100) : null };
+  };
+  var completude = function (empresa, per, agr) {
+    var pts = pontosVista(empresa, per);
+    return gruposVista(agr).map(function (g) {
+      var l = pts.filter(function (x) { return g.teste(x.c); }), n = contaPontos(l);
+      var titulo = '<span class="ps-cp-t">' + (g.t ? '<b>' + e(g.t) + '</b> ' : '') + e(g.d) + '</span>';
+      if (g.nm) return '<div class="ps-cp">' + titulo + '<span class="ps-cp-b"></span><span class="ps-cp-v ps-mut">Not material</span></div>';
+      if (!n.tot) return '<div class="ps-cp">' + titulo + '<span class="ps-cp-b"></span><span class="ps-cp-v ps-mut">No data points</span></div>';
+      var pct = function (k) { return (k / n.tot) * 100; };
+      return '<div class="ps-cp" data-tip="' + e((g.t || g.d) + ': ' + n.ap + ' approved, ' + n.rep + ' reported, ' + n.falta + ' missing, of ' + n.tot + ' data points') + '" tabindex="0">' + titulo + '<span class="ps-cp-b"><i class="a" style="width:' + pct(n.ap) + '%"></i><i class="r" style="width:' + pct(n.rep) + '%"></i></span><span class="ps-cp-v">' + n.pct + '%</span></div>';
     }).join('');
   };
+  /* Monitorizacao de cada periodo: grupos nas linhas, periodos nas colunas */
+  var matrizPeriodos = function (empresa, agr) {
+    var pers = (S.periodos || []).filter(function (p) { return p.ano === S.ciclo.ano; }), pts = pontosVista(empresa, ''), gs = gruposVista(agr).filter(function (g) { return !g.nm; }), sel = U.visao.per;
+    var cel = function (l, pid, g) {
+      var n = contaPontos(l);
+      if (!n.tot) return '<td class="mp-c vazio"><span class="ps-mut">-</span></td>';
+      var cls = n.pct === 100 && n.ap === n.tot ? 'ok' : n.pct >= 75 ? 'bom' : n.pct >= 40 ? 'meio' : 'baixo';
+      return '<td class="mp-c ' + cls + (sel === pid ? ' on' : '') + '"><button type="button" data-a="visaoPer" data-v="' + e(pid) + '" data-tip="' + e((g ? (g.t || g.d) + ', ' : '') + (P.periodo(pid) ? P.periodo(pid).nome : 'All periods') + ': ' + n.ap + ' approved, ' + n.rep + ' reported, ' + n.falta + ' missing, of ' + n.tot) + '"><b>' + n.pct + '%</b><small>' + (n.ap + n.rep) + '/' + n.tot + '</small></button></td>';
+    };
+    var linhas = gs.map(function (g) {
+      var l = pts.filter(function (x) { return g.teste(x.c); });
+      if (!l.length) return '';
+      return '<tr><th scope="row">' + (g.t ? '<b>' + e(g.t) + '</b> ' : '') + e(g.d) + '</th>' + pers.map(function (p) { return cel(l.filter(function (x) { return x.m.periodo === p.id; }), p.id, g); }).join('') + cel(l, '', g) + '</tr>';
+    }).join('');
+    var total = '<tr class="mp-tot"><th scope="row">All groups</th>' + pers.map(function (p) { return cel(pts.filter(function (x) { return x.m.periodo === p.id; }), p.id, null); }).join('') + cel(pts, '', null) + '</tr>';
+    return '<div class="ps-card ps-mt">' + cabCartao('Completeness by reporting period', 'cal', '<div class="ps-leg mp-leg"><span><i class="ok"></i>All approved</span><span><i class="bom"></i>75% or more</span><span><i class="meio"></i>40 to 74%</span><span><i class="baixo"></i>Below 40%</span></div>') +
+      '<div class="ps-card-body"><p class="ps-small ps-mut">Share of data points (indicator per period) with a value, approved or reported, in each reporting period. Click a cell to see that period above.</p>' +
+      '<div class="ps-tw mp-tw"><table class="mp-t"><thead><tr><th scope="col">' + (agr === 'tema' ? 'Company topic' : 'ESRS standard') + '</th>' + pers.map(function (p) { return '<th scope="col">' + e(p.nome) + '<small>close ' + e(P.fmtData(p.fecho)) + '</small></th>'; }).join('') + '<th scope="col">All periods</th></tr></thead><tbody>' + linhas + total + '</tbody></table></div></div></div>';
+  };
   var ORIGENS = ['Manual', 'Excel', 'External', 'Calculation', 'Restatement', 'API'];
-  var origens = function (empresa) {
+  var origens = function (empresa, per) {
     var n = {}, tot = 0;
-    catCiclo().forEach(function (c) {
-      if (empresa && P.msDoIndicador(c.id).empresa !== empresa) return;
-      var v = P.item(c.id).versoes, ult = v[v.length - 1];
-      if (!ult || P.item(c.id).valor === null) return;
+    pontosVista(empresa, per).forEach(function (x) {
+      var it = P.item(x.id, P.chave(x.m)), v = it ? it.versoes : [], ult = v[v.length - 1];
+      if (!ult || it.valor === null) return;
       var o = P.origemVersao(ult.origem); n[o] = (n[o] || 0) + 1; tot++;
     });
     if (!tot) return vazio('No values reported yet.');
@@ -59,18 +91,24 @@
     var v = U.visao, empV = v.modo === 'empresa' ? v.empresa || (S.ent[0] && S.ent[0].nome) : '', inc = S.ent.filter(function (x) { return x.perimetro_grupo; }).length, usr = u();
     var pend = aprovaveis().filter(function (m) { return usr.perfil !== 'resp' || P.temUnidade(usr, m.unidade); });
     if (empV) pend = pend.filter(function (m) { return m.empresa === empV; });
+    if (v.per) pend = pend.filter(function (m) { return m.periodo === v.per; });
+    var pers = (S.periodos || []).filter(function (p) { return p.ano === S.ciclo.ano; }), perSel = v.per ? P.periodo(v.per) : null;
     var ativ = P.trilho().filter(function (x) { return !empV || (x.m && x.m.empresa === empV); }).sort(function (a, b) { return a.em < b.em ? 1 : a.em > b.em ? -1 : 0; }).slice(0, 5);
     var podeAdmin = P.gereTudo(usr), podeTrilho = podeAdmin || usr.perfil === 'auditor';
     return '<div class="ps-card ps-vista"><div class="ps-vista-e"><span class="ps-lab">Data view</span><div class="ps-seg2" role="group"><button type="button" class="' + (empV ? '' : 'on') + '" data-a="visaoModo" data-v="consolidado">Consolidated</button><button type="button" class="' + (empV ? 'on' : '') + '" data-a="visaoModo" data-v="empresa">By company</button></div>' +
-      (empV ? '<label class="ps-sr" for="vis-empV">Company</label><select id="vis-empV" class="ps-sel" data-c="visaoEmp">' + S.ent.map(function (x) { return opt(x.nome, x.nome, empV); }).join('') + '</select>' : '') + '</div><div class="ps-vista-d ps-small ps-mut">' + (empV ? 'Showing what this company reports, at 100%.' : inc + ' of ' + S.ent.length + ' companies in the consolidation. Full at 100%, proportional by ownership, equity method excluded.') + (podeAdmin ? ' <a href="' + rota('Backoffice?tab=perimetro') + '">Set the perimeter</a>' : '') + '</div></div>' +
+      (empV ? '<label class="ps-sr" for="vis-empV">Company</label><select id="vis-empV" class="ps-sel" data-c="visaoEmp">' + S.ent.map(function (x) { return opt(x.nome, x.nome, empV); }).join('') + '</select>' : '') +
+      '<span class="ps-lab vis-sep">Reporting period</span><label class="ps-sr" for="vis-per">Reporting period</label><select id="vis-per" class="ps-sel" data-c="visaoPer">' + opt('', 'All periods', v.per) + pers.map(function (p) { return opt(p.id, p.nome, v.per); }).join('') + '</select></div><div class="ps-vista-d ps-small ps-mut">' + (empV ? 'Showing what this company reports, at 100%.' : inc + ' of ' + S.ent.length + ' companies in the consolidation. Full at 100%, proportional by ownership, equity method excluded.') + (podeAdmin ? ' <a href="' + rota('Backoffice?tab=perimetro') + '">Set the perimeter</a>' : '') + '</div></div>' +
       '<div class="ps-tiles ps-mt">' + TILES.map(function (id) { return tile(id, empV); }).join('') + '</div>' +
-      '<div class="ps-grid-vis ps-mt"><div class="ps-card">' + cabCartao('Completeness by ESRS standard', 'tarefa', '<div class="ps-leg"><span><i class="a"></i>Approved</span><span><i class="r"></i>Reported</span><span><i></i>Missing</span></div>') + '<div class="ps-card-body">' + completude(empV) + '</div></div>' +
+      '<div class="ps-grid-vis ps-mt"><div class="ps-card">' + cabCartao('Completeness by ' + (v.agr === 'tema' ? 'company topic' : 'ESRS standard') + (perSel ? ', ' + perSel.nome : ''), 'tarefa', '<div class="ps-sp"><div class="ps-seg" role="group" aria-label="Group indicators by"><button type="button" class="' + (v.agr !== 'tema' ? 'on' : '') + '" data-a="visaoAgr" data-v="esrs">ESRS</button><button type="button" class="' + (v.agr === 'tema' ? 'on' : '') + '" data-a="visaoAgr" data-v="tema">Topic</button></div><div class="ps-leg"><span><i class="a"></i>Approved</span><span><i class="r"></i>Reported</span><span><i></i>Missing</span></div></div>') + '<div class="ps-card-body">' + completude(empV, v.per, v.agr) + '</div></div>' +
       '<div class="ps-col"><div class="ps-card">' + cabCartao('Pending approval', 'ativ', podeTrilho ? '<a class="ps-small" href="' + rota('Aprovacoes') + '">See all (' + pend.length + ')</a>' : '') + '<ul class="ps-list">' + (pend.length ? pend.slice(0, 4).map(function (m) { return '<li><a class="ps-row" href="' + rota((podeTrilho ? 'Aprovacoes?ms=' : 'Milestone/') + m.id) + '"><span class="ps-row-txt"><b>' + e(m.nome) + '</b><span>' + emp(m.empresa) + ', ' + m.indicadores.length + ' indicators</span></span>' + estChip(m) + '</a></li>'; }).join('') : '<li>' + vazio('Nothing waiting for approval.') + '</li>') + '</ul></div>' +
-      '<div class="ps-card">' + cabCartao('Source of the data', 'doc') + '<div class="ps-card-body">' + origens(empV) + '</div></div></div></div>' +
+      '<div class="ps-card">' + cabCartao('Source of the data', 'doc') + '<div class="ps-card-body">' + origens(empV, v.per) + '</div></div></div></div>' + matrizPeriodos(empV, v.agr) +
       '<div class="ps-card ps-mt">' + cabCartao('Recent activity', 'ativ', podeTrilho ? '<a class="ps-small" href="' + rota('Trilho') + '">Open audit trail</a>' : '') + '<ul class="ps-list">' + (ativ.length ? ativ.map(function (x) { return '<li class="ps-ativ"><span class="ps-mut ps-small ps-nowrap">' + e(P.fmtDataHora(x.em)) + '</span><span>' + e(x.por) + ': ' + e(tituloEvento(x)) + '</span>' + chip(x.origem) + '</li>'; }).join('') : '<li>' + vazio('No activity yet.') + '</li>') + '</ul></div>' +
       '<h2 class="ps-grupo-t ps-mt-l">Reporting progress, whole group</h2>';
   };
   A.visaoModo = function (d) { U.visao.modo = d.v; R(); };
+  A.visaoAgr = function (d) { U.visao.agr = d.v; R(); };
+  A.visaoPer = function (d) { U.visao.per = U.visao.per === d.v ? '' : d.v; R(); window.scrollTo({ top: 0, behavior: 'smooth' }); };
+  C.visaoPer = function (el) { U.visao.per = el.value; };
   C.visaoEmp = function (el) { U.visao.empresa = el.value; };
   /* Estado de uma ligacao: so com "Connected" se pode puxar dados desse sistema nas milestones */
   C.ligEstado = function (el) { var a = S.apis[+el.dataset.id], usr = u(); if (!a || !P.gereTudo(usr)) return; a.estado = el.value; a.mudado = true; if (P.eventoGlobal) P.eventoGlobal('Connection ' + a.nome + ': ' + (el.value === 'ligada' ? 'connected' : 'waiting for credentials') + '.', usr.nome); P.guardar(); toast('Connection updated.', 'ok'); };

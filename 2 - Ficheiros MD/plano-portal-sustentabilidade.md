@@ -694,6 +694,23 @@ Pedido do André a 11 de novembro de 2026.
 - **Quem vê:** a gestão e o auditor veem todas as milestones. Quem tiver acesso à timeline e não for gestão vê só as milestones dos seus departamentos.
 - **CSS:** secção 48 de `global.css`.
 
+### Overview: monitorização por período de reporte
+
+Pedido do André a 11 de novembro de 2026: um ecrã de monitorização como o da imagem que enviou (vista consolidada ou por empresa, cartões, completude por norma ESRS, pendentes de aprovação, origem dos dados), com a completude por grupo de indicadores em cada período de reporte.
+
+- **Onde:** na página que já existia, **Monitoring > Overview** (web page `Consolidado`, bloco `visao` em `portal-gestao.js`). Não foi criada uma página nova.
+- **Novo na faixa "Data view":** o seletor **Reporting period** (All periods, T1 a T4, Ano), ao lado de Consolidated / By company. Filtra a completude, os Pending approval e a Source of the data.
+- **Completude:**
+  - Passa a contar por ponto de dados, um indicador num período (`P.pontosCiclo`), como o Reporting status e a Home. Antes contava por indicador e olhava só para a milestone anual, por isso os trimestres não entravam.
+  - A percentagem é a parte com valor, aprovado ou reportado. A barra separa aprovado, reportado e em falta.
+  - Pode agrupar-se por **ESRS** (com a materialidade, onde "Not material" continua assinalado) ou por **Topic** (tema da empresa).
+- **Quadro novo "Completeness by reporting period":** os grupos nas linhas, os períodos nas colunas (com a data de fecho) e as colunas All periods e All groups.
+  - Cada célula mostra a percentagem e "com valor / total". As cores são: tudo aprovado, 75% ou mais, 40 a 74%, abaixo de 40%.
+  - Clicar numa célula escolhe esse período em cima.
+  - O total bate certo com o Reporting status (no demo, 117 de 214).
+- **Mantém-se igual:** os quatro cartões de indicadores (valor consolidado do ano), a atividade recente e o resto da página.
+- **CSS:** secção 49 de `global.css`.
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.
