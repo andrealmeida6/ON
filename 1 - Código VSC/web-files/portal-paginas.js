@@ -219,7 +219,7 @@
     if (P.daUnidade(usr)) return ['Inicio', 'Milestones', 'Milestone', 'Documentos'];
     var base = ['Inicio', 'Milestones', 'Milestone', 'Timeline', 'Consolidado', 'Documentos', 'Evidencias', 'Relatorio', 'Historico', 'Auditoria'];
     if (usr.perfil !== 'auditor') base.push('Dados');
-    if (P.gereTudo(usr) || usr.perfil === 'auditor') base.push('Aprovacoes', 'Estado', 'Trilho');
+    if (P.gereTudo(usr) || usr.perfil === 'auditor') base.push('Dashboard', 'Aprovacoes', 'Estado', 'Trilho');
     if (P.gereTudo(usr)) base.push('Backoffice');
     return base;
   };

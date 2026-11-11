@@ -1281,6 +1281,25 @@ Reporting/
 3. **Mover quando se reclassifica:** quando um documento de "_To classify" é ligado a uma task ou KPI, *Move file* para a pasta nova e atualiza as colunas.
 4. **Permissões:** grupos por empresa (leitura) e a equipa de sustentabilidade (edição). Os auditores ficam só com leitura. As pastas do ano fechado passam a só leitura no fecho do ciclo.
 
+### Dashboard executivo (Monitoring → Dashboard)
+
+Pedido do André a 11 de novembro de 2026, com uma imagem de referência.
+
+- **Página nova `Dashboard`:** web page, snippet `Dashboard/Introducao` e bloco `dashboard` em `web-files/portal-dashboard.js`. É a primeira entrada do menu Monitoring e só a veem o administrador, a equipa de sustentabilidade e o auditor.
+- **Filtros:**
+  - perímetro: Consolidated, uma empresa ou uma seleção de empresas (cada uma a 100%, como na Overview);
+  - período: o ano ou um trimestre.
+  - No ano, quando o valor anual ainda não existe, o valor junta os trimestres reportados pela regra de agregação do KPI e fica marcado **YTD**. Num trimestre, a comparação é com o mesmo trimestre do ano anterior.
+- **Scorecard ESG global:** até 8 KPIs, por omissão Emissões Scope 1+2 (tCO2e), % renovável, intensidade carbónica, taxa de severidade, mulheres em liderança, rotatividade, formação anticorrupção e completude do reporte.
+  - Cada tile mostra o pilar, o valor, a unidade e o nome, e a variação face ao ano anterior (em % ou p.p.).
+  - Mostra também o estado em texto: **On target** (meta atingida), **On track**, **Attention** (até 5% no sentido errado), **At risk** e **No data yet**.
+  - O sentido "menos é melhor" (emissões, rotatividade, acidentes…) vem das metas ou de uma lista no código.
+  - O botão **Choose the KPIs** permite escolher, ordenar e repor os KPIs. A escolha fica guardada no ciclo (`S.ciclo.dashKpis`).
+- **Ambiente:** emissões por scope (barras), energia (% renovável deste ano e do anterior, eletricidade, energia primária, lamas valorizadas) e trajetória face às metas.
+- **Social:** força de trabalho, mulheres (no total e na liderança, mais a diferença salarial) e saúde e segurança.
+- **Governance:** ética e compliance (4 barras), cadeia de fornecimento e clientes.
+- As barras têm o valor sempre em texto e uma tooltip. A cor nunca é a única informação.
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.

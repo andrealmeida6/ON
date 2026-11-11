@@ -4,7 +4,7 @@ const fs = require('fs'), path = require('path');
 const cod = __dirname, raiz = path.dirname(cod);
 const ler = (...p) => fs.readFileSync(path.join(cod, ...p), 'utf8');
 const relWeb = encodeURI('../' + path.basename(cod) + '/web-files/');
-const ORDEM = ['Entrada', 'Inicio', 'Milestones', 'Milestone', 'Timeline', 'Consolidado', 'Estado', 'Dados', 'Aprovacoes', 'Documentos', 'Evidencias', 'Relatorio', 'Historico', 'Auditoria', 'Trilho', 'Backoffice', 'Pedidos'];
+const ORDEM = ['Entrada', 'Inicio', 'Milestones', 'Milestone', 'Timeline', 'Dashboard', 'Consolidado', 'Estado', 'Dados', 'Aprovacoes', 'Documentos', 'Evidencias', 'Relatorio', 'Historico', 'Auditoria', 'Trilho', 'Backoffice', 'Pedidos'];
 
 const resolver = (html) => html
   .replace(/\{\{\s*snippets\['([^']+)'\]\s*\}\}/g, (_, nome) => {

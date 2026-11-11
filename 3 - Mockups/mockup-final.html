@@ -22,6 +22,7 @@
       <div class="ps-h-grp" data-nav-grp>
         <button type="button" class="ps-h-mbtn" aria-haspopup="true">Monitoring<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
         <div class="ps-h-drop">
+          <a class="ps-h-link" href="/dashboard/" data-nav="Dashboard">Dashboard</a>
           <a class="ps-h-link" href="/consolidado/" data-nav="Consolidado">Overview</a>
           <a class="ps-h-link" href="/estado/" data-nav="Estado">Reporting status</a>
         </div>
@@ -180,6 +181,21 @@
 
     <!-- template: bloco-dinamico -->
 <div data-bloco="timeline"></div>
+
+  </div>
+</section>
+
+<!-- web page: Dashboard -->
+<section class="ps-pagina" hidden data-pagina="Dashboard">
+  <div class="ps-pag">
+    <!-- snippet: Dashboard/Introducao -->
+<header class="ps-pag-head">
+  <h1>Dashboard</h1>
+  <p>The ESG performance at a glance: a scorecard of up to 8 KPIs and the Environment, Social and Governance views, for the perimeter and period you choose.</p>
+</header>
+
+    <!-- template: bloco-dinamico -->
+<div data-bloco="dashboard"></div>
 
   </div>
 </section>
@@ -409,6 +425,7 @@
 <script src="../1%20-%20C%C3%B3digo%20VSC/web-files/portal-filtros.js"></script>
 <script src="../1%20-%20C%C3%B3digo%20VSC/web-files/portal-faturas.js"></script>
 <script src="../1%20-%20C%C3%B3digo%20VSC/web-files/portal-documentos.js"></script>
+<script src="../1%20-%20C%C3%B3digo%20VSC/web-files/portal-dashboard.js"></script>
 <script src="../1%20-%20C%C3%B3digo%20VSC/web-files/portal-pesquisa.js"></script>
 </body>
 </html>
