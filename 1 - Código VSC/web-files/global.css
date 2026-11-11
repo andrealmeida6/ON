@@ -2311,3 +2311,38 @@ tr.rev-pend>td:first-child{box-shadow:inset 3px 0 0 var(--rev)}
 .rq2-it.fechado.on{background:color-mix(in srgb,#14A89A 11%,var(--surface))}
 .rq2-it.fechado .rq2-fixo{color:#0B6F66;font-weight:700}
 
+/* 67. DOCUMENTS (todos os documentos, com task e KPIs) E LEITURA DE FATURAS */
+.dc-kpi{display:inline-block;margin:0 4px 2px 0;padding:1px 7px;border-radius:999px;background:var(--primary-50);color:var(--primary);font-family:var(--mono);font-size:11.5px;font-weight:600;text-decoration:none}
+.dc-kpi:hover{text-decoration:underline}
+.dc-fat{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;margin-top:4px}
+.dc-fat small{color:var(--muted);font-size:11.5px}
+.dc-up{display:flex;flex-direction:column;gap:14px}
+.dc-fatchk{align-items:flex-start;padding:10px 12px;border:1px dashed var(--line);border-radius:var(--r)}
+.fat-aler{display:flex;flex-direction:column;align-items:center;gap:8px;padding:40px 10px;text-align:center}
+.fat-aler small{color:var(--muted)}
+.fat-spin{width:34px;height:34px;border-radius:50%;border:3px solid var(--primary-100);border-top-color:var(--primary);animation:fat-gira 1s linear infinite}
+@keyframes fat-gira{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.fat-spin{animation:none}}
+.fat-g{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:18px;align-items:start}
+@media (max-width:900px){.fat-g{grid-template-columns:minmax(0,1fr)}}
+.fat-prev{position:sticky;top:0;max-height:70vh;overflow:auto;border:1px solid var(--line);border-radius:var(--r);background:#fff}
+.fat-img{display:block;width:100%;height:auto}
+.fat-campos{display:flex;flex-direction:column;gap:12px}
+.fat-leg{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:11.5px;color:var(--muted)}
+.fat-leg span::before{content:"";display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px;border:2px solid var(--line)}
+.fat-leg .alta::before{border-color:var(--ok)}
+.fat-leg .media::before{border-color:var(--warn)}
+.fat-leg .baixa::before{border-color:var(--err)}
+.fat-cg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 12px}
+.fat-c{display:flex;flex-direction:column;gap:3px}
+.fat-c small{font-size:11px;color:var(--muted)}
+.fat-c.alta .ps-in{border-color:color-mix(in srgb,var(--ok) 55%,var(--line))}
+.fat-c.media .ps-in{border-color:var(--warn);background:var(--warn-50)}
+.fat-c.media small{color:var(--warn)}
+.fat-c.baixa .ps-in{border-color:var(--err);background:var(--err-50)}
+.fat-c.baixa small{color:var(--err)}
+.fat-dest{display:flex;flex-direction:column;gap:10px;padding:12px;border:1px solid var(--line);border-radius:var(--r);background:var(--bg)}
+.fat-dest h3{margin:0;font-size:13px}
+.fat-val{margin:0;font-size:13.5px}
+.fat-val small{display:block;color:var(--muted);font-size:12px;margin-top:2px}
+

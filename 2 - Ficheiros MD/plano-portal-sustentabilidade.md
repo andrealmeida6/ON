@@ -1159,6 +1159,36 @@ Pedido do André a 11 de novembro de 2026 (exemplo: M25-T2, A02).
   - o estado diz "Approved and published", com quem aprovou e quando;
   - no workflow, o passo Publicação mostra "N published", com os indicadores na tooltip.
 
+### Documents com evidências, upload e leitura de faturas (QR, texto do PDF, OCR)
+
+Pedido do André a 11 de novembro de 2026.
+
+- **Documents** (`web-files/portal-documentos.js`, `P.listaDocumentos`): numa só página, todos os documentos a que a pessoa tem acesso.
+  - Junta as evidências dos KPIs, os documentos das tasks, os ficheiros pedidos e os documentos ainda sem task.
+  - Um ficheiro anexado a vários KPIs aparece uma vez, com todos os KPIs.
+  - Cada documento mostra os KPIs (cada um abre a task nesse indicador), a task, o período, a empresa, o tipo e quem o carregou e quando. Se for uma fatura lida, mostra também o resumo: fornecedor, kWh, CPE, período e total.
+  - Tem pesquisa em tudo (nome, KPI, task, empresa, fornecedor, CPE…) e filtros por empresa, período e tipo. O botão "Auditor package (Excel)" continua lá.
+  - A página Evidence saiu do menu (classe `ps-oculto`), e a rota antiga abre Documents.
+  - Os data owners passaram a ter acesso a Documents, só com as tasks deles.
+- **Upload por Documents:**
+  - escolhe-se o ficheiro, a task e os indicadores que ele suporta;
+  - sem indicadores, fica como documento da task; sem task, fica por ligar;
+  - a opção "It is an invoice: read the values" segue para a leitura.
+- **Leitura de faturas** (`web-files/portal-faturas.js`): corre toda no browser, por isso funciona no GitHub Pages. As bibliotecas descarregam-se só quando se lê a primeira fatura.
+  1. **QR code da AT** (jsQR): NIF do fornecedor e do cliente, data, número, ATCUD, IVA por taxa e total.
+  2. **Texto do PDF** (pdf.js 3.11) para PDFs digitais.
+  3. **OCR** (Tesseract.js 5, português) para digitalizações e fotografias, tolerante a erros típicos (O/0 no CPE, "kh" em vez de kWh).
+  - As regras de leitura de faturas de eletricidade portuguesas apanham: fornecedor, CPE, período de faturação, nível de tensão, potência contratada, tipo de leitura, kWh total e por período horário, % renovável, gCO₂/kWh e totais. Os campos seguem `esquema-fatura-energia.json`.
+  - **Ecrã de confirmação:** a primeira página da fatura aparece ao lado dos campos lidos, editáveis e coloridos pela confiança (alta, verificar, baixa, não encontrado).
+    - Escolhe-se a task e o indicador de energia; por omissão é a task aberta cujo período apanha a fatura.
+    - Quando a fatura apanha dois períodos, só a parte dos dias da task vai para essa task.
+    - O valor entra no indicador como uma entrada por CPE, por isso várias faturas do mesmo período somam-se. A fatura fica como evidência, com os dados lidos.
+    - Se a task tiver o E03, pode preencher-se também com a % renovável.
+    - Há também a opção "Save as document only".
+  - Na task, os indicadores de energia (MWh ou kWh) têm o botão **Read invoice** no detalhe.
+- **Fatura de teste** (fictícia): `3 - Mockups/exemplos/fatura-eletricidade-teste.pdf` e a mesma em `.png`, para testar o OCR. Tem QR code da AT, dois períodos horários, rotulagem, e cobre 15/09 a 14/10/2026 (apanha o T3 e o T4).
+- **Testado:** o PDF e a imagem leem todos os campos certos. Na task M05-T4 (Financeira), 14 dos 30 dias dão 14,467 MWh no E01, com a fatura como evidência, e a fatura encontra-se em Documents pelo CPE.
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.

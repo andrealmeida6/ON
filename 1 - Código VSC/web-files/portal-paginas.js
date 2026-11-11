@@ -216,7 +216,7 @@
     if (!usr) return ['Entrada'];
     if (usr.perfil === 'ext') return ['Pedidos'];
     /* Quem contribui so precisa das suas milestones (com a folha) e do chat. O resto e para quem acompanha o reporte. */
-    if (usr.perfil === 'resp') return ['Inicio', 'Milestones', 'Milestone'];
+    if (usr.perfil === 'resp') return ['Inicio', 'Milestones', 'Milestone', 'Documentos'];
     var base = ['Inicio', 'Milestones', 'Milestone', 'Timeline', 'Consolidado', 'Documentos', 'Evidencias', 'Relatorio', 'Historico', 'Auditoria'];
     if (usr.perfil !== 'auditor') base.push('Dados');
     if (P.gereTudo(usr) || usr.perfil === 'auditor') base.push('Aprovacoes', 'Estado', 'Trilho');
@@ -788,6 +788,7 @@
       var qual = '<div class="rq2-ac">' + campo('q-' + id, 'Data quality', '<select id="q-' + e(id) + '" class="ps-sel" data-c="qual" data-id="' + e(id) + '"' + (ed ? '' : ' disabled') + '>' + opt('medido', 'Measured', it.qualidade) + opt('calculado', 'Calculated', it.qualidade) + opt('estimado', 'Estimated', it.qualidade) + '</select>') +
         (it.qualidade === 'estimado' ? campo('m-' + id, 'Estimation method' + (ed ? ' (required)' : ''), '<input id="m-' + e(id) + '" class="ps-in" value="' + e(it.metodo) + '" data-c="metodo" data-id="' + e(id) + '"' + (ed ? '' : ' readonly') + '>') : '') +
         '<div class="ps-sp">' + (ed ? '<button type="button" id="e-' + e(id) + '" class="ps-btn peq" data-a="anexar" data-v="' + e(id) + '">Attach evidence</button>' : '') + (P.evidenciaPrecisa(m, id) ? (it.evidencias.length ? chip('Evidence attached', 'ok') : chip('Evidence required', 'warn')) : (it.evidencias.length ? chip(it.evidencias.length + ' evidence item(s)', 'ok') : '')) +
+        (ed && /^(MWh|kWh)$/.test(c.unidade_medida) && P.abrirLeituraFatura ? '<button type="button" class="ps-btn peq" data-a="fatLerInd" data-v="' + e(id) + '">' + svg(I.upload, 14) + 'Read invoice</button>' : '') +
         (ed ? '<button type="button" class="ps-btn peq" data-a="pedirAjuda" data-v="' + e(id) + '">Request assistance</button>' : '') + '</div>' + (it.evidencias.length || (P.extracaoDe && P.extracaoDe(m, id)) ? '<div class="fc-l rq2-ev"><span class="ps-lab">Evidence</span>' + (P.extracaoHtml ? P.extracaoHtml(m, id) : '') + P.fichLista(it.evidencias, m) + '</div>' : '') + '</div>';
       var ajuda = recebido ? '<div class="ps-aviso ok">' + e(recebido.entidade_externa) + ' sent ' + e(fmtV(id, recebido.valor)) + ' ' + e(c.unidade_medida) + (recebido.nota ? ': "' + e(recebido.nota) + '"' : '') + '. <button type="button" class="ps-btn peq" data-a="usarExt" data-v="' + e(recebido.id) + '">Use this value</button></div>'
         : pendente ? '<div class="ps-aviso">Waiting for ' + e(pendente.entidade_externa) + ', due ' + e(P.fmtData(pendente.prazo)) + '.</div>' : '';
@@ -2111,6 +2112,7 @@
     if (!P.online() && q.perfil && P.user(q.perfil)) P.entrar(q.perfil);
     /* KPI assignment e Companies and perimeter passaram a separadores do Backoffice: os links antigos continuam a funcionar */
     if (pag === 'Saidas') pag = 'Timeline';
+    if (pag === 'Evidencias') pag = 'Documentos';
     if (pag === 'Atribuicao') { pag = 'Backoffice'; q.tab = 'indicadores'; }
     if (pag === 'Perimetro') { pag = 'Backoffice'; q.tab = 'perimetro'; }
     if (pag === 'Calculos') { pag = 'Backoffice'; q.tab = 'calculos'; }
@@ -2372,6 +2374,7 @@
       if (resto.length) irParaIndicador(resto[0]);
     },
     matrizAbrir: function () { abrePainel('matriz', {}); },
+    fatLerInd: function (d) { var m = msAtual(); escolherFicheiro('.pdf,.png,.jpg,.jpeg,.webp', function (f) { P.abrirLeituraFatura(f, { ms: m.id, ind: d.v }); }); },
     revDevolver: function (d) { abrePainel('devInd', { id: d.v }); },
     revDevConfirmar: function (d) {
       var m = msAtual(), el = document.getElementById('dev-ind-com'), r = P.devolverIndicador(m, d.v, u(), el ? el.value : '');
