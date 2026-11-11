@@ -819,6 +819,20 @@ Pedido do André a 11 de novembro de 2026.
   - By area mostra os blocos por departamento logo abaixo dos números, com um filtro de empresa ao lado. Antes ficava no fim da página, depois da tabela, e não se via.
 - **Overview:** saiu o cartão "Completeness by report table" do fim da página.
 
+### Excel das tasks com layout e proteção, import pela coluna certa, Source data com quem e quando, Assign task
+
+Pedido do André a 11 de novembro de 2026.
+
+- **Excel das tasks** (`web-files/portal-excel.js`, `P.livroExcel`): o export dos Requested data, o template, as folhas de pedido e o relatório da task usam o layout do export dos indicadores.
+  - Tem uma faixa com o nome da plataforma, uma linha de explicação, cabeçalhos escuros e linhas alternadas, sem freeze panes.
+  - As folhas ficam protegidas sem palavra-passe. Só as colunas de preenchimento ficam desbloqueadas e têm o cabeçalho a verde: valor, qualidade, método e justificação, e no template também entity, source e evidence. A qualidade tem uma lista de valores.
+  - O cabeçalho está na linha 3. O import (`P.lerFicheiro` e o assistente) encontra-o sozinho.
+- **Import do Excel:** a coluna do valor é escolhida pelo cabeçalho do período da task (por exemplo "T4 2026 value", "2026" ou "value"), mesmo que ainda esteja vazia. Nunca se escolhem colunas de outros anos ("2025", "prior value"), de variação, de limiar ou de meta. Os anos escritos como número também contam como cabeçalho.
+- **Source data:** a coluna Source diz como o dado entrou (From the system, Typed ou Imported from Excel), por quem e quando (`S.puxados[ms].quem`).
+  - Um indicador que é só um dado de origem e foi escrito diretamente na linha do indicador mostra também esse valor no Source data, com "Typed in A08".
+  - Sem valor, a coluna mostra o estado da ligação ao sistema.
+- **Assign task:** "Launch" passou a "Assign task(s)" em todos os ecrãs do Backoffice onde se atribuem tasks, e também nas mensagens e no histórico.
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.

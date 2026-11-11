@@ -253,8 +253,10 @@
     var l = P.previewPuxar(m).filter(function (x) { return x.ligada && x.novo !== null; });
     if (!l.length) return { erro: 'None of the systems of this task is connected.' };
     var st = estadoFonte(m), regs = 0, dbs = {};
-    l.forEach(function (x) { st.vals[x.k] = x.novo; delete (st.editados || {})[x.k]; regs += x.registos; dbs[x.db] = 1; });
-    st.em = new Date().toISOString(); st.por = usr.nome; st.registos = regs;
+    st.em = new Date().toISOString(); st.por = usr.nome;
+    st.quem = st.quem || {};
+    l.forEach(function (x) { st.vals[x.k] = x.novo; delete (st.editados || {})[x.k]; st.quem[x.k] = { como: 'sistema', por: usr.nome, em: st.em }; regs += x.registos; dbs[x.db] = 1; });
+    st.registos = regs;
     /* Registo da extracao: e a evidencia de que o valor veio do sistema (query, filtros, registos lidos, quando e por quem) */
     var ext = { id: 'EXT-' + m.id + '-' + Date.now().toString(36).toUpperCase(), em: st.em, por: usr.nome, ms: m.id, empresa: m.empresa, periodo: P.rotPeriodo(m), consultas: l.map(function (x) {
       var t = tecnico(m, x.k), es = P.estadoSistema(x.db), regsK = P.registosCampo(x.k, m);
@@ -281,8 +283,11 @@
     var s = String(bruto === null || bruto === undefined ? '' : bruto).trim(), st = estadoFonte(m), v = s === '' ? null : P.lerNumero(s);
     if (s !== '' && v === null) return { erro: 'Enter a number.' };
     if (v !== null && campoInt(CAMPOS[k]) && Math.round(v) !== v) return { erro: 'Whole numbers only. This data counts units, so it cannot have decimals.' };
+    var antes = st.vals[k] === undefined ? null : st.vals[k];
     if (v === null) delete st.vals[k]; else st.vals[k] = v;
     (st.editados || (st.editados = {}))[k] = 1;
+    st.quem = st.quem || {};
+    if (v === null) delete st.quem[k]; else if (antes !== v || !st.quem[k]) st.quem[k] = { como: 'manual', por: usr.nome, em: new Date().toISOString() };
     P.sincronizarCalculados(m, usr);
     P.guardar();
     return { ok: true };
@@ -309,16 +314,42 @@
       : '<span class="ps-tip-alvo" tabindex="0" data-tip="The data source this task uses is not connected yet, so the data has to be typed in. The administrator connects it in Connections to other systems."><button type="button" class="ps-btn peq" disabled>Pull data from system</button></span>';
     return puxar + (tem ? '<button type="button" class="ps-btn peq" data-a="fdLimpar">Clear source data</button>' : '');
   };
+  /* Valor e origem de um dado: puxado do sistema, escrito no dado, ou escrito no indicador que e so esse dado.
+     Diz sempre como entrou, por quem e quando. */
+  var origemDado = function (m, k) {
+    var px = (S.puxados || {})[m.id], v = px && px.vals[k] !== undefined ? px.vals[k] : null, ed = (px && px.editados) || {}, q = px && px.quem && px.quem[k];
+    if (v !== null) {
+      var sis = !ed[k];
+      return { v: v, como: sis ? 'sistema' : 'manual', por: q ? q.por : sis ? px.por : '', em: q ? q.em : sis ? px.em : '' };
+    }
+    var dir = porCampo(m, k).filter(function (id) { var x = P.expressaoDe(id); return x && String(x).trim() === k; });
+    for (var i = 0; i < dir.length; i++) {
+      var it = P.item(dir[i], P.chave(m));
+      if (it && it.valor !== null) {
+        var ver = (it.versoes || [])[it.versoes.length - 1] || {}, imp = /import/i.test(ver.origem || '');
+        return { v: it.valor, como: imp ? 'ficheiro' : 'manual', no: dir[i], por: ver.por || '', em: ver.em || '' };
+      }
+    }
+    return { v: null };
+  };
+  P.origemDado = origemDado;
+  var ORIGEM_TXT = { sistema: 'From the system', manual: 'Typed', ficheiro: 'Imported from Excel' };
+  var origemHtml = function (o) {
+    if (o.v === null) return '';
+    var quem = (o.por ? 'by ' + o.por : '') + (o.em ? (o.por ? ', ' : '') + P.fmtDataHora(o.em) : '');
+    return '<small class="fd-orig' + (o.como === 'sistema' ? '' : ' ed') + '" data-fx-ignorar>' + e(ORIGEM_TXT[o.como] + (o.no ? ' in ' + o.no : '')) + '</small>' + (quem ? '<small class="fd-quem" data-fx-ignorar>' + e(quem) + '</small>' : '');
+  };
   /* Bloco "Source data" dentro de Requested data: o que cada indicador usa, de que sistema vem e o valor, editavel */
   P.fontesHtml = function (m) {
     var usr = u(), pode = podePuxar(m, usr), px = (S.puxados || {})[m.id], ks = P.camposMilestone(m);
     if (!ks.length) return '';
     var ed = (px && px.editados) || {};
     var linhas = ks.map(function (k) {
-      var f = CAMPOS[k], v = px && px.vals[k] !== undefined ? px.vals[k] : null, st = P.estadoSistema(f.db);
-      var orig = v === null ? '' : ed[k] ? '<small class="fd-orig ed" data-fx-ignorar>Typed</small>' : '<small class="fd-orig" data-fx-ignorar>From the system</small>';
+      var f = CAMPOS[k], o = origemDado(m, k), v = o.v, st = P.estadoSistema(f.db);
+      var orig = '';
+      /* Source: como entrou, por quem e quando; sem valor, o estado da ligacao ao sistema */
       return [e(f.rot), e(unidade(f)), indsDe(m, k),
-        '<span class="fd-sis' + (st.ligada ? '' : ' off') + '">' + e(st.txt) + '</span>',
+        (v === null ? '<span class="fd-sis' + (st.ligada ? '' : ' off') + '">' + e(st.txt) + '</span>' : '<span class="fd-src">' + origemHtml(o) + (o.como === 'sistema' ? '<small class="fd-sis">' + e(st.txt) + '</small>' : '') + '</span>'),
         pode ? '<span class="fd-val"><input id="fd-' + e(k) + '" class="ps-in ps-num fd-in' + (ed[k] ? ' ed' : '') + '"' + (campoInt(f) ? ' inputmode="numeric" data-int="1"' : ' inputmode="decimal"') + ' autocomplete="off" aria-label="' + e(f.rot) + '" value="' + e(v === null ? '' : String(Number(v.toFixed(4))).replace('.', ',')) + '" data-c="fdValor" data-id="' + e(k) + '">' + orig + '</span>'
           : (v === null ? '<span class="ps-mut">-</span>' : '<b class="ps-num">' + e(num(v)) + '</b>' + orig)];
     });
@@ -335,9 +366,9 @@
     if (!ks.length) return '';
     var usr = u(), pode = podePuxar(m, usr), px = (S.puxados || {})[m.id], ed = (px && px.editados) || {};
     return '<div class="rq-fs" role="group" aria-label="Source data of ' + e(id) + '">' + ks.map(function (k) {
-      var f = CAMPOS[k], v = px && px.vals[k] !== undefined ? px.vals[k] : null, st = P.estadoSistema(f.db), ja = vistos[k];
+      var f = CAMPOS[k], o = origemDado(m, k), v = o.v, st = P.estadoSistema(f.db), ja = vistos[k];
       if (!ja) vistos[k] = id;
-      var orig = v === null ? '' : '<small class="fd-orig' + (ed[k] ? ' ed' : '') + '">' + (ed[k] ? 'Typed' : 'From the system') + '</small>';
+      var orig = origemHtml(o);
       var val = ja ? '<span class="rq-f-ref"><b class="ps-num">' + (v === null ? '-' : e(num(v))) + '</b><small>Same value as in ' + e(ja) + ' above</small></span>'
         : pode ? '<input id="fd-' + e(k) + '" class="ps-in ps-num fd-in' + (ed[k] ? ' ed' : '') + '"' + (campoInt(f) ? ' inputmode="numeric" data-int="1"' : ' inputmode="decimal"') + ' autocomplete="off" aria-label="' + e(f.rot) + '" placeholder="-" value="' + e(v === null ? '' : String(Number(v.toFixed(4))).replace('.', ',')) + '" data-c="fdValor" data-id="' + e(k) + '">' + orig
           : '<b class="ps-num">' + (v === null ? '-' : e(num(v))) + '</b>' + orig;

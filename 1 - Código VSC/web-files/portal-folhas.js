@@ -210,7 +210,8 @@
     /* Os totais entram nos campos das fontes, como se viessem de um pull, e preenchem os indicadores que ja se conseguem calcular */
     S.puxados = S.puxados || {};
     var px = S.puxados[m.id] || (S.puxados[m.id] = { em: doc.em, por: usr.nome, vals: {}, registos: 0 });
-    st.cols.forEach(function (c) { if (st.totais[c.k] !== null) px.vals[c.k] = st.totais[c.k]; });
+    px.quem = px.quem || {}; px.editados = px.editados || {};
+    st.cols.forEach(function (c) { if (st.totais[c.k] !== null) { px.vals[c.k] = st.totais[c.k]; px.editados[c.k] = 1; px.quem[c.k] = { como: 'manual', por: usr.nome, em: doc.em }; } });
     px.em = doc.em; px.por = usr.nome; px.registos = (px.registos || 0) + st.cheias;
     var usa = [];
     st.cols.forEach(function (c) { c.usa.forEach(function (id) { if (usa.indexOf(id) < 0) usa.push(id); }); });
@@ -222,6 +223,8 @@
   };
   P.descarregarFolha = function (m, pid, comDados) {
     var ped = pedidoDe(m, pid), cfg = cfgFolha(m, ped, true);
+    /* No ficheiro, as colunas dos dados e a referencia ficam editaveis; o periodo fica bloqueado */
+    cfg.cols.forEach(function (c) { c.edita = c.k !== 'periodo'; });
     if (!comDados) cfg.linhas = cfg.linhas.map(function (l) { var c = {}; Object.keys(l.c).forEach(function (k) { c[k] = k === 'periodo' ? l.c[k] : { t: '' }; }); return { id: l.id, c: c }; });
     var defs = { nome: 'Columns', linhas: [['Column', 'Unit', 'How the rows add up', 'Used by']].concat(P.colunasFolha(m, ped).map(function (c) { return [c.rot + ' (' + c.un + ')', c.un, AGREG[c.agreg], c.usa.join(', ')]; })) };
     P.exportarGrelha(cfg, (ped.prefixo || 'pedido') + '-' + m.id.toLowerCase() + '-' + m.ano + (comDados ? '' : '-template') + '.xlsx', 'Data', defs);

@@ -724,7 +724,7 @@
         if (!m.tipos) delete m.tipos;
         S.ms.push(m);
         m.indicadores.forEach(function (i) { var ch = P.chave(m); if (!S.items[ch + ':' + i]) S.items[ch + ':' + i] = novoItem(i, ch, m.id, P.cat(i).tipo); });
-        ev(m, 'Task launched from the Backoffice for ' + per.nome + '.', u.nome, 'criada');
+        ev(m, 'Task assigned from the Backoffice for ' + per.nome + '.', u.nome, 'criada');
         if (m.atribuido_a && P.user(m.atribuido_a)) ev(m, 'Assigned to ' + P.user(m.atribuido_a).nome + '.', u.nome);
         criadas.push(m);
       });
@@ -1343,8 +1343,13 @@
           if (ext === 'xlsx') {
             if (!window.XLSX) return ok({ nome: nome, erro: 'The Excel library did not load.' });
             var wb = window.XLSX.read(new Uint8Array(r.result), { type: 'array' });
-            var folha = wb.Sheets.dados || wb.Sheets[wb.SheetNames[0]];
-            return ok({ nome: nome, linhas: window.XLSX.utils.sheet_to_json(folha, { defval: '' }) });
+            var folha = wb.Sheets.dados || wb.Sheets.data || wb.Sheets[wb.SheetNames[0]];
+            /* O cabecalho e a primeira linha com pelo menos duas celulas: os ficheiros da plataforma tem o titulo e a explicacao por cima */
+            var aoa = window.XLSX.utils.sheet_to_json(folha, { header: 1, defval: '' }), h = 0;
+            for (var hi = 0; hi < Math.min(15, aoa.length); hi++) { if (aoa[hi].filter(function (x) { return String(x).trim() !== ''; }).length >= 2) { h = hi; break; } }
+            var cab = (aoa[h] || []).map(function (x) { return String(x).trim(); });
+            var linhas = aoa.slice(h + 1).filter(function (l) { return l.some(function (x) { return String(x).trim() !== ''; }); }).map(function (l) { var o = {}; cab.forEach(function (k, i) { if (k) o[k] = l[i] === undefined ? '' : l[i]; }); return o; });
+            return ok({ nome: nome, linhas: linhas });
           }
           if (ext === 'csv') return ok({ nome: nome, linhas: lerCSV(r.result) });
           var j = JSON.parse(r.result);
@@ -1553,7 +1558,18 @@
     ];
     return { dados: dados, milestones: instr, instructions: ajuda };
   };
-  P.templateExcel = function (m) { return escreverLivro('template-' + m.id + '-' + m.ano + '.xlsx', P.folhasTemplate(m)); };
+  /* Template com o layout da plataforma: so value, justification, source, evidence, quality e method ficam editaveis */
+  var EDITA_TPL = { entity: 1, value: 1, justification: 1, source_system: 1, evidence_ref: 1, data_quality: 1, estimation_method: 1 };
+  var LARG_TPL = { indicator_name: 260, justification: 220, estimation_method: 180, regra: 300, nome: 260 };
+  P.templateExcel = function (m) {
+    var f = P.folhasTemplate(m), txt = function (k) { return COLUNAS_EN[k] || k; };
+    if (!P.livroExcel) return escreverLivro('template-' + m.id + '-' + m.ano + '.xlsx', f);
+    var folha = function (nome, titulo, lista, edita) {
+      var ks = lista.length ? Object.keys(lista[0]) : ['info'];
+      return { nome: nome, titulo: titulo, sub: m.nome + ', ' + P.rotPeriodo(m) + '.', cols: ks.map(function (k) { return { t: txt(k), larg: LARG_TPL[k] || (k.length > 12 ? 130 : 100), edita: edita && !!EDITA_TPL[k], dir: k === 'value' || k === 'ano_anterior', lista: k === 'data_quality' ? ['measured', 'calculated', 'estimated'] : null }; }), linhas: lista.map(function (l) { return ks.map(function (k) { return l[k]; }); }) };
+    };
+    return P.livroExcel('template-' + m.id + '-' + m.ano + '.xlsx', [folha('data', 'Data template', f.dados, true), folha('instructions', 'Instructions', f.instrucoes, false)]);
+  };
   P.paraCSV = function (linhas) {
     var esc = function (v) { var s = String(v === null || v === undefined ? '' : v); return /[;"\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
     var cols = COLS;

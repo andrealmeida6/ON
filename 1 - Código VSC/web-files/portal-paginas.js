@@ -265,7 +265,7 @@
       return '<div class="ps-amb on"><div><b>Test environment</b><p>Same people, companies, indicators and settings, with no tasks or values. What you do here never touches the main environment.' + (P.partilha && P.partilha.estado === 'ligado' ? ' It is shared online: everyone who opens this link sees the same and can enter as any profile.' : '') + '</p></div>' +
         '<div class="ps-amb-acts"><button type="button" class="ps-btn peq" data-a="ambienteLimpar">Clear test environment</button><button type="button" class="ps-btn peq pri" data-a="ambientePrincipal">Back to main environment</button></div></div>';
     }
-    return '<div class="ps-amb"><div><b>Test environment</b><p>Start from an empty platform: launch tasks, assign them and follow each person step by step.</p></div>' +
+    return '<div class="ps-amb"><div><b>Test environment</b><p>Start from an empty platform: assign tasks and follow each person step by step.</p></div>' +
       '<div class="ps-amb-acts"><button type="button" class="ps-btn peq" data-a="ambienteTeste">Open test environment</button></div></div>';
   };
 
@@ -856,7 +856,7 @@
     return {
       id: 'gr-' + m.id, titulo: 'Requested data', vazio: 'No data requested.',
       dica: pode ? 'Copy from Excel and paste here with Ctrl+V. Double-click or type to edit. Ctrl+Z undoes.' : 'Read only. Select cells and copy them to Excel with Ctrl+C.',
-      cols: [{ k: 'id', t: 'ID' }, { k: 'nome', t: 'Indicator', larg: 280 }, { k: 'un', t: 'Unit' }, { k: 'ant', t: P.rotAnterior(P.chave(m)), dir: 1 }, { k: 'valor', t: P.rotPeriodo(m) + ' value', dir: 1, edita: pode, larg: 110 }, { k: 'var', t: 'Change %', dir: 1 }, { k: 'qual', t: 'Data quality', edita: pode, larg: 110 }, { k: 'metodo', t: 'Estimation method', edita: pode, larg: 170 }, { k: 'just', t: 'Justification', edita: pode, larg: 220 }, { k: 'evid', t: 'Evidence', larg: 130 }, { k: 'res', t: 'Validation', larg: 130 }],
+      cols: [{ k: 'id', t: 'ID' }, { k: 'nome', t: 'Indicator', larg: 280 }, { k: 'un', t: 'Unit' }, { k: 'ant', t: P.rotAnterior(P.chave(m)), dir: 1 }, { k: 'valor', t: P.rotPeriodo(m) + ' value', dir: 1, edita: pode, noFicheiro: 1, larg: 110 }, { k: 'var', t: 'Change %', dir: 1 }, { k: 'qual', t: 'Data quality', edita: pode, noFicheiro: 1, larg: 110, lista: ['Measured', 'Calculated', 'Estimated'] }, { k: 'metodo', t: 'Estimation method', edita: pode, noFicheiro: 1, larg: 170 }, { k: 'just', t: 'Justification', edita: pode, noFicheiro: 1, larg: 220 }, { k: 'evid', t: 'Evidence', larg: 130 }, { k: 'res', t: 'Validation', larg: 130 }],
       linhas: m.indicadores.map(function (id) {
         var c = P.cat(id), it = P.item(id, P.chave(m)), v = P.validarItem(it), ant = P.valorAnterior(id, P.chave(m)), tem = it.valor !== null, msg = v.erros.concat(v.alertas).join(' ');
         var evid = it.evidencias.map(function (x) { return x.ficheiro; }).join(', ');
@@ -916,7 +916,7 @@
   /* Colar "assume bem": procura cabecalhos e indicadores no que veio, para nao depender da ordem do Excel */
   var norm = function (s) { return String(s === null || s === undefined ? '' : s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[_\s]+/g, ' ').trim(); };
   var planoColagem = function (m, mat) {
-    var ano = String(m.ano), ALIAS = { id: ['id', 'indicator id', 'indicador id', 'codigo', 'code', 'ref'], nome: ['indicator', 'indicador', 'nome', 'name', 'indicator name', 'designacao'], un: ['unit', 'unidade', 'unidade de medida', 'unit of measure', 'un'], valor: ['value', 'valor', ano, ano + ' value', 'valor ' + ano, 'value ' + ano], qual: ['data quality', 'quality', 'qualidade', 'qualidade dos dados'], metodo: ['estimation method', 'method', 'metodo', 'metodo de estimativa'], just: ['justification', 'justificacao', 'justificativa'] };
+    var ano = String(m.ano), ALIAS = { id: ['id', 'indicator id', 'indicador id', 'codigo', 'code', 'ref'], nome: ['indicator', 'indicador', 'nome', 'name', 'indicator name', 'designacao'], un: ['unit', 'unidade', 'unidade de medida', 'unit of measure', 'un'], valor: ['value', 'valor', ano, ano + ' value', 'valor ' + ano, 'value ' + ano, norm(P.rotPeriodo(m)), norm(P.rotPeriodo(m)) + ' value'], qual: ['data quality', 'quality', 'qualidade', 'qualidade dos dados'], metodo: ['estimation method', 'method', 'metodo', 'metodo de estimativa'], just: ['justification', 'justificacao', 'justificativa'] };
     var porId = {}, porNome = {};
     S.cat.forEach(function (c) { porId[norm(c.id)] = c; porNome[norm(c.nome)] = c; });
     var achar = function (txt) { var k = norm(txt); return porId[k] || porNome[k] || null; };
@@ -953,11 +953,11 @@
     var linhas = [cols.map(function (c) { return c.t; })].concat(cfg.linhas.map(function (l) {
       return cols.map(function (c) { var x = l.c[c.k] || {}; return typeof x.num === 'number' ? x.num : x.t === undefined ? '' : x.t; });
     }));
-    var wb = window.XLSX.utils.book_new(), ws = window.XLSX.utils.aoa_to_sheet(linhas);
-    ws['!cols'] = cols.map(function (c) { return { wch: Math.max(10, Math.round((c.larg || 80) / 7)) }; });
-    window.XLSX.utils.book_append_sheet(wb, ws, folha);
-    if (extra) window.XLSX.utils.book_append_sheet(wb, window.XLSX.utils.aoa_to_sheet(extra.linhas), extra.nome);
-    window.XLSX.writeFile(wb, ficheiro);
+    /* Layout da plataforma (portal-excel.js): so as colunas editaveis ficam desbloqueadas.
+       noFicheiro: a coluna e de preenchimento e fica aberta no ficheiro, mesmo para quem so exporta; o import volta a validar as permissoes. */
+    var folhas = [{ nome: folha, titulo: cfg.titulo || folha, sub: cfg.subExcel || '', cols: cols.map(function (c) { return { t: c.t, larg: c.larg, edita: !!(c.edita || c.noFicheiro), dir: c.dir, lista: c.lista }; }), linhas: linhas.slice(1) }];
+    if (extra) folhas.push({ nome: extra.nome, titulo: extra.nome, cols: extra.linhas[0].map(function (t) { return { t: t, larg: 150 }; }), linhas: extra.linhas.slice(1) });
+    P.livroExcel(ficheiro, folhas);
     return linhas;
   };
   P.exportarGrelha = exportarGrelha;
@@ -1447,15 +1447,15 @@
       if (!m && empF && l.length) return '<span class="ps-cob nada" title="' + e(l[0].nome + ' belongs to ' + l[0].empresa) + '">In ' + e(l[0].empresa) + '</span>';
       if (m) { var st = P.estadoMs(m); return '<a class="ps-cob ' + (P.concluida(m) ? 'ok' : st.cls) + '" href="' + rota('Milestone/' + m.id) + '" title="' + e(m.nome + ', ' + st.txt) + '">' + e(P.concluida(m) ? 'Done' : st.txt) + '</a>'; }
       var sug = P.indicadoresSugeridos(un, p.id).length;
-      return sug ? '<button type="button" class="ps-cob vazio" data-a="lancCel" data-v="' + e(un + '|' + p.id) + '" title="Launch ' + e(un + ': ' + p.nome) + '">+ Launch<small>' + sug + ' indicators</small></button>' : '<span class="ps-cob nada" title="No indicators planned">-</span>';
+      return sug ? '<button type="button" class="ps-cob vazio" data-a="lancCel" data-v="' + e(un + '|' + p.id) + '" title="Assign task: ' + e(un + ': ' + p.nome) + '">+ Assign task<small>' + sug + ' indicators</small></button>' : '<span class="ps-cob nada" title="No indicators planned">-</span>';
     };
     var faltam = 0;
     uns.forEach(function (un) { pers.forEach(function (p) { if (!P.msExistente(un, p.id) && P.indicadoresSugeridos(un, p.id).length) faltam++; }); });
     var porLancar = function (p) { return uns.filter(function (un) { return !P.msExistente(un, p.id) && P.indicadoresSugeridos(un, p.id).length; }).length; };
     return '<div class="ps-card">' + cabCartao('By department and period', 'cal') + '<div class="ps-card-body">' +
       '<p class="ps-mut ps-small">Each cell is a department in a reporting period, with the status of its task. Open cells show how many indicators the plan expects: click one to send it, or use the button of a period to send every department at once. Indicators come from Reporting moments and can be adjusted before sending.</p>' +
-      '<div class="ps-kpis ps-mt"><div class="ps-kpi"><span>Tasks ' + ano + (empF ? ', ' + e(empF.nome) : '') + '</span><b>' + P.msCiclo().filter(function (m) { return !empF || m.empresa === empF.nome; }).length + '</b></div><div class="ps-kpi"><span>Planned, not launched</span><b>' + faltam + '</b></div></div>' +
-      '<div class="ps-cob-sc ps-mt" tabindex="0" aria-label="Coverage by department and period"><table class="ps-cob-t"><thead><tr><th scope="col">Department</th>' + pers.map(function (p) { var n = porLancar(p); return '<th scope="col">' + e(p.nome) + '<small>close ' + e(P.fmtData(p.fecho)) + '</small>' + (n ? '<button type="button" class="ps-btn pri peq ps-cob-lanc" data-a="lancPeriodo" data-v="' + e(p.id) + '">Launch ' + e(p.nome) + '<small>' + n + ' department' + (n === 1 ? '' : 's') + '</small></button>' : '<span class="ps-cob-tudo">All launched</span>') + '</th>'; }).join('') + '</tr></thead><tbody>' +
+      '<div class="ps-kpis ps-mt"><div class="ps-kpi"><span>Tasks ' + ano + (empF ? ', ' + e(empF.nome) : '') + '</span><b>' + P.msCiclo().filter(function (m) { return !empF || m.empresa === empF.nome; }).length + '</b></div><div class="ps-kpi"><span>Planned, not assigned</span><b>' + faltam + '</b></div></div>' +
+      '<div class="ps-cob-sc ps-mt" tabindex="0" aria-label="Coverage by department and period"><table class="ps-cob-t"><thead><tr><th scope="col">Department</th>' + pers.map(function (p) { var n = porLancar(p); return '<th scope="col">' + e(p.nome) + '<small>close ' + e(P.fmtData(p.fecho)) + '</small>' + (n ? '<button type="button" class="ps-btn pri peq ps-cob-lanc" data-a="lancPeriodo" data-v="' + e(p.id) + '">Assign tasks ' + e(p.nome) + '<small>' + n + ' department' + (n === 1 ? '' : 's') + '</small></button>' : '<span class="ps-cob-tudo">All assigned</span>') + '</th>'; }).join('') + '</tr></thead><tbody>' +
       uns.map(function (un) { return '<tr><th scope="row">' + depHtml(un) + '</th>' + pers.map(function (p) { return '<td>' + cel(un, p) + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table></div></div></div>';
   };
   var pnLancar = function () {
@@ -1477,9 +1477,9 @@
         (aberto ? '<div class="ps-lc-un-b"><h4>Indicators</h4><div class="ps-dt-chips">' + (lista.length ? lista.map(function (id) { return chk('ind', 'lancInd', un + '|' + id, sel.indexOf(id) > -1, id, P.cat(id).nome); }).join('') : '<span class="ps-mut ps-small">The plan has no indicators for this department in the chosen periods.</span>') + '</div></div>' : '') + '</li>';
     }).join('');
     return {
-      t: 'Launch tasks', s: 'One task per department and period, with the base workflow', largo: true, cls: 'alto',
+      t: 'Assign tasks', s: 'One task per department and period, with the base workflow', largo: true, cls: 'alto',
       b: '<ol class="ps-lc">' +
-        '<li><h3><span>1</span>Reporting periods</h3><div class="ps-dt-chips">' + pers.map(function (p) { var n = P.msPeriodo(p.id).length; return chk('', 'lancPer', p.id, L.periodos.indexOf(p.id) > -1, p.nome, n ? n + ' launched' : 'Close ' + P.fmtData(p.fecho)); }).join('') + '</div></li>' +
+        '<li><h3><span>1</span>Reporting periods</h3><div class="ps-dt-chips">' + pers.map(function (p) { var n = P.msPeriodo(p.id).length; return chk('', 'lancPer', p.id, L.periodos.indexOf(p.id) > -1, p.nome, n ? n + ' assigned' : 'Close ' + P.fmtData(p.fecho)); }).join('') + '</div></li>' +
         '<li><h3><span>2</span>Departments</h3><div class="ps-sp-b"><span class="ps-small ps-mut">' + L.unidades.length + ' selected</span><span class="ps-sp"><button type="button" class="ps-btn liga" data-a="lancTodos">Select all with a plan</button><button type="button" class="ps-btn liga" data-a="lancNenhum">Clear</button></span></div><div class="ps-dt-chips">' + P.UNIDADES.map(function (un) { return chk('ps-dt-chip-dep', 'lancUnSel', un, L.unidades.indexOf(un) > -1, un, '', avEquipa()); }).join('') + '</div></li>' +
         '<li><h3><span>3</span>Who it is assigned to and what is asked</h3>' + (L.unidades.length ? '<ul class="ps-lc-uns">' + porUn + '</ul>' : '<p class="ps-mut ps-small">Choose departments to see their indicators.</p>') + '</li>' +
         '<li><h3><span>4</span>Company and due date</h3><div class="ps-form2">' + campo('lc-emp', 'Company', '<select id="lc-emp" class="ps-sel" data-c="lancEmp">' + S.ent.map(function (x) { return opt(x.nome, x.nome, L.empresa); }).join('') + '</select>') +
@@ -1487,7 +1487,7 @@
         (L.prazo === 'data' ? campo('lc-data', 'Date', '<input id="lc-data" type="date" class="ps-in" value="' + e(L.data) + '" data-c="lancData">') : '') + '</li></ol>' +
         '<div class="ps-lc-res" aria-live="polite"><b>' + novas + ' task(s) will be created</b>' + (existem ? '<span>' + existem + ' already exist and will be skipped</span>' : '') +
         (plano.length ? '<ul>' + plano.slice(0, 12).map(function (x) { return '<li class="' + (x.ex ? 'ex' : !x.n ? 'nada' : '') + '"><span class="ps-lc-res-t">' + e(x.un + ': ' + x.p.nome) + '<small>' + (x.ex ? 'exists' : x.n ? x.n + ' indicators' : 'no indicators') + '</small></span>' + (x.ex || !x.n ? '' : quem(x.un)) + '</li>'; }).join('') + (plano.length > 12 ? '<li>…</li>' : '') + '</ul>' : '') + '</div>',
-      p: '<span class="ps-sp-flex"></span><button type="button" class="ps-btn" data-a="fecharPainel">Cancel</button><button type="button" class="ps-btn pri" data-a="lancConfirmar"' + (novas ? '' : ' disabled') + '>Launch ' + novas + ' task(s)</button>'
+      p: '<span class="ps-sp-flex"></span><button type="button" class="ps-btn" data-a="fecharPainel">Cancel</button><button type="button" class="ps-btn pri" data-a="lancConfirmar"' + (novas ? '' : ' disabled') + '>Assign ' + novas + ' task(s)</button>'
     };
   };
   /* Momentos de report: que indicadores entram em cada periodo e em cada entrega externa */
@@ -1734,12 +1734,23 @@
     w.colId = -1;
     hits.forEach(function (h, i) { if (h && (w.colId < 0 || h > hits[w.colId])) w.colId = i; });
     /* O valor: a coluna com o ano do periodo ou "Value" no cabecalho, depois a primeira coluna com numeros a direita */
-    var pontos = function (h) { var k = norm(h); if (!k) return 0; return (k.indexOf(String(m.ano)) > -1 ? 2 : 0) + (/(^|\s)(value|valor)(\s|$)/.test(k) ? 1 : 0) - (k.indexOf(String(m.ano - 1)) > -1 ? 3 : 0); };
+    /* Nunca as colunas de outros periodos (ano anterior, prior value), variacoes, limiares ou metas */
+    var anoCab = function (k) { var y = k.match(/(^|\D)(19|20)\d{2}(?!\d)/g); return y ? y.map(function (t) { return +t.replace(/\D/g, ''); }) : []; };
+    var excluida = function (h) {
+      var k = norm(h); if (!k) return false;
+      if (anoCab(k).some(function (y) { return y !== m.ano; })) return true;
+      return /(prior|previous|anterior|last year|ano passado|change|variation|variacao|var %|threshold|limiar|target|meta|baseline|budget|orcamento)/.test(k);
+    };
+    var rotP = norm(P.rotPeriodo(m));
+    var pontos = function (h) { var k = norm(h); if (!k || excluida(h)) return 0; return (rotP && k.indexOf(rotP) > -1 ? 3 : 0) + (k.indexOf(String(m.ano)) > -1 ? 2 : 0) + (/(^|\s)(value|valor)(\s|$)/.test(k) ? 1 : 0); };
+    var vazia = function (ci) { return !linhas.some(function (x) { return String(x.l[ci] === undefined ? '' : x.l[ci]).trim(); }); };
     w.colVal = -1;
     var melhor = 0;
-    for (c = 0; c < nc; c++) if (c !== w.colId && nums[c] >= 0.5 && pontos(cab[c]) > melhor) { melhor = pontos(cab[c]); w.colVal = c; }
-    for (c = w.colId + 1; c < nc && w.colVal < 0; c++) if (nums[c] >= 0.5) w.colVal = c;
-    for (c = 0; c < nc && w.colVal < 0; c++) if (c !== w.colId && nums[c] >= 0.5) w.colVal = c;
+    /* Pelo cabecalho, mesmo que a coluna ainda esteja vazia */
+    for (c = 0; c < nc; c++) if (c !== w.colId && (nums[c] >= 0.5 || vazia(c)) && pontos(cab[c]) > melhor) { melhor = pontos(cab[c]); w.colVal = c; }
+    /* Sem cabecalho que ajude: a primeira coluna com numeros a direita, sem as colunas excluidas */
+    for (c = w.colId + 1; c < nc && w.colVal < 0; c++) if (nums[c] >= 0.5 && !excluida(cab[c])) w.colVal = c;
+    for (c = 0; c < nc && w.colVal < 0; c++) if (c !== w.colId && nums[c] >= 0.5 && !excluida(cab[c])) w.colVal = c;
     w.papel = w.colId < 0 ? 'id' : 'val';
     wzMapear(w, m);
   };
@@ -1748,7 +1759,10 @@
     w.cab = -1;
     for (var r = 0; r < Math.min(10, mat.length); r++) {
       if (mat[r].some(function (c) { return wzAchar(c, ids); })) break;
-      if (mat[r].filter(function (c) { return typeof c === 'string' && c.trim() && wzNum(c) === null; }).length >= 2) { w.cab = r; break; }
+      /* Cabecalho: textos, e os anos (2025, 2026) tambem contam, mesmo escritos como numero */
+      var txt = mat[r].filter(function (c) { return typeof c === 'string' && c.trim() && wzNum(c) === null; }).length;
+      var anos = mat[r].filter(function (c) { return /^(19|20)\d{2}$/.test(String(c).trim()); }).length;
+      if (txt >= 2 || (txt >= 1 && anos >= 1)) { w.cab = r; break; }
     }
     wzColunas(w, m);
   };
@@ -2067,7 +2081,7 @@
     lancConfirmar: function () {
       var L = lancEstado(), r = P.lancarMilestones({ periodos: L.periodos, unidades: L.unidades, empresa: L.empresa, prazo: L.prazo === 'data' ? L.data : 'fecho', indicadores: L.indicadores, tipos: L.tipos, atribuido: L.atrib }, u());
       if (r.erro) return toast(r.erro, 'err');
-      toast(r.criadas.length + ' task(s) launched' + (r.ignoradas.length ? ', ' + r.ignoradas.length + ' skipped' : '') + '.', r.criadas.length ? 'ok' : 'err');
+      toast(r.criadas.length + ' task(s) assigned' + (r.ignoradas.length ? ', ' + r.ignoradas.length + ' skipped' : '') + '.', r.criadas.length ? 'ok' : 'err');
       U.lanc = null; fechaPainel();
     },
     colRelFechar: function () { delete U.colRel[msAtual().id]; R(); },
@@ -2317,7 +2331,7 @@
     indFreq: function (el) {
       var r = P.mudarFrequencia(el.dataset.id, el.value, u());
       if (r.erro) return toast(r.erro, 'err');
-      toast('Frequency saved. New tasks follow it' + (r.abertas.length ? '; ' + r.abertas.length + ' open task(s) keep it as launched: ' + r.abertas.slice(0, 3).map(function (m) { return m.nome; }).join(', ') + (r.abertas.length > 3 ? '…' : '') : '') + '.', 'ok');
+      toast('Frequency saved. New tasks follow it' + (r.abertas.length ? '; ' + r.abertas.length + ' open task(s) keep it as assigned: ' + r.abertas.slice(0, 3).map(function (m) { return m.nome; }).join(', ') + (r.abertas.length > 3 ? '…' : '') : '') + '.', 'ok');
     },
     momento: function (el) {
       var x = el.dataset.id.split('|'), r = P.definirMomento(x[0], x[1], x[2], el.checked, u());
