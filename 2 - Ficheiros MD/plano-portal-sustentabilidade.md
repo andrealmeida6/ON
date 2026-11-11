@@ -524,6 +524,16 @@ Pedido do André a 11 de novembro de 2026.
 
 **CSS:** secção 39 de `global.css`.
 
+### Indicators com a vista por departamento, e Excel sem painéis fixos
+
+Pedido do André a 11 de novembro de 2026.
+
+- **Excel:** o export da lista de indicadores deixa de fixar painéis (sem freeze panes). Os outros exports nunca os tiveram.
+- **Launch by department:** deixou de ser um separador do Reporting set-up e passou a ser a vista **By department** da página Indicators. A página alterna entre **By indicator** (a lista) e **By department** (`U.ind.vista`). Os cartões de cima ficam nas duas vistas, por isso tudo se acompanha no mesmo ecrã.
+- **O mapa:** departamento × período, com o estado de cada task e os botões para enviar uma célula ou um período inteiro, mantém-se igual (`B.lancar`, painel `lancar`). O título passou a "By department and period".
+- **Links antigos:** `Backoffice?tab=lancar` abre esta vista.
+- **CSS:** secção 40 de `global.css`.
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.

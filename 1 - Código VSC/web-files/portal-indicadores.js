@@ -166,7 +166,7 @@
   var rotCurto = function (k) { return campoK[k].t.replace(/^.* - /, '').replace(/ \[.*\]$/, ''); };
 
   /* --- Estado da pagina -------------------------------------------------------------- */
-  U.ind = { q: '', tema: '', dep: '', emp: '', resp: '', est: 'todos', inativos: false, per: '', sel: {}, lim: 60, ed: null, lote: null, env: null, imp: null };
+  U.ind = { vista: 'lista', q: '', tema: '', dep: '', emp: '', resp: '', est: 'todos', inativos: false, per: '', sel: {}, lim: 60, ed: null, lote: null, env: null, imp: null };
   var periodos = function () { return (S.periodos || []).filter(function (p) { return p.ano === S.ciclo.ano; }); };
   var perAtual = function () {
     var f = U.ind, l = periodos();
@@ -244,7 +244,10 @@
     var tabela = l.length ? '<div class="ps-tw"><table class="ki-t"><thead><tr><th class="ki-c"><input id="ks-todos" type="checkbox" aria-label="Select all ' + l.length + ' indicators in the list" data-c="indSelTodos"' + (todosSel ? ' checked' : '') + '></th><th scope="col">Indicator</th><th scope="col">Responsible</th><th scope="col">Reported by</th><th scope="col">Task for ' + perSel + '</th><th><span class="ps-sr">Actions</span></th></tr></thead><tbody>' + linhas + '</tbody></table></div>' +
       (l.length > vis.length ? '<div class="ps-sp ps-mt"><button type="button" class="ps-btn" data-a="indMais">Show ' + Math.min(60, l.length - vis.length) + ' more</button><span class="ps-mut ps-small">' + vis.length + ' of ' + l.length + '</span></div>' : '')
       : vazio(S.cat.length ? 'No indicator matches these filters.' : 'No indicators yet. Create one or import your KPI list in Excel.');
-    return topo + tiles + '<div class="ps-card ki-card"><div class="ps-card-body">' + filtros + lote + '<div class="ki-conta ps-small ps-mut">' + l.length + ' indicator(s)' + (P.gereTudo(usr) ? '' : ', read only') + '</div>' + tabela + '</div></div>';
+    /* Duas vistas no mesmo ecra: a lista dos indicadores e o mapa por departamento e periodo (o antigo Launch by department) */
+    var vistas = '<div class="ki-vistas" role="tablist" aria-label="View">' + [['lista', 'By indicator', l.length + ' indicators'], ['dep', 'By department', 'coverage per period']].map(function (v) { return '<button type="button" role="tab" aria-selected="' + (f.vista === v[0]) + '" class="ki-vista' + (f.vista === v[0] ? ' on' : '') + '" data-a="indVista" data-v="' + v[0] + '"><b>' + v[1] + '</b><small>' + e(v[2]) + '</small></button>'; }).join('') + '</div>';
+    if (f.vista === 'dep') return topo + tiles + vistas + B.lancar();
+    return topo + tiles + vistas + '<div class="ps-card ki-card"><div class="ps-card-body">' + filtros + lote + '<div class="ki-conta ps-small ps-mut">' + l.length + ' indicator(s)' + (P.gereTudo(usr) ? '' : ', read only') + '</div>' + tabela + '</div></div>';
   };
   C.indF = function (el) { U.ind[el.dataset.id] = el.value; U.ind.lim = 60; };
   C.indInativos = function (el) { U.ind.inativos = el.checked; };
@@ -252,6 +255,7 @@
   C.indSelTodos = function (el) { filtrados().forEach(function (c) { if (el.checked) U.ind.sel[c.id] = true; else delete U.ind.sel[c.id]; }); };
   A.indSelLimpar = function () { U.ind.sel = {}; R(); };
   A.indLimpar = function () { var f = U.ind; f.q = ''; f.tema = ''; f.dep = ''; f.emp = ''; f.resp = ''; f.est = 'todos'; R(); };
+  A.indVista = function (d) { U.ind.vista = d.v; R(); };
   A.indMais = function () { U.ind.lim += 60; R(); };
   A.indTile = function (d) { var p = d.v.split('|'), f = U.ind; if (p[0] === 'est') f.est = f.est === p[1] ? 'todos' : p[1]; else f.resp = f.resp === p[1] ? '' : p[1]; R(); };
 
@@ -419,7 +423,7 @@
     var borda = function (c2) { var b = { style: 'thin', color: cor(c2 || LINHA) }; return { top: b, left: b, bottom: b, right: b }; };
 
     /* Folha 1: a lista */
-    var ws = wb.addWorksheet('KPI list', { properties: { tabColor: cor(prim), defaultRowHeight: 18 }, views: [{ state: 'frozen', xSplit: 3, ySplit: 5, showGridLines: false, zoomScale: 90 }], pageSetup: { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0, paperSize: 9 } });
+    var ws = wb.addWorksheet('KPI list', { properties: { tabColor: cor(prim), defaultRowHeight: 18 }, views: [{ showGridLines: false, zoomScale: 90 }], pageSetup: { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0, paperSize: 9 } });
     var nCols = CAMPOS.length, ult = letra(nCols + 1), EXTRA = 60, fimDados = 5 + cats.length + EXTRA;
     ws.getColumn(1).width = 2.2;
     CAMPOS.forEach(function (f, i) { ws.getColumn(i + 2).width = f.w; });

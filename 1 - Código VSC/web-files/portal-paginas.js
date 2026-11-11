@@ -1220,7 +1220,7 @@
   var BO_GRUPOS = [
     ['Indicators', [['indicadores', 'Indicators'], ['milestones', 'Tasks sent']]],
     ['Organisation', [['perimetro', 'Companies and perimeter'], ['departamentos', 'Departments'], ['utilizadores', 'Users and profiles'], ['externas', 'External entities']]],
-    ['Reporting set-up', [['periodos', 'Reporting periods'], ['momentos', 'Reporting moments'], ['lancar', 'Launch by department'], ['wfbase', 'Base workflow'], ['calendario', 'Calendar'], ['materialidade', 'Materiality and frameworks']]],
+    ['Reporting set-up', [['periodos', 'Reporting periods'], ['momentos', 'Reporting moments'], ['wfbase', 'Base workflow'], ['calendario', 'Calendar'], ['materialidade', 'Materiality and frameworks']]],
     ['Platform', [['areas', 'Data consumer areas'], ['dados', 'Data and storage']]]
   ];
   var BO = []; BO_GRUPOS.forEach(function (g) { g[1].forEach(function (t) { BO.push(t); }); });
@@ -1372,8 +1372,8 @@
     var faltam = 0;
     uns.forEach(function (un) { pers.forEach(function (p) { if (!P.msExistente(un, p.id) && P.indicadoresSugeridos(un, p.id).length) faltam++; }); });
     var porLancar = function (p) { return uns.filter(function (un) { return !P.msExistente(un, p.id) && P.indicadoresSugeridos(un, p.id).length; }).length; };
-    return '<div class="ps-card">' + cabCartao('Launch milestones', 'cal') + '<div class="ps-card-body">' +
-      '<p class="ps-mut ps-small">Each cell is a department in a reporting period. Open cells show how many indicators the plan expects; click one to launch it, or use the button of a period to launch every department at once. Indicators come from Reporting moments and can be adjusted before launching.</p>' +
+    return '<div class="ps-card">' + cabCartao('By department and period', 'cal') + '<div class="ps-card-body">' +
+      '<p class="ps-mut ps-small">Each cell is a department in a reporting period, with the status of its task. Open cells show how many indicators the plan expects: click one to send it, or use the button of a period to send every department at once. Indicators come from Reporting moments and can be adjusted before sending.</p>' +
       '<div class="ps-kpis ps-mt"><div class="ps-kpi"><span>Milestones ' + ano + '</span><b>' + P.msCiclo().length + '</b></div><div class="ps-kpi"><span>Planned, not launched</span><b>' + faltam + '</b></div></div>' +
       '<div class="ps-cob-sc ps-mt" tabindex="0" aria-label="Coverage by department and period"><table class="ps-cob-t"><thead><tr><th scope="col">Department</th>' + pers.map(function (p) { var n = porLancar(p); return '<th scope="col">' + e(p.nome) + '<small>close ' + e(P.fmtData(p.fecho)) + '</small>' + (n ? '<button type="button" class="ps-btn pri peq ps-cob-lanc" data-a="lancPeriodo" data-v="' + e(p.id) + '">Launch ' + e(p.nome) + '<small>' + n + ' department' + (n === 1 ? '' : 's') + '</small></button>' : '<span class="ps-cob-tudo">All launched</span>') + '</th>'; }).join('') + '</tr></thead><tbody>' +
       uns.map(function (un) { return '<tr><th scope="row">' + depHtml(un) + '</th>' + pers.map(function (p) { return '<td>' + cel(un, p) + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table></div></div></div>';
@@ -1865,6 +1865,8 @@
     var empRota = U.rota.pag === 'Milestones' && U.rota.q.empresa ? S.ent.filter(function (x) { return x.id === U.rota.q.empresa; })[0] : null;
     U.msFiltro.empresa = empRota ? empRota.nome : '';
     if (U.rota.pag === 'Backoffice' && U.rota.q.tab) U.boTab = U.rota.q.tab;
+    /* Launch by department passou a ser a vista By department da pagina Indicators */
+    if (U.boTab === 'lancar') { U.boTab = 'indicadores'; if (U.ind) U.ind.vista = 'dep'; }
     if (U.rota.q.sep) U.sep = U.rota.q.sep;
     else if (ant !== novo) U.sep = 'dados';
     U.menu = null; U.painel = null;
