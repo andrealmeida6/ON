@@ -1069,6 +1069,20 @@ Pedido do André a 11 de novembro de 2026.
 - **Barra de ação:** confirmado que quem tem o passo vê os botões Return e **Approve and send to sustainability** (ou "Approve and lock" no passo da sustentabilidade).
 - **Workflow da task:** os números ("2 of 10 submitted", "2 to approve", "1 approved") têm uma tooltip com a lista dos indicadores, um por linha. Também funcionam pelo teclado. As tooltips com mudanças de linha usam a classe `.linhas` (`white-space: pre-line`).
 
+### Tasks: donut dos indicadores e vista By KPI
+
+Pedido do André a 11 de novembro de 2026.
+
+- **Donut por task** (`donutInd`): aparece na coluna Task da página Tasks, ao lado do nome.
+  - Cada segmento é um estado dos indicadores: Approved, Submitted (em aprovação), Filled in (por submeter) e To fill in. Os segmentos estão separados por 2px.
+  - O número no centro diz quantos indicadores faltam reportar; quando não falta nenhum, aparece ✓.
+  - A tooltip mostra o detalhe de cada estado, para a cor nunca ser a única informação.
+- **Deadline em duas linhas** (data e, por baixo, quanto falta), para a tabela continuar a caber sem scroll.
+- **Vista By KPI:** é a terceira opção do seletor Table, Board, By KPI.
+  - As mesmas tasks filtradas, uma linha por KPI, com Task, Period, Perimeter, Value, Assigned to, Deadline e Status.
+  - O Status é a ação da pessoa, com o Overdue ao lado.
+  - Cada KPI abre a task já nesse indicador.
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.

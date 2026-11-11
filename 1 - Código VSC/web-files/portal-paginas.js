@@ -37,7 +37,7 @@
   var rotaEmp = function (nome) { var x = S.ent.filter(function (y) { return y.nome === nome; })[0]; return rota('Milestones' + (x ? '?empresa=' + encodeURIComponent(x.id) : '')); };
   /* A mesma regra em todas as tabelas de milestones: empresa e a quem esta atribuida */
   /* Perimeter e nao Company: o perimetro pode ser uma empresa ou uma unidade de negocio. O periodo tem coluna propria, para ler melhor. */
-  var COLS_MS = [{ t: 'Task' }, { t: 'Period' }, { t: 'Perimeter' }, { t: 'Assigned to' }, { t: 'Deadline' }, { t: 'Status' }];
+  var COLS_MS = [{ t: 'Task', info: 'The ring shows the indicators of the task by status; the number is how many are still to report. Hover it for the detail.' }, { t: 'Period' }, { t: 'Perimeter' }, { t: 'Assigned to' }, { t: 'Deadline' }, { t: 'Status' }];
   /* Periodo de reporte e relatorios que a milestone alimenta */
   var tagPer = function (m) { var p = P.periodo(m.periodo); return p ? '<span class="ps-per' + (p.tipo === 'ano' ? ' ano' : '') + '" title="Reporting period ' + e(P.fmtData(p.ini)) + ' to ' + e(P.fmtData(p.fim)) + '">' + e(p.nome) + '</span>' : ''; };
   var tagsRel = function (m, max) {
@@ -46,12 +46,44 @@
   };
   var tagsMs = function (m, max) { return '<span class="ps-per-l">' + tagPer(m) + tagsRel(m, max) + '</span>'; };
   P.tagPer = tagPer; P.tagsMs = tagsMs;
+  /* Estado de cada indicador de uma task, para o donut: aprovado, em aprovacao (submetido), preenchido, por preencher */
+  var EST_IND = [['ap', 'Approved', 'ok'], ['sub', 'Submitted, in approval', 'rev'], ['pre', 'Filled in, to submit', 'info'], ['falta', 'To fill in', '']];
+  var contaInd = function (m) {
+    var n = { ap: 0, sub: 0, pre: 0, falta: 0 }, conc = P.concluida(m), p = P.passoAtual(m), emRec = p && p.tipo === 'recolha';
+    m.indicadores.forEach(function (id) {
+      var it = P.item(id, P.chave(m)), tem = !!it && (it.valor !== null || !!it.rascunho);
+      if (conc || (it && it.revisto)) n.ap++;
+      else if (!emRec || (it && it.submetido)) n.sub++;
+      else if (tem) n.pre++;
+      else n.falta++;
+    });
+    n.tot = m.indicadores.length;
+    return n;
+  };
+  /* Donut pequeno: um segmento por estado, separados por 2px; o centro diz quantos faltam reportar.
+     A cor nunca vai sozinha: o texto ao lado e a tooltip dizem os numeros. */
+  var donutInd = function (m, compacto) {
+    var n = contaInd(m), R0 = 15, C = 2 * Math.PI * R0, gap = n.tot > 1 ? 2 : 0, acc = 0;
+    var porReportar = n.pre + n.falta;
+    var segs = EST_IND.map(function (x) {
+      var v = n[x[0]]; if (!v) return '';
+      var len = C * v / n.tot, d = Math.max(0, len - (v === n.tot ? 0 : gap));
+      var sg = '<circle class="dn-s ' + (x[2] || 'vazio') + '" r="' + R0 + '" cx="20" cy="20" stroke-dasharray="' + d.toFixed(2) + ' ' + (C - d).toFixed(2) + '" stroke-dashoffset="' + (-acc).toFixed(2) + '"></circle>';
+      acc += len; return sg;
+    }).join('');
+    var tip = (porReportar ? porReportar + ' still to report' : 'Nothing left to report') + '\n\n' + EST_IND.map(function (x) { return x[1] + ': ' + n[x[0]]; }).join('\n') + '\n' + n.tot + ' indicator' + (n.tot === 1 ? '' : 's') + ' in total';
+    return '<span class="dn" tabindex="0" data-tip="' + e(tip) + '" aria-label="' + e(EST_IND.map(function (x) { return n[x[0]] + ' ' + x[1].toLowerCase(); }).join(', ')) + '"><svg viewBox="0 0 40 40" width="40" height="40" aria-hidden="true"><g transform="rotate(-90 20 20)">' + segs + '</g><text x="20" y="21" text-anchor="middle" dominant-baseline="middle">' + (porReportar || '✓') + '</text></svg>' + (compacto ? '</span>' :
+      '<span class="dn-t"><b>' + (porReportar ? porReportar + ' to report' : n.ap === n.tot ? 'All approved' : 'All reported') + '</b><small>' + n.ap + ' of ' + n.tot + ' approved</small></span></span>');
+  };
+  P.donutInd = donutInd;
   /* No telemovel a linha vira cartao: titulo e estado em cima, empresa, responsavel e prazo numa linha por baixo */
+  /* Prazo em duas linhas (data e, por baixo, quanto falta), para a tabela caber com o donut */
+  var prazoDuasLinhas = function (m) { var t = prazoTxt(m), i = t.indexOf(' ('); return i < 0 ? '<span class="ps-nowrap">' + e(t) + '</span>' : '<span class="ps-nowrap">' + e(t.slice(0, i)) + '</span><br><small class="ps-mut ps-nowrap">' + e(t.slice(i + 2, -1)) + '</small>'; };
   var linhaTabMs = function (m) {
     var a = P.atribuido(m);
     var rels = tagsRel(m, 3);
-    return { attrs: 'class="ps-tr-ms"', celulas: ['<div class="ps-ms-cel"><div class="ps-ms-cel-t"><a href="' + rota('Milestone/' + m.id) + '">' + e(m.nome) + '</a><span class="ps-so-mob">' + estChip(m) + '</span></div>' + (rels ? '<span class="ps-per-l">' + rels + '</span>' : '') +
-      '<span class="ps-so-mob ps-ms-meta">' + e(P.rotPeriodo(m)) + ', ' + empHtml(m.empresa) + (a ? ', ' + e(a.nome) : '') + ', due ' + e(prazoTxt(m)) + '</span></div>', tagPer(m) || '<span class="ps-mut">-</span>', empHtml(m.empresa), atribHtml(m), '<span class="ps-nowrap">' + e(prazoTxt(m)) + '</span>', estChip(m)] };
+    return { attrs: 'class="ps-tr-ms"', celulas: ['<div class="ms-dn-l">' + donutInd(m, true) + '<div class="ps-ms-cel"><div class="ps-ms-cel-t"><a href="' + rota('Milestone/' + m.id) + '">' + e(m.nome) + '</a><span class="ps-so-mob">' + estChip(m) + '</span></div>' + (rels ? '<span class="ps-per-l">' + rels + '</span>' : '') +
+      '<span class="ps-so-mob ps-ms-meta">' + e(P.rotPeriodo(m)) + ', ' + empHtml(m.empresa) + (a ? ', ' + e(a.nome) : '') + ', due ' + e(prazoTxt(m)) + '</span></div></div>', tagPer(m) || '<span class="ps-mut">-</span>', empHtml(m.empresa), atribHtml(m), prazoDuasLinhas(m), estChip(m)] };
   };
   var chip = function (txt, cls) { return '<span class="ps-chip ' + (cls || '') + '">' + e(txt) + '</span>'; };
   /* O estado diz o que a pessoa tem de fazer quando a task esta com ela (To approve, To fill in...);
@@ -551,7 +583,7 @@
       campo('f-es', 'Status', '<select id="f-es" class="ps-sel" data-c="msEstado">' + opt('todas', 'All', f.estado) + opt('curso', 'In progress', f.estado) + opt('atraso', 'Overdue', f.estado) + opt('concluidas', 'Completed', f.estado) + '</select>') +
       '<label class="ps-chk"><input id="f-minhas" type="checkbox" data-c="msMinhas"' + (f.minhas ? ' checked' : '') + '> Waiting on me</label>' +
       '<label class="ps-chk"><input id="f-esrs" type="checkbox" data-c="msEsrs"' + (f.esrs ? ' checked' : '') + '> Include ESRS track</label></div>';
-    var dir = '<div class="ps-sp"><div class="ps-seg" role="group" aria-label="View"><button type="button" class="' + (U.msVista === 'lista' ? 'on' : '') + '" data-a="msVista" data-v="lista">Table</button><button type="button" class="' + (U.msVista === 'board' ? 'on' : '') + '" data-a="msVista" data-v="board">Board</button></div>' + botaoTl('Timeline') + '<button type="button" class="ps-btn peq" data-a="msExcel"' + (lista.length ? '' : ' disabled') + '>Export to Excel</button></div>';
+    var dir = '<div class="ps-sp"><div class="ps-seg" role="group" aria-label="View"><button type="button" class="' + (U.msVista === 'lista' ? 'on' : '') + '" data-a="msVista" data-v="lista">Table</button><button type="button" class="' + (U.msVista === 'board' ? 'on' : '') + '" data-a="msVista" data-v="board">Board</button><button type="button" class="' + (U.msVista === 'kpi' ? 'on' : '') + '" data-a="msVista" data-v="kpi">By KPI</button></div>' + botaoTl('Timeline') + '<button type="button" class="ps-btn peq" data-a="msExcel"' + (lista.length ? '' : ' disabled') + '>Export to Excel</button></div>';
     var cab = cabCartao((f.empresa || 'All companies') + ' (' + lista.length + ')', 'tarefa', dir);
     if (!lista.length) return filtros + '<div class="ps-card">' + cab + vazio('No tasks match these filters.') + '</div>';
     if (U.msVista === 'board') {
@@ -562,6 +594,16 @@
           return '<a class="ps-board-it" href="' + rota('Milestone/' + m.id) + '"><b>' + e(m.nome) + '</b>' + tagsMs(m, 2) + '<small class="ps-mut">' + empHtml(m.empresa) + '</small><div>' + atribHtml(m) + '</div><div class="ps-sp-b ps-mt">' + estChip(m) + '<span class="ps-mut ps-small">' + e(P.fmtData(m.prazo)) + '</span></div></a>';
         }).join('') + '</div>';
       }).join('') + '</div></div></div>';
+    }
+    if (U.msVista === 'kpi') {
+      /* Por KPI: as mesmas tasks desagregadas, uma linha por indicador, com o estado de cada um */
+      var linhasK = [];
+      lista.forEach(function (m) { m.indicadores.forEach(function (id) { if (P.cat(id)) linhasK.push({ m: m, id: id }); }); });
+      return filtros + '<div class="ps-card">' + cabCartao((f.empresa || 'All companies') + ', ' + linhasK.length + ' KPIs in ' + lista.length + ' tasks', 'tarefa', dir) + '<div class="ps-card-body">' +
+        tabela([{ t: 'KPI' }, { t: 'Task' }, { t: 'Period' }, { t: 'Perimeter' }, { t: 'Value', dir: 1 }, { t: 'Assigned to' }, { t: 'Deadline' }, { t: 'Status' }], linhasK.map(function (x) {
+          var c = P.cat(x.id), it = P.item(x.id, P.chave(x.m)), st = estadoTarefa(x.m, x.id);
+          return { attrs: 'class="ps-tr-tar"', celulas: ['<a href="' + rota('Milestone/' + x.m.id + '?ind=' + encodeURIComponent(x.id)) + '"><b>' + e(c.nome) + '</b></a><br><small class="ps-mut">' + e(x.id + ', ' + c.unidade_medida) + '</small>', '<a href="' + rota('Milestone/' + x.m.id) + '">' + e(x.m.nome) + '</a>', tagPer(x.m) || e(P.rotPeriodo(x.m)), empHtml(x.m.empresa), it && it.valor !== null ? '<span class="ps-num">' + e(fmtV(x.id, it.valor)) + '</span>' : '<span class="ps-mut">-</span>', atribHtml(x.m), '<span class="ps-nowrap">' + e(prazoTxt(x.m)) + '</span>', P.chipEstadoTarefa(x.m, st)] };
+        }), 'No KPIs in these tasks.') + '</div></div>';
     }
     return filtros + '<div class="ps-card">' + cab + '<div class="ps-card-body">' + tabela(COLS_MS, lista.map(linhaTabMs)) + '</div></div>';
   };
