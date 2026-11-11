@@ -2046,6 +2046,16 @@
     }
     window.scrollTo(0, sy);
   };
+  /* Desce ate a linha do indicador (abaixo do cabecalho da pagina e do da lista), realca-a e poe o cursor no valor */
+  var irParaIndicador = function (id) {
+    var el = document.getElementById('ind-' + id) || document.getElementById('sec-dados');
+    if (!el) return;
+    var h = document.querySelector('.ps-h'), cab = document.querySelector('.rq2-cab');
+    var topo = el.getBoundingClientRect().top + window.scrollY - (h ? h.getBoundingClientRect().height : 0) - (cab ? cab.getBoundingClientRect().height : 0) - 12;
+    window.scrollTo({ top: Math.max(0, topo), behavior: 'auto' });
+    el.classList.add('ps-alvo'); setTimeout(function () { el.classList.remove('ps-alvo'); }, 2600);
+    var inp = document.getElementById('v-' + id); if (inp && !inp.disabled) { try { inp.focus({ preventScroll: true }); } catch (x) { inp.focus(); } }
+  };
   var navegar = function () {
     var ant = U.rota.pag + '/' + U.rota.arg;
     U.rota = lerRota();
@@ -2059,6 +2069,12 @@
     if (U.boTab === 'lancar') { U.boTab = 'indicadores'; if (U.ind) U.ind.vista = 'dep'; }
     if (U.rota.q.sep) U.sep = U.rota.q.sep;
     else if (ant !== novo) U.sep = 'dados';
+    /* Vindo de um KPI (Home, Tasks): abre a task no separador Work, lista, com esse indicador aberto */
+    var indAlvo = U.rota.pag === 'Milestone' && U.rota.q.ind ? U.rota.q.ind : '', msAlvo = indAlvo ? P.ms(U.rota.arg) : null;
+    if (msAlvo && msAlvo.indicadores.indexOf(indAlvo) > -1) {
+      U.msTab[msAlvo.id] = 'trabalho'; U.dadosVista = 'form'; irAba(msAlvo, 'ecra');
+      U.rqSub = U.rqSub || {}; U.rqSub[msAlvo.id] = 'todos'; U.rqAberto[msAlvo.id + ':' + indAlvo] = true;
+    } else indAlvo = '';
     U.menu = null; U.painel = null;
     var hd = document.querySelector('[data-cabecalho]');
     if (hd) hd.classList.remove('open');
@@ -2066,6 +2082,7 @@
     R();
     if (ant !== novo) window.scrollTo(0, 0);
     if (U.rota.q.sep) { var alvoSec = document.getElementById('sec-' + U.rota.q.sep); if (alvoSec) alvoSec.scrollIntoView({ block: 'start' }); }
+    if (indAlvo) irParaIndicador(indAlvo);
     var alvo = U.rota.pag;
     if (MODO === 'hash' && !location.hash && alvo !== 'Entrada') location.replace('#/' + alvo);
   };

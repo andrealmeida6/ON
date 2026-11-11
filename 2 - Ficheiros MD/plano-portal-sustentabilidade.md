@@ -1002,6 +1002,19 @@ Pedido do André a 11 de novembro de 2026.
   - na barra de progresso do topo, a mesma fração somada ao passo em curso.
 - O CSS está na secção 61 do `global.css`.
 
+### Da Home direto ao indicador dentro da task
+
+Pedido do André a 11 de novembro de 2026.
+
+- Na Home, na tabela Tasks, o link de cada KPI e o botão de ação ("Fill in →") abrem `Milestone/<task>?ind=<KPI>`.
+- Ao chegar à task:
+  - abre-se o separador Work, na vista de lista, com o filtro All;
+  - abre-se o detalhe desse indicador;
+  - a página desce até à linha do indicador, logo por baixo dos dois cabeçalhos fixos (`irParaIndicador`);
+  - a linha fica realçada durante 2,6 segundos;
+  - o cursor fica no campo do valor.
+- O CSS do realce está na secção 62 do `global.css`. Quem tem a opção de reduzir movimentos no sistema vê o realce fixo, sem animação.
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.
