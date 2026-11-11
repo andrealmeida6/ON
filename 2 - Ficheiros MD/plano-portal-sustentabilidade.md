@@ -1117,6 +1117,23 @@ Reportado pelo André a 11 de novembro de 2026: a Rita Sousa submeteu uma task d
   - a linha da lista explica com quem está a decisão (`P.quemDecide`). Se não houver mais ninguém na equipa, diz que tem de ser o administrador, ou que é preciso acrescentar outra pessoa à equipa.
 - O administrador (Service account) continua a poder aprovar.
 
+### Faturas de eletricidade: esquema dos dados e tabelas no Supabase
+
+Pedido do André a 11 de novembro de 2026. Primeiro passo para ler as faturas (texto do PDF ou OCR no browser) e usá-las nos indicadores de energia.
+
+- **Esquema** `web-files/esquema-fatura-energia.json` (JSON Schema). Não existe um modelo público que junte a parte financeira, os consumos e o ESG para faturas portuguesas, por isso o esquema junta três referências:
+  - **Financeiro:** EN 16931, a norma europeia da fatura eletrónica, também base do CIUS-PT. Fornecedor e cliente com NIF, número, ATCUD, datas, totais, IVA por taxa e linhas. Cada campo indica o termo da norma (BT-n).
+  - **Fornecimento e consumo:** o conteúdo que a ERSE exige nas faturas em Portugal. CPE, nível de tensão, potência contratada, ciclo horário, período de faturação, tipo de leitura, kWh por período horário (ponta, cheias, vazio, super vazio), energia reativa, autoconsumo, e os encargos (energia, potência, redes, IEC, CAV, taxa DGEG).
+  - **Rotulagem do fornecedor:** % renovável, mix por fonte, gCO₂/kWh e garantias de origem. É a base do Scope 2 market-based.
+  - **ESG:** os valores para os indicadores E01 (MWh), E03 (% renovável) e E07 (Scope 2 location-based e market-based); a repartição dos kWh por período de reporte quando a fatura apanha dois trimestres; e, para cada campo, como foi lido e com que confiança.
+- **SQL** `supabase/017_esg_faturas_energia.sql` (ainda não corrido):
+  - tabelas `esg_faturas_energia` (uma por fatura e CPE, com o objeto lido completo em `dados_lidos`) e `esg_faturas_linhas`;
+  - estados `lida` → `confirmada` → `rejeitada`, com o servidor a registar quem confirma;
+  - RLS: quem é interno lê e carrega; a gestão confirma e apaga;
+  - a vista `esg_faturas_energia_periodo` soma por empresa e período os kWh, o % renovável ponderado e o Scope 2, só das faturas confirmadas.
+  - A sintaxe foi verificada com um parser de PostgreSQL.
+- **Próximo passo:** no indicador de eletricidade da task, carregar a fatura → ler (pdf.js para PDF digital, Tesseract.js para digitalizações) → ecrã de confirmação ao lado da fatura → valores para os indicadores e fatura como evidência.
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.

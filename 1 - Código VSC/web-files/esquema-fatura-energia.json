@@ -1,0 +1,170 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "esg-data-hub/esquema-fatura-energia.json",
+  "title": "Electricity invoice (Portugal), read for ESG",
+  "description": "What is read from an electricity invoice. Financial part follows EN 16931 (business terms BT-n in each description); supply and consumption follow the content ERSE requires on Portuguese invoices; the ESG part is the activity data for Scope 2 (GHG Protocol, location-based and market-based). Each read field may carry a confidence (0-1) in 'confianca'.",
+  "type": "object",
+  "required": ["fornecedor", "fatura", "fornecimento", "consumo", "valores"],
+  "properties": {
+    "fornecedor": {
+      "type": "object",
+      "description": "Seller (EN 16931 BG-4).",
+      "required": ["nome"],
+      "properties": {
+        "nome": { "type": "string", "description": "Seller name (BT-27). For example EDP Comercial, Endesa, Iberdrola, Galp, Goldenergy." },
+        "nif": { "type": "string", "pattern": "^(PT)?[0-9]{9}$", "description": "Seller VAT identifier (BT-31)." },
+        "morada": { "type": "string", "description": "Seller address (BG-5)." }
+      }
+    },
+    "cliente": {
+      "type": "object",
+      "description": "Buyer (EN 16931 BG-7): the group company the invoice is for.",
+      "properties": {
+        "nome": { "type": "string", "description": "Buyer name (BT-44)." },
+        "nif": { "type": "string", "pattern": "^(PT)?[0-9]{9}$", "description": "Buyer VAT identifier (BT-48). Used to find the company of the group." },
+        "numero_cliente": { "type": "string", "description": "Customer account number at the supplier." }
+      }
+    },
+    "fatura": {
+      "type": "object",
+      "description": "Invoice identification (EN 16931 BG-0 / BT-1 to BT-3).",
+      "required": ["numero", "data_emissao"],
+      "properties": {
+        "numero": { "type": "string", "description": "Invoice number (BT-1)." },
+        "atcud": { "type": "string", "description": "ATCUD, Portuguese unique document code." },
+        "tipo": { "type": "string", "enum": ["fatura", "nota_credito", "acerto", "estimativa"], "description": "Invoice type (BT-3). 'acerto' corrects earlier estimated readings; 'estimativa' is billed on estimated readings." },
+        "data_emissao": { "type": "string", "format": "date", "description": "Issue date (BT-2)." },
+        "data_vencimento": { "type": "string", "format": "date", "description": "Payment due date (BT-9)." },
+        "moeda": { "type": "string", "default": "EUR", "description": "Invoice currency (BT-5)." }
+      }
+    },
+    "fornecimento": {
+      "type": "object",
+      "description": "Supply point and contract (content required by ERSE on Portuguese invoices).",
+      "required": ["cpe", "periodo_inicio", "periodo_fim"],
+      "properties": {
+        "cpe": { "type": "string", "pattern": "^PT[0-9]{16}[A-Z]{2}$", "description": "Delivery point code (Código de Ponto de Entrega), 20 characters, for example PT0002000012345678AB. One per meter: the site of the company." },
+        "morada_local": { "type": "string", "description": "Address of the consumption site." },
+        "nivel_tensao": { "type": "string", "enum": ["BTN", "BTE", "MT", "AT", "MAT"], "description": "Voltage level: low normal, low special, medium, high, very high." },
+        "potencia_contratada_kva": { "type": "number", "minimum": 0, "description": "Contracted power in kVA (BTN) or kW." },
+        "ciclo_horario": { "type": "string", "enum": ["simples", "bi-horario", "tri-horario", "tetra-horario"], "description": "Time-of-use tariff." },
+        "periodo_inicio": { "type": "string", "format": "date", "description": "Start of the billing period (BT-73)." },
+        "periodo_fim": { "type": "string", "format": "date", "description": "End of the billing period (BT-74). When the period crosses two quarters, the kWh are split by days." },
+        "tipo_leitura": { "type": "string", "enum": ["real", "estimada", "telecontagem"], "description": "Real meter reading, estimated, or smart meter." }
+      }
+    },
+    "consumo": {
+      "type": "object",
+      "description": "Energy consumed in the period: the activity data for Scope 2.",
+      "required": ["energia_ativa_kwh"],
+      "properties": {
+        "energia_ativa_kwh": { "type": "number", "minimum": 0, "description": "Total active energy in kWh. Goes to E01 Consumo de eletricidade (converted to MWh)." },
+        "por_periodo_horario": {
+          "type": "array",
+          "description": "Active energy by time-of-use period, when the invoice splits it.",
+          "items": {
+            "type": "object",
+            "required": ["periodo", "kwh"],
+            "properties": {
+              "periodo": { "type": "string", "enum": ["ponta", "cheias", "vazio", "super_vazio", "fora_vazio", "simples"] },
+              "kwh": { "type": "number", "minimum": 0 },
+              "leitura_anterior": { "type": "number" },
+              "leitura_atual": { "type": "number" }
+            }
+          }
+        },
+        "energia_reativa_kvarh": { "type": "number", "minimum": 0, "description": "Reactive energy (medium voltage and above)." },
+        "autoconsumo_kwh": { "type": "number", "minimum": 0, "description": "Self-consumption (UPAC), when shown." },
+        "injecao_rede_kwh": { "type": "number", "minimum": 0, "description": "Energy fed into the grid, when shown." }
+      }
+    },
+    "rotulagem": {
+      "type": "object",
+      "description": "Energy label that Portuguese suppliers show on the invoice (source mix and emissions of the supplier). Basis for market-based Scope 2.",
+      "properties": {
+        "renovavel_pct": { "type": "number", "minimum": 0, "maximum": 100, "description": "Share of renewable sources in the supplier mix. Goes to E03 Eletricidade de fontes renováveis." },
+        "mix": {
+          "type": "array",
+          "description": "Source mix as printed (hydro, wind, solar, natural gas, coal, nuclear, cogeneration, other).",
+          "items": { "type": "object", "required": ["fonte", "pct"], "properties": { "fonte": { "type": "string" }, "pct": { "type": "number", "minimum": 0, "maximum": 100 } } }
+        },
+        "emissoes_gco2_kwh": { "type": "number", "minimum": 0, "description": "CO2 emissions of the supplier mix in g/kWh. Market-based emission factor." },
+        "residuos_radioativos_ug_kwh": { "type": "number", "minimum": 0, "description": "Radioactive waste in µg/kWh, as printed." },
+        "garantias_origem": { "type": "boolean", "description": "True when the contract is 100% renewable with guarantees of origin (market-based factor 0)." },
+        "ano_referencia": { "type": "integer", "description": "Year the label refers to." }
+      }
+    },
+    "valores": {
+      "type": "object",
+      "description": "Financial totals (EN 16931 BG-22) and the main charges.",
+      "required": ["total_com_iva"],
+      "properties": {
+        "energia_eur": { "type": "number", "description": "Energy charge." },
+        "potencia_eur": { "type": "number", "description": "Contracted power charge." },
+        "redes_eur": { "type": "number", "description": "Network access charges (tarifas de acesso às redes)." },
+        "iec_eur": { "type": "number", "description": "Special consumption tax on electricity (IEC)." },
+        "cav_eur": { "type": "number", "description": "Audiovisual contribution (CAV)." },
+        "taxa_dgeg_eur": { "type": "number", "description": "DGEG operating fee." },
+        "total_sem_iva": { "type": "number", "description": "Total without VAT (BT-109)." },
+        "iva": {
+          "type": "array",
+          "description": "VAT breakdown by rate (BG-23); electricity in Portugal has 6% and 23% parts.",
+          "items": { "type": "object", "required": ["taxa_pct", "base", "valor"], "properties": { "taxa_pct": { "type": "number" }, "base": { "type": "number" }, "valor": { "type": "number" } } }
+        },
+        "total_iva": { "type": "number", "description": "Total VAT (BT-110)." },
+        "total_com_iva": { "type": "number", "description": "Total with VAT (BT-112)." },
+        "custo_medio_eur_kwh": { "type": "number", "description": "Calculated: total without VAT / active energy kWh." }
+      }
+    },
+    "linhas": {
+      "type": "array",
+      "description": "Invoice lines as printed (EN 16931 BG-25), for traceability.",
+      "items": {
+        "type": "object",
+        "required": ["descricao", "valor"],
+        "properties": {
+          "tipo": { "type": "string", "enum": ["energia", "potencia", "redes", "imposto", "taxa", "desconto", "acerto", "outro"] },
+          "descricao": { "type": "string", "description": "Line description (BT-153)." },
+          "periodo_horario": { "type": "string" },
+          "quantidade": { "type": "number", "description": "Invoiced quantity (BT-129)." },
+          "unidade": { "type": "string", "description": "Unit (BT-130): kWh, kVA.dia, kvarh, dia." },
+          "preco_unitario": { "type": "number", "description": "Unit price (BT-146)." },
+          "valor": { "type": "number", "description": "Line net amount (BT-131)." },
+          "iva_pct": { "type": "number", "description": "VAT rate of the line (BT-152)." }
+        }
+      }
+    },
+    "esg": {
+      "type": "object",
+      "description": "What the platform does with the invoice: calculated after reading, confirmed by the user.",
+      "properties": {
+        "indicadores": {
+          "type": "object",
+          "description": "Values that go to indicators of the platform.",
+          "properties": {
+            "E01": { "type": "number", "description": "Consumo de eletricidade, MWh = energia_ativa_kwh / 1000." },
+            "E03": { "type": "number", "description": "Eletricidade de fontes renováveis, % = rotulagem.renovavel_pct (weighted by kWh across invoices)." },
+            "E07": { "type": "number", "description": "Emissões indiretas de GHG (Âmbito 2), kgCO2e: location-based with the grid factor of the library, or market-based with rotulagem.emissoes_gco2_kwh." }
+          }
+        },
+        "reparticao_periodos": {
+          "type": "array",
+          "description": "kWh by reporting period when the billing period crosses two of them (pro rata by days).",
+          "items": { "type": "object", "properties": { "periodo": { "type": "string", "description": "Platform period, for example 2026-T3." }, "dias": { "type": "integer" }, "kwh": { "type": "number" } } }
+        },
+        "scope2_location_kgco2e": { "type": "number" },
+        "scope2_market_kgco2e": { "type": "number" }
+      }
+    },
+    "leitura": {
+      "type": "object",
+      "description": "How the invoice was read.",
+      "properties": {
+        "metodo": { "type": "string", "enum": ["texto_pdf", "ocr", "manual", "cloud"], "description": "Text of a digital PDF, OCR of a scan or photo, typed by hand, or a cloud service." },
+        "confianca": { "type": "object", "description": "Confidence 0-1 per field path, for example {\"consumo.energia_ativa_kwh\": 0.97}.", "additionalProperties": { "type": "number", "minimum": 0, "maximum": 1 } },
+        "ficheiro_fid": { "type": "string", "description": "Id of the stored invoice file (evidence)." },
+        "lido_em": { "type": "string", "format": "date-time" }
+      }
+    }
+  }
+}
