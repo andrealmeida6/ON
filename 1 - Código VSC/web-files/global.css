@@ -1977,3 +1977,19 @@ button.ps-est-i:hover{border-color:rgba(255,255,255,.4);background:rgba(255,255,
   .ki-t .ki-ac{width:auto;text-align:left}
   .ki-impl ul li{grid-template-columns:1fr}
 }
+
+/* 39. UTILIZADORES COM VARIOS DEPARTAMENTOS (tags) E DEPARTAMENTOS */
+.us-novo{padding:14px 16px;border:1px solid var(--line);border-radius:12px;background:var(--bg)}
+.us-novo h3{font-size:13px;font-weight:700;margin-bottom:10px}
+.us-novo-g{display:grid;grid-template-columns:minmax(180px,1.2fr) minmax(150px,.8fr) minmax(220px,1.6fr) auto;gap:12px;align-items:end}
+.us-novo > small{display:block;margin-top:8px;font-size:12px}
+.us-tags{display:flex;flex-wrap:wrap;gap:6px;align-items:center;min-height:34px}
+.us-tag{display:inline-flex;align-items:center;gap:5px;padding:3px 4px 3px 8px;border-radius:999px;background:var(--primary-50);color:var(--primary);font-size:12px;font-weight:600;white-space:nowrap}
+.us-tag .ps-avd{width:18px;height:18px}
+.us-tag-x{width:20px;height:20px;border:0;border-radius:50%;background:none;color:inherit;font-size:14px;line-height:1;cursor:pointer;display:grid;place-items:center}
+.us-tag-x:hover{background:var(--primary-100)}
+.ps-sel.us-add{width:auto;min-width:0;min-height:30px;padding:3px 26px 3px 10px;font-size:12px;border-style:dashed;color:var(--muted);background-color:transparent}
+.dp-uso{display:inline-block;min-width:28px;padding:2px 9px;border-radius:999px;background:var(--neutro-50);font-weight:700;text-align:center;cursor:help}
+@media (max-width:820px){.us-novo-g{grid-template-columns:1fr}}
+.us-tags .ps-sel.us-add{width:auto;flex:0 0 auto;max-width:170px}
+.ps-t .us-tags .ps-sel.us-add{min-width:0}

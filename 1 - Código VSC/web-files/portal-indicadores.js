@@ -264,10 +264,10 @@
   X.Pn.indEd = function () {
     var E = U.ind.ed, d = E.d, c = E.novo ? null : P.cat(E.id), per = perAtual();
     var freqs = FREQ.map(function (f) { return f[1]; }); if (d.freq && freqs.indexOf(d.freq) < 0) freqs.push(d.freq);
-    var depPess = pessoas('submete').filter(function (x) { return x.perfil === 'esg' || x.unidade === d.dep; }), outras = pessoas('submete').filter(function (x) { return depPess.indexOf(x) < 0; });
+    var depPess = pessoas('submete').filter(function (x) { return x.perfil === 'esg' || P.temUnidade(x, d.dep); }), outras = pessoas('submete').filter(function (x) { return depPess.indexOf(x) < 0; });
     var respOps = '<select id="ke-resp" class="ps-sel" data-c="indCampo" data-f="resp">' + opt(GRUPO_TXT, 'Whole department: ' + (d.dep || 'choose a department'), d.resp) +
       (depPess.length ? '<optgroup label="People of this department">' + depPess.map(function (x) { return opt(x.nome, x.nome, d.resp); }).join('') + '</optgroup>' : '') +
-      (outras.length ? '<optgroup label="Other people">' + outras.map(function (x) { return opt(x.nome, x.nome + ' (' + x.unidade + ')', d.resp); }).join('') + '</optgroup>' : '') + '</select>';
+      (outras.length ? '<optgroup label="Other people">' + outras.map(function (x) { return opt(x.nome, x.nome + ' (' + P.unidadesTxt(x) + ')', d.resp); }).join('') + '</optgroup>' : '') + '</select>';
     var cobre = String(d.empresas || '').split(';').map(function (t) { return t.trim(); }).filter(Boolean);
     var empChk = '<div class="ki-emps" role="group" aria-label="Companies covered">' + S.ent.map(function (x, i) { var on = cobre.indexOf(x.nome) > -1; return '<label class="ki-empc' + (on ? ' on' : '') + '"><input id="ke-emp-' + i + '" type="checkbox" data-c="indEmp" data-id="' + e(x.nome) + '"' + (on ? ' checked' : '') + '>' + X.avEmpresa() + e(x.nome) + '</label>'; }).join('') + '</div>';
     var hist = c ? (S.evg || []).filter(function (x) { return x.texto.indexOf('Indicator ' + c.id + ' ') === 0; }).slice(-6).reverse() : [];

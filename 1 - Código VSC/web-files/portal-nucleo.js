@@ -135,15 +135,32 @@
     ];
   };
   var UTILIZADORES = [
-    ['admin', 'Administrador da plataforma', 'admin', ''], ['esg', 'Equipa de sustentabilidade', 'esg', 'I&D, CSR e ESG'],
+    /* So pessoas: o papel (administrador, equipa de sustentabilidade, auditor) vem do perfil. A unidade pode ser varias, separadas por "|". */
+    ['admin', 'Helena Martins', 'admin', ''], ['esg', 'Rita Sousa', 'esg', 'I&D, CSR e ESG'],
     ['operacoes', 'Marta Lopes', 'resp', 'Operações'], ['qualidade', 'Rui Antunes', 'resp', 'Qualidade e Laboratório'],
     ['comercial', 'Sofia Reis', 'resp', 'Comercial e Relação com o Cliente'], ['ass', 'Tiago Moura', 'resp', 'Ambiente, Saúde e Segurança'],
     ['rh', 'Inês Faria', 'resp', 'Recursos Humanos'], ['financeira', 'Paulo Serra', 'resp', 'Financeira'],
     ['juridico', 'Joana Pinto', 'resp', 'Jurídico e Compliance'], ['compras', 'Carlos Neves', 'resp', 'Compras'],
-    ['frota', 'Ana Duarte', 'resp', 'Frota'], ['si', 'Miguel Costa', 'resp', 'Sistemas de Informação'],
-    ['auditor', 'Auditor externo (assurance)', 'auditor', ''], ['ext-energia', 'Comercializador de eletricidade', 'ext', ''],
+    ['frota', 'Ana Duarte', 'resp', 'Frota|Compras'], ['si', 'Miguel Costa', 'resp', 'Sistemas de Informação'],
+    ['auditor', 'Nuno Ferreira', 'auditor', ''], ['ext-energia', 'Comercializador de eletricidade', 'ext', ''],
     ['ext-frota', 'Gestora de frota em renting', 'ext', ''], ['ext-reagentes', 'Fornecedor de reagentes químicos', 'ext', '']
   ];
+  var NOME_ESG = 'Rita Sousa';
+  P.NOME_ESG = NOME_ESG;
+  /* Departamentos de uma pessoa: pode ter varios (tags). u.unidade fica sempre igual ao primeiro, para o que so mostra um. */
+  P.unidadesDe = function (u) { return !u ? [] : u.unidades && u.unidades.length ? u.unidades : u.unidade ? [u.unidade] : []; };
+  P.temUnidade = function (u, un) { return !!un && P.unidadesDe(u).indexOf(un) > -1; };
+  P.definirUnidades = function (u, l) {
+    var ok = []; (l || []).forEach(function (x) { if (x && ok.indexOf(x) < 0) ok.push(x); });
+    u.unidades = ok; u.unidade = ok[0] || '';
+  };
+  P.unidadesTxt = function (u) { return P.unidadesDe(u).join(', '); };
+  /* Nome de utilizador gerado a partir do nome (ja nao se escreve a mao) */
+  P.loginDe = function (nome) {
+    var base = String(nome || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim().split(/\s+/), b = (base.length > 1 ? base[0] + '.' + base[base.length - 1] : base[0] || 'user').replace(/[^a-z0-9.]/g, '') || 'user', l = b, i = 2;
+    while (P.user(l)) l = b + i++;
+    return l;
+  };
   var MATERIALIDADE = [
     ['E1', 'Alterações climáticas', 'material', 'Prioridade "Clima" da dupla materialidade.'], ['E2', 'Poluição', 'por avaliar', 'Descargas de águas residuais tratadas.'],
     ['E3', 'Água e recursos marinhos', 'material', 'Prioridade "Água".'], ['E4', 'Biodiversidade e ecossistemas', 'por avaliar', 'Levantamento de áreas sensíveis em curso.'],
@@ -344,7 +361,7 @@
     S.ciclo = { ano: 2026, estado: 'aberto', data_abertura: diasDe(-300), fechados: [2025] };
     S.cat = clone(window.PORTAL_CATALOGO);
     S.wfbase = WF_BASE();
-    S.users = UTILIZADORES.map(function (u) { return { login: u[0], nome: u[1], perfil: u[2], unidade: u[3] }; });
+    S.users = UTILIZADORES.map(function (u) { var l = u[3] ? u[3].split('|') : []; return { login: u[0], nome: u[1], perfil: u[2], unidades: l, unidade: l[0] || '' }; });
     S.mat = MATERIALIDADE.map(function (m) { return { norma: m[0], tema: m[1], avaliacao: m[2], justificacao: m[3] }; });
     S.ent = ENTIDADES.map(function (e) { return { id: e[0], nome: e[0], perimetro_grupo: !!e[1], perimetro_maioritario: !!e[2] }; });
     S.deps = DEPARTAMENTOS.map(function (n) { return { id: n, nome: n }; });
@@ -374,8 +391,8 @@
       M20: { i: 0, d: 42 }, M21: { i: 0, d: 45 }, M22: { i: 0, d: 48 }, M23: { i: 0, d: 42 }, M24: { i: 0, d: 50 }, M25: { i: 0, d: 55 }
     };
     var EMPRESAS_DEMO = ['Entidade A', 'Entidade B'];
-    var pessoaDe = function (un) { var x = UTILIZADORES.filter(function (l) { return l[2] === 'resp' && l[3] === un; })[0]; return x || null; };
-    var nomeDe = function (un) { var x = pessoaDe(un); return x ? x[1] : 'Equipa de sustentabilidade'; };
+    var pessoaDe = function (un) { var x = UTILIZADORES.filter(function (l) { return l[2] === 'resp' && l[3].split('|')[0] === un; })[0]; return x || null; };
+    var nomeDe = function (un) { var x = pessoaDe(un); return x ? x[1] : NOME_ESG; };
     /* Uma milestone por trimestre para o que e mensal ou trimestral, uma para o ano para o resto,
        e uma consolidacao anual por departamento que junta os trimestres */
     var inst = [], trimPorUn = {};
@@ -435,7 +452,7 @@
       /* O que ja passou da recolha entregou os ficheiros pedidos */
       if (cfg.i > 0) (FICHEIROS_BASE[pl.unidade] || []).forEach(function (f, ixF) { m.documentos_gerais.push({ ficheiro: f[3] + '-' + x.id.toLowerCase() + '-2026.' + f[2][0], por: nomeDe(pl.unidade), em: quando(-8), pedido: 'tipo:' + f[3] }); });
       if (cfg.dev) {
-        m.comentarios.push({ autor: 'Equipa de sustentabilidade', texto: 'A percentagem de veículos verdes parece baixa. Confirmem com a gestora da frota, por favor.', em: new Date(Date.now() - 86400000).toISOString(), passo: m.passos[2].nome, indicador: 'E09' });
+        m.comentarios.push({ autor: NOME_ESG, texto: 'A percentagem de veículos verdes parece baixa. Confirmem com a gestora da frota, por favor.', em: new Date(Date.now() - 86400000).toISOString(), passo: m.passos[2].nome, indicador: 'E09' });
         m.eventos.splice(1, 0, { texto: 'Milestone submitted.', em: new Date(Date.now() - 86400000 * 6).toISOString(), por: nomeDe(m.unidade), wf: 'avanco', passo: m.passos[0].nome }, { texto: 'Automatic validation completed: 1 indicator(s) with alerts.', em: new Date(Date.now() - 86400000 * 6 + 60000).toISOString(), por: 'System', wf: 'auto', passo: m.passos[1].nome });
         m.eventos.push({ texto: 'Returned to the unit.', em: new Date(Date.now() - 86400000).toISOString(), por: 'Sustainability team', wf: 'devolucao', passo: m.passos[2].nome });
       }
@@ -450,14 +467,14 @@
       m.comentarios.sort(function (a, b) { return a.em < b.em ? -1 : 1; });
     };
     com('M01-T3', 'Marta Lopes', 'Submeti o T3. O volume de entrada subiu por causa da nova adução que entrou em serviço em março.', 600, 'Recolha e submissão dos dados', 'A01');
-    com('M01-T3', 'Equipa de sustentabilidade', 'Obrigado, Marta. Consegues anexar o extrato de setembro da telemetria para confirmarmos o A01?', 50, 'Revisão pela equipa de sustentabilidade', 'A01');
+    com('M01-T3', NOME_ESG, 'Obrigado, Marta. Consegues anexar o extrato de setembro da telemetria para confirmarmos o A01?', 50, 'Revisão pela equipa de sustentabilidade', 'A01');
     com('M01-T3', 'Marta Lopes', 'Anexado. O A09 está estimado porque faltam os registos de 12 a 15 de setembro.', 20, 'Revisão pela equipa de sustentabilidade', 'A09');
     com('M02-T3', 'Rui Antunes', 'Os boletins de setembro já estão carregados.', 70, 'Validação técnica pela Direção de Operações');
     com('M02-T3', 'Marta Lopes', 'Valido os resultados da ETA Central amanhã de manhã.', 30, 'Validação técnica pela Direção de Operações', 'A13');
     com('M11-T3', 'Paulo Serra', 'O valor de compras bate com o balancete do T3. Dou o parecer até sexta.', 3, 'Parecer da Direção Financeira', 'G01');
     com('M17', 'Paulo Serra', 'Ainda aguardamos as garantias de origem do comercializador de eletricidade.', 96, 'Recolha e submissão dos dados', 'E03');
-    com('M17', 'Equipa de sustentabilidade', 'Já enviei o pedido externo ao comercializador. O prazo é 16/11/2026.', 72, 'Recolha e submissão dos dados', 'E03');
-    com('M26', 'Equipa de sustentabilidade', 'Quando o T3 estiver aprovado, usem os trimestres para fechar o ano.', 26, 'Recolha e submissão dos dados');
+    com('M17', NOME_ESG, 'Já enviei o pedido externo ao comercializador. O prazo é 16/11/2026.', 72, 'Recolha e submissão dos dados', 'E03');
+    com('M26', NOME_ESG, 'Quando o T3 estiver aprovado, usem os trimestres para fechar o ano.', 26, 'Recolha e submissão dos dados');
     S.ext = [
       { id: 'X1', indicador_id: 'E03', milestone_id: 'M17', entidade_externa: 'Comercializador de eletricidade', descricao: 'Percentagem de eletricidade com garantias de origem renovável no ano.', prazo: diasDe(9), estado: 'pendente', valor: null, evidencia: '', respondido_em: null },
       { id: 'X2', indicador_id: 'E09', milestone_id: 'M12-T3', entidade_externa: 'Gestora de frota em renting', descricao: 'Percentagem de viaturas elétricas ou híbridas plug-in na frota em renting a 31/12.', prazo: diasDe(2), estado: 'recebido', valor: 6.4, evidencia: 'frota-renting-dezembro.pdf', respondido_em: new Date(Date.now() - 3600000 * 5).toISOString() },
@@ -488,6 +505,12 @@
     if ((S.apis || []).length && !S.apis.some(function (a) { return a.db; }) && P.ligacoesBase) S.apis = P.ligacoesBase();
     /* O sistema de RH passou a estar ligado; so fica por ligar se o administrador o mudou */
     (S.apis || []).forEach(function (a) { if (a.id === 'api2' && a.estado === 'pendente' && !a.mudado) a.estado = 'ligada'; });
+    /* Pessoas com varios departamentos, e os perfis de sistema passam a pessoas com nome */
+    var NOMES_NOVOS = { admin: ['Administrador da plataforma', 'Helena Martins'], esg: ['Equipa de sustentabilidade', 'Rita Sousa'], auditor: ['Auditor externo (assurance)', 'Nuno Ferreira'] };
+    (S.users || []).forEach(function (u) {
+      if (!u.unidades) P.definirUnidades(u, u.unidade ? [u.unidade] : []);
+      var nv = NOMES_NOVOS[u.login]; if (nv && u.nome === nv[0]) u.nome = nv[1];
+    });
     /* A plataforma passou a chamar-se ESG Data Hub: a marca gravada com o nome antigo acompanha a mudanca */
     if (S.marca && /^(Record to Report \(R2R\)|Portal de Sustentabilidade)$/.test(S.marca.nome || '')) { S.marca.nome = P.MARCA_BASE.nome; escrever(CHAVES.marca, S.marca); }
     if (P.garantirEsrs) P.garantirEsrs();
@@ -877,7 +900,7 @@
     var x = p.tipo === 'recolha' && m.atribuido_a ? P.user(m.atribuido_a) : null;
     return x ? { tipo: 'pessoa', nome: x.nome } : { tipo: 'tag', nome: P.nomeResp(m, p.responsavel) };
   };
-  P.atribuiveis = function (m) { return S.users.filter(function (x) { return x.perfil === 'resp' && x.unidade === m.unidade; }); };
+  P.atribuiveis = function (m) { return S.users.filter(function (x) { return x.perfil === 'resp' && P.temUnidade(x, m.unidade); }); };
   P.atribuir = function (m, login, u) {
     if (!P.acompanha(m, u)) return { erro: 'No permission.' };
     m.atribuido_a = login || null;
@@ -891,9 +914,9 @@
     if (!u) return false;
     if (P.gereTudo(u) || u.perfil === 'auditor') return true;
     if (u.perfil !== 'resp') return false;
-    if (c.unidade_negocio === u.unidade) return true;
+    if (P.temUnidade(u, c.unidade_negocio) || P.temUnidade(u, P.donoIndicador(c.id))) return true;
     var m = P.msDoIndicador(c.id);
-    return !!m && m.unidade === u.unidade;
+    return !!m && P.temUnidade(u, m.unidade);
   };
 
   /* --- Estados e permissoes ---------------------------------------------- */
@@ -932,8 +955,8 @@
     if (!p || !u || p.responsavel === 'sistema') return false;
     if (u.perfil === 'admin') return true;
     if (p.responsavel === 'esg') return u.perfil === 'esg';
-    if (p.responsavel === 'unidade') return (u.perfil === 'resp' && u.unidade === m.unidade) || (!!m.atribuido_a && m.atribuido_a === u.login);
-    if (p.responsavel.indexOf('area:') === 0) return u.perfil === 'resp' && u.unidade === p.responsavel.slice(5);
+    if (p.responsavel === 'unidade') return (u.perfil === 'resp' && P.temUnidade(u, m.unidade)) || (!!m.atribuido_a && m.atribuido_a === u.login);
+    if (p.responsavel.indexOf('area:') === 0) return u.perfil === 'resp' && P.temUnidade(u, p.responsavel.slice(5));
     return false;
   };
   /* "Waiting on you": o administrador pode agir em tudo, mas so lhe espera o que e mesmo dele */
@@ -944,7 +967,7 @@
   };
   P.podePreencher = function (m, u) { var p = P.passoAtual(m); return !!p && p.tipo === 'recolha' && P.podeAgir(m, u); };
   P.gereTudo = function (u) { return !!u && (u.perfil === 'admin' || u.perfil === 'esg'); };
-  P.acompanha = function (m, u) { return !!u && (P.gereTudo(u) || (u.perfil === 'resp' && u.unidade === m.unidade)); };
+  P.acompanha = function (m, u) { return !!u && (P.gereTudo(u) || (u.perfil === 'resp' && P.temUnidade(u, m.unidade))); };
   P.podeAlterarWorkflow = function (m, u) { return !P.concluida(m) && P.acompanha(m, u); };
   P.podeReexpressar = function (u) { return P.gereTudo(u); };
 
@@ -1227,7 +1250,7 @@
     if (!u) return false;
     if (P.gereTudo(u)) return true;
     var m = P.msDoIndicador(a.indicador_id);
-    return u.perfil === 'resp' && !!m && m.unidade === u.unidade;
+    return u.perfil === 'resp' && !!m && P.temUnidade(u, m.unidade);
   };
   P.responderAuditor = function (a, texto, u) {
     if (!P.podeResponderAuditor(a, u)) return { erro: 'This request is not for your unit.' };
@@ -1615,10 +1638,12 @@
     S.ent.splice(S.ent.indexOf(x), 1);
     guardar(); return { ok: true };
   };
-  var usosDepartamento = function (nome) {
-    return S.users.filter(function (u) { return u.unidade === nome; }).length + S.cat.filter(function (c) { return c.unidade_negocio === nome; }).length +
-      S.ms.filter(function (m) { return m.unidade === nome || m.departamentos.indexOf(nome) > -1 || m.passos.some(function (p) { return p.responsavel === 'area:' + nome; }); }).length;
+  /* Onde se usa um departamento: pessoas (tags), indicadores (quem reporta) e milestones (dono, tags ou passo do workflow) */
+  P.usosDepartamentoDet = function (nome) {
+    return { pessoas: S.users.filter(function (u) { return P.temUnidade(u, nome); }).length, indicadores: S.cat.filter(function (c) { return c.unidade_negocio === nome || c.unidade_reporte === nome; }).length,
+      milestones: S.ms.filter(function (m) { return m.unidade === nome || m.departamentos.indexOf(nome) > -1 || m.passos.some(function (p) { return p.responsavel === 'area:' + nome; }); }).length };
   };
+  var usosDepartamento = function (nome) { var d = P.usosDepartamentoDet(nome); return d.pessoas + d.indicadores + d.milestones; };
   P.usosDepartamento = usosDepartamento;
   P.criarDepartamento = function (nome) {
     var e = erroNome(nome, S.deps); if (e) return { erro: e };
@@ -1629,8 +1654,8 @@
     var e = erroNome(nome, S.deps, x); if (e) return { erro: e };
     var antigo = x.nome;
     x.nome = nome;
-    S.users.forEach(function (u) { if (u.unidade === antigo) u.unidade = nome; });
-    S.cat.forEach(function (c) { if (c.unidade_negocio === antigo) c.unidade_negocio = nome; });
+    S.users.forEach(function (u) { if (P.temUnidade(u, antigo)) P.definirUnidades(u, P.unidadesDe(u).map(function (d) { return d === antigo ? nome : d; })); });
+    S.cat.forEach(function (c) { if (c.unidade_negocio === antigo) c.unidade_negocio = nome; if (c.unidade_reporte === antigo) c.unidade_reporte = nome; });
     S.ms.forEach(function (m) {
       if (m.unidade === antigo) m.unidade = nome;
       m.departamentos = m.departamentos.map(function (d) { return d === antigo ? nome : d; });
@@ -1656,7 +1681,7 @@
     }
     P.msCiclo().forEach(function (m) {
       var est = P.estadoMs(m), r = 'Milestone/' + m.id;
-      var minha = u.perfil === 'resp' && u.unidade === m.unidade;
+      var minha = u.perfil === 'resp' && P.temUnidade(u, m.unidade);
       if (minha || P.gereTudo(u)) {
         if (est.cod === 'devolvida') add('err', m.nome + ' was returned', 'Correct and resubmit', r);
         if (est.cod === 'atraso') add('err', m.nome + ' is overdue', 'Due ' + P.fmtData(m.prazo), r);

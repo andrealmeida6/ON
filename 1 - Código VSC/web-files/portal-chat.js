@@ -29,7 +29,7 @@
     return P.msCiclo().filter(function (m) {
       if (P.gereTudo(usr) || usr.perfil === 'auditor') return true;
       if ((S.ext || []).some(function (x) { return x.tipo === 'ajuda' && x.para === usr.login && x.milestone_id === m.id; })) return true;
-      return m.unidade === usr.unidade || (m.departamentos || []).indexOf(usr.unidade) > -1 || m.passos.some(function (p) { return p.responsavel === 'area:' + usr.unidade; });
+      return P.unidadesDe(usr).some(function (un) { return m.unidade === un || (m.departamentos || []).indexOf(un) > -1 || m.passos.some(function (p) { return p.responsavel === 'area:' + un; }); });
     });
   };
   /* Lidas: so neste navegador, por pessoa */

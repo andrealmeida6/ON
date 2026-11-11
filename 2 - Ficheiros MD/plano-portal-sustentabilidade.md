@@ -496,6 +496,34 @@ Pedido do André a 10 de novembro de 2026: KPI assignment e Companies and perime
 
 **CSS:** secção 38 de `global.css`.
 
+### Utilizadores com vários departamentos e Departments
+
+Pedido do André a 11 de novembro de 2026.
+
+**Users and profiles**
+
+- **Só pessoas:** a tabela só tem pessoas. O papel vem da coluna Profile: Administrator, Sustainability team, Data owner ou Auditor.
+- **Pessoas no lugar dos registos de sistema:** os utilizadores "Administrador da plataforma", "Equipa de sustentabilidade" e "Auditor externo (assurance)" passam a ser Helena Martins, Rita Sousa e Nuno Ferreira, com o mesmo login interno. Os dados já gravados no browser mudam sozinhos. O histórico antigo mantém o nome que tinha.
+- **Entidades externas:** já não aparecem nesta tabela. Estão em External entities.
+- **Sem coluna de login:** o nome de utilizador é gerado a partir do nome completo (`P.loginDe`). O formulário de novo utilizador fica em cima e pede o nome, o perfil e os departamentos. Um data owner precisa de pelo menos um departamento.
+- **Departamentos por tags:** cada pessoa pode ter vários (`u.unidades`; `u.unidade` fica igual ao primeiro). Juntam-se com "+ Add" e tiram-se com ×.
+- **Permissões:** todas as regras passaram a usar `P.temUnidade`. Quem tem vários departamentos vê, preenche e acompanha as tasks de todos eles: `podeAgir`, `acompanha`, `atribuiveis`, notificações, chat, My tasks, Approvals e o responsável por indicador.
+- **Proteções:**
+  - Não se muda o próprio perfil.
+  - Quem reporta indicadores só pode ser data owner ou equipa de sustentabilidade.
+  - Não se remove quem é responsável por indicadores ou por tasks abertas.
+- **Registo e dicas:** cada mudança fica no registo de configuração. Os cabeçalhos Profile e Departments têm uma tooltip.
+- **Demonstração:** a Ana Duarte tem Frota e Compras (só nos dados novos).
+
+**Departments**
+
+- O formulário New department passou para cima da tabela.
+- A coluna **In use** tem uma tooltip que explica o número: pessoas, indicadores e milestones que usam o departamento. Também explica que um departamento em uso não se remove, apenas se muda o nome. Em cada linha, a tooltip do número mostra o detalhe (`P.usosDepartamentoDet`), e o botão Remove fica desativado enquanto o departamento estiver em uso.
+
+**Supabase:** `013_esg_utilizadores_departamentos.sql` acrescenta a coluna `unidades text[]`, muda os nomes de sistema para nomes de pessoas e atualiza as permissões (`esg_unidades()`, `esg_ms_minha`, `esg_ms_em_recolha`, `esg_indicador_meu`). Correr depois do 012.
+
+**CSS:** secção 39 de `global.css`.
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.

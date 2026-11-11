@@ -48,7 +48,7 @@
     S.defs = {};
     Object.keys(BASE).forEach(function (id) {
       var b = BASE[id], alt = Object.keys(b.m || {}).map(function (a) { return { ano: Number(a), txt: b.m[a] }; });
-      S.defs[id] = { inclui: b.i, exclui: b.x, fonte: b.f, dono: '', alteracoes: alt, versao: alt.length ? 2 : 1, em: alt.length ? '2026-02-16T10:00:00Z' : '2026-01-20T10:00:00Z', por: 'Equipa de sustentabilidade' };
+      S.defs[id] = { inclui: b.i, exclui: b.x, fonte: b.f, dono: '', alteracoes: alt, versao: alt.length ? 2 : 1, em: alt.length ? '2026-02-16T10:00:00Z' : '2026-01-20T10:00:00Z', por: P.NOME_ESG || 'Equipa de sustentabilidade' };
     });
   };
 

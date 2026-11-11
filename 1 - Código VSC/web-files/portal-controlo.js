@@ -80,7 +80,7 @@
     var resp = S.users.filter(function (x) { return x.perfil === 'resp'; });
     S.atrib = {};
     S.cat.forEach(function (c) {
-      var i = -1; resp.forEach(function (x, k) { if (x.unidade === c.unidade_negocio) i = k; });
+      var i = -1; resp.forEach(function (x, k) { if (i < 0 && x.unidade === c.unidade_negocio) i = k; });
       S.atrib[c.id] = { submete: i > -1 ? resp[i].login : 'esg', reve: i > -1 ? resp[(i + 1) % resp.length].login : 'financeira', valida: i > -1 ? 'esg' : 'admin' };
     });
     S.regrasEnt = {};

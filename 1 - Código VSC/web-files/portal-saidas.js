@@ -56,9 +56,9 @@
 
   P.semearSaidas = function () {
     S.saidas = [
-      { id: 'G1', rel: 'QA-2026-T1', versao: 1, formato: 'xlsx', ficheiro: 'QA-2026-T1_ERSAR_v1.xlsx', final: true, em: '2026-06-12T10:20:00Z', por: 'Equipa de sustentabilidade', ok: 2, total: 2 },
-      { id: 'G2', rel: 'QA-2026-T2', versao: 1, formato: 'xlsx', ficheiro: 'QA-2026-T2_ERSAR_v1.xlsx', final: true, em: '2026-09-08T09:05:00Z', por: 'Equipa de sustentabilidade', ok: 2, total: 2 },
-      { id: 'G3', rel: 'QA-2026-T3', versao: 1, formato: 'xlsx', ficheiro: 'QA-2026-T3_ERSAR_v1_draft.xlsx', final: false, em: '2026-11-04T15:40:00Z', por: 'Equipa de sustentabilidade', ok: 0, total: 2 }
+      { id: 'G1', rel: 'QA-2026-T1', versao: 1, formato: 'xlsx', ficheiro: 'QA-2026-T1_ERSAR_v1.xlsx', final: true, em: '2026-06-12T10:20:00Z', por: P.NOME_ESG, ok: 2, total: 2 },
+      { id: 'G2', rel: 'QA-2026-T2', versao: 1, formato: 'xlsx', ficheiro: 'QA-2026-T2_ERSAR_v1.xlsx', final: true, em: '2026-09-08T09:05:00Z', por: P.NOME_ESG, ok: 2, total: 2 },
+      { id: 'G3', rel: 'QA-2026-T3', versao: 1, formato: 'xlsx', ficheiro: 'QA-2026-T3_ERSAR_v1_draft.xlsx', final: false, em: '2026-11-04T15:40:00Z', por: P.NOME_ESG, ok: 0, total: 2 }
     ];
   };
 
