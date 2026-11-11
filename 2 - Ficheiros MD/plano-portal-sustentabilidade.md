@@ -984,6 +984,13 @@ Pedido do André a 11 de novembro de 2026.
 - Saiu a lista "External deliveries" de baixo da timeline. O detalhe de cada entrega está nos cartões dos Outputs, no "Check the values".
 - Os cartões dos Outputs têm todos a mesma borda. Uma entrega com o prazo passado e sem ficheiro deixa de ter a borda vermelha e passa a mostrar só a data do prazo a vermelho.
 
+### Cabeçalho da lista de indicadores fixo na task
+
+Pedido do André a 11 de novembro de 2026.
+
+- Em Requested data, o cabeçalho da lista (Indicator, Expand all, T4 2025, Value T4 2026, Change, Status) fica preso por baixo do cabeçalho da página enquanto se faz scroll e a lista ainda está no ecrã. Quando a lista acaba, sai com ela.
+- É CSS na secção 60 do `global.css`: `position: sticky`, a 69px do topo no desktop e a 61px no telemóvel.
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.

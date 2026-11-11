@@ -2253,3 +2253,8 @@ button.ps-est-i:hover{border-color:rgba(255,255,255,.4);background:rgba(255,255,
 
 /* 59. ESCONDIDO SEM APAGAR (ex.: Data entry no menu Data) */
 .ps-oculto{display:none!important}
+
+/* 60. TASK: CABECALHO DA LISTA DE INDICADORES FIXO AO FAZER SCROLL
+   Fica preso por baixo do cabecalho da pagina enquanto a lista de Requested data esta no ecra */
+.rq2-cab{position:sticky;top:var(--ps-h-alt,69px);z-index:6;background:var(--surface);box-shadow:0 1px 0 var(--line)}
+@media (max-width:820px){.rq2-cab{top:var(--ps-h-alt-m,61px)}}
