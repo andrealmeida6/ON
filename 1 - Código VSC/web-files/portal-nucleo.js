@@ -875,14 +875,14 @@
     if (!faltam.length) return { preciso: false, porque: 'All its data already came from the system or was filled in on screen.', faltam: [] };
     return { preciso: true, porque: faltam.length + ' indicator' + (faltam.length === 1 ? ' has' : 's have') + ' no value from the system or on screen yet.', faltam: faltam };
   };
-  P.entregarFicheiro = function (m, pid, nome, u) {
+  P.entregarFicheiro = function (m, pid, nome, u, fid) {
     if (!P.podePreencher(m, u)) return { erro: 'This milestone is not with you right now.' };
     var f = P.ficheirosPedidos(m).filter(function (x) { return x.id === pid; })[0];
     if (!f) return { erro: 'That file is no longer requested.' };
     var ext = String(nome).split('.').pop().toLowerCase();
     if (f.formatos.length && f.formatos.indexOf(ext) < 0) return { erro: 'This request accepts ' + f.formatos.join(', ') + ' files.' };
-    if (f.indicador) P.anexar(P.item(f.indicador, P.chave(m)), nome, u);
-    else m.documentos_gerais.push({ ficheiro: nome, por: u.nome, em: agora(), pedido: pid });
+    if (f.indicador) P.anexar(P.item(f.indicador, P.chave(m)), nome, u, fid);
+    else { var dg = { ficheiro: nome, por: u.nome, em: agora(), pedido: pid }; if (fid) dg.fid = fid; m.documentos_gerais.push(dg); }
     ev(m, 'File delivered for "' + f.nome + '": ' + nome + '.', u.nome);
     guardar();
     return { ok: true };
@@ -1129,7 +1129,7 @@
     var s = String(bruto || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     return { measured: 'medido', medido: 'medido', calculated: 'calculado', calculado: 'calculado', estimated: 'estimado', estimado: 'estimado' }[s] || null;
   };
-  P.anexar = function (it, nome, u) { it.evidencias.push({ id: 'ev' + Date.now() + Math.random().toString(36).slice(2, 5), ficheiro: nome, por: u.nome, em: agora() }); guardar(); };
+  P.anexar = function (it, nome, u, fid) { var x = { id: 'ev' + Date.now() + Math.random().toString(36).slice(2, 5), ficheiro: nome, por: u.nome, em: agora() }; if (fid) x.fid = fid; it.evidencias.push(x); guardar(); };
 
   /* --- Contributos externos (secao 9) ------------------------------------ */
   P.criarPedidoExterno = function (m, indId, entidade, descricao, prazo, u) {

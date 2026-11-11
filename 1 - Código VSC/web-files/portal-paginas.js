@@ -622,7 +622,7 @@
       var qual = '<div class="rq2-ac">' + campo('q-' + id, 'Data quality', '<select id="q-' + e(id) + '" class="ps-sel" data-c="qual" data-id="' + e(id) + '">' + opt('medido', 'Measured', it.qualidade) + opt('calculado', 'Calculated', it.qualidade) + opt('estimado', 'Estimated', it.qualidade) + '</select>') +
         (it.qualidade === 'estimado' ? campo('m-' + id, 'Estimation method (required)', '<input id="m-' + e(id) + '" class="ps-in" value="' + e(it.metodo) + '" data-c="metodo" data-id="' + e(id) + '">') : '') +
         '<div class="ps-sp"><button type="button" id="e-' + e(id) + '" class="ps-btn peq" data-a="anexar" data-v="' + e(id) + '">Attach evidence</button>' + (P.evidenciaPrecisa(m, id) ? (it.evidencias.length ? chip('Evidence attached', 'ok') : chip('Evidence required', 'warn')) : (it.evidencias.length ? chip(it.evidencias.length + ' evidence item(s)', 'ok') : '')) +
-        '<button type="button" class="ps-btn peq" data-a="pedirAjuda" data-v="' + e(id) + '">Request assistance</button></div></div>';
+        '<button type="button" class="ps-btn peq" data-a="pedirAjuda" data-v="' + e(id) + '">Request assistance</button></div>' + (it.evidencias.length ? '<div class="fc-l rq2-ev"><span class="ps-lab">Attached</span>' + P.fichLista(it.evidencias) + '</div>' : '') + '</div>';
       var ajuda = recebido ? '<div class="ps-aviso ok">' + e(recebido.entidade_externa) + ' sent ' + e(fmtV(id, recebido.valor)) + ' ' + e(c.unidade_medida) + (recebido.nota ? ': "' + e(recebido.nota) + '"' : '') + '. <button type="button" class="ps-btn peq" data-a="usarExt" data-v="' + e(recebido.id) + '">Use this value</button></div>'
         : pendente ? '<div class="ps-aviso">Waiting for ' + e(pendente.entidade_externa) + ', due ' + e(P.fmtData(pendente.prazo)) + '.</div>' : '';
       return '<div class="rq2-it on ' + cls + '" id="ind-' + e(id) + '">' + linha + '<div class="rq2-det" id="rqd-' + e(id) + '"><div class="rq2-det-g' + (origem ? '' : ' um') + '">' + defin + origem + '</div>' + just + qual + ajuda + '</div></div>';
@@ -688,7 +688,7 @@
     var fila = filaDe(m), fora = [];
     Array.prototype.forEach.call(files || [], function (f, i) {
       if (['xlsx', 'pdf'].indexOf(extDe(f.name)) < 0) return fora.push(f.name);
-      fila.push({ k: 'dz' + Date.now() + i, nome: f.name, cat: sugerirCat(m, f.name) });
+      fila.push({ k: 'dz' + Date.now() + i, nome: f.name, cat: sugerirCat(m, f.name), file: f });
     });
     if (fora.length) toast('Only Excel (.xlsx) or PDF files: ' + fora.join(', ') + ' left out.', 'err');
     irAba(m, 'fic');
@@ -698,8 +698,8 @@
     var usr = u(), ok = [], erros = [];
     Array.prototype.forEach.call(files || [], function (f) {
       if (['xlsx', 'pdf'].indexOf(extDe(f.name)) < 0) return erros.push(f.name + ': only Excel (.xlsx) or PDF.');
-      var r = P.entregarFicheiro(m, pid, f.name, usr);
-      if (r.erro) erros.push(f.name + ': ' + r.erro); else ok.push(f.name);
+      var fid = P.novoFid(), r = P.entregarFicheiro(m, pid, f.name, usr, fid);
+      if (r.erro) erros.push(f.name + ': ' + r.erro); else { P.guardarFicheiro(f, fid); ok.push(f.name); }
     });
     if (erros.length) toast((ok.length ? ok.length + ' uploaded. ' : '') + erros.join(' '), 'err'); else if (ok.length) toast(ok.length === 1 ? ok[0] + ' uploaded.' : ok.length + ' files uploaded.', 'ok');
     R();
@@ -742,7 +742,7 @@
       return '<li class="fp-it' + (ok ? ' ok' : '') + '" id="fp-' + e(f.id) + '" tabindex="-1"' + (solta ? ' data-dzf="' + e(f.id) + '" data-dz="' + e(m.id) + '"' : '') + '><span class="fp-ic" aria-hidden="true">' + svg(ok ? I.tick : I.doc, 16) + '</span>' +
         '<div class="fp-txt"><b>' + e(f.nome) + '</b>' + (f.obrigatorio ? '' : ' <span class="ps-mut ps-small">(optional)</span>') +
         '<small>' + e(f.porque) + '</small>' + nomesFaltam(f) +
-        (ok ? '<small class="fp-ent">' + ent.map(function (x) { return e(x.ficheiro) + (x.origem === 'grid' ? ' (filled in on the platform)' : ''); }).join(', ') + '</small>' : '') + '</div>' +
+        (ok ? '<small class="fp-ent">' + ent.map(function (x) { return P.fichHtml(x, x.origem === 'grid' ? ' (filled in on the platform)' : ''); }).join('') + '</small>' : '') + '</div>' +
         '<span class="fp-fmt">' + e(formatosFic(f).join(', ').toUpperCase()) + '</span>' +
         '<span class="ps-sp fp-ac">' + (ok ? chip('Delivered', 'ok') : f.obrigatorio ? chip('Missing', 'warn') : chip('Optional')) + acoes + '</span>' +
         (solta ? '<span class="fp-solta" aria-hidden="true">' + svg(I.upload, 18) + 'Drop to upload as ' + e(f.nome) + '</span>' : '') + '</li>';
@@ -756,7 +756,7 @@
         '<button type="button" class="fp-tirar" data-a="dzTirar" data-v="' + e(x.k) + '" aria-label="Remove ' + e(x.nome) + '">×</button></div>';
     }).join('') + '<div class="fp-fila-p"><button type="button" class="ps-btn" data-a="dzLimpar">Clear</button><button type="button" class="ps-btn pri" data-a="dzEnviar">Upload ' + fila.length + ' file' + (fila.length === 1 ? '' : 's') + '</button></div></div>' : '';
     var disp = dispensados.length ? '<details class="fp-disp"><summary>' + dispensados.length + ' file' + (dispensados.length === 1 ? '' : 's') + ' not needed</summary><ul>' + dispensados.map(function (f) { return '<li><b>' + e(f.nome) + '</b> ' + e(f.porque) + '</li>'; }).join('') + '</ul></details>' : '';
-    var outros = gerais.length ? '<p class="ps-small ps-mut fp-outros">Other documents: ' + gerais.map(function (d) { return e(d.ficheiro); }).join(', ') + '</p>' : '';
+    var outros = gerais.length ? '<p class="ps-small ps-mut fp-outros">Other documents: ' + gerais.map(function (d) { return P.fichHtml(d); }).join('') + '</p>' : '';
     if (embutido) {
       var titulo = precisos.length ? '<div class="fp-tit"><h3>Requested files</h3>' + cab + '</div>' +
         (solta ? '<p class="ps-small ps-mut fp-dica">' + svg(I.upload, 14) + 'Drag each file onto its row, or use Upload.</p>' : '') : '<p class="fp-zero">' + svg(I.tick, 16) + 'No file is required for this milestone. The data goes in on screen.</p>';
@@ -980,8 +980,8 @@
     return '<div class="ps-card">' + cabCartao('Evidence and quality', 'doc', chip(comEv + ' of ' + obrig.length + ' required evidence items attached', comEv === obrig.length ? 'ok' : 'warn')) + '<div class="ps-card-body">' +
       tabela([{ t: 'Indicator' }, { t: 'Quality' }, { t: 'Method' }, { t: 'Evidence' }], m.indicadores.map(function (id) {
         var it = P.item(id, P.chave(m)), c = P.cat(id);
-        return [linkFicha(id), e(P.QUALIDADE_TXT[it.qualidade]), e(it.metodo || '-'), (it.evidencias.length ? it.evidencias.map(function (x) { return e(x.ficheiro); }).join(', ') : P.evidenciaPrecisa(m, id) ? chip('Required, missing', 'warn') : c.evidencia_obrigatoria ? chip('Not needed, from the system', 'ok') : '-')];
-      })) + '<h3 class="ps-grupo-t">General milestone documents</h3>' + (m.documentos_gerais.length ? '<ul class="ps-list">' + m.documentos_gerais.map(function (d) { return '<li class="ps-row"><span class="ps-row-ico">' + svg(I.doc, 18) + '</span><span class="ps-row-txt"><b>' + e(d.ficheiro) + '</b><span>' + quemHtml(d.por) + '<span class="ps-q-sep">, </span>' + e(P.fmtDataHora(d.em)) + '</span></span></li>'; }).join('') + '</ul>' : '<p class="ps-mut ps-small">No general documents yet.</p>') +
+        return [linkFicha(id), e(P.QUALIDADE_TXT[it.qualidade]), e(it.metodo || '-'), (it.evidencias.length ? '<span class="fc-l">' + P.fichLista(it.evidencias) + '</span>' : P.evidenciaPrecisa(m, id) ? chip('Required, missing', 'warn') : c.evidencia_obrigatoria ? chip('Not needed, from the system', 'ok') : '-')];
+      })) + '<h3 class="ps-grupo-t">General milestone documents</h3>' + (m.documentos_gerais.length ? '<ul class="ps-list">' + m.documentos_gerais.map(function (d) { return '<li class="ps-row"><span class="ps-row-ico">' + svg(I.doc, 18) + '</span><span class="ps-row-txt"><b>' + P.fichHtml(d) + '</b><span>' + quemHtml(d.por) + '<span class="ps-q-sep">, </span>' + e(P.fmtDataHora(d.em)) + '</span></span></li>'; }).join('') + '</ul>' : '<p class="ps-mut ps-small">No general documents yet.</p>') +
       (P.acompanha(m, usr) ? '<button type="button" class="ps-btn ps-mt" data-a="anexarGeral">Attach general document</button>' : '') + '</div></div>';
   };
   var sepExternos = function (m) {
@@ -1638,6 +1638,7 @@
   };
   var wzLer = function (file) {
     var w = U.wiz, m = P.ms(w.ms);
+    w.file = file;
     if (['xlsx', 'xls', 'csv'].indexOf(extDe(file.name)) < 0) { w.erro = file.name + ' is not an Excel file. Use .xlsx, .xls or .csv.'; return R(); }
     if (!window.XLSX) { w.erro = 'The Excel library did not load.'; return R(); }
     w.erro = ''; w.aLer = true; R();
@@ -1987,7 +1988,7 @@
       var ids = wzIds(m).filter(function (id) { return w.incl[id] && wzCheck(w, m, id).ok; });
       ids.forEach(function (id) { P.gravarValor(m, id, String(wzCheck(w, m, id).n), usr, 'import from Excel'); });
       P.evento(m, ids.length + ' value' + (ids.length === 1 ? '' : 's') + ' imported from ' + w.nome + '.', usr.nome);
-      if (w.guardar) m.documentos_gerais.push({ ficheiro: w.nome, por: usr.nome, em: new Date().toISOString() });
+      if (w.guardar) m.documentos_gerais.push({ ficheiro: w.nome, por: usr.nome, em: new Date().toISOString(), fid: P.guardarFicheiro(w.file) });
       P.guardar();
       U.wiz = null; U.painel = null; U.dadosVista = 'form'; irAba(m, 'ecra');
       toast(ids.length + ' value' + (ids.length === 1 ? '' : 's') + ' filled in from ' + w.nome + '.', 'ok');
@@ -2004,9 +2005,9 @@
       var m = msAtual(), usr = u(), ok = 0, erros = [], fica = [];
       if (!P.podePreencher(m, usr)) return toast('This milestone is not with you right now.', 'err');
       filaDe(m).forEach(function (x) {
-        if (x.cat === 'geral') { m.documentos_gerais.push({ ficheiro: x.nome, por: usr.nome, em: new Date().toISOString() }); P.evento(m, 'Supporting document uploaded: ' + x.nome + '.', usr.nome); ok++; return; }
-        var r = P.entregarFicheiro(m, x.cat, x.nome, usr);
-        if (r.erro) { erros.push(x.nome + ': ' + r.erro); fica.push(x); } else ok++;
+        if (x.cat === 'geral') { m.documentos_gerais.push({ ficheiro: x.nome, por: usr.nome, em: new Date().toISOString(), fid: P.guardarFicheiro(x.file) }); P.evento(m, 'Supporting document uploaded: ' + x.nome + '.', usr.nome); ok++; return; }
+        var fid = P.novoFid(), r = P.entregarFicheiro(m, x.cat, x.nome, usr, fid);
+        if (r.erro) { erros.push(x.nome + ': ' + r.erro); fica.push(x); } else { P.guardarFicheiro(x.file, fid); ok++; }
       });
       U.dzFila[m.id] = fica;
       P.guardar();
@@ -2028,8 +2029,8 @@
     schemaDesc: function () { var m = msAtual(); P.descarregar('schema-' + m.id + '.json', JSON.stringify(P.jsonSchema(m), null, 2), 'application/json'); },
     tplExcel: function () { P.templateExcel(msAtual()); },
     tplCsv: function () { P.templateCSV(msAtual()); },
-    anexar: function (d) { var m = msAtual(), it = P.item(d.v, P.chave(m)); escolherFicheiro('', function (f) { P.anexar(it, f.name, u()); P.evento(m, 'Evidence attached to ' + P.cat(d.v).nome + ': ' + f.name + '.', u().nome); P.guardar(); toast('Evidence attached.', 'ok'); R(); }); },
-    anexarGeral: function () { var m = msAtual(), usr = u(); escolherFicheiro('', function (f) { m.documentos_gerais.push({ ficheiro: f.name, por: usr.nome, em: new Date().toISOString() }); P.evento(m, 'General document attached: ' + f.name + '.', usr.nome); P.guardar(); toast('Document attached.', 'ok'); R(); }); },
+    anexar: function (d) { var m = msAtual(), it = P.item(d.v, P.chave(m)); escolherFicheiro('', function (f) { P.anexar(it, f.name, u(), P.guardarFicheiro(f)); P.evento(m, 'Evidence attached to ' + P.cat(d.v).nome + ': ' + f.name + '.', u().nome); P.guardar(); toast('Evidence attached.', 'ok'); R(); }); },
+    anexarGeral: function () { var m = msAtual(), usr = u(); escolherFicheiro('', function (f) { m.documentos_gerais.push({ ficheiro: f.name, por: usr.nome, em: new Date().toISOString(), fid: P.guardarFicheiro(f) }); P.evento(m, 'General document attached: ' + f.name + '.', usr.nome); P.guardar(); toast('Document attached.', 'ok'); R(); }); },
     submeter: function () {
       var m = msAtual(), r = P.submeter(m, u());
       if (r.erro) return toast(r.erro, 'err');

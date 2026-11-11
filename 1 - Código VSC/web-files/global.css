@@ -2066,3 +2066,14 @@ button.ps-est-i:hover{border-color:rgba(255,255,255,.4);background:rgba(255,255,
 .ki-t .ki-lim{white-space:nowrap}
 .ki-t .ki-lim-in:not(.proprio) .ps-in{color:var(--muted);background:var(--neutro-50)}
 .ki-t .ki-lim-in.proprio .ps-in{font-weight:700;border-color:var(--primary)}
+
+/* 45. FICHEIROS CARREGADOS: ABRIR E DESCARREGAR (portal-ficheiros.js) */
+.fc{display:inline-flex;align-items:center;gap:2px;max-width:100%;margin:1px 6px 1px 0;vertical-align:middle}
+.fc-n{border:0;background:none;padding:0;font:inherit;font-weight:600;color:var(--info);text-decoration:underline;text-underline-offset:2px;cursor:pointer;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:280px}
+.fc-n:hover{color:var(--primary)}
+.fc-b{display:inline-grid;place-items:center;width:24px;height:24px;border:1px solid transparent;border-radius:6px;background:none;color:var(--muted);cursor:pointer}
+.fc-b:hover{background:var(--primary-50);border-color:var(--primary-100);color:var(--primary)}
+.fc-so{color:var(--muted)}
+.fc-l{display:flex;flex-wrap:wrap;align-items:center;gap:2px 4px}
+.rq2-ev{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line)}
+.rq2-ev .ps-lab{margin:0 8px 0 0}

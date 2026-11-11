@@ -624,6 +624,26 @@ Pedido do André a 11 de novembro de 2026.
 - **Supabase:** `014_esg_limiar_padrao.sql` acrescenta `limiar_padrao` ao ciclo (50 no ciclo aberto). `limiar_proprio` vai no `config` do indicador.
 - **CSS:** secção 44 de `global.css`.
 
+### Abrir e descarregar os ficheiros carregados
+
+Pedido do André a 11 de novembro de 2026: dentro da milestone, depois de anexar evidências, abri-las ou descarregá-las na plataforma.
+
+- **Antes:** só se guardava o nome do ficheiro.
+- **Agora** (`portal-ficheiros.js`):
+  - O conteúdo de cada ficheiro carregado fica no IndexedDB do browser, separado por ambiente (`P.guardarFicheiro`, que devolve um `fid`).
+  - A evidência ou o documento guarda o nome e o `fid` (`P.anexar(it, nome, u, fid)`, `P.entregarFicheiro(..., fid)`, `documentos_gerais[].fid`).
+- **Guardam o conteúdo:** Attach evidence na linha do indicador, Attach evidence no Data entry, Evidence (página), ficheiros pedidos (Upload files, largar em cima da linha e fila de envio), outros documentos e o Excel guardado pelo assistente de importação.
+- **Open e Download** (`P.fichHtml`, `P.abrirFicheiro`) aparecem:
+  - na linha aberta do indicador ("Attached");
+  - em Requested files e Other documents;
+  - em Evidence and quality e nos documentos gerais;
+  - em Approvals;
+  - na página Evidence.
+- **Como abre:** PDF, imagens e texto abrem num separador novo. Os outros formatos (Excel, Word) descarregam-se.
+- **Ficheiros de demonstração e anteriores a esta mudança:** só têm o nome, que aparece esbatido, sem botões.
+- **Limite:** o conteúdo fica no browser onde foi carregado. Em produção vai para o armazenamento de documentos (Supabase Storage ou SharePoint), com hash e antivírus (ponto 4 de "O que falta para produção"), e o `fid` passa a ser o caminho do ficheiro.
+- **CSS:** secção 45 de `global.css`.
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.
