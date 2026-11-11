@@ -1189,6 +1189,23 @@ Pedido do André a 11 de novembro de 2026.
 - **Fatura de teste** (fictícia): `3 - Mockups/exemplos/fatura-eletricidade-teste.pdf` e a mesma em `.png`, para testar o OCR. Tem QR code da AT, dois períodos horários, rotulagem, e cobre 15/09 a 14/10/2026 (apanha o T3 e o T4).
 - **Testado:** o PDF e a imagem leem todos os campos certos. Na task M05-T4 (Financeira), 14 dos 30 dias dão 14,467 MWh no E01, com a fatura como evidência, e a fatura encontra-se em Documents pelo CPE.
 
+### Users and profiles pelos níveis do Reporting Perimeter, e os perfis novos
+
+Pedido do André a 11 de novembro de 2026.
+
+- **Tabela:** as colunas são Group | Company | Business unit / Department | Name | Profile | Actions.
+  - As linhas estão ordenadas por empresa, departamento e nome.
+  - O grupo é a empresa-mãe do perímetro (ou o nome da plataforma).
+  - Abaixo do nome aparece "Area head of …" quando a pessoa é responsável de área.
+  - A pesquisa procura também na empresa.
+- **Perfis** (`P.PERFIS`):
+  - **Data provider (focal point)** (`resp`): preenche e submete.
+  - **Data reviewer (superior)** (`revisor`, novo): aprova o que o departamento submete. Ao escolher este perfil, a pessoa passa a ser area head dos seus departamentos, por isso o passo "Aprovação do responsável de área" vai para ela. Precisa de pelo menos um departamento e pode também reportar indicadores.
+  - **Data approver (sustainability team)** (`esg`): aprova no fim e gere o Backoffice.
+  - **Auditor** e **Administrator**.
+- `P.daUnidade(u)`: data providers e data reviewers veem e acompanham as tasks dos seus departamentos, com as mesmas páginas. Os pareceres de área também incluem os reviewers.
+- No arranque, o area head de cada departamento é o data reviewer desse departamento; se não houver, é o primeiro data provider.
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.

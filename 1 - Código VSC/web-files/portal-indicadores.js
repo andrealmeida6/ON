@@ -21,7 +21,7 @@
   var atrL = function (id) { return (S.atrib || {})[id] || { submete: '', reve: '', valida: '' }; };
   var atr = function (id) { if (!S.atrib) S.atrib = {}; return S.atrib[id] || (S.atrib[id] = { submete: '', reve: '', valida: '' }); };
   var nomeDe = function (login) { var x = login ? P.user(login) : null; return x ? x.nome : ''; };
-  var pessoas = function (papel) { return S.users.filter(function (x) { return papel === 'valida' ? x.perfil === 'esg' || x.perfil === 'admin' : x.perfil === 'resp' || x.perfil === 'esg'; }); };
+  var pessoas = function (papel) { return S.users.filter(function (x) { return papel === 'valida' ? x.perfil === 'esg' || x.perfil === 'admin' : x.perfil === 'resp' || x.perfil === 'revisor' || x.perfil === 'esg'; }); };
   var pessoaPor = function (t, papel) { var v = norm(t); return pessoas(papel).filter(function (x) { return norm(x.login) === v || norm(x.nome) === v; })[0] || null; };
   var empPor = function (t) { var v = norm(t); return S.ent.filter(function (x) { return norm(x.nome) === v || norm(x.id) === v; })[0] || null; };
   var tipoDadoDe = function (c) {

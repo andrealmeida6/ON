@@ -113,7 +113,11 @@
   P.TEMAS = { 'Água e saneamento': '#0091DA', 'Energia e clima': '#EAAA00', 'Pessoas': '#C6007E', 'Governance': '#483698', 'Comunidade e cliente': '#00A3A1' };
   P.QUADROS = ['Desempenho', 'Ambientais', 'Sociais', 'Governance', 'ESRS'];
   P.TIPOS_PASSO = { recolha: 'Collection and submission', area: 'Area head approval', validacao: 'Automatic validation', revisao: 'Review', parecer: 'Opinion from another area', aprovacao: 'Approval', publicacao: 'Report publication' };
-  P.PERFIS = { admin: 'Administrator', esg: 'Sustainability team', resp: 'Data owner', auditor: 'Auditor', ext: 'External entity' };
+  /* Perfis: Data provider (focal point) preenche e submete; Data reviewer (superior) aprova a area; Data approver (equipa de
+     sustentabilidade) aprova no fim; Auditor le; Administrator gere tudo */
+  P.PERFIS = { admin: 'Administrator', esg: 'Data approver (sustainability team)', resp: 'Data provider (focal point)', revisor: 'Data reviewer (superior)', auditor: 'Auditor', ext: 'External entity' };
+  /* Pessoas de um departamento (data provider ou data reviewer): veem e acompanham as tasks desse departamento */
+  P.daUnidade = function (u) { return !!u && (u.perfil === 'resp' || u.perfil === 'revisor'); };
   var DEPARTAMENTOS = ['Operações', 'Qualidade e Laboratório', 'Comercial e Relação com o Cliente', 'Ambiente, Saúde e Segurança', 'Recursos Humanos', 'Financeira', 'Jurídico e Compliance', 'Compras', 'Frota', 'Sistemas de Informação', 'I&D, CSR e ESG'];
   /* Os departamentos geridos no backoffice sao as unidades de negocio */
   Object.defineProperty(P, 'UNIDADES', { get: function () { return (S.deps || []).map(function (d) { return d.nome; }); } });
@@ -390,7 +394,7 @@
     S.mat = MATERIALIDADE.map(function (m) { return { norma: m[0], tema: m[1], avaliacao: m[2], justificacao: m[3] }; });
     S.ent = ENTIDADES.map(function (e) { return { id: e[0], nome: e[0], perimetro_grupo: !!e[1], perimetro_maioritario: !!e[2] }; });
     S.deps = DEPARTAMENTOS.map(function (n) { return { id: n, nome: n }; });
-    S.deps.forEach(function (d) { var x = S.users.filter(function (u) { return u.perfil === 'resp' && P.temUnidade(u, d.nome); })[0]; if (x) d.chefe = x.login; });
+    S.deps.forEach(function (d) { var x = S.users.filter(function (u) { return u.perfil === 'revisor' && P.temUnidade(u, d.nome); })[0] || S.users.filter(function (u) { return u.perfil === 'resp' && P.temUnidade(u, d.nome); })[0]; if (x) d.chefe = x.login; });
     S.periodos = periodosAno(2026); S.relatorios = relatoriosAno(2026); S.tipos = tiposBase();
     S.janelas = JANELAS.map(function (j) { return { nome: j[0], tema: j[1], meses: j[2], dia_inicio: j[3], dia_fim: j[4] }; });
     S.areas = AREAS.map(function (a) { return { codigo: a[0], nome: a[1], uso: a[2] }; });
@@ -1205,9 +1209,9 @@
     if (!p || !u || p.responsavel === 'sistema') return false;
     if (u.perfil === 'admin') return true;
     if (p.responsavel === 'esg') return u.perfil === 'esg';
-    if (p.responsavel === 'chefe') { var ch = P.chefeDe(m.unidade); return ch ? ch.login === u.login : u.perfil === 'resp' && P.temUnidade(u, m.unidade); }
+    if (p.responsavel === 'chefe') { var ch = P.chefeDe(m.unidade); return ch ? ch.login === u.login : P.daUnidade(u) && P.temUnidade(u, m.unidade); }
     if (p.responsavel === 'unidade') return (u.perfil === 'resp' && P.temUnidade(u, m.unidade)) || (!!m.atribuido_a && m.atribuido_a === u.login);
-    if (p.responsavel.indexOf('area:') === 0) return u.perfil === 'resp' && P.temUnidade(u, p.responsavel.slice(5));
+    if (p.responsavel.indexOf('area:') === 0) return P.daUnidade(u) && P.temUnidade(u, p.responsavel.slice(5));
     return false;
   };
   /* "Waiting on you": o administrador pode agir em tudo, mas so lhe espera o que e mesmo dele */
@@ -1242,7 +1246,7 @@
   };
   P.podePreencher = function (m, u) { var p = P.passoAtual(m); return !!p && p.tipo === 'recolha' && P.podeAgir(m, u); };
   P.gereTudo = function (u) { return !!u && (u.perfil === 'admin' || u.perfil === 'esg'); };
-  P.acompanha = function (m, u) { return !!u && (P.gereTudo(u) || (u.perfil === 'resp' && P.temUnidade(u, m.unidade))); };
+  P.acompanha = function (m, u) { return !!u && (P.gereTudo(u) || (P.daUnidade(u) && P.temUnidade(u, m.unidade))); };
   P.podeAlterarWorkflow = function (m, u) { return !P.concluida(m) && P.acompanha(m, u); };
   P.podeReexpressar = function (u) { return P.gereTudo(u); };
 
@@ -1550,7 +1554,7 @@
     if (!u) return false;
     if (P.gereTudo(u)) return true;
     var m = P.msDoIndicador(a.indicador_id);
-    return u.perfil === 'resp' && !!m && P.temUnidade(u, m.unidade);
+    return P.daUnidade(u) && !!m && P.temUnidade(u, m.unidade);
   };
   P.responderAuditor = function (a, texto, u) {
     if (!P.podeResponderAuditor(a, u)) return { erro: 'This request is not for your unit.' };
@@ -2019,7 +2023,7 @@
     }
     P.msCiclo().forEach(function (m) {
       var est = P.estadoMs(m), r = 'Milestone/' + m.id;
-      var minha = u.perfil === 'resp' && P.temUnidade(u, m.unidade);
+      var minha = P.daUnidade(u) && P.temUnidade(u, m.unidade);
       if (minha || P.gereTudo(u)) {
         if (est.cod === 'devolvida') add('err', m.nome + ' was returned', 'Correct and resubmit', r);
         if (est.cod === 'atraso') add('err', m.nome + ' is overdue', 'Due ' + P.fmtData(m.prazo), r);
