@@ -1220,6 +1220,18 @@ Pedido do André a 11 de novembro de 2026 (exemplo de teste: Marta Lopes via uma
   - **All Tasks:** todas as tasks, para acompanhar o reporte. Só o administrador, a equipa de sustentabilidade e o auditor o têm; os contribuidores veem só My Tasks.
   - A caixa "Waiting on me" saiu e o subtítulo explica cada separador.
 
+### Overview: Data view com seleção de empresas (pivot)
+
+Pedido do André a 11 de novembro de 2026.
+
+- O "Data view" da Overview tem agora três opções: **Consolidated**, **By company** e **Selection**.
+- **Selection:** escolhem-se as empresas, uma a uma, incluindo as que estão fora do perímetro do grupo.
+  - Cada empresa conta a 100%: os volumes somam-se e os rácios fazem média.
+  - Os indicadores de output refazem a conta com os inputs da seleção (`P.valorVista` aceita uma lista de empresas e chama `vistaSelecao`).
+  - Os tiles, a completude, a matriz por período, "Pending approval" e "Recent activity" seguem a seleção (`naVista`).
+  - A nota de cada tile diz "Sum of N companies, each at 100%" ou "Average of…".
+  - Com uma só empresa, é igual a By company.
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.

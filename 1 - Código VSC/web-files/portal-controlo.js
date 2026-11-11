@@ -150,7 +150,21 @@
       return { valor: tot, partes: partes, lista: lista, metodo: 'calculo', recalculado: true, formula: c.calc_codigos };
     } finally { fundo--; }
   };
+  /* Selecao de empresas (pivot da Overview): cada empresa escolhida conta a 100%, esteja ou nao no perimetro do grupo.
+     Volumes somam-se, racios fazem media; os outputs refazem a conta com os inputs da selecao. */
+  var vistaSelecao = function (id, chave, sel) {
+    var c = P.cat(id), casas = c ? c.casas_decimais : 2;
+    if (P.eOutput && P.eOutput(c)) {
+      var v0 = P.avaliarCalc(c.calc_codigos, function (k) { return P.valorVista(k, chave, sel).valor; });
+      return { valor: v0 === null ? null : Number(v0.toFixed(casas)), partes: {}, metodo: 'calculo', recalculado: true, formula: c.calc_codigos };
+    }
+    var o = P.valoresEmpresas(id, chave), nomes = Object.keys(o).filter(function (n) { return sel.indexOf(n) > -1; });
+    if (!nomes.length) return { valor: null, partes: o, metodo: '' };
+    var soma = nomes.reduce(function (a, n) { return a + o[n]; }, 0), ad = P.aditivo(c), v = ad ? soma : soma / nomes.length;
+    return { valor: Number(v.toFixed(casas)), partes: o, lista: nomes.map(function (n) { return { empresa: n, valor: o[n], peso: 1 }; }), metodo: ad ? 'soma' : 'media', selecao: nomes };
+  };
   P.valorVista = function (id, chave, empresa) {
+    if (Array.isArray(empresa)) return empresa.length === 1 ? P.valorVista(id, chave, empresa[0]) : vistaSelecao(id, chave, empresa);
     var c = P.cat(id);
     if (P.eOutput && P.eOutput(c)) { var vo = vistaOutput(c, chave, empresa); if (vo) return vo; }
     var o = P.valoresEmpresas(id, chave), nomes = Object.keys(o), casas = c ? c.casas_decimais : 2;
@@ -176,6 +190,7 @@
     var c = P.cat(id), it = P.item(id), m = P.msDoIndicador(id);
     if (!c || !it || !m || it.valor === null) return { valor: null, peso: null, m: m };
     var r = P.valorVista(id, S.ciclo.ano, empresa || '');
+    if (Array.isArray(empresa) && empresa.length > 1) return { valor: r.valor, peso: 1, m: m, racio: r.metodo === 'media', selecao: true, recalculado: !!r.recalculado, formula: r.formula || '' };
     if (empresa) return { valor: r.valor, peso: 1, m: m, fora: r.valor === null };
     var l = r.lista || [], peso = l.length === 1 ? l[0].peso : 1;
     return { valor: r.valor, peso: peso, m: m, racio: r.metodo === 'media', recalculado: !!r.recalculado, formula: r.formula || '' };
