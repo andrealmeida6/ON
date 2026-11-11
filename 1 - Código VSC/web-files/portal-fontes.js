@@ -323,6 +323,8 @@
     P.calculosMilestone(m).forEach(function (r) {
       if (!r.x) return;
       var it = P.item(r.id, P.chave(m));
+      /* Submetido ou aprovado: ja nao muda pelos dados de origem */
+      if (it.submetido || it.revisto) return;
       if (r.valor !== null) {
         if (it.valor !== r.valor || !it.daFonte) { P.gravarValor(m, r.id, String(r.valor).replace('.', ','), usr, DERIV[r.id] ? 'calculated from the source data' : 'source data'); n++; }
         it.daFonte = true; it.qualidade = DERIV[r.id] ? 'calculado' : 'medido'; it.metodo = '';
@@ -446,7 +448,7 @@
     if (!x) return '';
     var ks = P.camposDaFormula(x).filter(function (k) { return CAMPOS[k]; });
     if (!ks.length) return '';
-    var usr = u(), pode = podePuxar(m, usr), px = (S.puxados || {})[m.id], ed = (px && px.editados) || {};
+    var usr = u(), itF = P.item(id, P.chave(m)), pode = podePuxar(m, usr) && !(itF && (itF.submetido || itF.revisto)), px = (S.puxados || {})[m.id], ed = (px && px.editados) || {};
     return '<div class="rq-fs" role="group" aria-label="Source data of ' + e(id) + '">' + ks.map(function (k) {
       var f = CAMPOS[k], o = origemDado(m, k), v = o.v, st = P.estadoSistema(f.db), ja = vistos[k];
       if (!ja) vistos[k] = id;

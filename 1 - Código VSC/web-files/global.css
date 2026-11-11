@@ -2305,3 +2305,9 @@ tr.rev-pend>td:first-child{box-shadow:inset 3px 0 0 var(--rev)}
 
 /* 65. TASK: BOTAO DA MATRIZ DE RASTREABILIDADE NO PAINEL DA DIREITA (abre em pop-up) */
 .ms-matriz-btn{width:100%;justify-content:center}
+
+/* 66. TASK: INDICADOR APROVADO E PUBLICADO ANTES DA TASK (fechado, verde agua) */
+.rq2-it.fechado{background:color-mix(in srgb,#14A89A 9%,var(--surface));border-left-color:#14A89A}
+.rq2-it.fechado.on{background:color-mix(in srgb,#14A89A 11%,var(--surface))}
+.rq2-it.fechado .rq2-fixo{color:#0B6F66;font-weight:700}
+

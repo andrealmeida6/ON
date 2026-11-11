@@ -75,7 +75,7 @@
     /* Linhas sem KPI sao valores do grupo escritos a mao: so entram na vista consolidada */
     if (!r.k) { if (U.rep.emp) return { ant: null, val: null, pend: false }; var d = S.rq[r.id] || {}; return { ant: d.ant === undefined ? null : d.ant, val: d.val === undefined ? null : d.val, pend: false }; }
     var emp = U.rep.emp, f = r.f || 1, it = P.item(r.k, ano), m = P.msDoIndicador(r.k, ano), v = it && it.valor !== null && it.valor !== undefined ? P.valorVista(r.k, ano, emp).valor : null, an = P.anteriorVista(r.k, ano, emp);
-    var pend = v !== null && !(m && P.concluida(m));
+    var pend = v !== null && !(m && P.indAprovado(m, r.k));
     if (pend && so) { v = null; pend = false; }
     return { ant: an === null || an === undefined ? null : an * f, val: v === null ? null : v * f, pend: pend };
   };

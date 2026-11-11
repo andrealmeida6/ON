@@ -1142,6 +1142,23 @@ Pedido do André a 11 de novembro de 2026.
 - A pessoa muda quando se reatribui a task ou quando o processo avança, por isso aparece só em "Assigned to" e no workflow.
 - As tasks que já existiam perdem o ", Nome" do fim quando os dados são carregados (`P.migrarDados`).
 
+### Indicador aprovado sozinho: publicado, fechado e a verde água
+
+Pedido do André a 11 de novembro de 2026 (exemplo: M25-T2, A02).
+
+- Um indicador aprovado pela equipa de sustentabilidade antes da task fica logo **aprovado e publicado**.
+  - `P.indAprovado(m, id)` dá verdadeiro quando a task está concluída ou quando o indicador foi aprovado sozinho (`it.revisto`, com `it.publicado`).
+  - Passaram a usar esta regra: o estado dos pontos de dados e dos KPIs (Reporting status, Overview), os quadros do Report, os Outputs, o data room, a lista de aprovados, o valor do ano anterior e a reexpressão.
+- **Fechado:**
+  - o valor, a qualidade, o método e a justificação ficam bloqueados;
+  - "Reopen" deixa de funcionar ("only changes by restatement");
+  - os dados de origem por baixo do indicador ficam só de leitura;
+  - o recálculo pelos dados de origem já não mexe em indicadores submetidos ou aprovados.
+- **Na task:**
+  - a linha fica a verde água, com o fundo suave e a borda à esquerda;
+  - o estado diz "Approved and published", com quem aprovou e quando;
+  - no workflow, o passo Publicação mostra "N published", com os indicadores na tooltip.
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.

@@ -618,7 +618,7 @@
     var a = ano - 1, it = S.items[a + ':' + id];
     if (it) {
       var m = P.ms(it.milestone_id);
-      return m && P.concluida(m) ? it.valor : null;
+      return m && P.indAprovado(m, id) ? it.valor : null;
     }
     if (a === 2025) { var c = P.cat(id); return c ? c.ano_anterior : null; }
     return null;
@@ -769,6 +769,9 @@
      Fica bloqueado para edicao, conta como submetido nos calculos dos outputs, e a task mostra
      sempre quantos faltam. A task avanca no workflow com "Submit task", quando estiver tudo. */
   P.faltasIndicador = function (m, id) { return P.faltasSubmissao(m).filter(function (f) { return f.id === id; }); };
+  /* Aprovado: a task esta concluida, ou o indicador foi aprovado sozinho pela equipa de sustentabilidade.
+     Um indicador aprovado fica fechado e conta como publicado (relatorios, outputs, data room). */
+  P.indAprovado = function (m, id) { if (!m) return false; if (P.concluida(m)) return true; var it = P.item(id, P.chave(m)); return !!(it && it.revisto); };
   /* Submetido: o indicador foi submetido sozinho, ou a task ja saiu da recolha (todos foram com ela) */
   P.indSubmetido = function (m, id) { var it = P.item(id, P.chave(m)), pa = P.passoAtual(m); if (P.concluida(m) || (pa && pa.tipo !== 'recolha')) return true; return !!(it && it.submetido); };
   P.estadoSubmissao = function (m) {
@@ -801,6 +804,7 @@
     if (!P.podePreencher(m, u)) return { erro: 'This task is not with you right now.' };
     var it = P.item(id, P.chave(m));
     if (!it || !it.submetido) return { erro: 'This indicator is not submitted.' };
+    if (it.revisto) return { erro: 'This indicator is approved and published. It only changes by restatement.' };
     delete it.submetido; delete it.revisto; delete it.aprovadoArea;
     ev(m, 'Indicator ' + id + ' reopened for changes.', u.nome);
     guardar();
@@ -828,7 +832,7 @@
     if (!P.podeReverInd(m, id, u)) return { erro: P.item(id, P.chave(m)).submetido && P.item(id, P.chave(m)).submetido.por === u.nome ? 'Segregation of duties: you submitted this indicator, so someone else has to review it.' : 'This indicator is not waiting for your review.' };
     var itA = P.item(id, P.chave(m));
     if (P.etapaInd(m, id) === 'area') { itA.aprovadoArea = { em: agora(), por: u.nome }; ev(m, 'Indicator ' + id + ' approved by the area head. It goes to the sustainability team.', u.nome); }
-    else { itA.revisto = { em: agora(), por: u.nome }; ev(m, 'Indicator ' + id + ' approved by the sustainability team ahead of the task.', u.nome); }
+    else { itA.revisto = { em: agora(), por: u.nome }; itA.publicado = { em: agora() }; ev(m, 'Indicator ' + id + ' approved by the sustainability team ahead of the task and published to the report tables. It is closed.', u.nome); }
     guardar();
     return { ok: true };
   };
@@ -1181,7 +1185,7 @@
   };
   P.estadoIndicador = function (m, id) {
     var it = P.item(id, P.chave(m));
-    if (P.concluida(m)) return { txt: 'Approved', cls: 'ok' };
+    if (P.indAprovado(m, id)) return { txt: 'Approved', cls: 'ok' };
     if (P.passoAtual(m).tipo === 'recolha') {
       if (m.devolvida) return { txt: 'Returned', cls: 'err' };
       return it.valor === null ? { txt: 'To collect', cls: '' } : { txt: 'In progress', cls: 'info' };
@@ -1372,7 +1376,7 @@
   };
   P.reexpressar = function (m, id, bruto, motivo, u) {
     if (!P.podeReexpressar(u)) return { erro: 'Only the sustainability team and the administrator can restate.' };
-    if (!P.concluida(m)) return { erro: 'Only approved values can be restated.' };
+    if (!P.indAprovado(m, id)) return { erro: 'Only approved values can be restated.' };
     var n = lerNumero(bruto), c = P.cat(id), it = P.item(id, P.chave(m));
     if (n === null) return { erro: 'Enter a numeric value.' };
     if (!motivo || !motivo.trim()) return { erro: 'A reason is required to restate.' };
@@ -1476,7 +1480,7 @@
   /* --- Auditoria (secao 12) ---------------------------------------------- */
   P.aprovados = function (ano) {
     var r = [];
-    P.msCiclo(ano).forEach(function (m) { if (P.concluida(m)) m.indicadores.forEach(function (id) { r.push({ id: id, m: m }); }); });
+    P.msCiclo(ano).forEach(function (m) { m.indicadores.forEach(function (id) { if (P.indAprovado(m, id)) r.push({ id: id, m: m }); }); });
     return r;
   };
   P.sortearAmostra = function (u) {
@@ -1898,7 +1902,7 @@
     var ano = S.ciclo.ano, folhas = {};
     P.QUADROS.forEach(function (q) {
       folhas[q] = S.cat.filter(function (c) { return c.quadro === q; }).map(function (c) {
-        var m = P.msDoIndicador(c.id, ano), it = P.item(c.id, ano), apr = m && P.concluida(m);
+        var m = P.msDoIndicador(c.id, ano), it = P.item(c.id, ano), apr = m && P.indAprovado(m, c.id);
         /* Segue a vista do Report: consolidado, com uma coluna por empresa, ou uma empresa so */
         var emp = P.ext && P.ext.U && P.ext.U.rep ? P.ext.U.rep.emp : '', r = P.valorVista ? P.valorVista(c.id, ano, emp) : { valor: it && it.valor, partes: {} };
         var o = { indicador: c.nome, unidade: c.unidade_medida, perimetro: emp || 'Consolidated' };
@@ -1915,7 +1919,7 @@
     var o = [];
     Object.keys(S.items).forEach(function (k) {
       var it = S.items[k], m = P.ms(it.milestone_id);
-      if (m && P.concluida(m)) o.push({ indicador_id: it.id, ano: it.ano, valor: it.valor, unidade: P.cat(it.id).unidade_medida, qualidade: it.qualidade, reexpresso: it.reexpresso, milestone_id: m.id });
+      if (m && P.indAprovado(m, it.id)) o.push({ indicador_id: it.id, ano: it.ano, valor: it.valor, unidade: P.cat(it.id).unidade_medida, qualidade: it.qualidade, reexpresso: it.reexpresso, milestone_id: m.id });
     });
     return o;
   };

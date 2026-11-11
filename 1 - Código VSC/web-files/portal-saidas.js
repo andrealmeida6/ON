@@ -38,7 +38,7 @@
   var linha = function (rel, id) {
     var c = P.cat(id), per = P.periodo(rel.periodo), tri = per && per.tipo === 'trimestre', chave = tri ? per.id : per ? per.ano : S.ciclo.ano;
     var it = S.items[chave + ':' + id] || null, m = it ? P.ms(it.milestone_id) : null, v = it ? it.valor : null, origem = '';
-    var ok = !!(m && P.concluida(m));
+    var ok = !!(m && P.indAprovado(m, id));
     if (!tri && (v === null || v === undefined)) {
       var q = P.anualDosTrimestres({ ano: chave }, id);
       if (q) { v = q.valor; ok = q.aprovados === q.total; origem = 'From ' + q.n + ' of ' + q.total + ' quarters'; m = m || (q.l.filter(function (x) { return x.m; }).slice(-1)[0] || {}).m; }

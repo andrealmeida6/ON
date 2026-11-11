@@ -646,7 +646,7 @@
         var lst = function (f) { return m.indicadores.filter(f); }, nomes = function (ids) { return ids.map(function (id) { return id + ' ' + P.cat(id).nome; }).join('\n'); };
         var etiq = function (ids, txt) { return ids.length ? '<span class="ps-wf-n-i" tabindex="0" data-tip="' + e(nomes(ids)) + '">' + ids.length + ' ' + txt + '</span>' : ''; };
         var lArea = lst(function (id) { return P.etapaInd(m, id) === 'area'; }), lEsg = lst(function (id) { return P.etapaInd(m, id) === 'esg'; }), lRev = lst(function (id) { var it = P.item(id, P.chave(m)); return it && it.submetido && it.revisto; }), lSub = lst(function (id) { return P.indSubmetido(m, id); });
-        var parcial = es && es.submetidos && i === m.passo_atual, aqui = !es || !es.submetidos || i <= m.passo_atual ? '' : p.tipo === 'area' ? etiq(lArea, 'to approve') : p === primEsg ? [etiq(lEsg, 'to review'), etiq(lRev, 'approved')].filter(Boolean).join(', ') : '', chegam = !!aqui;
+        var parcial = es && es.submetidos && i === m.passo_atual, aqui = !es || !es.submetidos || i <= m.passo_atual ? '' : p.tipo === 'area' ? etiq(lArea, 'to approve') : p === primEsg ? etiq(lEsg, 'to review') : p.tipo === 'publicacao' ? etiq(lRev, 'published') : '', chegam = !!aqui;
         if (parcial) c += ' parcial';
         var anel = parcial ? ' style="--parte:' + Math.round(parte * 100) + '%" title="' + e(es.submetidos + ' of ' + es.total + ' indicators submitted') + '"' : '';
         return '<div class="ps-wf-p ' + c + '"' + (i === m.passo_atual ? ' aria-current="step"' : '') + anel + '><div class="ps-wf-n">' + e(p.nome) + '</div><div class="ps-wf-c">' + (i < m.passo_atual ? svg(I.tick, 18) : m.devolvida && i === m.passo_atual ? svg(I.voltar, 18) : i + 1) + '</div>' +
@@ -773,6 +773,8 @@
         '<div class="rq2-c rq2-var"><span class="rq2-k">Change</span><span class="ps-num">' + (v.variacao === null ? '-' : (v.variacao > 0 ? '+' : '') + P.fmtNum(v.variacao, 1) + '%') + '</span></div>' +
         '<div class="rq2-c rq2-res">' + res + (P.botaoComentarInd ? P.botaoComentarInd(m, id) : '') + '</div></div>' +
         (v.erros.length ? '<div id="err-' + e(id) + '" class="ps-ind-msg rq2-msg" role="alert">' + e(v.erros[0]) + '</div>' : '');
+      /* Indicador aprovado e publicado (sozinho, antes da task): a linha fica fechada, a verde agua */
+      if (it.revisto && emRec) cls += ' fechado';
       if (!aberto) return '<div class="rq2-it ' + cls + '" id="ind-' + e(id) + '">' + linha + '</div>';
       /* So as linhas abertas mostram os dados de origem: o primeiro indicador aberto que usa um dado fica com o campo */
       var fontes = P.fontesDoIndicador ? P.fontesDoIndicador(m, id, vistos) : '';
@@ -1152,7 +1154,7 @@
   var estadoRevHtml = function (m, id) {
     var it = P.item(id, P.chave(m)), usr = u();
     if (!it) return '';
-    if (it.revisto) return '<span class="rq2-sub">' + chip('Approved', 'ok') + '<small>' + e('Sustainability: ' + it.revisto.por + ', ' + P.fmtDataHora(it.revisto.em)) + '</small></span>';
+    if (it.revisto) return '<span class="rq2-sub">' + chip('Approved and published', 'ok') + '<small>' + e(it.revisto.por + ', ' + P.fmtDataHora(it.revisto.em) + '. Closed') + '</small></span>';
     var et = P.etapaInd(m, id);
     if (P.podeReverInd(m, id, usr)) return '<span class="rev-acoes">' + chip(et === 'area' ? 'Submitted, to approve' : 'Area approved, to review', 'rev') + '<small>' + e(it.submetido.por + ', ' + P.fmtDataHora(it.submetido.em)) + '</small><span class="ps-sp"><button type="button" class="ps-btn peq pri" data-a="revAprovar" data-v="' + e(id) + '">Approve</button><button type="button" class="ps-btn peq" data-a="revDevolver" data-v="' + e(id) + '">Return</button></span></span>';
     if (it.submetido && !P.concluida(m) && P.passoAtual(m).tipo === 'recolha') return '<span class="rq2-sub">' + chip(et === 'area' ? 'With the area head' : 'With sustainability', 'rev') + '<small>' + e(it.submetido.por + ', ' + P.fmtDataHora(it.submetido.em)) + '</small></span>';
