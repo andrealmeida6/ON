@@ -1334,6 +1334,8 @@ ul.rq-lista.ps-card-body{padding:16px 20px 4px}
 .ps-lc-res ul{grid-template-columns:repeat(auto-fill,minmax(290px,1fr))}
 .ps-lc-un-b{padding:10px 14px 14px;display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--line)}
 .ps-lc-un-b h4{font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted)}
+.ps-lc-add{display:flex;flex-direction:column;gap:4px;max-width:520px}
+.ps-dt-chip.extra{border-style:dashed}
 .ps-lc-res{margin-top:18px;padding:12px 14px;border-radius:12px;background:var(--neutro-50);display:flex;flex-direction:column;gap:6px;font-size:13px}
 .ps-lc-res>span{color:var(--muted);font-size:12px}
 .ps-lc-res ul{list-style:none;margin:4px 0 0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:4px}

@@ -1470,11 +1470,15 @@
     var porUn = L.unidades.map(function (un, iu) {
       var aberto = L.aberto === un, inds = L.indicadores[un] || null, sug = {}, tiposUn = (S.tipos || []).filter(function (t) { return t.ativo && t.unidade === un; }), tSel = L.tipos[un] || tiposUn.map(function (t) { return t.id; });
       L.periodos.forEach(function (pid) { P.indicadoresSugeridos(un, pid).forEach(function (id) { sug[id] = 1; }); });
-      var lista = Object.keys(sug), sel = inds || lista;
+      /* Os sugeridos pelo plano e os que se acrescentam aqui da lista de indicadores */
+      var extra = (L.extra && L.extra[un]) || [], lista = Object.keys(sug).concat(extra.filter(function (id) { return !sug[id]; })), sel = inds || Object.keys(sug);
+      var porTema = {}; S.cat.forEach(function (c) { if (lista.indexOf(c.id) > -1 || c.ativo === false) return; (porTema[c.tema || 'Other'] = porTema[c.tema || 'Other'] || []).push(c); });
+      var juntar = '<div class="ps-lc-add"><label class="ps-lab" for="lc-add-' + iu + '">Add an indicator from the indicator list</label><select id="lc-add-' + iu + '" class="ps-sel" data-c="lancAdd" data-id="' + e(un) + '"><option value="">Choose an indicator…</option>' +
+        Object.keys(porTema).map(function (t) { return '<optgroup label="' + e(t) + '">' + porTema[t].map(function (c) { return '<option value="' + e(c.id) + '">' + e(c.id + '  ' + c.nome + (P.donoIndicador(c.id) && P.donoIndicador(c.id) !== un ? ' (' + P.donoIndicador(c.id) + ')' : '')) + '</option>'; }).join('') + '</optgroup>'; }).join('') + '</select></div>';
       var at = L.atrib[un] || '', ops = [{ v: '', ico: avEquipa(), t: un, s: 'Whole department' }].concat(pessoasUn(un).map(function (x) { return { v: x.login, ico: avPessoa(x.nome), t: x.nome, s: 'Data owner' }; }));
       var escolha = '<div class="ps-atr-l"><span class="ps-lab">Assigned to</span><div class="ps-atr-esc" role="radiogroup" aria-label="Assigned to, ' + e(un) + '">' + ops.map(function (o, i) { return '<label class="ps-atr-op' + (at === o.v ? ' on' : '') + '"><input type="radio" id="lc-at-' + iu + '-' + i + '" name="lc-at-' + iu + '" data-c="lancAtrib" data-id="' + e(un) + '" value="' + e(o.v) + '"' + (at === o.v ? ' checked' : '') + '>' + o.ico + '<span>' + e(o.t) + '<small>' + e(o.s) + '</small></span></label>'; }).join('') + '</div></div>';
       return '<li class="ps-lc-un' + (aberto ? ' aberto' : '') + '"><button type="button" class="ps-lc-un-h" data-a="lancUn" data-v="' + e(un) + '" aria-expanded="' + aberto + '">' + depHtml(un) + '<span>' + sel.length + ' indicators</span>' + svg(I.chev || '<path d="m6 9 6 6 6-6"/>', 14) + '</button>' + escolha +
-        (aberto ? '<div class="ps-lc-un-b"><h4>Indicators</h4><div class="ps-dt-chips">' + (lista.length ? lista.map(function (id) { return chk('ind', 'lancInd', un + '|' + id, sel.indexOf(id) > -1, id, P.cat(id).nome); }).join('') : '<span class="ps-mut ps-small">The plan has no indicators for this department in the chosen periods.</span>') + '</div></div>' : '') + '</li>';
+        (aberto ? '<div class="ps-lc-un-b"><h4>Indicators</h4><div class="ps-dt-chips">' + (lista.length ? lista.map(function (id) { return chk('ind' + (sug[id] ? '' : ' extra'), 'lancInd', un + '|' + id, sel.indexOf(id) > -1, id, P.cat(id).nome + (sug[id] ? '' : ' (added)')); }).join('') : '<span class="ps-mut ps-small">The plan has no indicators for this department in the chosen periods. Add them from the list below.</span>') + '</div>' + juntar + '</div>' : '') + '</li>';
     }).join('');
     return {
       t: 'Assign tasks', s: 'One task per department and period, with the base workflow', largo: true, cls: 'alto',
@@ -2301,6 +2305,14 @@
     lancPer: function (el) { var L = lancEstado(), v = el.dataset.id; L.periodos = L.periodos.filter(function (x) { return x !== v; }); if (el.checked) L.periodos.push(v); L.indicadores = {}; },
     lancUnSel: function (el) { var L = lancEstado(), v = el.dataset.id; L.unidades = L.unidades.filter(function (x) { return x !== v; }); if (el.checked) { L.unidades.push(v); L.aberto = v; } },
     lancTipo: function (el) { var L = lancEstado(), x = el.dataset.id.split('|'), un = x[0]; var cur = L.tipos[un] || (S.tipos || []).filter(function (t) { return t.ativo && t.unidade === un; }).map(function (t) { return t.id; }); cur = cur.filter(function (i) { return i !== x[1]; }); if (el.checked) cur.push(x[1]); L.tipos[un] = cur; },
+    lancAdd: function (el) {
+      var L = lancEstado(), un = el.dataset.id, id = el.value, sug = {};
+      if (!id) return;
+      L.periodos.forEach(function (pid) { P.indicadoresSugeridos(un, pid).forEach(function (x) { sug[x] = 1; }); });
+      L.extra = L.extra || {}; L.extra[un] = (L.extra[un] || []).concat([id]);
+      var cur = L.indicadores[un] || Object.keys(sug); if (cur.indexOf(id) < 0) cur = cur.concat([id]); L.indicadores[un] = cur;
+      toast(id + ' added to the task of ' + un + '.', 'ok'); R();
+    },
     lancInd: function (el) { var L = lancEstado(), x = el.dataset.id.split('|'), un = x[0], sug = {}; L.periodos.forEach(function (pid) { P.indicadoresSugeridos(un, pid).forEach(function (id) { sug[id] = 1; }); }); var cur = L.indicadores[un] || Object.keys(sug); cur = cur.filter(function (i) { return i !== x[1]; }); if (el.checked) cur.push(x[1]); L.indicadores[un] = cur; },
     lancAtrib: function (el) { var L = lancEstado(); L.atrib = L.atrib || {}; L.atrib[el.dataset.id] = el.value; },
     lancEmp: function (el) { lancEstado().empresa = el.value; },

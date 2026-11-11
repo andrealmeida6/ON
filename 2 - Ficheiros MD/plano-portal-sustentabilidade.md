@@ -833,6 +833,16 @@ Pedido do André a 11 de novembro de 2026.
   - Sem valor, a coluna mostra o estado da ligação ao sistema.
 - **Assign task:** "Launch" passou a "Assign task(s)" em todos os ecrãs do Backoffice onde se atribuem tasks, e também nas mensagens e no histórico.
 
+### Assign tasks: acrescentar indicadores da lista
+
+Pedido do André a 11 de novembro de 2026.
+
+- No painel **Assign tasks** (passo 3), cada departamento tem agora a lista "Add an indicator from the indicator list".
+  - A lista mostra todos os indicadores ativos agrupados por tema. Quando um indicador é de outro departamento, esse departamento aparece entre parênteses.
+  - O indicador escolhido entra logo selecionado na task, com o chip a tracejado e a nota "(added)".
+  - Não é preciso ir à página Indicators.
+- O que se acrescenta aqui vale só para as tasks criadas neste painel. O plano do indicador no Backoffice não muda.
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.
