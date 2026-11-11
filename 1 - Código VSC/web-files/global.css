@@ -2111,3 +2111,12 @@ button.ps-est-i:hover{border-color:rgba(255,255,255,.4);background:rgba(255,255,
 .fc-rem:hover{background:var(--err-50);border-color:color-mix(in srgb,var(--err) 30%,#fff);color:var(--err)}
 .fc{flex-wrap:wrap}
 .ps-conf-l b.fr-q{color:var(--text);font-size:13.5px}
+
+/* 48. TIMELINE: MILESTONES EM CURSO E O QUE FALTA REPORTAR */
+.tl-prog{display:block;width:140px;height:5px;margin-top:6px;border-radius:999px;background:var(--neutro-50);overflow:hidden}
+.tl-prog i{display:block;height:100%;background:var(--ok);border-radius:999px}
+.tl-falta{display:flex;flex-direction:column;gap:4px;min-width:220px}
+.tl-falta-n{font-size:12px;font-weight:700;color:var(--warn)}
+.tl-falta-l{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+.tl-kpi{border:0;cursor:pointer;font:inherit;font-size:11px;font-weight:600;max-width:200px;overflow:hidden;text-overflow:ellipsis}
+.tl-kpi:hover{background:var(--primary-100)}

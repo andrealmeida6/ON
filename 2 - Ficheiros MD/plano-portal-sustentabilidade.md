@@ -684,6 +684,16 @@ Pedido do André a 11 de novembro de 2026: o data owner deve ver no topo da Home
   - Os números batem certo com a lista (por exemplo, 30 por preencher e 30 linhas).
 - `P.estadoKpi` continua a ser usado na visão anual por indicador (Overview, completude por norma).
 
+### Reporting timeline: milestones em curso e o que falta reportar
+
+Pedido do André a 11 de novembro de 2026.
+
+- **Onde:** por baixo da timeline, um cartão **Milestones in progress** (`emCurso`, no bloco `timeline`). Aparece na página Reporting timeline e na vista Timeline de Backoffice > Indicators.
+- **O que mostra:** as milestones ainda não concluídas, por prazo, com Period, Perimeter, Assigned to, Deadline e Status. A coluna **Still to report** diz quantos valores faltam ("2 of 6 to report") e lista os indicadores em falta. Cada nome abre a ficha do indicador. Uma barra por baixo do nome da milestone mostra quanto já foi reportado.
+- **Filtros:** período de reporte e "Only milestones with values still to report" (ligado por omissão). O cabeçalho diz quantas milestones e quantos valores faltam.
+- **Quem vê:** a gestão e o auditor veem todas as milestones. Quem tiver acesso à timeline e não for gestão vê só as milestones dos seus departamentos.
+- **CSS:** secção 48 de `global.css`.
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.

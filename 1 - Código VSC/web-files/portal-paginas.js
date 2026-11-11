@@ -427,7 +427,27 @@
       (lista.length ? '<h3 class="ps-grupo-t tlr-prox-t">External deliveries</h3><ul class="tlr-prox">' + lista.map(function (r) { var d = P.diasAte(r.data); return '<li class="' + (d < 0 ? 'feito' : '') + '"><b>' + e(r.sigla) + '</b><span>' + e(r.nome) + '<small>' + e(r.entidade + ', ' + r.base) + '</small></span><em>' + e(P.fmtDataAno(r.data)) + '<small>' + (d < 0 ? 'done' : 'in ' + d + ' days') + '</small></em></li>'; }).join('') + '</ul>' : '') + '</div></div>';
   };
   var MESES_C = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  Blocos['timeline'] = function () { return timeline(); };
+  /* Por baixo da timeline: as milestones em curso e o que cada uma ainda tem por reportar */
+  U.tlEC = { per: '', falta: true };
+  var emCurso = function () {
+    var usr = u(), f = U.tlEC, ano = S.ciclo.ano;
+    var todas = P.msCiclo().filter(function (m) { return !P.concluida(m) && (P.gereTudo(usr) || usr.perfil === 'auditor' || doUtilizador(m, usr)); });
+    var faltaDe = function (m) { return m.indicadores.filter(function (id) { var it = P.item(id, P.chave(m)); return !it || (it.valor === null && !it.rascunho); }); };
+    var l = todas.filter(function (m) { return (!f.per || m.periodo === f.per) && (!f.falta || faltaDe(m).length); }).sort(function (a2, b2) { return a2.prazo < b2.prazo ? -1 : a2.prazo > b2.prazo ? 1 : 0; });
+    var nFalta = 0; l.forEach(function (m) { nFalta += faltaDe(m).length; });
+    var pers = (S.periodos || []).filter(function (p) { return p.ano === ano && todas.some(function (m) { return m.periodo === p.id; }); });
+    var filtros = '<div class="ps-filtros">' + campo('tl-per', 'Reporting period', '<select id="tl-per" class="ps-sel" data-c="tlEC" data-id="per">' + opt('', 'All periods', f.per) + pers.map(function (p) { return opt(p.id, p.nome + ' (' + todas.filter(function (m) { return m.periodo === p.id; }).length + ')', f.per); }).join('') + '</select>') +
+      '<label class="ps-chk"><input id="tl-falta" type="checkbox" data-c="tlECFalta"' + (f.falta ? ' checked' : '') + '> Only milestones with values still to report</label></div>';
+    var linhas = l.map(function (m) {
+      var fl = faltaDe(m), tot = m.indicadores.length, feitos = tot - fl.length, pct = tot ? Math.round(feitos / tot * 100) : 0, p = P.passoAtual(m);
+      var falta = fl.length ? '<div class="tl-falta"><span class="tl-falta-n">' + fl.length + ' of ' + tot + ' to report</span><span class="tl-falta-l">' + fl.slice(0, 4).map(function (id) { return '<button type="button" class="ps-tag tl-kpi" data-a="ficha" data-v="' + e(id) + '" title="' + e(P.cat(id).nome) + '">' + e(P.cat(id).nome) + '</button>'; }).join('') + (fl.length > 4 ? '<span class="ps-mut ps-small">and ' + (fl.length - 4) + ' more</span>' : '') + '</span></div>'
+        : '<span class="ps-mut ps-small">' + (p && p.tipo === 'recolha' ? 'All values in, to submit' : 'All values in, ' + e(p ? p.nome.toLowerCase() : 'done')) + '</span>';
+      return ['<a href="' + rota('Milestone/' + m.id) + '"><b>' + e(m.nome) + '</b></a><span class="tl-prog" aria-label="' + feitos + ' of ' + tot + ' reported"><i style="width:' + pct + '%"></i></span>', tagPer(m) || e(P.rotPeriodo(m)), empHtml(m.empresa), atribHtml(m), '<span class="ps-nowrap">' + e(prazoTxt(m)) + '</span>', estChip(m), falta];
+    });
+    return '<div class="ps-card ps-mt">' + cabCartao('Milestones in progress', 'tarefa', '<span class="ps-small ps-mut">' + l.length + ' milestone(s), ' + nFalta + ' value(s) still to report</span>') + '<div class="ps-card-body">' + filtros +
+      tabela([{ t: 'Milestone' }, { t: 'Period' }, { t: 'Perimeter' }, { t: 'Assigned to' }, { t: 'Deadline' }, { t: 'Status' }, { t: 'Still to report' }], linhas, f.falta ? 'Every milestone in progress already has all its values.' : 'No milestone in progress.') + '</div></div>';
+  };
+  Blocos['timeline'] = function () { return timeline() + emCurso(); };
 
   /* --- Milestones -------------------------------------------------------- */
   var msFiltradas = function () {
@@ -2228,6 +2248,8 @@
     userUnJuntar: function (el) { if (!el.value) return; if (el.dataset.id === '__novo') { U.userNovo.unidades.push(el.value); return; } var x = P.user(el.dataset.id); P.definirUnidades(x, P.unidadesDe(x).concat([el.value])); P.eventoGlobal(x.nome + ' added to ' + el.value + '.', u().nome); P.guardar(); },
     userNovoC: function (el) { U.userNovo[el.dataset.f] = el.value; },
     userBusca: function (el) { U.userBusca = el.value; },
+    tlEC: function (el) { U.tlEC[el.dataset.id] = el.value; },
+    tlECFalta: function (el) { U.tlEC.falta = el.checked; },
     limiar: function (el) { var n = Number(el.value), c = P.cat(el.dataset.id); if (el.value !== '' && n >= 0) { c.limiar_variacao_pct = n; c.limiar_proprio = true; P.guardar(); } },
     janNome: function (el) { S.janelas[+el.dataset.id].nome = el.value; P.guardar(); },
     janTema: function (el) { S.janelas[+el.dataset.id].tema = el.value; P.guardar(); },
