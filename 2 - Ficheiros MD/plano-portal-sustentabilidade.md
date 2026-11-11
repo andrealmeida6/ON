@@ -748,7 +748,7 @@ Pedido do André a 11 de novembro de 2026: no site publicado, só entram as pess
 
 - **Como funciona** (`portal-acesso.js`, carregado em último lugar):
   - Antes de arrancar (e antes do ambiente partilhado), cobre a página com um ecrã que pede o utilizador.
-  - O nome é confirmado no Supabase pela função `esg_acesso_entrar`. Se existir e estiver ativo, entra com o nome, o perfil, os departamentos e as empresas dessa pessoa, que passa a existir na lista de pessoas da plataforma.
+  - O nome é confirmado no Supabase pela função `esg_acesso_entrar`. Também aceita um email: conta só o que vem antes do @ (pedido do André a 11 de novembro de 2026), por isso `andreborges@qualquer.dominio` entra como `andreborges`. Se existir e estiver ativo, entra com o nome, o perfil, os departamentos e as empresas dessa pessoa, que passa a existir na lista de pessoas da plataforma.
   - O acesso fica guardado no browser e volta a ser confirmado em cada visita. Se for retirado, o ecrã volta a pedir o nome. Sem rede, entra com o que estava guardado.
   - **Avatar:** "Switch profile" continua a mostrar a lista de perfis. "Leave the platform" esquece o utilizador e volta ao ecrã de entrada.
 - **Só no site publicado:** `gerar-mockup.js` põe `window.PORTAL_ACESSO = true` no `index.html` em vez da entrada direta como administrador. O mockup e o Power Pages não o usam (em Power Pages o login é o do próprio site).

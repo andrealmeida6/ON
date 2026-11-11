@@ -18,11 +18,11 @@ alter table public.esg_acessos enable row level security;
 -- Sem politicas e sem permissoes: a tabela nao se le nem se altera com a chave publica
 revoke all on public.esg_acessos from anon, authenticated;
 
--- Confirma um nome de utilizador e devolve os dados da pessoa, ou null se nao existir ou estiver inativo
+-- Confirma um nome de utilizador (ou um email: conta so o que vem antes do @) e devolve os dados da pessoa, ou null se nao existir ou estiver inativo
 create or replace function public.esg_acesso_entrar(p_utilizador text) returns jsonb
 language sql volatile security definer set search_path = '' as $$
   update public.esg_acessos set ultimo_acesso = now()
-  where utilizador = lower(btrim(p_utilizador)) and ativo
+  where utilizador = split_part(lower(btrim(p_utilizador)), '@', 1) and ativo
   returning jsonb_build_object('login', utilizador, 'nome', nome, 'perfil', perfil, 'unidades', unidades, 'empresas', empresas)
 $$;
 revoke execute on function public.esg_acesso_entrar(text) from public;

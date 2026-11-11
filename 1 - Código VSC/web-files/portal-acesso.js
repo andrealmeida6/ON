@@ -55,8 +55,8 @@
     el.setAttribute('aria-labelledby', 'ac-tit');
     el.innerHTML = '<div class="ps-ent"><div class="ps-ent-esq ps-fundo-marca"><div><b class="ps-acesso-marca">ESG Data Hub</b>' +
       '<h1>Record once, report with confidence.</h1><p>Access is limited to invited people.</p></div></div>' +
-      '<div class="ps-ent-dir"><h2 id="ac-tit">Sign in</h2><p class="ps-mut">Enter the username you were given.</p>' +
-      '<form class="ps-login" data-acesso-form novalidate><div class="ps-campo"><label class="ps-lab" for="ac-user">Username</label>' +
+      '<div class="ps-ent-dir"><h2 id="ac-tit">Sign in</h2><p class="ps-mut">Enter your username or email.</p>' +
+      '<form class="ps-login" data-acesso-form novalidate><div class="ps-campo"><label class="ps-lab" for="ac-user">Username or email</label>' +
       '<input id="ac-user" class="ps-in" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" required></div>' +
       '<div class="ps-aviso err" role="alert" data-acesso-erro hidden></div>' +
       '<button type="submit" class="ps-btn pri">Continue</button></form></div></div>';
@@ -68,11 +68,11 @@
     form.addEventListener('submit', function (ev) {
       ev.preventDefault();
       var nome = input.value.trim();
-      if (!nome) { aviso('Enter your username.'); return; }
+      if (!nome) { aviso('Enter your username or email.'); return; }
       btn.disabled = true; btn.textContent = 'Checking'; aviso('');
       confirmar(nome).then(function (a) {
         btn.disabled = false; btn.textContent = 'Continue';
-        if (!a) { aviso('This username has no access. Ask the platform owner to add you.'); input.select(); return; }
+        if (!a) { aviso('This user has no access. Ask the platform owner to add you.'); input.select(); return; }
         gravarAcesso(a);
         /* Quem entra comeca como si proprio, mesmo que esta janela tivesse outro perfil escolhido */
         P.sair();
@@ -81,7 +81,7 @@
         fim(a);
       }).catch(function () {
         btn.disabled = false; btn.textContent = 'Continue';
-        aviso('Could not check the username. Check your connection and try again.');
+        aviso('Could not check the user. Check your connection and try again.');
       });
     });
   };
