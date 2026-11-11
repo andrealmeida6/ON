@@ -195,7 +195,9 @@
     document.querySelectorAll('[data-nav]').forEach(function (a) {
       var n = a.getAttribute('data-nav');
       a.hidden = per.indexOf(n) < 0;
-      a.classList.toggle('on', ativaNav(pag) === n);
+      /* O atalho Data > Indicators so fica marcado no separador Indicators do Backoffice */
+      var q = a.getAttribute('data-nav-q') || '', tabQ = /^tab=/.test(q) ? q.slice(4) : '';
+      a.classList.toggle('on', ativaNav(pag) === n && (!tabQ || (U.boTab || 'indicadores') === tabQ));
       a.setAttribute('href', rota(n + (a.getAttribute('data-nav-q') ? '?' + a.getAttribute('data-nav-q') : '')));
       if (ativaNav(pag) === n) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
     });

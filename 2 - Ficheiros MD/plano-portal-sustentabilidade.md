@@ -958,6 +958,14 @@ Pedido do André a 11 de novembro de 2026.
   - Só há uma coisa que fica sem outro sítio: os vários valores por empresa no mesmo KPI ("One row per company"), que só existiam no Data entry.
 - **Connections** passou a ser um separador do Backoffice → Platform (`B.ligacoes` usa `P.ligacoesHtml`). Tem o estado de cada ligação, a criação de uma nova ligação e o contrato da API. As mensagens do "Pull data from system" apontam agora para lá.
 
+### Atalho Data → Indicators
+
+Pedido do André a 11 de novembro de 2026.
+
+- O menu Data tem de novo o item **Indicators**. É um atalho que abre o Backoffice no separador Indicators (`data-nav="Backoffice"`, `data-nav-q="tab=indicadores"`).
+- Só aparece a quem tem acesso ao Backoffice.
+- O atalho só fica marcado no separador Indicators. Nos outros separadores do Backoffice não fica.
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.
