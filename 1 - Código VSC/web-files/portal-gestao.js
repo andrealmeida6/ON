@@ -20,7 +20,7 @@
   var variacaoTxt = function (v) { return v === null || v === undefined ? '-' : (v > 0 ? '+' : '') + P.fmtNum(v, 1) + '%'; };
 
   /* --- Visao geral ------------------------------------------------------------ */
-  U.visao = { modo: 'consolidado', empresa: '', per: '', agr: 'esrs' };
+  U.visao = { modo: 'consolidado', empresa: '', per: '', agr: 'tema' };
   var TILES = ['E06', 'E01', 'P02', 'N05'];
   var tile = function (id, empresa) {
     var c = P.cat(id), r = P.valorConsolidado(id, empresa), m = r.m, it = P.item(id), ant = P.valorAnterior(id, S.ciclo.ano), est = P.estadoKpi(id);

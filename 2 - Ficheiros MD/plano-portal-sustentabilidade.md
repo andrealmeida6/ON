@@ -703,7 +703,7 @@ Pedido do André a 11 de novembro de 2026: um ecrã de monitorização como o da
 - **Completude:**
   - Passa a contar por ponto de dados, um indicador num período (`P.pontosCiclo`), como o Reporting status e a Home. Antes contava por indicador e olhava só para a milestone anual, por isso os trimestres não entravam.
   - A percentagem é a parte com valor, aprovado ou reportado. A barra separa aprovado, reportado e em falta.
-  - Pode agrupar-se por **ESRS** (com a materialidade, onde "Not material" continua assinalado) ou por **Topic** (tema da empresa).
+  - Pode agrupar-se por **Topic** (tema da empresa, por omissão desde 11 de novembro) ou por **ESRS** (com a materialidade, onde "Not material" continua assinalado).
 - **Quadro novo "Completeness by reporting period":** os grupos nas linhas, os períodos nas colunas (com a data de fecho) e as colunas All periods e All groups.
   - Cada célula mostra a percentagem e "com valor / total". As cores são: tudo aprovado, 75% ou mais, 40 a 74%, abaixo de 40%.
   - Clicar numa célula escolhe esse período em cima.
