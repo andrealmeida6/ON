@@ -700,6 +700,54 @@
     return f;
   };
 
+  /* --- Submeter indicadores um a um --------------------------------------------------------
+     Cada indicador pode ser submetido logo que esta completo, sem esperar pelos outros da task.
+     Fica bloqueado para edicao, conta como submetido nos calculos dos outputs, e a task mostra
+     sempre quantos faltam. A task avanca no workflow com "Submit task", quando estiver tudo. */
+  P.faltasIndicador = function (m, id) { return P.faltasSubmissao(m).filter(function (f) { return f.id === id; }); };
+  P.indSubmetido = function (m, id) { var it = P.item(id, P.chave(m)); return !!(it && it.submetido); };
+  P.estadoSubmissao = function (m) {
+    var ids = m.indicadores.filter(function (id) { return !P.eOutput(P.cat(id)); });
+    var sub = ids.filter(function (id) { return P.indSubmetido(m, id); });
+    var prontos = ids.filter(function (id) { return !P.indSubmetido(m, id) && !P.faltasIndicador(m, id).length; });
+    return { total: ids.length, submetidos: sub.length, prontos: prontos, faltam: ids.length - sub.length };
+  };
+  P.submeterIndicadores = function (m, ids, u) {
+    if (!P.podePreencher(m, u)) return { erro: 'This task is not with you right now.' };
+    var feitos = [], recusados = [];
+    ids.forEach(function (id) {
+      if (P.indSubmetido(m, id) || P.eOutput(P.cat(id))) return;
+      var f = P.faltasIndicador(m, id);
+      if (f.length) { recusados.push(f[0].msg); return; }
+      P.item(id, P.chave(m)).submetido = { em: agora(), por: u.nome };
+      feitos.push(id);
+    });
+    if (feitos.length) {
+      ev(m, (feitos.length === 1 ? 'Indicator ' + feitos[0] + ' submitted.' : feitos.length + ' indicators submitted: ' + feitos.join(', ') + '.'), u.nome);
+      var nc = P.calcularOutputs(P.chave(m), u);
+      if (nc) ev(m, nc + ' output indicator(s) calculated from the submitted inputs.', 'System');
+      guardar();
+    }
+    return { feitos: feitos, recusados: recusados };
+  };
+  P.reabrirIndicador = function (m, id, u) {
+    if (!P.podePreencher(m, u)) return { erro: 'This task is not with you right now.' };
+    var it = P.item(id, P.chave(m));
+    if (!it || !it.submetido) return { erro: 'This indicator is not submitted.' };
+    delete it.submetido;
+    ev(m, 'Indicator ' + id + ' reopened for changes.', u.nome);
+    guardar();
+    return { ok: true };
+  };
+  /* Guardar sem submeter: os valores ja ficam gravados; isto deixa o registo de quando se guardou */
+  P.guardarTrabalho = function (m, u) {
+    m.guardado = { em: agora(), por: u.nome };
+    var ult = m.eventos[m.eventos.length - 1];
+    if (!(ult && /^Work saved/.test(ult.texto || ult.t || '') )) ev(m, 'Work saved, not submitted yet.', u.nome);
+    guardar();
+    return { ok: true };
+  };
+
   /* --- Pedido de dados: ficheiros pedidos em cada milestone ------------------ */
   /* [nome, porque e pedido, formatos aceites, prefixo do ficheiro de exemplo] */
   var FICHEIROS_BASE = {
@@ -1089,6 +1137,7 @@
     p.concluido_em = agora(); p.concluido_por = u.nome;
     m.devolvida = false;
     ev(m, 'Task submitted.', u.nome, 'avanco', p.nome);
+    m.indicadores.forEach(function (id) { var it = P.item(id, P.chave(m)); if (it && !it.submetido && !P.eOutput(P.cat(id))) it.submetido = { em: agora(), por: u.nome }; });
     m.passo_atual++;
     correrAutomaticos(m);
     var nc = P.calcularOutputs(P.chave(m), u);
@@ -1116,6 +1165,7 @@
     var deOnde = P.passoAtual(m).nome;
     m.passos.forEach(function (p) { p.concluido_em = null; p.concluido_por = null; });
     m.passo_atual = 0;
+    m.indicadores.forEach(function (id) { var it = P.item(id, P.chave(m)); if (it) delete it.submetido; });
     m.devolvida = true;
     if (P.diasAte(m.prazo) < 3) m.prazo = diasDe(3);
     m.comentarios.push({ autor: u.nome, texto: comentario.trim(), em: agora(), passo: deOnde });
@@ -1543,6 +1593,7 @@
     rel.linhas.forEach(function (r) {
       if (r.estado !== 'valida' && r.estado !== 'alerta') return;
       var l = r.dados, it = P.item(r.indicador, P.chave(m));
+      if (it.submetido) return;
       if (r.entradas && P.gravarEntradas) {
         var nv = it.versoes.length;
         P.gravarEntradas(m, r.indicador, r.entradas, r.agreg, u);

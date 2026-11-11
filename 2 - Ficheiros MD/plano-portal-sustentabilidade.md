@@ -895,6 +895,35 @@ Pedido do André a 11 de novembro de 2026.
   - o import, quando um output chega sem cálculo.
 - **Limite atual:** dos 24 outputs, só o A03 se consegue converter. Os outros usam 39 dados de origem que ainda não existem como indicadores de input (por exemplo CQO afluente, colaboradores_total, receitas_eur) ou fatores de emissão. Falta decidir se esses dados passam a ser indicadores de input.
 
+### Cálculo em tags, pesquisa melhor dos inputs, submit por indicador e Save
+
+Pedido do André a 11 de novembro de 2026.
+
+- **Pesquisa do cálculo** (`P.sugerirCalc`): cada dado de um output é procurado por esta ordem:
+  1. o dado é exatamente o de um indicador;
+  2. o dado é o cálculo inteiro de outro output (o E08 usa o E06);
+  3. há um indicador com o mesmo significado e a mesma unidade, mas só quando o vencedor é claro (fica como sugestão a confirmar);
+  4. é um fator de emissão da biblioteca (`fator.gas`);
+  5. se nada disto der, fica como input em falta (`[Perdas reais]`).
+  - Agora os 24 outputs ficam todos com a estrutura completa. Antes era só 1.
+- **Linguagem do cálculo** (`P.tokensCalc`, `P.validarCalc`): aceita códigos de KPI, fatores de emissão, `[inputs em falta]`, números e `+ - * / ( )`. Um output com inputs em falta não é calculado.
+- **Editor em tags** no painel do indicador:
+  - verde: input;
+  - azul: output;
+  - amarelo tracejado: correspondência sugerida, para confirmar;
+  - roxo: fator de emissão;
+  - vermelho: input em falta, com o botão **Create input KPI** e o botão **Create all inputs**. O novo input fica com o próximo código livre, a unidade do dado de origem, e o departamento, a frequência e as empresas do output.
+  - Para acrescentar um indicador ou fator há uma lista com pesquisa. Há também botões de operadores, um campo de número e o modo "Edit as text".
+  - Uma linha de estado diz se o cálculo está completo, se tem inputs em falta ou se tem algum erro.
+- **Submit por indicador na task** (`P.submeterIndicadores`, `P.reabrirIndicador`, `P.estadoSubmissao`):
+  - Cada indicador completo tem o seu botão **Submit**. Há também o **Submit N ready**.
+  - Um indicador submetido fica bloqueado e mostra quem o submeteu e quando. Volta a abrir com **Reopen**.
+  - O indicador submetido conta logo para os cálculos dos outputs.
+  - No topo da lista há uma barra de progresso ("3 of 10 submitted") e os filtros All, To submit e Submitted.
+  - O **Submit task** continua a mandar a task para revisão e marca como submetidos os indicadores que faltavam. Quando a task é devolvida, os indicadores voltam a ficar por submeter.
+  - O import e a colagem não alteram indicadores já submetidos.
+- **Save:** está sempre na barra de ações da task. Guarda o trabalho sem submeter e mostra quando foi guardado.
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.

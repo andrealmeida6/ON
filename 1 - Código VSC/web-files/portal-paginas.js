@@ -625,8 +625,10 @@
       return '<div class="ps-ms-acao" role="region" aria-label="Actions"><span class="ps-small">' + e(p.nome) + '</span><span class="ps-sp"><button type="button" class="ps-btn err" data-a="devolver">Return to the unit</button><button type="button" class="ps-btn pri" data-a="concluirPasso">' + e(rot) + '</button></span></div>';
     }
     if (!P.podePreencher(m, usr)) return '';
-    var f = P.faltasSubmissao(m).length, feitos = preenchidos(m);
-    return '<div class="ps-ms-acao" role="region" aria-label="Actions"><span class="ps-small" aria-live="polite"><b>' + feitos + ' of ' + m.indicadores.length + '</b> indicators with a value' + (f ? '<span class="ps-mut">, ' + f + ' item' + (f === 1 ? '' : 's') + ' still missing</span>' : '<span class="ps-txt-ok">, ready to submit</span>') + '</span><button type="button" id="btn-submeter" class="ps-btn pri" data-a="submeter">Submit task</button></div>';
+    var f = P.faltasSubmissao(m).length, feitos = preenchidos(m), es = P.estadoSubmissao(m);
+    var guard = m.guardado ? '<small class="ps-mut">Saved ' + e(P.fmtDataHora(m.guardado.em)) + '</small>' : '';
+    return '<div class="ps-ms-acao" role="region" aria-label="Actions"><span class="ps-small" aria-live="polite"><b>' + es.submetidos + ' of ' + es.total + '</b> submitted, ' + feitos + ' with a value' + (f ? '<span class="ps-mut">, ' + f + ' item' + (f === 1 ? '' : 's') + ' still missing</span>' : '<span class="ps-txt-ok">, ready to submit</span>') + '</span>' +
+      '<span class="ps-sp">' + guard + '<button type="button" class="ps-btn" data-a="guardarTrab">Save</button>' + (es.prontos.length ? '<button type="button" class="ps-btn" data-a="indSubmeterProntos">Submit ' + es.prontos.length + ' ready</button>' : '') + '<button type="button" id="btn-submeter" class="ps-btn pri" data-a="submeter">Submit task</button></span></div>';
   };
   var editorAtrib = function (m, usr) {
     var p = P.passoAtual(m);
@@ -660,18 +662,24 @@
   var sepRecolha = function (m) {
     var usr = u(), calcs = P.calculosMilestone ? P.calculosMilestone(m) : [], comFontes = P.camposMilestone ? P.camposMilestone(m).length > 0 : false, vistos = {};
     var todosAbertos = m.indicadores.every(function (id) { return rqAberto(m, id); });
-    var linhas = m.indicadores.map(function (id) {
-      var c = P.cat(id), it = P.item(id, P.chave(m)), v = P.validarItem(it), ant = P.valorAnterior(id, P.chave(m)), aberto = rqAberto(m, id);
+    /* Submeter indicadores um a um: o filtro mostra o que falta submeter, nada se perde de vista */
+    var est = P.estadoSubmissao(m), fil = (U.rqSub || {})[m.id] || 'todos';
+    var linhas = m.indicadores.filter(function (id) { var sb = P.indSubmetido(m, id); return fil === 'todos' || (fil === 'sub' ? sb : !sb && !P.eOutput(P.cat(id))); }).map(function (id) {
+      var c = P.cat(id), it = P.item(id, P.chave(m)), v = P.validarItem(it), ant = P.valorAnterior(id, P.chave(m)), aberto = rqAberto(m, id), sub = it.submetido, saida = P.eOutput(c);
       var calc = calcs.filter(function (r) { return r.id === id; })[0], emCalc = !!(calc && calc.x && calc.valor !== null && it.daFonte);
       var txtBruto = it.rascunho || (it.valor === null ? '' : String(it.valor).replace('.', ','));
       var cls = v.erros.length ? 'erro' : v.alertas.length ? 'alerta' : '';
       var res = v.erros.length ? chip('Error', 'err') : v.alertas.length ? alertaHtml(m, id, v, it) : it.valor !== null ? chip('Valid', 'ok') : chip('To fill in');
+      var prontoInd = !sub && !saida && !P.faltasIndicador(m, id).length;
+      if (saida) res = it.valor !== null ? chip('Calculated', 'info') : '<span class="ps-tip-alvo" tabindex="0" data-tip="Calculated by the platform from ' + e(P.codigosCalc(c.calc_codigos).join(', ')) + ' once they are submitted.">' + chip('Waiting for inputs') + '</span>';
+      else if (sub) res = '<span class="rq2-sub">' + chip('Submitted', 'ok') + '<small>' + e(sub.por + ', ' + P.fmtDataHora(sub.em)) + '</small><button type="button" class="ps-btn liga" data-a="indReabrir" data-v="' + e(id) + '">Reopen</button></span>';
+      else if (prontoInd) res = res + '<button type="button" class="ps-btn peq pri rq2-subm" data-a="indSubmeter" data-v="' + e(id) + '">Submit</button>';
       var pedidos = S.ext.filter(function (x) { return x.indicador_id === id && x.milestone_id === m.id; });
       var recebido = pedidos.filter(function (x) { return x.estado === 'recebido'; })[0], pendente = pedidos.filter(function (x) { return x.estado === 'pendente'; })[0];
       var evTxt = P.evidenciaPrecisa(m, id) ? (it.evidencias.length ? '' : '<span class="rq2-b warn">Evidence required</span>') : '';
       var marcas = (emCalc ? '<span class="rq2-b calc">Calculated</span>' : '') + (P.inteiro(c) ? '<span class="rq2-b">Whole number</span>' : '') + evTxt + (it.evidencias.length ? '<span class="rq2-b">' + it.evidencias.length + ' evidence</span>' : '') +
         (it.qualidade === 'estimado' ? '<span class="rq2-b">Estimated</span>' : '') + (recebido ? '<span class="rq2-b ok">Value received</span>' : pendente ? '<span class="rq2-b">Assistance requested</span>' : '');
-      var valor = emCalc ? '<span class="rq2-calc ps-num ' + cls + '" title="Calculated from the source data">' + e(fmtV(id, it.valor)) + '</span>'
+      var valor = (sub || saida) && !emCalc ? '<span class="rq2-calc ps-num rq2-fixo" title="' + (saida ? 'Calculated from ' + e(c.calc_codigos) : 'Submitted: reopen it to change') + '">' + (it.valor === null ? '-' : e(fmtV(id, it.valor))) + '</span>' : emCalc ? '<span class="rq2-calc ps-num ' + cls + '" title="Calculated from the source data">' + e(fmtV(id, it.valor)) + '</span>'
         : '<input id="v-' + e(id) + '" class="ps-in ps-num rq2-in ' + cls + '"' + numAttr(id) + ' autocomplete="off" aria-label="Value ' + e(P.rotPeriodo(m) + ', ' + c.nome) + '" placeholder="-" value="' + e(txtBruto) + '" data-c="valor" data-id="' + e(id) + '"' + (v.erros.length ? ' aria-invalid="true" aria-describedby="err-' + e(id) + '"' : '') + '>';
       var linha = '<div class="rq2-l"><button type="button" class="rq2-seta" data-a="rqAbrir" data-v="' + e(id) + '" aria-expanded="' + aberto + '" aria-controls="rqd-' + e(id) + '" aria-label="' + (aberto ? 'Hide' : 'Show') + ' the details of ' + e(c.nome) + '">' + svg(I.baixo, 16) + '</button>' +
         '<div class="rq2-nome"><span class="rq2-nl"><button type="button" class="rq2-n" data-a="ficha" data-v="' + e(id) + '">' + e(c.nome) + '</button>' + infoFormula(id, emCalc) + '</span><small>' + e(id) + ', ' + e(c.unidade_medida) + marcas + '</small></div>' +
@@ -698,7 +706,10 @@
         : pendente ? '<div class="ps-aviso">Waiting for ' + e(pendente.entidade_externa) + ', due ' + e(P.fmtData(pendente.prazo)) + '.</div>' : '';
       return '<div class="rq2-it on ' + cls + '" id="ind-' + e(id) + '">' + linha + '<div class="rq2-det" id="rqd-' + e(id) + '"><div class="rq2-det-g' + (origem ? '' : ' um') + '">' + defin + origem + '</div>' + just + qual + ajuda + '</div></div>';
     }).join('');
-    var vistaLista = '<div class="rq2"><div class="rq2-cab"><button type="button" class="ps-btn liga rq2-todos" data-a="rqTodos">' + (todosAbertos ? 'Collapse all' : 'Expand all') + '</button><span>Indicator</span><span class="rq2-dir">' + e(P.rotAnterior(P.chave(m))) + '</span><span class="rq2-dir">Value ' + e(P.rotPeriodo(m)) + '</span><span class="rq2-dir">Change</span><span>Status</span></div>' + linhas + '</div>';
+    var acomp = '<div class="rq2-acomp" role="group" aria-label="Submission"><div class="rq2-prog"><b>' + est.submetidos + ' of ' + est.total + ' submitted</b><span class="rq2-barra" aria-hidden="true"><i style="width:' + (est.total ? Math.round(est.submetidos / est.total * 100) : 0) + '%"></i></span><small>' + (est.faltam ? est.faltam + ' still to submit' + (est.prontos.length ? ', ' + est.prontos.length + ' ready now' : '') : 'All indicators submitted. Submit the task to send it for review.') + '</small></div>' +
+      '<div class="ps-seg" role="group" aria-label="Show">' + [['todos', 'All ' + m.indicadores.length], ['falta', 'To submit ' + est.faltam], ['sub', 'Submitted ' + est.submetidos]].map(function (x) { return '<button type="button" class="' + (fil === x[0] ? 'on' : '') + '" data-a="rqSubFil" data-v="' + x[0] + '">' + e(x[1]) + '</button>'; }).join('') + '</div>' +
+      (est.prontos.length ? '<button type="button" class="ps-btn peq pri" data-a="indSubmeterProntos">Submit the ' + est.prontos.length + ' ready</button>' : '') + '</div>';
+    var vistaLista = acomp + '<div class="rq2"><div class="rq2-cab"><button type="button" class="ps-btn liga rq2-todos" data-a="rqTodos">' + (todosAbertos ? 'Collapse all' : 'Expand all') + '</button><span>Indicator</span><span class="rq2-dir">' + e(P.rotAnterior(P.chave(m))) + '</span><span class="rq2-dir">Value ' + e(P.rotPeriodo(m)) + '</span><span class="rq2-dir">Change</span><span>Status</span></div>' + (linhas || '<p class="ps-mut ps-small rq2-vazio">' + (fil === 'sub' ? 'Nothing submitted yet.' : 'Nothing left to submit.') + '</p>') + '</div>';
     /* Um so cartao: os valores entram no separador do ecra, os ficheiros no separador de upload */
     var tab = abaRecolha(m), aberta = !P.concluida(m);
     var porPreencher = m.indicadores.filter(function (id) { return P.item(id, P.chave(m)).valor === null; }).length;
@@ -892,6 +903,7 @@
     if (!P.podePreencher(m, usr)) return { aplicados: 0, recusados: ['This task is read only for you right now.'], semAlteracao: true };
     lista.forEach(function (a) {
       var c = P.cat(a.id), it = P.item(a.id, P.chave(m));
+      if (it && it.submetido) { rec.push(c.nome + ' is submitted. Reopen it to change it.'); return; }
       if (a.k === 'valor') {
         var s = P.limparColado(a.valor), num = s === '' ? null : P.lerNumero(s);
         if (s === '' ? (it.valor === null && !it.rascunho) : num === null ? it.rascunho === s : (num === it.valor && !it.rascunho)) return;
@@ -2179,6 +2191,11 @@
     tplCsv: function () { P.templateCSV(msAtual()); },
     anexar: function (d) { var m = msAtual(), it = P.item(d.v, P.chave(m)); escolherFicheiro('', function (f) { P.anexar(it, f.name, u(), P.guardarFicheiro(f)); P.evento(m, 'Evidence attached to ' + P.cat(d.v).nome + ': ' + f.name + '.', u().nome); P.guardar(); toast('Evidence attached.', 'ok'); R(); }); },
     anexarGeral: function () { var m = msAtual(), usr = u(); escolherFicheiro('', function (f) { m.documentos_gerais.push({ ficheiro: f.name, por: usr.nome, em: new Date().toISOString(), fid: P.guardarFicheiro(f) }); P.evento(m, 'General document attached: ' + f.name + '.', usr.nome); P.guardar(); toast('Document attached.', 'ok'); R(); }); },
+    indSubmeter: function (d) { var m = msAtual(), r = P.submeterIndicadores(m, [d.v], u()); if (r.erro) return toast(r.erro, 'err'); if (r.recusados.length) return toast(r.recusados[0], 'err'); toast(d.v + ' submitted. ' + P.estadoSubmissao(m).faltam + ' still to submit.', 'ok'); R(); },
+    indSubmeterProntos: function () { var m = msAtual(), es = P.estadoSubmissao(m), r = P.submeterIndicadores(m, es.prontos, u()); if (r.erro) return toast(r.erro, 'err'); toast(r.feitos.length + ' indicator(s) submitted. ' + P.estadoSubmissao(m).faltam + ' still to submit.', 'ok'); R(); },
+    indReabrir: function (d) { var r = P.reabrirIndicador(msAtual(), d.v, u()); if (r.erro) return toast(r.erro, 'err'); toast(d.v + ' reopened. Submit it again when it is ready.', 'ok'); R(); },
+    rqSubFil: function (d) { U.rqSub = U.rqSub || {}; U.rqSub[msAtual().id] = d.v; R(); },
+    guardarTrab: function () { var ae = document.activeElement; if (ae && ae.blur) ae.blur(); P.guardarTrabalho(msAtual(), u()); toast('Work saved. Nothing was submitted.', 'ok'); R(); },
     submeter: function () {
       var m = msAtual(), r = P.submeter(m, u());
       if (r.erro) return toast(r.erro, 'err');
@@ -2294,15 +2311,15 @@
   /* --- Campos (mudanca) -------------------------------------------------- */
   var mudouMarca = function () { P.aplicarMarca(U.marca); agendar(); };
   var C = {
-    valor: function (el) { var m = msAtual(); P.gravarValor(m, el.dataset.id, el.value, u()); },
+    valor: function (el) { var m = msAtual(); if (P.indSubmetido(m, el.dataset.id)) { toast('Submitted. Reopen it to change it.', 'err'); return R(); } P.gravarValor(m, el.dataset.id, el.value, u()); },
     dzCat: function (el) { var x = filaDe(msAtual()).filter(function (y) { return y.k === el.dataset.id; })[0]; if (x) x.cat = el.value; },
     wzCab: function (el) { var w = U.wiz; w.cab = +el.value; wzMapear(w, P.ms(w.ms)); },
     wzLinha: function (el) { var w = U.wiz, m = P.ms(w.ms), id = el.dataset.id, r = +el.value; if (r < 0) delete w.mapa[id]; else w.mapa[id] = r; w.incl[id] = wzCheck(w, m, id).ok; },
     wzIncl: function (el) { U.wiz.incl[el.dataset.id] = el.checked; },
     wzGuardar: function (el) { U.wiz.guardar = el.checked; },
-    just: function (el) { P.item(el.dataset.id, P.chave(msAtual())).justificacao = el.value; P.guardar(); },
-    qual: function (el) { var it = P.item(el.dataset.id, P.chave(msAtual())); it.qualidade = el.value; if (el.value !== 'estimado') it.metodo = ''; P.guardar(); },
-    metodo: function (el) { P.item(el.dataset.id, P.chave(msAtual())).metodo = el.value; P.guardar(); },
+    just: function (el) { if (P.indSubmetido(msAtual(), el.dataset.id)) { toast('Submitted. Reopen it to change it.', 'err'); return R(); } P.item(el.dataset.id, P.chave(msAtual())).justificacao = el.value; P.guardar(); },
+    qual: function (el) { if (P.indSubmetido(msAtual(), el.dataset.id)) { toast('Submitted. Reopen it to change it.', 'err'); return R(); } var it = P.item(el.dataset.id, P.chave(msAtual())); it.qualidade = el.value; if (el.value !== 'estimado') it.metodo = ''; P.guardar(); },
+    metodo: function (el) { if (P.indSubmetido(msAtual(), el.dataset.id)) { toast('Submitted. Reopen it to change it.', 'err'); return R(); } P.item(el.dataset.id, P.chave(msAtual())).metodo = el.value; P.guardar(); },
     tiposUn: function (el) { U.tiposF = U.tiposF || {}; U.tiposF.un = el.value; },
     tiposQ: function (el) { U.tiposF = U.tiposF || {}; U.tiposF.q = el.value; },
     tiposArq: function (el) { U.tiposF = U.tiposF || {}; U.tiposF.arq = el.checked; },
