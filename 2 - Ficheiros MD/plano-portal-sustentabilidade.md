@@ -1134,6 +1134,14 @@ Pedido do André a 11 de novembro de 2026. Primeiro passo para ler as faturas (t
   - A sintaxe foi verificada com um parser de PostgreSQL.
 - **Próximo passo:** no indicador de eletricidade da task, carregar a fatura → ler (pdf.js para PDF digital, Tesseract.js para digitalizações) → ecrã de confirmação ao lado da fatura → valores para os indicadores e fatura como evidência.
 
+### O nome da task não leva a pessoa
+
+Pedido do André a 11 de novembro de 2026.
+
+- As tasks enviadas a partir de Backoffice → Indicators ("Send task") eram criadas com o nome da pessoa no fim, por exemplo "Entrega T2 2026 de Comercial e Relação com o Cliente, Sofia Reis". Agora o nome fica só com o período e o departamento (`P.enviarTarefas`).
+- A pessoa muda quando se reatribui a task ou quando o processo avança, por isso aparece só em "Assigned to" e no workflow.
+- As tasks que já existiam perdem o ", Nome" do fim quando os dados são carregados (`P.migrarDados`).
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.

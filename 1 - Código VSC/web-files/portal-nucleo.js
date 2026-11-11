@@ -536,6 +536,9 @@
       if (m.passo_atual === 0 && !m.passos.some(function (p) { return p.tipo === 'area'; })) m.passos = passosDe(WF_BASE());
     });
     (S.deps || []).forEach(function (d) { if (d.chefe === undefined) { var x = (S.users || []).filter(function (u) { return u.perfil === 'resp' && P.temUnidade(u, d.nome); })[0]; d.chefe = x ? x.login : ''; } });
+    /* O nome da task nao leva a pessoa (muda quando se reatribui ou quando o processo avanca): tira ", Nome" do fim */
+    var nomesPessoas = (S.users || []).map(function (u) { return u.nome; });
+    (S.ms || []).forEach(function (m) { nomesPessoas.forEach(function (n) { var suf = ', ' + n; if (m.nome && m.nome.length > suf.length && m.nome.slice(-suf.length) === suf) m.nome = m.nome.slice(0, -suf.length); }); });
     /* Indicadores submetidos um a um antes de existir o passo do responsavel de area: iam direto para a
        sustentabilidade, por isso esse passo fica dado como passado */
     Object.keys(S.items || {}).forEach(function (k) {
@@ -1038,7 +1041,7 @@
         var id = 'M' + String(num).padStart(2, '0') + (per.tipo === 'trimestre' ? '-T' + per.t : '');
         while (P.ms(id)) id += 'b';
         m = {
-          id: id, nome: (per.tipo === 'trimestre' ? 'Entrega T' + per.t + ' ' + per.ano : 'Entrega anual ' + per.ano) + ' de ' + g.dep + (g.resp.tipo === 'pessoa' ? ', ' + g.resp.nome : ''), ano: per.ano, periodo: per.id, consolida: false,
+          id: id, nome: (per.tipo === 'trimestre' ? 'Entrega T' + per.t + ' ' + per.ano : 'Entrega anual ' + per.ano) + ' de ' + g.dep, ano: per.ano, periodo: per.id, consolida: false,
           empresa: g.empresa.nome, departamentos: [g.dep], atribuido_a: g.resp.login || null, ficheiros_pedidos: [], unidade: g.dep,
           periodicidade: per.tipo === 'trimestre' ? 'Trimestral' : 'Anual', prazo: prazo, indicadores: g.ids.slice(), passos: passosDe(WF_BASE()), passo_atual: 0, devolvida: false, workflow_ajustado: false,
           documentos_gerais: [], comentarios: [], eventos: []
