@@ -2386,4 +2386,5 @@ tr.rev-pend>td:first-child{box-shadow:inset 3px 0 0 var(--rev)}
 .db-lk{margin-top:auto;font-size:12px;font-weight:600}
 .db-ed{display:flex;flex-direction:column;gap:6px;margin:0 0 14px;padding-left:20px}
 .db-ed li{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:6px 8px;border:1px solid var(--line);border-radius:var(--r)}
-
+.ms-del{display:grid;place-items:center;width:28px;height:28px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--err);cursor:pointer}
+.ms-del:hover,.ms-del:focus-visible{background:var(--err-50);border-color:var(--err)}

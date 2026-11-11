@@ -1300,6 +1300,19 @@ Pedido do André a 11 de novembro de 2026, com uma imagem de referência.
 - **Governance:** ética e compliance (4 barras), cadeia de fornecimento e clientes.
 - As barras têm o valor sempre em texto e uma tooltip. A cor nunca é a única informação.
 
+### Tasks sent: por task ou por indicador, donut e apagar
+
+Pedido do André a 11 de novembro de 2026.
+
+- Backoffice → **Tasks sent** tem duas vistas, **By task** e **By indicator**, e uma pesquisa (task, empresa, departamento, pessoa ou KPI).
+  - **By task:** o donut do estado dos indicadores na linha (o mesmo da página Tasks), a empresa, a atribuição, o prazo e o estado.
+  - **By indicator:** uma linha por KPI enviado, com a task, a empresa, a pessoa atribuída, o valor, o prazo e o estado. Cada KPI abre a task nesse indicador.
+- **Apagar uma task enviada:** o ícone do caixote do lixo pede confirmação (`Pn.msApagar`).
+  - O pop-up diz quantos valores e ficheiros a task já tem.
+  - `P.apagarTask` apaga a task com os seus valores e ficheiros e deixa o registo no audit trail.
+  - As tasks concluídas não se apagam, porque ficam no histórico.
+  - Os indicadores podem voltar a ser enviados a partir de Indicators.
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.

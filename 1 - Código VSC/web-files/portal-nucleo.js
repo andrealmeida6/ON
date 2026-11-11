@@ -938,6 +938,20 @@
       .map(function (c) { return c.id; }).sort(function (a, b) { return pos(a) - pos(b); });
   };
   P.msExistente = function (un, pid) { return S.ms.filter(function (m) { return m.unidade === un && m.periodo === pid && !m.consolida; })[0] || null; };
+  /* Apagar uma task enviada (ainda nao concluida): sai com os valores e ficheiros dela; fica no registo geral */
+  P.apagarTask = function (id, u) {
+    if (!P.gereTudo(u)) return { erro: 'No permission.' };
+    var m = P.ms(id);
+    if (!m) return { erro: 'This task no longer exists.' };
+    if (P.concluida(m)) return { erro: 'Completed tasks stay in the history and cannot be deleted.' };
+    var ch = P.chave(m), n = 0;
+    m.indicadores.forEach(function (i) { var k = ch + ':' + i, it = S.items[k]; if (it && (it.milestone_id === m.id || !it.milestone_id)) { (it.evidencias || []).forEach(function (x) { if (x.fid && P.apagarConteudo) P.apagarConteudo(x.fid); }); delete S.items[k]; n++; } });
+    (m.documentos_gerais || []).forEach(function (x) { if (x.fid && P.apagarConteudo) P.apagarConteudo(x.fid); });
+    S.ms.splice(S.ms.indexOf(m), 1);
+    P.eventoGlobal('Task deleted: ' + m.nome + ' (' + m.id + ', ' + m.empresa + ', ' + P.rotPeriodo(m) + '), with ' + m.indicadores.length + ' indicator(s).', u.nome, 'Change');
+    guardar();
+    return { ok: true, nome: m.nome };
+  };
   P.lancarMilestones = function (cfg, u) {
     if (!P.gereTudo(u)) return { erro: 'No permission.' };
     if (!cfg.periodos.length || !cfg.unidades.length) return { erro: 'Choose at least one period and one department.' };

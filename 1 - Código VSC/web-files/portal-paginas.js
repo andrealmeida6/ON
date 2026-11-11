@@ -1530,10 +1530,28 @@
   /* Calculations (formulas e fatores de emissao) e configuracao: vive no Backoffice, so para quem o gere */
   B.calculos = function () { return '<div class="ps-card"><div class="ps-card-body"><h2 class="ki-h2">Calculations</h2><p class="ps-mut ps-small">Configured formulas and a versioned emission factor library. The values of the indicators that use them are calculated from here.</p></div></div>' + (Blocos['calculos'] ? Blocos['calculos']() : ''); };
   B.perimetro = function () { return Blocos['perimetro'] ? Blocos['perimetro']() : ''; };
+  /* Tasks sent: por task (com o donut do estado dos indicadores) ou por indicador; apagar uma task enviada */
+  U.boMs = { vista: 'task', q: '' };
   B.milestones = function () {
-    return '<div class="ps-card">' + cabCartao('Tasks (' + P.msCiclo().length + ')', 'tarefa') + '<div class="ps-card-body">' + tabela([{ t: 'Task' }, { t: 'Company' }, { t: 'Assigned to' }, { t: 'Indicators', dir: 1 }, { t: 'Due' }, { t: 'Status' }], P.msCiclo().map(function (m) {
+    var f = U.boMs, q = norm(f.q || ''), todas = P.msCiclo().filter(function (m) { return !q || norm(m.nome + ' ' + m.empresa + ' ' + m.unidade + ' ' + (P.atribuido(m) ? P.atribuido(m).nome : '') + ' ' + m.indicadores.join(' ')).indexOf(q) > -1; });
+    var seg = '<div class="ps-sp"><div class="ps-seg" role="group" aria-label="View"><button type="button" class="' + (f.vista !== 'kpi' ? 'on' : '') + '" data-a="boMsVista" data-v="task">By task</button><button type="button" class="' + (f.vista === 'kpi' ? 'on' : '') + '" data-a="boMsVista" data-v="kpi">By indicator</button></div></div>';
+    var busca = '<div class="ps-filtros">' + campo('bo-ms-q', 'Search', '<input id="bo-ms-q" class="ps-in" type="search" placeholder="Task, company, department, person or KPI" value="' + e(f.q || '') + '" data-c="boMsQ">') + '</div>';
+    if (f.vista === 'kpi') {
+      var lk = []; todas.forEach(function (m) { m.indicadores.forEach(function (id) { if (P.cat(id)) lk.push({ m: m, id: id }); }); });
+      return '<div class="ps-card">' + cabCartao('Indicators sent (' + lk.length + ' in ' + todas.length + ' tasks)', 'tarefa', seg) + '<div class="ps-card-body">' + busca + tabela([{ t: 'Indicator' }, { t: 'Task' }, { t: 'Company' }, { t: 'Assigned to' }, { t: 'Value', dir: 1 }, { t: 'Due' }, { t: 'Status' }], lk.map(function (x) {
+        var c = P.cat(x.id), it = P.item(x.id, P.chave(x.m)), st = estadoTarefa(x.m, x.id);
+        return ['<a href="' + rota('Milestone/' + x.m.id + '?ind=' + encodeURIComponent(x.id)) + '"><b>' + e(c.nome) + '</b></a><small class="ps-mut ps-blk">' + e(x.id + ', ' + c.unidade_medida) + '</small>', '<a href="' + rota('Milestone/' + x.m.id) + '">' + e(x.m.nome) + '</a>', empHtml(x.m.empresa), atribKpi(x.m, x.id), it && it.valor !== null ? '<span class="ps-num">' + e(fmtV(x.id, it.valor)) + '</span>' : '<span class="ps-mut">-</span>', '<span class="ps-nowrap">' + e(P.fmtData(x.m.prazo)) + '</span>', P.chipEstadoTarefa(x.m, st)];
+      }), 'No indicators sent.') + '</div></div>';
+    }
+    return '<div class="ps-card">' + cabCartao('Tasks (' + todas.length + ')', 'tarefa', seg) + '<div class="ps-card-body">' + busca + tabela([{ t: 'Task', info: 'The ring shows the indicators of the task by status; the number is how many are still to report.' }, { t: 'Company' }, { t: 'Assigned to' }, { t: 'Indicators', dir: 1 }, { t: 'Due' }, { t: 'Status' }, { t: '', sr: 'Actions' }], todas.map(function (m) {
+      var linha = (function () {
         return ['<a href="' + rota('Milestone/' + m.id) + '">' + e(m.nome) + '</a>', '<select id="bo-emp-' + e(m.id) + '" class="ps-sel" aria-label="Company of ' + e(m.nome) + '" data-c="msEmpresa" data-id="' + e(m.id) + '">' + S.ent.map(function (x) { return opt(x.nome, x.nome, m.empresa); }).join('') + '</select>', P.concluida(m) || P.passoAtual(m).tipo !== 'recolha' ? atribHtml(m) : '<select id="bo-atr-' + e(m.id) + '" class="ps-sel" aria-label="Assigned to, ' + e(m.nome) + '" data-c="msAtrib" data-id="' + e(m.id) + '">' + opt('', m.unidade + ' (department)', m.atribuido_a || '') + P.atribuiveis(m).map(function (x) { return opt(x.login, x.nome, m.atribuido_a || ''); }).join('') + '</select>', m.indicadores.length, '<input id="pz-' + e(m.id) + '" class="ps-in" type="date" aria-label="Due date of ' + e(m.nome) + '" value="' + e(m.prazo) + '" data-c="msPrazo" data-id="' + e(m.id) + '">', estChip(m)];
-      })) + '</div></div>';
+      })();
+      linha[0] = '<div class="ms-dn-l">' + donutInd(m, true) + '<div>' + linha[0] + '</div></div>';
+      var temDados = m.indicadores.some(function (id) { var it = P.item(id, P.chave(m)); return it && (it.valor !== null || it.evidencias.length); });
+      linha.push(P.concluida(m) ? '<span class="ps-mut ps-small" title="Completed tasks stay in the history">-</span>' : '<button type="button" class="ms-del" data-a="boMsApagar" data-v="' + e(m.id) + '" aria-label="Delete ' + e(m.nome) + '" data-tip="Delete this task' + (temDados ? ' (it already has values or files)' : '') + '">' + svg('<path d="M3 6h18M8 6V4h8v2M6 6l1 15h10l1-15"/><path d="M10 11v6M14 11v6"/>', 16) + '</button>');
+      return linha;
+    })) + '</div></div>';
   };
   var MESES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   B.calendario = function () {
@@ -1778,6 +1796,16 @@
   var abrePainel = function (tipo, args) { U.painel = { tipo: tipo, args: args || {} }; U.painelFoco = true; R(); };
   var fechaPainel = function () { if (U.painel && U.painel.tipo === 'marca' && U.marca) { U.marca = null; U.logoEstado = ''; P.aplicarMarca(); } U.painel = null; R(); };
   var Pn = {};
+  Pn.msApagar = function (a) {
+    var m = P.ms(a.id);
+    if (!m) return { t: 'Delete task', b: '<div class="ps-aviso">This task no longer exists.</div>', p: '<span class="ps-sp-flex"></span><button type="button" class="ps-btn" data-a="fecharPainel">Close</button>' };
+    var com = m.indicadores.filter(function (id) { var it = P.item(id, P.chave(m)); return it && it.valor !== null; }).length, fic = m.indicadores.reduce(function (n, id) { var it = P.item(id, P.chave(m)); return n + (it ? it.evidencias.length : 0); }, 0) + (m.documentos_gerais || []).length;
+    return { t: 'Delete this task?', s: m.nome, cls: 'conf',
+      b: '<div class="ps-conf"><div><p><b>' + e(m.nome) + '</b> (' + e(m.empresa) + ', ' + e(P.rotPeriodo(m)) + ') will be removed for everyone, with its ' + m.indicadores.length + ' indicator(s).</p>' +
+        (com || fic ? '<div class="ps-aviso warn">It already has ' + (com ? com + ' value(s)' : '') + (com && fic ? ' and ' : '') + (fic ? fic + ' file(s)' : '') + '. They are deleted with the task.</div>' : '') +
+        '<p class="ps-small ps-mut">The indicators can be sent again from Indicators. The deletion stays in the audit trail, with who deleted it and when.</p></div></div>',
+      p: '<span class="ps-sp-flex"></span><button type="button" class="ps-btn" data-a="fecharPainel">Cancel</button><button type="button" class="ps-btn err" data-a="boMsApagarSim" data-v="' + e(m.id) + '">Delete the task</button>' };
+  };
   Pn.matriz = function () { var m = msAtual(); return { t: 'Traceability matrix', s: m.nome + ': each indicator with its value, ESRS and GRI references, who submitted and approved it, and the evidence', largo: true, b: matrizHtml(m), p: '<span class="ps-sp-flex"></span><button type="button" class="ps-btn" data-a="fecharPainel">Close</button>' }; };
   Pn.devInd = function (a) {
     var c = P.cat(a.id), m = msAtual(), it = P.item(a.id, P.chave(m));
@@ -2268,6 +2296,9 @@
     calMes: function (d) { var n = U.cal.mes + (+d.v), dt = new Date(U.cal.ano, n, 1); U.cal = { ano: dt.getFullYear(), mes: dt.getMonth(), dia: 1 }; R(); },
     calHoje: function () { U.cal = null; R(); },
     msVista: function (d) { U.msVista = d.v; R(); },
+    boMsVista: function (d) { U.boMs.vista = d.v; R(); },
+    boMsApagar: function (d) { abrePainel('msApagar', { id: d.v }); },
+    boMsApagarSim: function (d) { var r = P.apagarTask(d.v, u()); if (r.erro) return toast(r.erro, 'err'); U.painel = null; toast(r.nome + ' deleted.', 'ok'); R(); },
     msAba: function (d) { U.msFiltro.minhas = d.v === 'minhas'; R(); },
     msEmpTodas: function () { U.msEmpTodas = !U.msEmpTodas; R(); },
     msExcel: function () { exportarMilestones(msFiltradas()); },
@@ -2606,6 +2637,7 @@
     userUnJuntar: function (el) { if (!el.value) return; if (el.dataset.id === '__novo') { U.userNovo.unidades.push(el.value); return; } var x = P.user(el.dataset.id); P.definirUnidades(x, P.unidadesDe(x).concat([el.value])); P.eventoGlobal(x.nome + ' added to ' + el.value + '.', u().nome); P.guardar(); },
     userNovoC: function (el) { U.userNovo[el.dataset.f] = el.value; },
     userBusca: function (el) { U.userBusca = el.value; },
+    boMsQ: function (el) { U.boMs.q = el.value; R(); },
     depChefe: function (el) {
       var d = S.deps[+el.dataset.id]; if (!d || !P.gereTudo(u())) return;
       var antes = d.chefe ? (P.user(d.chefe) || {}).nome : 'nobody'; d.chefe = el.value;
