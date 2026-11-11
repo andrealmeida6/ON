@@ -1210,7 +1210,8 @@
     if (u.perfil === 'admin') return true;
     if (p.responsavel === 'esg') return u.perfil === 'esg';
     if (p.responsavel === 'chefe') { var ch = P.chefeDe(m.unidade); return ch ? ch.login === u.login : P.daUnidade(u) && P.temUnidade(u, m.unidade); }
-    if (p.responsavel === 'unidade') return (u.perfil === 'resp' && P.temUnidade(u, m.unidade)) || (!!m.atribuido_a && m.atribuido_a === u.login);
+    /* Recolha: atribuida a uma pessoa, so ela; atribuida ao departamento, as pessoas do departamento que trabalham na empresa da task */
+    if (p.responsavel === 'unidade') return m.atribuido_a ? m.atribuido_a === u.login : P.daUnidade(u) && P.temUnidade(u, m.unidade) && (!P.userNaEmpresa || P.userNaEmpresa(u, m.empresa));
     if (p.responsavel.indexOf('area:') === 0) return P.daUnidade(u) && P.temUnidade(u, p.responsavel.slice(5));
     return false;
   };

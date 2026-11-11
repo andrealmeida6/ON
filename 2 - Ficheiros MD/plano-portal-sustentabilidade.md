@@ -1206,6 +1206,20 @@ Pedido do André a 11 de novembro de 2026.
 - `P.daUnidade(u)`: data providers e data reviewers veem e acompanham as tasks dos seus departamentos, com as mesmas páginas. Os pareceres de área também incluem os reviewers.
 - No arranque, o area head de cada departamento é o data reviewer desse departamento; se não houver, é o primeiro data provider.
 
+### Tasks: My Tasks e All Tasks, e só aparece o que é mesmo meu
+
+Pedido do André a 11 de novembro de 2026 (exemplo de teste: Marta Lopes via uma task da Entidade B atribuída a Paulo Serra).
+
+- **Causa:** na recolha, qualquer data provider do departamento podia agir na task, mesmo atribuída a outra pessoa ou de outra empresa.
+- **Regra nova** (`P.podeAgir`, responsável `unidade`):
+  - task atribuída a uma pessoa: só essa pessoa preenche (e o administrador);
+  - task atribuída ao departamento: só as pessoas desse departamento que trabalham na empresa da task (Users and profiles → Company).
+- **Menu:** "My tasks" passou a **Tasks**, também no menu do telemóvel.
+- **Na página há dois separadores:**
+  - **My Tasks:** o que espera por mim (preencher, rever, aprovar), incluindo as tasks com indicadores submetidos à espera da minha aprovação.
+  - **All Tasks:** todas as tasks, para acompanhar o reporte. Só o administrador, a equipa de sustentabilidade e o auditor o têm; os contribuidores veem só My Tasks.
+  - A caixa "Waiting on me" saiu e o subtítulo explica cada separador.
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.

@@ -540,6 +540,8 @@
   };
 
   /* --- Milestones -------------------------------------------------------- */
+  /* All Tasks e para quem acompanha todo o reporte (administrador, equipa de sustentabilidade, auditor) */
+  var veTodas = function (usr) { return !!usr && (P.gereTudo(usr) || usr.perfil === 'auditor'); };
   var msFiltradas = function () {
     var f = U.msFiltro, usr = u();
     return P.msCiclo().filter(function (m) {
@@ -547,7 +549,8 @@
       if (f.empresa && m.empresa !== f.empresa) return false;
       if (f.dep && m.departamentos.indexOf(f.dep) < 0) return false;
       if (f.periodo && m.periodo !== f.periodo) return false;
-      if (f.minhas && !esperaMim(m, usr)) return false;
+      /* My Tasks: o que espera por mim (preencher, aprovar, rever), incluindo indicadores submetidos a espera da minha aprovacao */
+      if ((f.minhas || !veTodas(usr)) && !esperaMim(m, usr) && !(P.revParaMim && P.revParaMim(usr).some(function (r) { return r.m.id === m.id; }))) return false;
       if (f.estado === 'curso' && c === 'concluida') return false;
       if (f.estado === 'atraso' && c !== 'atraso') return false;
       if (f.estado === 'concluidas' && c !== 'concluida') return false;
@@ -585,10 +588,11 @@
     toast('Excel file exported.', 'ok');
   };
   Blocos['milestones'] = function () {
-    var f = U.msFiltro, lista = msFiltradas();
-    var filtros = '<div class="ps-filtros">' + campo('f-per', 'Reporting period', '<select id="f-per" class="ps-sel" data-c="msPerF">' + opt('', 'All', f.periodo) + (S.periodos || []).filter(function (p) { return p.ano === S.ciclo.ano; }).map(function (p) { return opt(p.id, p.nome, f.periodo); }).join('') + '</select>') + campo('f-dep', 'Department', '<select id="f-dep" class="ps-sel" data-c="msDepF">' + opt('', 'All', f.dep) + P.UNIDADES.map(function (x) { return opt(x, x, f.dep); }).join('') + '</select>') +
+    var f = U.msFiltro, lista = msFiltradas(), usrT = u(), todas = veTodas(usrT);
+    var abas = todas ? '<div class="ps-mtabs ms-abas" role="tablist" aria-label="Which tasks"><button type="button" role="tab" aria-selected="' + !!f.minhas + '" class="' + (f.minhas ? 'on' : '') + '" data-a="msAba" data-v="minhas">My Tasks</button><button type="button" role="tab" aria-selected="' + !f.minhas + '" class="' + (!f.minhas ? 'on' : '') + '" data-a="msAba" data-v="todas">All Tasks</button></div>' : '';
+    var filtros = abas + '<div class="ps-filtros">' + campo('f-per', 'Reporting period', '<select id="f-per" class="ps-sel" data-c="msPerF">' + opt('', 'All', f.periodo) + (S.periodos || []).filter(function (p) { return p.ano === S.ciclo.ano; }).map(function (p) { return opt(p.id, p.nome, f.periodo); }).join('') + '</select>') + campo('f-dep', 'Department', '<select id="f-dep" class="ps-sel" data-c="msDepF">' + opt('', 'All', f.dep) + P.UNIDADES.map(function (x) { return opt(x, x, f.dep); }).join('') + '</select>') +
       campo('f-es', 'Status', '<select id="f-es" class="ps-sel" data-c="msEstado">' + opt('todas', 'All', f.estado) + opt('curso', 'In progress', f.estado) + opt('atraso', 'Overdue', f.estado) + opt('concluidas', 'Completed', f.estado) + '</select>') +
-      '<label class="ps-chk"><input id="f-minhas" type="checkbox" data-c="msMinhas"' + (f.minhas ? ' checked' : '') + '> Waiting on me</label>' +
+ +
       '<label class="ps-chk"><input id="f-esrs" type="checkbox" data-c="msEsrs"' + (f.esrs ? ' checked' : '') + '> Include ESRS track</label></div>';
     var dir = '<div class="ps-sp"><div class="ps-seg" role="group" aria-label="View"><button type="button" class="' + (U.msVista === 'lista' ? 'on' : '') + '" data-a="msVista" data-v="lista">Table</button><button type="button" class="' + (U.msVista === 'board' ? 'on' : '') + '" data-a="msVista" data-v="board">Board</button><button type="button" class="' + (U.msVista === 'kpi' ? 'on' : '') + '" data-a="msVista" data-v="kpi">By KPI</button></div>' + botaoTl('Timeline') + '<button type="button" class="ps-btn peq" data-a="msExcel"' + (lista.length ? '' : ' disabled') + '>Export to Excel</button></div>';
     var cab = cabCartao((f.empresa || 'All companies') + ' (' + lista.length + ')', 'tarefa', dir);
@@ -2147,8 +2151,9 @@
     /* Aberta pelo separador My tasks, a pagina mostra o que espera por mim */
     if (pag === 'Milestones') {
       var tt = document.querySelector('[data-campo="ms-titulo"]'), ts = document.querySelector('[data-campo="ms-sub"]');
-      if (tt) tt.textContent = U.msFiltro.minhas ? 'My tasks' : 'Tasks';
-      if (ts) ts.textContent = U.msFiltro.minhas ? 'Deliveries waiting on you. Untick Waiting on me to see every task.' : 'Choose a company to see its deliveries.';
+      var todasT = veTodas(u());
+      if (tt) tt.textContent = 'Tasks';
+      if (ts) ts.textContent = U.msFiltro.minhas || !todasT ? 'My Tasks: what is waiting on you to fill in, review or approve.' : 'All Tasks: every open task, to follow the whole reporting.';
     }
     var sec = document.querySelector('[data-pagina="' + pag + '"]');
     if (sec) sec.querySelectorAll('[data-bloco]').forEach(function (b) {
@@ -2263,6 +2268,7 @@
     calMes: function (d) { var n = U.cal.mes + (+d.v), dt = new Date(U.cal.ano, n, 1); U.cal = { ano: dt.getFullYear(), mes: dt.getMonth(), dia: 1 }; R(); },
     calHoje: function () { U.cal = null; R(); },
     msVista: function (d) { U.msVista = d.v; R(); },
+    msAba: function (d) { U.msFiltro.minhas = d.v === 'minhas'; R(); },
     msEmpTodas: function () { U.msEmpTodas = !U.msEmpTodas; R(); },
     msExcel: function () { exportarMilestones(msFiltradas()); },
     dadosVista: function (d) { U.dadosVista = d.v; R(); },
