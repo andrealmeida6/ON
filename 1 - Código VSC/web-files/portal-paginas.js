@@ -335,7 +335,7 @@
       return { attrs: 'class="ps-tr-tar"', celulas: ['<div class="ps-tar-k"><a href="' + rota('Milestone/' + x.m.id) + '">' + e(x.c.nome) + '</a>' + esrs + (cta ? '<a class="ps-tar-cta" href="' + rota('Milestone/' + x.m.id) + '">' + e(cta) + ' →</a>' : '') + '</div>', tagPer(x.m) || e(P.rotPeriodo(x.m)), empHtml(x.m.empresa), atribHtml(x.m), '<span class="ps-nowrap">' + e(prazoTxt(x.m)) + '</span>', chip(st.txt, st.cls)] };
     })) + (linhas.length > 12 ? '<div class="ps-sp ps-mt"><button type="button" class="ps-btn liga" data-a="tarTodas">' + (U.tarTodas ? 'Show fewer' : 'Show all ' + linhas.length + ' tasks') + '</button><a class="ps-btn liga" href="' + rota('Milestones' + (esc === 'minhas' ? '?minhas=1' : '')) + '">Open by milestone</a></div>' : '') + '</div>'
       : vazio(esc === 'minhas' ? 'Nothing waiting on you.' + (gere ? ' Switch to Everyone to follow the open tasks.' : '') : 'No open tasks.');
-    return '<div class="ps-dock">' + cabCartao('My tasks', 'tarefa', dir) + corpo + '</div>';
+    return '<div class="ps-dock">' + cabCartao('Tasks', 'tarefa', dir) + corpo + '</div>';
   };
   AI.tarEsc = function (d) { U.tarEsc = d.v; U.tarTodas = false; R(); };
   AI.tarTodas = function () { U.tarTodas = !U.tarTodas; R(); };

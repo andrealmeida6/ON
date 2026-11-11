@@ -1521,7 +1521,7 @@
       { step: 2, what: 'Do not change milestone_id, indicator_id, period or unit. They tell the platform where each value goes.' },
       { step: 3, what: 'If the change against prior_value is above threshold_pct, write a justification.' },
       { step: 4, what: porEmpresa ? 'Each indicator has one row per company. The platform adds them up (or takes the latest value or the average, as the indicator says) and keeps the value of each company.' : 'For estimated values, set data_quality to estimated and describe the estimation_method.' },
-      { step: 5, what: 'Upload the file in Home, My tasks, Excel (offline), or in Data entry, Excel upload. Rows that did not change are skipped.' }
+      { step: 5, what: 'Upload the file in Home, Tasks, Excel (offline), or in Data entry, Excel upload. Rows that did not change are skipped.' }
     ];
     return { dados: dados, milestones: instr, instructions: ajuda };
   };

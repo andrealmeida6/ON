@@ -191,7 +191,7 @@
     if (U.off.ids) { U.off.ids = null; U.off.res = null; }
     return '<div class="ps-card">' + cabCartao('Work offline in Excel', 'doc') + '<div class="ps-card-body">' + cartaoOffline(usr) + '<p class="ps-small ps-mut ps-mt">To paste straight from Excel, open a milestone and use its grid.</p></div></div>';
   };
-  /* Home, My tasks: o mesmo cartao num painel, so com as milestones da lista */
+  /* Home, Tasks: o mesmo cartao num painel, so com as milestones da lista */
   X.Pn.offline = function () {
     return { t: 'Excel (offline)', s: 'Download your KPIs, fill them in Excel and upload the file again', largo: true, b: cartaoOffline(u()), p: '<span class="ps-sp-flex"></span><button type="button" class="ps-btn" data-a="fecharPainel">Close</button>' };
   };
