@@ -810,6 +810,15 @@ Pedido do André a 11 de novembro de 2026.
   - Saiu também o cartão **Source of the data** (pedido do André, 11 de novembro de 2026). A coluna da direita fica só com Pending approval.
   - O "By report table" passou a **Completeness by report table**, com o visual das barras de completude (aprovado, reportado, em falta e a percentagem). Conta por ponto de dados e segue o período e a empresa escolhidos em cima.
 
+### Reporting status com duas vistas e Overview sem o Completeness by report table
+
+Pedido do André a 11 de novembro de 2026.
+
+- **Reporting status:** no topo há um seletor **By data point | By area**.
+  - By data point é a lista dos pontos de dados (a vista por omissão).
+  - By area mostra os blocos por departamento logo abaixo dos números, com um filtro de empresa ao lado. Antes ficava no fim da página, depois da tabela, e não se via.
+- **Overview:** saiu o cartão "Completeness by report table" do fim da página.
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.

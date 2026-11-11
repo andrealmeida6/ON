@@ -114,7 +114,7 @@
   C.ligEstado = function (el) { var a = S.apis[+el.dataset.id], usr = u(); if (!a || !P.gereTudo(usr)) return; a.estado = el.value; a.mudado = true; if (P.eventoGlobal) P.eventoGlobal('Connection ' + a.nome + ': ' + (el.value === 'ligada' ? 'connected' : 'waiting for credentials') + '.', usr.nome); P.guardar(); toast('Connection updated.', 'ok'); };
 
   /* --- Estado de reporte -------------------------------------------------------- */
-  U.est = { norma: '', empresa: '', dono: '', estado: 'todos' };
+  U.est = { norma: '', empresa: '', dono: '', estado: 'todos', vista: 'lista' };
   /* Uma linha por ponto de dados (indicador num periodo): conta tambem o que foi preenchido nas entregas trimestrais */
   var linhasEstado = function () {
     return P.pontosCiclo().map(function (x) { return { c: x.c, s: x.s, m: x.m, d: P.dono(x.id) }; });
@@ -135,8 +135,12 @@
     }).filter(function (o) { return o.falta + o.atraso; }).sort(function (a, b) { return b.atraso + b.falta - a.atraso - a.falta; });
     var prox = cicloMs().filter(function (m) { return !P.concluida(m) && P.diasAte(m.prazo) >= 0; }).sort(function (a, b) { return a.prazo < b.prazo ? -1 : 1; }).slice(0, 4);
     var kpi = function (t, v, s, cls) { return '<div class="ps-kpi ' + (cls || '') + '"><span>' + e(t) + '</span><b>' + v + '</b><small>' + e(s) + '</small></div>'; };
-    return '<div class="ps-sp ps-filtros"><button type="button" class="ps-btn" data-a="estExcel">Export to Excel</button></div>' +
-      '<div class="ps-kpis">' + kpi('Data points', base.length, S.ciclo.ano + ' cycle') + kpi('Approved', n('aprovado'), pct(n('aprovado')), 'k-ok') + kpi('In approval', n('aprovacao'), pct(n('aprovacao')), 'k-rev') + kpi('In progress', n('curso'), pct(n('curso')), 'k-info') + kpi('Missing', n('falta'), pct(n('falta')), 'k-warn') + kpi('Overdue', n('atraso'), 'past the due date', 'k-err') + '</div>' +
+    /* Duas vistas: a lista dos pontos de dados e By area (por departamento) */
+    var vistas = '<div class="ps-seg" role="tablist" aria-label="View"><button type="button" role="tab" aria-selected="' + (f.vista !== 'area') + '" class="' + (f.vista !== 'area' ? 'on' : '') + '" data-a="estVista" data-v="lista">By data point</button><button type="button" role="tab" aria-selected="' + (f.vista === 'area') + '" class="' + (f.vista === 'area' ? 'on' : '') + '" data-a="estVista" data-v="area">By area</button></div>';
+    var topo = '<div class="ps-sp-b ps-filtros">' + vistas + '<span class="ps-sp">' + (f.vista === 'area' ? '<label class="ps-sr" for="est-emp-a">Company</label><select id="est-emp-a" class="ps-sel" data-c="estF" data-id="empresa">' + opt('', 'All companies', f.empresa) + S.ent.map(function (x) { return opt(x.nome, x.nome, f.empresa); }).join('') + '</select>' : '') + '<button type="button" class="ps-btn" data-a="estExcel">Export to Excel</button></span></div>';
+    var kpis = '<div class="ps-kpis">' + kpi('Data points', base.length, S.ciclo.ano + ' cycle') + kpi('Approved', n('aprovado'), pct(n('aprovado')), 'k-ok') + kpi('In approval', n('aprovacao'), pct(n('aprovacao')), 'k-rev') + kpi('In progress', n('curso'), pct(n('curso')), 'k-info') + kpi('Missing', n('falta'), pct(n('falta')), 'k-warn') + kpi('Overdue', n('atraso'), 'past the due date', 'k-err') + '</div>';
+    if (f.vista === 'area') return topo + kpis + (P.porAreaHtml ? P.porAreaHtml(function (m) { return !f.empresa || m.empresa === f.empresa; }) : '');
+    return topo + kpis +
       '<div class="ps-grid-side ps-grid-side-l ps-mt"><div class="ps-card"><div class="ps-card-body"><div class="ps-form">' +
       campo('est-norma', 'ESRS standard', '<select id="est-norma" class="ps-sel" data-c="estF" data-id="norma">' + opt('', 'All', f.norma) + S.mat.map(function (x) { return opt(x.norma, x.norma + ' ' + x.tema, f.norma); }).join('') + '</select>') +
       campo('est-emp', 'Perimeter', '<select id="est-emp" class="ps-sel" data-c="estF" data-id="empresa">' + opt('', 'All', f.empresa) + S.ent.filter(function (x) { return cicloMs().some(function (m) { return m.empresa === x.nome; }); }).map(function (x) { return opt(x.nome, x.nome, f.empresa); }).join('') + '</select>') +
@@ -146,10 +150,10 @@
         return ['<a href="' + rota('Milestone/' + x.m.id) + '">' + e(x.c.nome) + '</a><br><small class="ps-mut">' + e(P.esrsDe(x.c.id).dps[0] || x.c.esrs_requisito || 'No ESRS') + ', ' + e(x.m.periodicidade) + '</small>', P.tagPer(x.m) || e(P.rotPeriodo(x.m)), emp(x.m.empresa), x.d ? pessoa(x.d) : X.depHtml(P.donoIndicador(x.c.id)), '<span class="ps-nowrap">' + e(X.prazoTxt(x.m)) + '</span>', chip(x.s.txt, x.s.cls)];
       }), 'No KPI matches these filters.') + '</div></div></div>' +
       '<div class="ps-col"><div class="ps-card">' + cabCartao('Missing by owner', 'tarefa') + '<ul class="ps-list">' + (porDono.length ? porDono.map(function (o) { return '<li class="ps-row"><span class="ps-row-txt"><b>' + e(o.x.nome) + '</b><span>' + e(P.unidadesTxt(o.x) || P.PERFIS[o.x.perfil]) + '</span></span><span class="ps-sp">' + (o.falta ? chip(o.falta + ' missing', 'warn') : '') + (o.atraso ? chip(o.atraso + ' overdue', 'err') : '') + '</span></li>'; }).join('') : '<li>' + vazio('Nothing missing.') + '</li>') + '</ul>' + (P.gereTudo(u()) ? '<div class="ps-card-body ps-small"><a href="' + rota('Backoffice?tab=indicadores') + '">Manage assignments</a></div>' : '') + '</div>' +
-      '<div class="ps-card">' + cabCartao('Next due dates', 'cal') + '<ul class="ps-list">' + (prox.length ? prox.map(function (m) { return '<li><a class="ps-row" href="' + rota('Milestone/' + m.id) + '"><span class="ps-row-txt"><b>' + e(m.nome) + '</b><span>' + emp(m.empresa) + '</span></span><b class="ps-nowrap ps-small">' + e(P.fmtDataAno(m.prazo)) + '</b></a></li>'; }).join('') : '<li>' + vazio('No upcoming due dates.') + '</li>') + '</ul></div></div></div>' +
-      (P.porAreaHtml ? P.porAreaHtml(function (m) { return !U.est.empresa || m.empresa === U.est.empresa; }) : '');
+      '<div class="ps-card">' + cabCartao('Next due dates', 'cal') + '<ul class="ps-list">' + (prox.length ? prox.map(function (m) { return '<li><a class="ps-row" href="' + rota('Milestone/' + m.id) + '"><span class="ps-row-txt"><b>' + e(m.nome) + '</b><span>' + emp(m.empresa) + '</span></span><b class="ps-nowrap ps-small">' + e(P.fmtDataAno(m.prazo)) + '</b></a></li>'; }).join('') : '<li>' + vazio('No upcoming due dates.') + '</li>') + '</ul></div></div></div>';
   };
   C.estF = function (el) { U.est[el.dataset.id] = el.value; };
+  A.estVista = function (d) { U.est.vista = d.v; R(); };
   A.estTab = function (d) { U.est.estado = d.v; R(); };
   A.estExcel = function () {
     P.escreverFolhas('reporting-status-' + S.ciclo.ano + '.xlsx', { status: filtroEstado(linhasEstado()).map(function (x) {
