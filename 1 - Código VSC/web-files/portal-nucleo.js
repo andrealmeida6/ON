@@ -608,9 +608,67 @@
     return P.validar(c, it.valor, it.ano);
   };
   /* O que falta para submeter. Cada entrada leva o campo onde o cursor deve ir. */
+  /* --- Outputs: indicadores calculados pelos codigos de outros (ex.: A01 + A02) -----------
+     Input: dado que alguem tem de colocar. Output: calculado pela plataforma a partir dos inputs,
+     logo que todos os inputs desse periodo estao submetidos. */
+  var RE_COD = /\b[A-Z]{1,4}\d{1,3}[A-Z]?\b/g;
+  P.codigosCalc = function (txt) { var l = String(txt || '').toUpperCase().match(RE_COD) || []; return l.filter(function (x, i) { return l.indexOf(x) === i; }); };
+  /* Valida a expressao: so codigos, numeros, + - * / ( ) e espacos; codigos conhecidos e sem se usar a si propria */
+  P.validarCalc = function (txt, idProprio, idsExtra) {
+    var s = String(txt || '').trim();
+    if (!s) return null;
+    if (/[^A-Za-z0-9.,+\-*/()\s]/.test(s)) return 'Use only KPI codes, numbers and + - * / ( ).';
+    var cods = P.codigosCalc(s);
+    if (!cods.length) return 'The calculation needs at least one KPI code, for example A01 + A02.';
+    if (idProprio && cods.indexOf(String(idProprio).toUpperCase()) > -1) return 'An indicator cannot use itself in its calculation.';
+    var mal = cods.filter(function (k) { return !P.cat(k) && (!idsExtra || idsExtra.indexOf(k) < 0); });
+    if (mal.length) return 'Unknown KPI code(s) in the calculation: ' + mal.join(', ') + '.';
+    var teste = s.toUpperCase().replace(RE_COD, '1').replace(/,/g, '.');
+    try { var r = Function('"use strict";return (' + teste + ');')(); if (typeof r !== 'number') throw 0; } catch (x) { return 'The calculation is not a valid expression: ' + s + '.'; }
+    return null;
+  };
+  P.eOutput = function (c) { return !!c && c.tipo === 'derivado' && !!String(c.calc_codigos || '').trim(); };
+  /* O input conta quando tem valor e a sua task ja saiu da recolha (submetida) */
+  var inputSubmetido = function (id, ch) {
+    var it = S.items[ch + ':' + id];
+    if (!it || it.valor === null) return null;
+    if (P.eOutput(P.cat(id))) return it.valor;
+    var m = it.milestone_id ? P.ms(it.milestone_id) : null;
+    if (m && !P.concluida(m) && P.passoAtual(m) && P.passoAtual(m).tipo === 'recolha') return null;
+    return it.valor;
+  };
+  P.calcularOutputs = function (ch, usr) {
+    var n = 0, quem = (usr && usr.nome) || 'System';
+    /* Varias passagens, para outputs que usam outros outputs */
+    for (var volta = 0; volta < 4; volta++) {
+      var mudou = 0;
+      S.cat.forEach(function (c) {
+        if (!P.eOutput(c)) return;
+        var cods = P.codigosCalc(c.calc_codigos), vals = {}, falta = false;
+        cods.forEach(function (k) { var v = inputSubmetido(k, ch); if (v === null) falta = true; vals[k] = v; });
+        var it = S.items[ch + ':' + c.id];
+        if (falta) return;
+        var expr = String(c.calc_codigos).toUpperCase().replace(RE_COD, function (k) { return '(' + vals[k] + ')'; }).replace(/,/g, '.'), r;
+        try { r = Function('"use strict";return (' + expr + ');')(); } catch (x) { r = null; }
+        if (typeof r !== 'number' || !isFinite(r)) return;
+        r = Number(r.toFixed(c.casas_decimais === undefined ? 2 : c.casas_decimais));
+        if (!it) it = S.items[ch + ':' + c.id] = novoItem(c.id, ch, null, 'derivado');
+        if (it.valor === r && it.daCalculo) return;
+        it.valor = r; it.rascunho = null; it.daCalculo = true; it.qualidade = 'calculado';
+        it.versoes.push({ valor: r, em: agora(), por: quem, origem: 'calculated: ' + c.calc_codigos, motivo: '' });
+        mudou++;
+      });
+      n += mudou;
+      if (!mudou) break;
+    }
+    if (n) guardar();
+    return n;
+  };
   P.faltasSubmissao = function (m) {
     var f = [];
     m.indicadores.forEach(function (id) {
+      /* Um output e calculado pela plataforma: nao se pede a quem preenche */
+      if (P.eOutput(P.cat(id))) return;
       var it = P.item(id, P.chave(m)), c = P.cat(id), v = P.validarItem(it);
       if (it.valor === null && !it.rascunho) f.push({ id: id, campo: 'val', msg: c.nome + ': value missing.' });
       v.erros.forEach(function (e) { f.push({ id: id, campo: 'val', msg: c.nome + ': ' + e }); });
@@ -1013,6 +1071,8 @@
     ev(m, 'Task submitted.', u.nome, 'avanco', p.nome);
     m.passo_atual++;
     correrAutomaticos(m);
+    var nc = P.calcularOutputs(P.chave(m), u);
+    if (nc) ev(m, nc + ' output indicator(s) calculated from the submitted inputs.', 'System');
     guardar();
     return { ok: true };
   };

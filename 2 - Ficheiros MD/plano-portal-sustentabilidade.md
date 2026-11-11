@@ -860,6 +860,26 @@ Pedido do André a 11 de novembro de 2026.
   - No painel do indicador, o Responsible de cada empresa só mostra as pessoas dessa empresa.
   - Para produção falta guardar `empresas` na tabela dos utilizadores no Supabase, tal como já acontece com as `unidades`.
 
+### Indicadores Input / Output com cálculo por códigos
+
+Pedido do André a 11 de novembro de 2026.
+
+- **Excel dos indicadores (export e import) e painel do indicador:**
+  - A coluna "Base or derived" passou a **Input / Output**. Input é o dado que alguém tem mesmo de colocar. Output é calculado pela plataforma. Os ficheiros antigos com Base ou Derived continuam a ser aceites.
+  - Há uma coluna nova, **Calculation (KPI codes)**, com o cálculo escrito com os códigos dos indicadores, por exemplo `A01 + A02` ou `(E01 - E02) / A01 * 100` (`c.calc_codigos`).
+  - A antiga "Calculation" passou a **Calculation methodology**, para o texto livre.
+- **Validação no import e no painel** (`P.validarCalc`):
+  - só são aceites códigos, números, `+ - * / ( )` e espaços;
+  - os códigos têm de existir na plataforma ou no próprio ficheiro;
+  - um indicador não pode usar o seu próprio código;
+  - a expressão tem de ser válida.
+  - Quando há um erro, a linha é recusada e o import diz qual é o código que falta.
+- **Cálculo** (`P.calcularOutputs`):
+  - Um output é calculado assim que todos os seus inputs desse período têm valor e as tasks deles já foram submetidas.
+  - Corre em cada submit, depois de um import e quando se grava o indicador. Fica uma versão com a origem "calculated: A01 + A02".
+  - Um output pode usar outros outputs.
+  - Um output que esteja numa task não é pedido a quem preenche.
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.

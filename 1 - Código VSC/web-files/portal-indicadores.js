@@ -38,6 +38,8 @@
   /* --- Campos do indicador: os mesmos no painel, no Excel e na importacao ---------- */
   /* g: grupo; t: cabecalho no Excel (como no modelo); d: explicacao; w: largura; ler: so de leitura;
      get: valor em texto; res: valida e devolve o texto canonico; set: grava. al: outros nomes aceites ao importar. */
+  /* Codigos de KPI do ficheiro que se esta a importar: uma calculation pode usar indicadores novos do mesmo ficheiro */
+  var idsImport = null;
   var GRUPOS = [
     ['id', 'Identification', '00338D'], ['esrs', 'ESRS reference', '7213EA'], ['car', 'Characteristics', '1E49E2'], ['resp', 'Responsibility', '005EB8'],
     ['emp', 'Companies', '0091DA'], ['disp', 'Availability', '00805A'], ['ctrl', 'Controls', 'A86400'], ['div', 'Disclosure', '483698']
@@ -75,9 +77,11 @@
       get: function (c) { return c.unidade_medida || ''; }, res: function (v) { return String(v).trim() ? okv(v) : { erro: 'Unit is required.' }; }, set: function (c, v) { c.unidade_medida = v; } },
     { k: 'casas', g: 'car', t: 'Decimals', w: 13, d: 'Number of decimal places shown, from 0 to 6.',
       get: function (c) { return String(c.casas_decimais === undefined ? 2 : c.casas_decimais); }, res: function (v) { var n = P.lerNumero(v); return n === null || n < 0 || n > 6 || Math.round(n) !== n ? { erro: 'Decimals must be a whole number from 0 to 6.' } : { val: String(n) }; }, set: function (c, v) { c.casas_decimais = Number(v); } },
-    { k: 'natureza', g: 'car', t: 'Base or derived', w: 13, d: 'Base: typed in or pulled from a system. Derived: calculated from other data.', vals: ['Base', 'Derived'],
-      get: function (c) { return c.tipo === 'derivado' ? 'Derived' : 'Base'; }, res: lista([['base', 'Base'], ['derivado', 'Derived']], 'Base or derived'), set: function (c, v) { c.tipo = v === 'Derived' ? 'derivado' : 'base'; } },
-    { k: 'formula', g: 'car', t: 'Calculation', w: 44, longo: true, d: 'Calculation methodology, formula or key assumptions.', al: ['formula', 'calculation method'],
+    { k: 'natureza', g: 'car', t: 'Input / Output', w: 13, d: 'Input: data someone has to enter. Output: calculated by the platform from the inputs, with the codes in "Calculation (KPI codes)".', vals: ['Input', 'Output'], al: ['base or derived', 'input output', 'input/output'],
+      get: function (c) { return c.tipo === 'derivado' ? 'Output' : 'Input'; }, res: lista([['input', 'Input'], ['output', 'Output'], ['base', 'Input'], ['derived', 'Output'], ['derivado', 'Output']], 'Input / Output'), set: function (c, v) { c.tipo = v === 'Output' ? 'derivado' : 'base'; } },
+    { k: 'calc', g: 'car', t: 'Calculation (KPI codes)', w: 26, d: 'For outputs: the calculation with the KPI codes, for example A01 + A02 or (E01 - E02) / A01 * 100. It runs by itself once all the inputs of the period are submitted.', al: ['calculation kpi codes', 'calculation codes', 'kpi formula'],
+      get: function (c) { return c.calc_codigos || ''; }, res: function (v, c) { var s = String(v || '').trim(); var er = P.validarCalc(s, c && c.id, idsImport); return er ? { erro: er } : { val: s.toUpperCase().replace(/\s+/g, ' ') }; }, set: function (c, v) { c.calc_codigos = v || ''; if (v) c.tipo = 'derivado'; } },
+    { k: 'formula', g: 'car', t: 'Calculation methodology', w: 44, longo: true, d: 'Calculation methodology, formula in words or key assumptions.', al: ['formula', 'calculation method', 'calculation'],
       get: function (c) { return c.formula || ''; }, res: okv, set: function (c, v) { c.formula = v || null; } },
     { k: 'freq', g: 'car', t: 'Reporting Frequency', w: 14, d: 'How often the indicator is reported.', vals: FREQ.map(function (f) { return f[1]; }), al: ['frequency', 'periodicidade'],
       get: function (c) { var f = par(FREQ, c.periodicidade, 0); return f ? f[1] : (X.PERIODO_TXT[c.periodicidade] || c.periodicidade || ''); },
@@ -394,9 +398,9 @@
         cmp('valida', 'Validator', sel('valida', d, pessoas('valida').map(function (x) { return x.nome; }), 'Not set'), 'Validates at the end.'), 'Who reviews and validates') +
       secao('car', cmp('unidade', 'Unit *', inp('unidade', d), 'For example m³, MWh, %, n.º') + cmp('casas', 'Decimals', inp('casas', d, ' inputmode="numeric"')) +
         cmp('freq', 'Reporting frequency *', sel('freq', d, freqs)) + cmp('recolha', 'Data collection frequency', sel('recolha', d, campoK.recolha.vals, 'Same as reporting')) +
-        cmp('agreg', 'Aggregation', sel('agreg', d, AGREG.map(function (f) { return f[1]; })), 'How companies and periods are combined.') + cmp('natureza', 'Base or derived', sel('natureza', d, ['Base', 'Derived'])) +
+        cmp('agreg', 'Aggregation', sel('agreg', d, AGREG.map(function (f) { return f[1]; })), 'How companies and periods are combined.') + cmp('natureza', 'Input / Output', sel('natureza', d, ['Input', 'Output']), 'Output: calculated from other indicators.') + cmp('calc', 'Calculation (KPI codes)', inp('calc', d, ' placeholder="For example A01 + A02" autocomplete="off"'), 'Runs by itself once the inputs are submitted.') +
         cmp('div_tipo', 'Disclosure type', sel('div_tipo', d, ['Quantitative', 'Qualitative'])) + cmp('tipo_dado', 'Data type', sel('tipo_dado', d, campoK.tipo_dado.vals.indexOf(d.tipo_dado) < 0 && d.tipo_dado ? campoK.tipo_dado.vals.concat([d.tipo_dado]) : campoK.tipo_dado.vals)) +
-        '<div class="ki-full">' + cmp('formula', 'Calculation', area('formula', d), 'Formula, methodology or key assumptions.') + '</div>') +
+        '<div class="ki-full">' + cmp('formula', 'Calculation methodology', area('formula', d), 'Methodology in words or key assumptions.') + '</div>') +
       secao('esrs', cmp('esrs', 'ESRS standard', sel('esrs', d, (S.mat || []).map(function (x) { return x.norma; }), 'Entity-specific'), d.esrs_tema || '') + cmp('dr', 'ESRS DR', inp('dr', d), 'Disclosure Requirement, for example E3-4.') +
         cmp('tema', 'Company topic', inp('tema', d)) + cmp('subtema', 'Company sub-topic', inp('subtema', d)) + (d.dps ? '<div class="ki-full ps-small ps-mut">ESRS datapoints: <span class="ps-mono">' + e(d.dps) + '</span>. From the ESRS datapoint list.</div>' : '')) +
       secao('ctrl', cmp('limiar', 'Change threshold (%)', inp('limiar', d, ' inputmode="decimal"'), 'Above it, the platform asks for a justification.') + cmp('evid', 'Evidence required', sel('evid', d, ['Yes', 'No']), 'A document must be attached to submit.') +
@@ -468,6 +472,7 @@
     c.resp_emp = novoRE;
     if (antesRE !== JSON.stringify(novoRE)) mud.push({ k: 'resp', t: 'Responsible by company', de: '', para: cobre.map(function (nome) { var re = d.respEmp[nome]; return nome + ': ' + re.dep + ', ' + re.resp; }).join('; ') });
     if (!E.novo) registar(c, mud, usr);
+    if (P.eOutput(c)) Object.keys(S.items).map(function (k) { return k.slice(0, k.lastIndexOf(':')); }).filter(function (k, i, l) { return l.indexOf(k) === i; }).forEach(function (ch) { P.calcularOutputs(ch, usr); });
     P.guardar();
     return { c: c, mud: mud, novo: E.novo };
   };
@@ -677,6 +682,12 @@
     return cols;
   };
   var analisar = function (livro) {
+    /* Os codigos que existem no ficheiro tambem servem nas calculations (indicadores novos do mesmo ficheiro) */
+    idsImport = [];
+    (livro.folhas || []).forEach(function (f) { (f.aoa || []).forEach(function (l) { l.forEach(function (x) { var t = String(x === null || x === undefined ? '' : x).trim().toUpperCase(); if (/^[A-Z]{1,4}\d{1,3}[A-Z]?$/.test(t) && idsImport.indexOf(t) < 0) idsImport.push(t); }); }); });
+    try { return analisar0(livro); } finally { idsImport = null; }
+  };
+  var analisar0 = function (livro) {
     var melhor = null;
     livro.folhas.forEach(function (fo) {
       if (norm(fo.nome) === 'lists' || norm(fo.nome) === 'how to use') return;
@@ -778,6 +789,9 @@
       aplicar(c, val); nn++;
     });
     if (nn) P.eventoGlobal(nn + ' indicator(s) created from the import of ' + x.nome + '.', usr.nome, 'Creation');
+    /* Calculations novas ou alteradas: calcula ja os outputs cujos inputs estao submetidos */
+    var nc = 0; Object.keys(S.items).map(function (k) { return k.slice(0, k.lastIndexOf(':')); }).filter(function (k, i, l) { return l.indexOf(k) === i; }).forEach(function (ch) { nc += P.calcularOutputs(ch, usr); });
+    if (nc) toast(nc + ' output value(s) calculated from submitted inputs.', 'ok');
     P.guardar(); U.ind.imp = null; U.painel = null;
     toast(n + ' indicator(s) changed' + (nn ? ', ' + nn + ' created' : '') + ' from ' + x.nome + '.', 'ok'); R();
   };
