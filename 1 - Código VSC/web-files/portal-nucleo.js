@@ -136,7 +136,8 @@
   };
   var UTILIZADORES = [
     /* So pessoas: o papel (administrador, equipa de sustentabilidade, auditor) vem do perfil. A unidade pode ser varias, separadas por "|". */
-    ['admin', 'Helena Martins', 'admin', ''], ['esg', 'Rita Sousa', 'esg', 'I&D, CSR e ESG'],
+    /* A conta de servico e o utilizador por omissao (entrada direta no site): administrador, sem departamento */
+    ['admin', 'Service account', 'admin', ''], ['esg', 'Rita Sousa', 'esg', 'I&D, CSR e ESG'],
     ['operacoes', 'Marta Lopes', 'resp', 'Operações'], ['qualidade', 'Rui Antunes', 'resp', 'Qualidade e Laboratório'],
     ['comercial', 'Sofia Reis', 'resp', 'Comercial e Relação com o Cliente'], ['ass', 'Tiago Moura', 'resp', 'Ambiente, Saúde e Segurança'],
     ['rh', 'Inês Faria', 'resp', 'Recursos Humanos'], ['financeira', 'Paulo Serra', 'resp', 'Financeira'],
@@ -506,10 +507,10 @@
     /* O sistema de RH passou a estar ligado; so fica por ligar se o administrador o mudou */
     (S.apis || []).forEach(function (a) { if (a.id === 'api2' && a.estado === 'pendente' && !a.mudado) a.estado = 'ligada'; });
     /* Pessoas com varios departamentos, e os perfis de sistema passam a pessoas com nome */
-    var NOMES_NOVOS = { admin: ['Administrador da plataforma', 'Helena Martins'], esg: ['Equipa de sustentabilidade', 'Rita Sousa'], auditor: ['Auditor externo (assurance)', 'Nuno Ferreira'] };
+    var NOMES_NOVOS = { admin: [['Administrador da plataforma', 'Helena Martins'], 'Service account'], esg: ['Equipa de sustentabilidade', 'Rita Sousa'], auditor: ['Auditor externo (assurance)', 'Nuno Ferreira'] };
     (S.users || []).forEach(function (u) {
       if (!u.unidades) P.definirUnidades(u, u.unidade ? [u.unidade] : []);
-      var nv = NOMES_NOVOS[u.login]; if (nv && u.nome === nv[0]) u.nome = nv[1];
+      var nv = NOMES_NOVOS[u.login]; if (nv && [].concat(nv[0]).indexOf(u.nome) > -1) u.nome = nv[1];
     });
     /* A plataforma passou a chamar-se ESG Data Hub: a marca gravada com o nome antigo acompanha a mudanca */
     if (S.marca && /^(Record to Report \(R2R\)|Portal de Sustentabilidade)$/.test(S.marca.nome || '')) { S.marca.nome = P.MARCA_BASE.nome; escrever(CHAVES.marca, S.marca); }

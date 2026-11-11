@@ -503,7 +503,7 @@ Pedido do André a 11 de novembro de 2026.
 **Users and profiles**
 
 - **Só pessoas:** a tabela só tem pessoas. O papel vem da coluna Profile: Administrator, Sustainability team, Data owner ou Auditor.
-- **Pessoas no lugar dos registos de sistema:** os utilizadores "Administrador da plataforma", "Equipa de sustentabilidade" e "Auditor externo (assurance)" passam a ser Helena Martins, Rita Sousa e Nuno Ferreira, com o mesmo login interno. Os dados já gravados no browser mudam sozinhos. O histórico antigo mantém o nome que tinha.
+- **Pessoas no lugar dos registos de sistema:** os utilizadores "Administrador da plataforma", "Equipa de sustentabilidade" e "Auditor externo (assurance)" passam a ser Helena Martins, Rita Sousa e Nuno Ferreira, com o mesmo login interno. A 11 de novembro, a pedido do André, o administrador (login `admin`), que é o utilizador com que o site entra por omissão, passou a chamar-se **Service account**. Os dados já gravados no browser mudam sozinhos. O histórico antigo mantém o nome que tinha.
 - **Entidades externas:** já não aparecem nesta tabela. Estão em External entities.
 - **Sem coluna de login:** o nome de utilizador é gerado a partir do nome completo (`P.loginDe`). O formulário de novo utilizador fica em cima e pede o nome, o perfil e os departamentos. Um data owner precisa de pelo menos um departamento.
 - **Departamentos por tags:** cada pessoa pode ter vários (`u.unidades`; `u.unidade` fica igual ao primeiro). Juntam-se com "+ Add" e tiram-se com ×.

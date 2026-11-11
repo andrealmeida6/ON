@@ -4,7 +4,8 @@ alter table public.esg_utilizadores add column if not exists unidades text[] not
 update public.esg_utilizadores set unidades = array[unidade] where unidade is not null and cardinality(unidades) = 0;
 
 -- Os utilizadores sao pessoas; o papel vem do perfil. Os registos de sistema passam a ter nome de pessoa.
-update public.esg_utilizadores set nome = 'Helena Martins' where login = 'admin' and nome = 'Administrador da plataforma';
+-- O administrador por omissao e a conta de servico
+update public.esg_utilizadores set nome = 'Service account' where login = 'admin' and nome in ('Administrador da plataforma', 'Helena Martins');
 update public.esg_utilizadores set nome = 'Rita Sousa' where login = 'esg' and nome = 'Equipa de sustentabilidade';
 update public.esg_utilizadores set nome = 'Nuno Ferreira' where login = 'auditor' and nome = 'Auditor externo (assurance)';
 -- Demonstracao: a responsavel da Frota tambem trata de Compras
