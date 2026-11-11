@@ -65,6 +65,7 @@
     kpim: 'esg_kpi_master', puxados: 'esg_source_pulls', periodos: 'esg_periods', relatorios: 'esg_reports', tipos: 'esg_data_types', dpdec: 'esg_dp_decisions', gloss: 'esg_glossary', rq: 'esg_report_tables', doc: 'esg_report_doc', defs: 'esg_definitions', saidas: 'esg_outputs'
   };
   var VERSAO_DADOS = 10;
+  P.CHAVES = CHAVES;
   var S = (P.S = {});
   var memoria = {};
   /* Ambiente de testes: as mesmas pessoas, empresas, indicadores e configuracao, sem milestones nem valores.

@@ -32,6 +32,8 @@
       var t = db.transaction(LOJA, 'readwrite');
       t.objectStore(LOJA).put({ nome: file.name, tipo: file.type || '', tamanho: file.size, blob: file }, chave(fid));
     }).catch(function () { /* sem IndexedDB: fica so nesta sessao */ });
+    /* Ambiente de testes partilhado: o ficheiro vai tambem para o Supabase */
+    if (P.ficheiroRemoto) P.ficheiroRemoto.gravar(fid, file);
     return fid;
   };
   var lerFicheiro = function (fid) {
@@ -42,7 +44,7 @@
         r.onsuccess = function () { ok(r.result || null); };
         r.onerror = function () { ok(null); };
       });
-    }).catch(function () { return null; });
+    }).catch(function () { return null; }).then(function (x) { return x || (P.ficheiroRemoto ? P.ficheiroRemoto.ler(fid) : null); });
   };
   var TIPOS = { pdf: 'application/pdf', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', svg: 'image/svg+xml', txt: 'text/plain', csv: 'text/csv', xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' };
   var NO_BROWSER = ['pdf', 'png', 'jpg', 'jpeg', 'gif', 'svg', 'txt', 'csv'];
@@ -51,7 +53,7 @@
   /* Abrir: PDF, imagens e texto abrem num separador novo; o resto descarrega-se */
   P.abrirFicheiro = function (fid, nome, descarregar) {
     return lerFicheiro(fid).then(function (r) {
-      if (!r) { aviso('The file ' + nome + ' is not stored in this browser. Files are kept in the browser where they were uploaded.'); return false; }
+      if (!r) { aviso('The content of ' + nome + ' is not available here: it was uploaded in another browser and is not in the shared test environment.'); return false; }
       var tipo = r.tipo || TIPOS[ext(nome)] || 'application/octet-stream', blob = r.blob.type ? r.blob : new Blob([r.blob], { type: tipo });
       var url = URL.createObjectURL(blob);
       if (!descarregar && NO_BROWSER.indexOf(ext(nome)) > -1) {
@@ -89,6 +91,7 @@
     if (!fid) return;
     delete memoria[fid];
     abrirBD().then(function (db) { db.transaction(LOJA, 'readwrite').objectStore(LOJA).delete(chave(fid)); }).catch(function () { /* nada a apagar */ });
+    if (P.ficheiroRemoto) P.ficheiroRemoto.apagar(fid);
   };
   document.addEventListener('click', function (ev) {
     var b = ev.target.closest && ev.target.closest('[data-fich-op]');

@@ -720,6 +720,29 @@ Pedido do André a 11 de novembro de 2026: as fórmulas e a biblioteca de fatore
 - **Links antigos:** `#/Calculos` e `/calculos/` abrem `Backoffice?tab=calculos`. Quem não tem Backoffice vai para a Home.
 - **CSS:** secção 50 de `global.css`.
 
+### Ambiente de testes partilhado no Supabase
+
+Pedido do André a 11 de novembro de 2026: manter os acessos como estão (sem login, qualquer pessoa escolhe o perfil e entra como esse utilizador), mas no ambiente de testes o que se faz fica gravado para os colegas com o mesmo link verem o mesmo.
+
+- **Como funciona** (`portal-partilha.js`, carregado depois de `portal-controlo.js`):
+  - **Ao abrir** com `?ambiente=teste`, antes de arrancar, traz da tabela `esg_teste_estado` as partes do estado (as mesmas chaves que o browser guarda, `P.CHAVES`) e escreve-as no armazenamento do browser. Na primeira vez, com a tabela vazia, envia o ambiente semeado.
+  - **Ao gravar** (`P.aoGuardar`): pouco depois, envia só as partes que mudaram, com quem gravou.
+  - **O que os outros fizeram:** chega ao voltar à janela e de 15 em 15 segundos. A página redesenha-se e diz de quem são as alterações.
+  - **Ficheiros carregados:** também vão para `esg_teste_ficheiros` (até 6 MB cada). O Open e o Download vão buscá-los lá quando não estão no browser.
+  - **Cabeçalho:** a etiqueta diz "Test environment, shared" ou "Test environment, not shared", com o motivo.
+  - **Clear test environment:** limpa para toda a gente e avisa disso.
+- **O ambiente principal continua só no browser.** As tabelas `esg_` reais e o login não mudam.
+- **Base de dados:** `015_esg_ambiente_teste.sql` cria `esg_teste_estado` e `esg_teste_ficheiros`, com RLS aberto a anon (é um ambiente de testes sem login) e a hora sempre do servidor.
+  - **Ainda não foi corrido:** a sessão não tinha autorização para alterar o Supabase.
+  - **Até ser corrido:** a plataforma funciona como antes e a etiqueta mostra "not shared".
+- **Configuração:** `gerar-mockup.js` põe `window.PORTAL_PARTILHA` (URL e chave pública do Supabase) no mockup e no site publicado.
+- **Limites:**
+  - Se duas pessoas gravarem a mesma parte ao mesmo tempo, fica a última. As partes são grandes (todas as milestones, todos os valores), por isso a última gravação ganha.
+  - Quem tem o link pode ler e alterar o ambiente de testes. Não deve ter dados reais nem confidenciais.
+- **Aviso do Supabase:** o projeto tem 38 tabelas de outra aplicação (formação, deslocações, inventário, medicina no trabalho) com RLS desligado, expostas a quem tiver a chave pública. Não foram mexidas: é preciso decidir as políticas.
+- **Verificado** com um Supabase simulado e dois browsers: a task enviada pelo administrador num browser apareceu no outro, o valor e o ficheiro carregados pelo data owner chegaram ao primeiro, e o ficheiro foi descarregado no outro browser. Sem as tabelas, a plataforma continua a funcionar e a etiqueta diz "not shared".
+- **CSS:** secção 51 de `global.css`.
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.

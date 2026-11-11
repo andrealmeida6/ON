@@ -26,7 +26,9 @@ let html = resolver(ler('web-templates', 'layout-portal.html').replace(/\{%\s*bl
 const montar = (web, config) => '<!-- Gerado por gerar-mockup.js. Nao editar: alterar as web pages, snippets ou templates. -->\n' + html
   .replace(/(href|src)="\/(global\.css|[\w.-]+\.js)"/g, (_, a, f) => a + '="' + web + f + '"')
   .replace('<script src="' + web + 'xlsx.full.min.js"', '<script>' + config + '</script>\n<script src="' + web + 'xlsx.full.min.js"');
-const MODO_MOCKUP = 'window.PORTAL_MODO = "hash";';
+/* Ambiente de testes partilhado (portal-partilha.js): mesma base Supabase, tabelas esg_teste_ (015_esg_ambiente_teste.sql) */
+const PARTILHA = 'window.PORTAL_PARTILHA = ' + JSON.stringify({ url: 'https://yujhfscnnngaivwwunom.supabase.co', chave: 'sb_publishable_wU6S2mgSbmnTzz4hQMKZ6g_jTj6MMgo' }) + ';';
+const MODO_MOCKUP = 'window.PORTAL_MODO = "hash"; ' + PARTILHA;
 /* A chave publicavel foi feita para estar no navegador: quem protege os dados e o RLS */
 const BACKEND = { url: 'https://yujhfscnnngaivwwunom.supabase.co', chave: 'sb_publishable_wU6S2mgSbmnTzz4hQMKZ6g_jTj6MMgo', dominio: 'portal-esg.invalid' };
 

@@ -262,7 +262,7 @@
   /* Cartao do ambiente: entrar no ambiente de testes, ou sair dele e limpa-lo */
   var ambienteHtml = function () {
     if (P.teste()) {
-      return '<div class="ps-amb on"><div><b>Test environment</b><p>Same people, companies, indicators and settings, with no milestones or values. What you do here never touches the main environment.</p></div>' +
+      return '<div class="ps-amb on"><div><b>Test environment</b><p>Same people, companies, indicators and settings, with no milestones or values. What you do here never touches the main environment.' + (P.partilha && P.partilha.estado === 'ligado' ? ' It is shared online: everyone who opens this link sees the same and can enter as any profile.' : '') + '</p></div>' +
         '<div class="ps-amb-acts"><button type="button" class="ps-btn peq" data-a="ambienteLimpar">Clear test environment</button><button type="button" class="ps-btn peq pri" data-a="ambientePrincipal">Back to main environment</button></div></div>';
     }
     return '<div class="ps-amb"><div><b>Test environment</b><p>Start from an empty platform: launch milestones, assign them and follow each person step by step.</p></div>' +
@@ -1942,7 +1942,7 @@
     marcaAbrir: function () { U.menu = null; U.marca = null; U.logoEstado = ''; abrePainel('marca'); },
     ambienteTeste: function () { P.sair(); P.mudarAmbiente(true); },
     ambientePrincipal: function () { P.sair(); P.mudarAmbiente(false); },
-    ambienteLimpar: function () { if (!window.confirm('Clear the test environment? Every milestone, value and comment created here will be removed.')) return; P.reporDemonstracao(); U.menu = null; U.imp = {}; U.cal = null; toast('Test environment cleared.', 'ok'); P.irPara('Inicio'); },
+    ambienteLimpar: function () { if (!window.confirm('Clear the test environment? Every milestone, value and comment created here will be removed' + (P.partilha && P.partilha.estado === 'ligado' ? ', for everyone who uses it' : '') + '.')) return; P.reporDemonstracao(); U.menu = null; U.imp = {}; U.cal = null; toast('Test environment cleared.', 'ok'); P.irPara('Inicio'); },
     sair: function () { P.sair(); if (P.online()) { window.PortalBackend.sair(); P.estadoVazio(); } U.menu = null; U.cal = null; P.irPara('Entrada'); },
     menuNotif: function () { U.menu = U.menu === 'notif' ? null : 'notif'; R(); },
     menuConta: function () { U.menu = U.menu === 'conta' ? null : 'conta'; R(); },
@@ -2445,5 +2445,9 @@
   };
   /* As paginas de controlo (portal-gestao.js) acrescentam-se aqui */
   P.ext = { aplicarDados: function (m, l, o) { return aplicarDados(m, l, o); }, estadoTarefa: estadoTarefa, ctaPasso: ctaPasso, pendentesDe: pendentesDe, abertas: abertas, tagPer: tagPer, bruNum: bruNum, botaoTl: botaoTl, Live: Live, Blocos2: Blocos, B: B, linkFicha: linkFicha, PERIODO_TXT: PERIODO_TXT, fechaPainel: function () { fechaPainel(); }, pessHtml: pessHtml, depHtml: depHtml, empHtml: empHtml, avPessoa: avPessoa, avEquipa: avEquipa, avEmpresa: avEmpresa, msAtual: function () { return msAtual(); }, Pn: Pn, abrePainel: function (t, a) { abrePainel(t, a); }, Blocos: Blocos, A: A, C: C, U: U, e: e, svg: svg, I: I, rota: rota, chip: chip, estChip: estChip, cabCartao: cabCartao, vazio: vazio, opt: opt, campo: campo, ficheiroHtml: ficheiroHtml, numAttr: numAttr, infoFormula: infoFormula, tabela: tabela, toast: toast, R: R, val: val, res: res, escolherFicheiro: escolherFicheiro, atribHtml: atribHtml, iniciais: iniciais, u: u, fmtV: fmtV, prazoTxt: prazoTxt };
-  document.addEventListener('DOMContentLoaded', P.iniciar);
+  /* Antes de arrancar, o ambiente de testes partilhado traz o estado do Supabase (portal-partilha.js) */
+  document.addEventListener('DOMContentLoaded', function () {
+    var depois = function () { P.iniciar(); if (P.depoisIniciar) P.depoisIniciar(); };
+    (P.antesIniciar ? P.antesIniciar() : Promise.resolve()).then(depois, depois);
+  });
 })();
