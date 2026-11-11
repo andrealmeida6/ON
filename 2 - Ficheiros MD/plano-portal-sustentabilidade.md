@@ -991,6 +991,17 @@ Pedido do André a 11 de novembro de 2026.
 - Em Requested data, o cabeçalho da lista (Indicator, Expand all, T4 2025, Value T4 2026, Change, Status) fica preso por baixo do cabeçalho da página enquanto se faz scroll e a lista ainda está no ecrã. Quando a lista acaba, sai com ela.
 - É CSS na secção 60 do `global.css`: `position: sticky`, a 69px do topo no desktop e a 61px no telemóvel.
 
+### Workflow da task mostra os indicadores já submetidos
+
+Pedido do André a 11 de novembro de 2026.
+
+- Quando há indicadores submetidos um a um e a task ainda está em recolha, o workflow da task (o "breadcrumb" dos passos) mostra:
+  - no passo de recolha, um anel de progresso com a parte submetida e o texto "2 of 10 submitted";
+  - na ligação para o passo seguinte, a mesma parte a verde;
+  - no passo seguinte, "2 indicators ready here", com a lista dos indicadores no tooltip;
+  - na barra de progresso do topo, a mesma fração somada ao passo em curso.
+- O CSS está na secção 61 do `global.css`.
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.

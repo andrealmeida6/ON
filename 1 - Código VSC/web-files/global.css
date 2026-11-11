@@ -2258,3 +2258,12 @@ button.ps-est-i:hover{border-color:rgba(255,255,255,.4);background:rgba(255,255,
    Fica preso por baixo do cabecalho da pagina enquanto a lista de Requested data esta no ecra */
 .rq2-cab{position:sticky;top:var(--ps-h-alt,69px);z-index:6;background:var(--surface);box-shadow:0 1px 0 var(--line)}
 @media (max-width:820px){.rq2-cab{top:var(--ps-h-alt-m,61px)}}
+
+/* 61. WORKFLOW DA TASK: INDICADORES JA SUBMETIDOS (SUBMIT POR INDICADOR)
+   O passo de recolha mostra um anel com a parte submetida, a ligacao ao passo seguinte fica verde nessa parte
+   e o passo seguinte diz quantos indicadores ja la estao */
+.ps-wf-p.parcial .ps-wf-c{background:radial-gradient(closest-side,var(--surface) 76%,transparent 79%),conic-gradient(var(--ok) var(--parte),var(--primary-100) 0);border-color:transparent}
+.ps-wf-p.parcial:not(:last-child)::after{background:linear-gradient(90deg,var(--ok) var(--parte),var(--line) 0)}
+.ps-wf-sub{font-size:11.5px;font-weight:700;color:var(--ok);margin:-2px 0 4px}
+.ps-wf-chega{display:inline-block;font-size:11px;font-weight:700;color:var(--ok);background:var(--ok-50);border:1px dashed var(--ok);border-radius:999px;padding:1px 8px;margin:-2px 0 4px}
+
