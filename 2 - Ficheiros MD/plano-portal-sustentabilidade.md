@@ -807,6 +807,7 @@ Pedido do André a 11 de novembro de 2026.
   - Segue o filtro de empresa da página e conta por ponto de dados, como o resto da plataforma.
 - **Overview, Reporting progress:**
   - Saiu o cartão "By topic", que repetia a "Completeness by company topic" de cima.
+  - Saiu também o cartão **Source of the data** (pedido do André, 11 de novembro de 2026). A coluna da direita fica só com Pending approval.
   - O "By report table" passou a **Completeness by report table**, com o visual das barras de completude (aprovado, reportado, em falta e a percentagem). Conta por ponto de dados e segue o período e a empresa escolhidos em cima.
 
 ## O que falta para produção
