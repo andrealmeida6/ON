@@ -29,6 +29,13 @@
     return '/' + p[0].toLowerCase() + '/' + (p[1] || q[1] ? '?' + [p[1] ? 'id=' + p[1] : '', q[1] || ''].filter(Boolean).join('&') : '');
   };
   var tagsDe = function (m) { return '<span class="ps-tags">' + (m.departamentos || []).map(function (d) { return '<span class="ps-tag ps-tag-dep">' + avEquipa() + e(d) + '</span>'; }).join('') + '</span>'; };
+  /* Um KPI aprovado (a task concluida, ou aprovado sozinho pela sustentabilidade) ja nao esta atribuido a ninguem */
+  var atribKpi = function (m, id) {
+    var it = P.item(id, P.chave(m));
+    if (P.concluida(m) || (it && it.revisto && P.passoAtual(m) && P.passoAtual(m).tipo === 'recolha')) return '<span class="ps-mut" title="Approved: no one is assigned">-</span>';
+    return atribHtml(m);
+  };
+  P.atribKpiHtml = function (m, id) { return atribKpi(m, id); };
   var atribHtml = function (m) {
     var a = P.atribuido(m);
     if (!a) return '<span class="ps-mut">-</span>';
@@ -602,7 +609,7 @@
       return filtros + '<div class="ps-card">' + cabCartao((f.empresa || 'All companies') + ', ' + linhasK.length + ' KPIs in ' + lista.length + ' tasks', 'tarefa', dir) + '<div class="ps-card-body">' +
         tabela([{ t: 'KPI' }, { t: 'Task' }, { t: 'Period' }, { t: 'Perimeter' }, { t: 'Value', dir: 1 }, { t: 'Assigned to' }, { t: 'Deadline' }, { t: 'Status' }], linhasK.map(function (x) {
           var c = P.cat(x.id), it = P.item(x.id, P.chave(x.m)), st = estadoTarefa(x.m, x.id);
-          return { attrs: 'class="ps-tr-tar"', celulas: ['<a href="' + rota('Milestone/' + x.m.id + '?ind=' + encodeURIComponent(x.id)) + '"><b>' + e(c.nome) + '</b></a><br><small class="ps-mut">' + e(x.id + ', ' + c.unidade_medida) + '</small>', '<a href="' + rota('Milestone/' + x.m.id) + '">' + e(x.m.nome) + '</a>', tagPer(x.m) || e(P.rotPeriodo(x.m)), empHtml(x.m.empresa), it && it.valor !== null ? '<span class="ps-num">' + e(fmtV(x.id, it.valor)) + '</span>' : '<span class="ps-mut">-</span>', atribHtml(x.m), '<span class="ps-nowrap">' + e(prazoTxt(x.m)) + '</span>', P.chipEstadoTarefa(x.m, st)] };
+          return { attrs: 'class="ps-tr-tar"', celulas: ['<a href="' + rota('Milestone/' + x.m.id + '?ind=' + encodeURIComponent(x.id)) + '"><b>' + e(c.nome) + '</b></a><br><small class="ps-mut">' + e(x.id + ', ' + c.unidade_medida) + '</small>', '<a href="' + rota('Milestone/' + x.m.id) + '">' + e(x.m.nome) + '</a>', tagPer(x.m) || e(P.rotPeriodo(x.m)), empHtml(x.m.empresa), it && it.valor !== null ? '<span class="ps-num">' + e(fmtV(x.id, it.valor)) + '</span>' : '<span class="ps-mut">-</span>', atribKpi(x.m, x.id), '<span class="ps-nowrap">' + e(prazoTxt(x.m)) + '</span>', P.chipEstadoTarefa(x.m, st)] };
         }), 'No KPIs in these tasks.') + '</div></div>';
     }
     return filtros + '<div class="ps-card">' + cab + '<div class="ps-card-body">' + tabela(COLS_MS, lista.map(linhaTabMs)) + '</div></div>';

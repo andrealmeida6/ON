@@ -1099,6 +1099,13 @@ Reportado pelo André a 11 de novembro de 2026, no ambiente de testes.
 - **Dados antigos** (`P.migrarDados`): os indicadores submetidos um a um antes de existir o passo do responsável de área (antes de 11/11/2026 12:39 UTC) ficam com esse passo dado como passado, porque já estavam com a sustentabilidade.
   - Estes acertos e os do workflow passaram para `P.migrarDados`. Correm ao carregar e também quando o ambiente de testes partilhado recebe alterações de outras pessoas.
 
+### KPI aprovado deixa de estar atribuído
+
+Pedido do André a 11 de novembro de 2026.
+
+- Um KPI aprovado já não aparece atribuído a ninguém: a coluna "Assigned to" mostra "-" (`atribKpi`, `P.atribKpiHtml`). Conta como aprovado quando a task está concluída ou quando a sustentabilidade aprovou o KPI sozinho, com a task ainda aberta.
+- Aplica-se à Home (Tasks) e à vista By KPI da página Tasks. As tasks concluídas já mostravam "-".
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.
