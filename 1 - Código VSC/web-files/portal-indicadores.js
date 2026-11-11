@@ -60,7 +60,7 @@
       get: function (c) { var m = (S.mat || []).filter(function (x) { return x.norma === c.esrs; })[0]; return m ? m.tema : ''; } },
     { k: 'dr', g: 'esrs', t: 'ESRS DR', w: 13, d: 'ESRS Disclosure Requirement the indicator comes from (for example E3-4).', al: ['disclosure requirement'],
       get: function (c) { return c.esrs_requisito || ''; }, res: okv, set: function (c, v) { c.dr_proprio = v; c.esrs_requisito = v || c.esrs || 'Setorial'; } },
-    { k: 'dps', g: 'esrs', t: 'IG3 ID', w: 22, ler: true, d: 'ESRS datapoints mapped to this indicator. Managed in KPI master.', al: ['ig3 id as of 28 08 2026'],
+    { k: 'dps', g: 'esrs', t: 'IG3 ID', w: 22, ler: true, d: 'ESRS datapoints mapped to this indicator, from the ESRS datapoint list.', al: ['ig3 id as of 28 08 2026'],
       get: function (c) { return P.esrsDe(c.id).dps.join('; '); } },
     { k: 'tema', g: 'esrs', t: 'Company Topic', w: 24, d: 'Company-defined sustainability topic.', al: ['topic', 'tema'],
       get: function (c) { return c.tema || ''; }, res: okv, set: function (c, v) { c.tema = v; } },
@@ -337,6 +337,36 @@
   var sel = function (k, d, ops, vazioTxt) { return '<select id="ke-' + k + '" class="ps-sel" data-c="indCampo" data-f="' + k + '">' + (vazioTxt === undefined ? '' : opt('', vazioTxt, d[k])) + ops.map(function (o) { return opt(o, o, d[k]); }).join('') + '</select>'; };
   var cmp = function (k, rot, html, ajuda) { return '<div class="ps-campo"><label class="ps-lab" for="ke-' + k + '">' + e(rot) + '</label>' + html + (ajuda ? '<small class="ps-mut">' + e(ajuda) + '</small>' : '') + '</div>'; };
   var secao = function (g, corpo, ajuda) { var x = GRUPOS.filter(function (y) { return y[0] === g; })[0]; return '<section class="ki-sec" style="--gc:#' + x[2] + '"><h3>' + e(x[1]) + (ajuda ? '<small>' + e(ajuda) + '</small>' : '') + '</h3><div class="ki-g">' + corpo + '</div></section>'; };
+  /* Companies, no topo do painel: que empresas o indicador abrange e, em cada uma, o departamento e a pessoa que reportam */
+  var secaoEmpresas = function (d) {
+    var cobre = String(d.empresas || '').split(';').map(function (t) { return t.trim(); }).filter(Boolean);
+    var chk = '<div class="ki-emps" role="group" aria-label="Companies covered">' + S.ent.map(function (x, i) { var on = cobre.indexOf(x.nome) > -1; return '<label class="ki-empc' + (on ? ' on' : '') + '"><input id="ke-emp-' + i + '" type="checkbox" data-c="indEmp" data-id="' + e(x.nome) + '"' + (on ? ' checked' : '') + '>' + X.avEmpresa() + e(x.nome) + '</label>'; }).join('') + '</div>';
+    var linhas = cobre.map(function (nome, i) {
+      var r = (d.respEmp || {})[nome] || { dep: '', resp: GRUPO_TXT }, deps = P.depsDaEmpresa ? P.depsDaEmpresa(nome) : P.UNIDADES, rep = d.reporta === nome;
+      if (r.dep && deps.indexOf(r.dep) < 0) deps = deps.concat([r.dep]);
+      var doDep = pessoas('submete').filter(function (x) { return x.perfil === 'esg' || P.temUnidade(x, r.dep); }), outras = pessoas('submete').filter(function (x) { return doDep.indexOf(x) < 0; });
+      var selResp = '<select id="ker-p-' + i + '" class="ps-sel" data-c="indRespEmp" data-id="' + e(nome) + '" data-f="resp">' + opt(GRUPO_TXT, 'Whole department' + (r.dep ? ': ' + r.dep : ''), r.resp) +
+        (doDep.length ? '<optgroup label="People of this department">' + doDep.map(function (x) { return opt(x.nome, x.nome, r.resp); }).join('') + '</optgroup>' : '') + (outras.length ? '<optgroup label="Other people">' + outras.map(function (x) { return opt(x.nome, x.nome + ' (' + P.unidadesTxt(x) + ')', r.resp); }).join('') + '</optgroup>' : '') + '</select>';
+      return '<div class="ke-er' + (rep ? ' rep' : '') + '"><div class="ke-er-e">' + X.empHtml(nome) + '<label class="ps-chk ke-er-rep"><input type="radio" name="ke-rep" id="ker-r-' + i + '" data-c="indRep" data-id="' + e(nome) + '"' + (rep ? ' checked' : '') + '> Reports it</label></div>' +
+        '<div class="ps-campo"><label class="ps-lab" for="ker-d-' + i + '">Department *</label><select id="ker-d-' + i + '" class="ps-sel" data-c="indRespEmp" data-id="' + e(nome) + '" data-f="dep">' + (r.dep ? '' : opt('', 'Choose', '')) + deps.map(function (x) { return opt(x, x, r.dep); }).join('') + '</select></div>' +
+        '<div class="ps-campo"><label class="ps-lab" for="ker-p-' + i + '">Responsible: person or group *</label>' + selResp + '</div></div>';
+    }).join('');
+    return secao('emp', '<div class="ki-full"><span class="ps-lab">Companies covered *</span>' + chk + '</div>' +
+      '<div class="ki-full ke-ers">' + (linhas || '<p class="ps-mut ps-small">Choose at least one company.</p>') + '</div>' +
+      '<div class="ki-full ps-small ps-mut">' + (cobre.length > 1 ? 'Each company has its own department and person. The company marked "Reports it" receives the task; with more than one company, the value is entered per company and combined with the aggregation.' : 'The department and the person who report this indicator in this company.') + '</div>' +
+      cmp0('scope', 'KPI Scope', inp0('scope', d), 'For example Group, Subsidiaries, Sites.'), 'Which companies, and who reports in each');
+  };
+  var cmp0 = function (k, rot, html, ajuda) { return '<div class="ps-campo"><label class="ps-lab" for="ke-' + k + '">' + e(rot) + '</label>' + html + (ajuda ? '<small class="ps-mut">' + e(ajuda) + '</small>' : '') + '</div>'; };
+  var inp0 = function (k, d) { return '<input id="ke-' + k + '" class="ps-in" data-c="indCampo" data-f="' + k + '" value="' + e(d[k] === undefined ? '' : d[k]) + '">'; };
+  /* Responsaveis por empresa no rascunho do painel: os gravados, ou o responsavel geral para cada empresa abrangida */
+  var respEmpDe = function (c, d) {
+    var o = {}, cobre = String(d.empresas || '').split(';').map(function (t) { return t.trim(); }).filter(Boolean);
+    cobre.forEach(function (nome) {
+      var x = S.ent.filter(function (y) { return y.nome === nome; })[0], g = c && c.resp_emp && x ? c.resp_emp[x.id] : null;
+      o[nome] = g && g.dep ? { dep: g.dep, resp: g.pessoa ? (P.user(g.pessoa) || {}).nome || GRUPO_TXT : GRUPO_TXT } : { dep: d.dep || '', resp: nome === d.reporta ? d.resp || GRUPO_TXT : GRUPO_TXT };
+    });
+    return o;
+  };
   X.Pn.indEd = function () {
     var E = U.ind.ed, d = E.d, c = E.novo ? null : P.cat(E.id), per = perAtual();
     var freqs = FREQ.map(function (f) { return f[1]; }); if (d.freq && freqs.indexOf(d.freq) < 0) freqs.push(d.freq);
@@ -350,23 +380,19 @@
     var tar = c && per ? P.estadoTarefaInd(c.id, per.id) : null;
     var corpo = (E.erros && E.erros.length ? '<div class="ps-aviso err" role="alert"><b>Check before saving</b><ul class="ki-err">' + E.erros.map(function (t) { return '<li>' + e(t) + '</li>'; }).join('') + '</ul></div>' : '') +
       (tar ? '<div class="ki-estado"><span>Task for ' + e(per.nome) + '</span>' + chip(tar.txt, tar.cls) + (tar.m ? '<a href="' + rota('Milestone/' + tar.m.id) + '" data-a="fecharPainel">Open ' + e(tar.m.nome) + '</a>' : '<span class="ps-mut ps-small">Save and use Send task to ask for this period.</span>') + '</div>' : '') +
+      secaoEmpresas(d) +
       secao('id', (E.novo ? cmp('id', 'KPI ID *', inp('id', d, ' maxlength="24" autocapitalize="characters"'), 'Short unique code, for example W05. It cannot be changed later.') : cmp('id', 'KPI ID', '<input id="ke-id" class="ps-in" readonly value="' + e(d.id) + '">')) +
         cmp('ativo', 'Status', sel('ativo', d, ['Active', 'Inactive']), 'Inactive indicators are not sent in tasks.') +
         '<div class="ki-full">' + cmp('nome', 'KPI Name *', inp('nome', d)) + '</div><div class="ki-full">' + cmp('desc', 'KPI Description', area('desc', d), 'What is measured, with the key definitions.') + '</div>') +
-      secao('resp', cmp('dep', 'Responsible department *', sel('dep', d, (function () { var l = P.depsDaEmpresa ? P.depsDaEmpresa(d.reporta) : P.UNIDADES; if (d.dep && l.indexOf(d.dep) < 0) l = l.concat([d.dep]); return l; })(), P.UNIDADES.indexOf(d.dep) < 0 ? 'Choose' : undefined), 'Departments of ' + (d.reporta || 'the reporting company') + '.') +
-        cmp('resp', 'Responsible: person or group *', respOps, 'A person, or the whole department as a group.') +
-        cmp('reve', 'Reviewer', sel('reve', d, pessoas('reve').map(function (x) { return x.nome; }), 'Not set'), 'Reviews the value. Cannot be who reports.') +
-        cmp('valida', 'Validator', sel('valida', d, pessoas('valida').map(function (x) { return x.nome; }), 'Not set'), 'Validates at the end.'), 'Who reports, reviews and validates') +
-      secao('emp', '<div class="ki-full"><span class="ps-lab">Companies covered *</span>' + empChk + '<small class="ps-mut">' + (cobre.length > 1 ? 'With ' + cobre.length + ' companies, the value is entered once per company (Data entry or Excel offline) and combined with the aggregation below.' : 'The indicator holds the data of this company only.') + '</small></div>' +
-        cmp('reporta', 'Reporting company *', sel('reporta', d, S.ent.map(function (x) { return x.nome; })), 'The company that has to report it. Tasks are sent to this company.') +
-        cmp('scope', 'KPI Scope', inp('scope', d), 'For example Group, Subsidiaries, Sites.'), 'Which companies it covers and which one reports') +
+      secao('resp', cmp('reve', 'Reviewer', sel('reve', d, pessoas('reve').map(function (x) { return x.nome; }), 'Not set'), 'Reviews the value. Cannot be who reports.') +
+        cmp('valida', 'Validator', sel('valida', d, pessoas('valida').map(function (x) { return x.nome; }), 'Not set'), 'Validates at the end.'), 'Who reviews and validates') +
       secao('car', cmp('unidade', 'Unit *', inp('unidade', d), 'For example m³, MWh, %, n.º') + cmp('casas', 'Decimals', inp('casas', d, ' inputmode="numeric"')) +
         cmp('freq', 'Reporting frequency *', sel('freq', d, freqs)) + cmp('recolha', 'Data collection frequency', sel('recolha', d, campoK.recolha.vals, 'Same as reporting')) +
         cmp('agreg', 'Aggregation', sel('agreg', d, AGREG.map(function (f) { return f[1]; })), 'How companies and periods are combined.') + cmp('natureza', 'Base or derived', sel('natureza', d, ['Base', 'Derived'])) +
         cmp('div_tipo', 'Disclosure type', sel('div_tipo', d, ['Quantitative', 'Qualitative'])) + cmp('tipo_dado', 'Data type', sel('tipo_dado', d, campoK.tipo_dado.vals.indexOf(d.tipo_dado) < 0 && d.tipo_dado ? campoK.tipo_dado.vals.concat([d.tipo_dado]) : campoK.tipo_dado.vals)) +
         '<div class="ki-full">' + cmp('formula', 'Calculation', area('formula', d), 'Formula, methodology or key assumptions.') + '</div>') +
       secao('esrs', cmp('esrs', 'ESRS standard', sel('esrs', d, (S.mat || []).map(function (x) { return x.norma; }), 'Entity-specific'), d.esrs_tema || '') + cmp('dr', 'ESRS DR', inp('dr', d), 'Disclosure Requirement, for example E3-4.') +
-        cmp('tema', 'Company topic', inp('tema', d)) + cmp('subtema', 'Company sub-topic', inp('subtema', d)) + (d.dps ? '<div class="ki-full ps-small ps-mut">ESRS datapoints: <span class="ps-mono">' + e(d.dps) + '</span>. Mapped in KPI master.</div>' : '')) +
+        cmp('tema', 'Company topic', inp('tema', d)) + cmp('subtema', 'Company sub-topic', inp('subtema', d)) + (d.dps ? '<div class="ki-full ps-small ps-mut">ESRS datapoints: <span class="ps-mono">' + e(d.dps) + '</span>. From the ESRS datapoint list.</div>' : '')) +
       secao('ctrl', cmp('limiar', 'Change threshold (%)', inp('limiar', d, ' inputmode="decimal"'), 'Above it, the platform asks for a justification.') + cmp('evid', 'Evidence required', sel('evid', d, ['Yes', 'No']), 'A document must be attached to submit.') +
         '<div class="ki-full">' + cmp('ctrl', 'Other controls', inp('ctrl', d), 'Controls performed outside the platform.') + '</div>') +
       secao('disp', cmp('disp', 'Data available today', sel('disp', d, ['Yes', 'No'], 'Please select')) + cmp('fonte', 'Source or system', inp('fonte', d))) +
@@ -376,10 +402,11 @@
     return { t: E.novo ? 'New indicator' : d.nome || E.id, s: E.novo ? 'Define what it is, who reports it and which companies it covers' : E.id + ', ' + (d.dr || 'no ESRS') + ', ' + d.freq, largo: true, cls: 'alto ki-pan', b: corpo,
       p: (E.novo ? '' : '<button type="button" class="ps-btn" data-a="indEnviar1" data-v="' + e(E.id) + '">' + svg(ICO.enviar, 14) + 'Send task</button>') + '<span class="ps-sp-flex"></span><button type="button" class="ps-btn" data-a="fecharPainel">Cancel</button><button type="button" class="ps-btn pri" data-a="indGuardar">' + (E.novo ? 'Create indicator' : 'Save changes') + '</button>' };
   };
-  A.indEditar = function (d) { var c = P.cat(d.v); if (!c) return; U.ind.ed = { id: c.id, novo: false, d: lerInd(c), erros: [] }; X.abrePainel('indEd'); };
+  A.indEditar = function (d) { var c = P.cat(d.v); if (!c) return; var dd = lerInd(c); dd.respEmp = respEmpDe(c, dd); U.ind.ed = { id: c.id, novo: false, d: dd, erros: [] }; X.abrePainel('indEd'); };
   A.indNovo = function () {
     var c = novoCat(''), d = lerInd(c);
     d.dep = U.ind.dep || ''; d.resp = GRUPO_TXT; d.reve = ''; d.valida = (pessoas('valida')[0] || {}).nome || ''; d.reporta = (S.ent.filter(function (x) { return x.id === U.ind.emp; })[0] || S.ent[0] || {}).nome || ''; d.freq = 'Annual';
+    d.empresas = d.reporta; d.respEmp = respEmpDe(null, d);
     U.ind.ed = { id: '', novo: true, d: d, erros: [] }; X.abrePainel('indEd');
   };
   C.indCampo = function (el) {
@@ -392,7 +419,14 @@
     if (el.checked && l.indexOf(n) < 0) l.push(n); if (!el.checked) l = l.filter(function (x) { return x !== n; });
     d.empresas = S.ent.filter(function (x) { return l.indexOf(x.nome) > -1; }).map(function (x) { return x.nome; }).join('; ');
     if (l.length && l.indexOf(d.reporta) < 0) d.reporta = l[0];
+    d.respEmp = d.respEmp || {};
+    if (el.checked && !d.respEmp[n]) d.respEmp[n] = { dep: d.dep || '', resp: GRUPO_TXT };
+    sincRep(d);
   };
+  /* A empresa que reporta da o departamento e a pessoa gerais do indicador (os que o resto da plataforma usa) */
+  var sincRep = function (d) { var r = (d.respEmp || {})[d.reporta]; if (r) { d.dep = r.dep; d.resp = r.resp || GRUPO_TXT; } };
+  C.indRespEmp = function (el) { var d = U.ind.ed.d, r = (d.respEmp[el.dataset.id] = d.respEmp[el.dataset.id] || { dep: '', resp: GRUPO_TXT }); r[el.dataset.f] = el.value; sincRep(d); };
+  C.indRep = function (el) { var d = U.ind.ed.d; d.reporta = el.dataset.id; sincRep(d); };
   var guardarEd = function () {
     var E = U.ind.ed, usr = u(), d = E.d;
     if (!P.gereTudo(usr)) { E.erros = ['No permission.']; return false; }
@@ -401,11 +435,24 @@
       if (!/^[A-Z0-9][A-Z0-9_.-]{1,23}$/.test(d.id || '')) extra.push('KPI ID is required: 2 to 24 letters or digits, with no spaces.');
       else if (P.cat(d.id)) extra.push('KPI ID ' + d.id + ' already exists. Choose another code.');
     }
+    /* Cada empresa abrangida precisa de departamento; quem reporta numa empresa nao pode rever nem validar */
+    var cobre = String(d.empresas || '').split(';').map(function (t) { return t.trim(); }).filter(Boolean);
+    cobre.forEach(function (nome) {
+      var re = (d.respEmp || {})[nome];
+      if (!re || !re.dep) extra.push(nome + ': choose the department that reports it.');
+      else if (re.resp && re.resp !== GRUPO_TXT && (re.resp === d.reve || re.resp === d.valida)) extra.push(nome + ': ' + re.resp + ' cannot report and also review or validate this KPI.');
+    });
+    sincRep(d);
     var r = resolver(d, c);
     E.erros = extra.concat(r.erros);
     if (E.erros.length) return false;
     if (E.novo) { c = novoCat(d.id); S.cat.push(c); atr(c.id); P.eventoGlobal('Indicator ' + c.id + ' ' + r.val.nome + ': created.', usr.nome, 'Creation'); }
     var mud = aplicar(c, r.val);
+    /* Departamento e pessoa de cada empresa */
+    var antesRE = JSON.stringify(c.resp_emp || {}), novoRE = {};
+    cobre.forEach(function (nome) { var x = S.ent.filter(function (y) { return y.nome === nome; })[0], re = d.respEmp[nome], px = re.resp && re.resp !== GRUPO_TXT ? pessoaPor(re.resp, 'submete') : null; if (x) novoRE[x.id] = { dep: re.dep, pessoa: px ? px.login : '' }; });
+    c.resp_emp = novoRE;
+    if (antesRE !== JSON.stringify(novoRE)) mud.push({ k: 'resp', t: 'Responsible by company', de: '', para: cobre.map(function (nome) { var re = d.respEmp[nome]; return nome + ': ' + re.dep + ', ' + re.resp; }).join('; ') });
     if (!E.novo) registar(c, mud, usr);
     P.guardar();
     return { c: c, mud: mud, novo: E.novo };
@@ -690,7 +737,7 @@
     return { t: 'Import indicators from Excel', s: x.nome + ', sheet "' + x.folha + '", headers in row ' + x.linhaCab, largo: true, cls: 'alto ki-pan',
       b: '<div class="ki-impks">' + k(x.alterados.length, 'to change', x.alterados.length ? 'info' : '') + k(x.novos.length, 'new', x.novos.length ? 'ok' : '') + k(x.iguais, 'unchanged') + k(x.erros.length, 'with errors', x.erros.length ? 'err' : '') + '</div>' +
         '<p class="ps-small ps-mut">Columns read: ' + e(x.cols.join(', ')) + '.' + (x.ignoradas ? ' ' + x.ignoradas + ' row(s) without a KPI ID that match no indicator were skipped.' : '') + '</p>' +
-        (x.dpSem || x.dpVarios ? '<div class="ps-aviso">This file is an ESRS datapoint mapping. ' + (x.dpSem ? x.dpSem + ' datapoint(s) have no indicator in the platform yet and were skipped' : '') + (x.dpSem && x.dpVarios ? '; ' : '') + (x.dpVarios ? x.dpVarios + ' feed more than one indicator and were skipped' : '') + '. Datapoints are mapped in Reporting, KPI master. To create an indicator from this file, add a KPI ID column.</div>' : '') + erros + alter + novos +
+        (x.dpSem || x.dpVarios ? '<div class="ps-aviso">This file is an ESRS datapoint mapping. ' + (x.dpSem ? x.dpSem + ' datapoint(s) have no indicator in the platform yet and were skipped' : '') + (x.dpSem && x.dpVarios ? '; ' : '') + (x.dpVarios ? x.dpVarios + ' feed more than one indicator and were skipped' : '') + '. Datapoints are mapped to indicators in the ESRS datapoint list. To create an indicator from this file, add a KPI ID column.</div>' : '') + erros + alter + novos +
         (!total && !x.erros.length ? '<div class="ps-aviso ok">The file matches the platform. There is nothing to import.</div>' : ''),
       p: '<button type="button" class="ps-btn" data-a="indImpEscolher">Upload another file</button><span class="ps-sp-flex"></span><button type="button" class="ps-btn" data-a="fecharPainel">Cancel</button><button type="button" class="ps-btn pri" data-a="indImpAplicar"' + (total ? '' : ' disabled') + '>Import ' + total + ' indicator(s)</button>' };
   };

@@ -59,7 +59,7 @@
         campo('km-ctx', 'Description of those controls', '<input id="km-ctx" class="ps-in" data-c="kmCampo" data-f="controlo_txt" value="' + e(r.controlo_txt || '') + '"' + (ed ? '' : ' readonly') + '>') +
         campoSim('km-div', 'Disclose this KPI', 'divulga', 'kmCampo', r.divulga || '', ed) +
         (r.divulga === 'nao' ? campo('km-mot', 'Why not', '<input id="km-mot" class="ps-in" data-c="kmCampo" data-f="motivo" value="' + e(r.motivo || '') + '"' + (ed ? '' : ' readonly') + '>') : '') +
-        '</div>' + (m ? '<p class="ps-mt"><a href="' + rota('Milestone/' + m.id) + '">Open the milestone</a></p>' : '') + '</div></div>';
+        '</div>' + (m ? '<p class="ps-mt"><a href="' + rota('Milestone/' + m.id) + '">Open the task</a></p>' : '') + '</div></div>';
     }
     return '<div class="ps-card ps-card-body ps-sp-b-f">' + filtro + '</div><div class="km-g ps-mt"><div class="ps-card km-lista"><div class="ps-card-head"><h2>' + lista.length + ' KPI' + (lista.length === 1 ? '' : 's') + '</h2></div><div class="km-itens">' + (itens || vazio('No KPI matches these filters.')) + '</div></div><div>' + (det || vazio('Pick a KPI.')) + '</div></div>';
   };

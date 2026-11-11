@@ -97,7 +97,7 @@
     return 1;
   };
   var aplicar = function (m, pid, lista, origem) {
-    if (!podeEditar(m)) return { aplicados: 0, recusados: ['This milestone is read only for you right now.'], semAlteracao: true };
+    if (!podeEditar(m)) return { aplicados: 0, recusados: ['This task is read only for you right now.'], semAlteracao: true };
     var ped = pedidoDe(m, pid), cols = P.colunasFolha(m, ped), n = 0, rec = [];
     lista.forEach(function (a) {
       var r = gravarCelula(m, pid, cols, a.id, a.k, a.valor, origem === 'colar' ? 'excel' : origem === 'importar' ? 'excel' : 'manual');
@@ -111,7 +111,7 @@
 
   /* Puxar da base de dados: preenche as celulas vazias e as que vieram da base. As editadas ficam, salvo se pedir para substituir. */
   P.puxarFolha = function (m, pid, substituir) {
-    if (!podeEditar(m)) return { erro: 'You can only pull data while the milestone is in collection with you.' };
+    if (!podeEditar(m)) return { erro: 'You can only pull data while the task is in collection with you.' };
     var ped = pedidoDe(m, pid), cols = P.colunasFolha(m, ped), f = folha(m, pid), n = 0, mantidas = 0, regs = 0, bases = {};
     var linhasF = periodos(m, ped);
     cols.forEach(function (c) {
@@ -144,7 +144,7 @@
     return { n: n, mantidas: mantidas, registos: regs, bases: Object.keys(bases) };
   };
   P.limparFolha = function (m, pid) {
-    if (!podeEditar(m)) return { erro: 'This milestone is read only for you right now.' };
+    if (!podeEditar(m)) return { erro: 'This task is read only for you right now.' };
     if (m.folhas) delete m.folhas[pid];
     P.guardar();
     return { ok: true };
@@ -196,7 +196,7 @@
   /* Entregar: gera o ficheiro do pedido, guarda os dados com ele e envia os totais para os calculos */
   P.entregarFolha = function (m, pid) {
     var usr = u(), ped = pedidoDe(m, pid);
-    if (!podeEditar(m)) return { erro: 'This milestone is not with you right now.' };
+    if (!podeEditar(m)) return { erro: 'This task is not with you right now.' };
     var st = P.estadoFolha(m, ped);
     if (!st.pronta) return { erro: st.erros ? st.erros + ' cell(s) with errors. Fix them before delivering.' : st.faltam + ' required cell(s) are still empty.' };
     var f = folha(m, pid), prefixo = (ped.prefixo || norm(ped.nome).replace(/[^a-z0-9]+/g, '-').slice(0, 40)), versao = ped.entregues.filter(function (x) { return x.origem === 'grid'; }).length + 1;
@@ -255,7 +255,7 @@
       aoAplicar: function (lista, origem) { return aplicar(m, ped.id, lista.filter(function (a) { return a.id !== 'total'; }), origem); },
       aoColar: function (mat, pos) { return planoMatriz(m, ped.id, mat, pos ? pos.r : 0); },
       aoColado: function (rel) { U.fhRel = { pid: ped.id, notas: rel.recusados.concat(rel.ignorados) }; toast(rel.aplicados + ' cell(s) updated from your copy.', rel.aplicados ? 'ok' : 'err'); R(); },
-      aoRecusar: function () { toast(pode ? 'Totals are calculated from the months.' : 'This milestone is read only for you right now.', 'err'); },
+      aoRecusar: function () { toast(pode ? 'Totals are calculated from the months.' : 'This task is read only for you right now.', 'err'); },
       aoAnular: function (n) { toast(n + ' cell(s) restored.', 'ok'); }
     };
   };
@@ -306,7 +306,7 @@
     st.cols.forEach(function (c) { c.usa.forEach(function (id) { if (usa.indexOf(id) < 0) usa.push(id); }); });
     return {
       t: ped.nome, s: m.nome + ', ' + m.empresa + ', ' + P.rotPeriodo(m), cls: 'folha',
-      b: estado + (ped.instrucoes ? '<div class="ps-aviso info"><b>How to fill it in.</b> ' + e(ped.instrucoes) + '</div>' : '') + '<p class="ps-small ps-mut">' + e(ped.motivo || 'Fill in the columns this milestone needs.') + ' One row per month. Every cell keeps where it came from.</p>' + ferr + resumo + aviso + window.PortalGrelha.html(cfg) + impactoHtml(m, ped) + defs,
+      b: estado + (ped.instrucoes ? '<div class="ps-aviso info"><b>How to fill it in.</b> ' + e(ped.instrucoes) + '</div>' : '') + '<p class="ps-small ps-mut">' + e(ped.motivo || 'Fill in the columns this task needs.') + ' One row per month. Every cell keeps where it came from.</p>' + ferr + resumo + aviso + window.PortalGrelha.html(cfg) + impactoHtml(m, ped) + defs,
       p: '<span class="fh-motivo ' + (st.pronta ? 'ok' : '') + '" aria-live="polite">' + e(motivo) + (pode && usa.length ? '<small>Delivering updates ' + e(usa.join(', ')) + '</small>' : '') + '</span><button type="button" class="ps-btn" data-a="fecharPainel">' + (pode ? 'Save and close' : 'Close') + '</button>' +
         (pode ? '<button type="button" class="ps-btn pri" data-a="fhEntregar"' + (st.pronta ? '' : ' disabled') + '>' + (entregue ? 'Deliver new version' : 'Deliver data') + '</button>' : '') + (!pode && entregue ? '<button type="button" class="ps-btn" data-a="fhDescarregar">Download Excel</button>' : '')
     };

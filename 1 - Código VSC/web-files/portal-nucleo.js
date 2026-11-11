@@ -424,7 +424,7 @@
       };
       /* A recolha de um trimestre abre no fim do trimestre (ou no inicio, se ainda esta a decorrer); a do ano, a 1 de janeiro */
       var abre = per.tipo === 'trimestre' && P.diasAte(per.fim) < 0 ? diasDe(P.diasAte(per.fim) + 1) : per.ini;
-      m.eventos.push({ texto: 'Milestone created in the 2026 cycle for ' + per.nome + '.', em: new Date(abre + 'T09:00:00').toISOString(), por: 'System', wf: 'criada' });
+      m.eventos.push({ texto: 'Task created in the 2026 cycle for ' + per.nome + '.', em: new Date(abre + 'T09:00:00').toISOString(), por: 'System', wf: 'criada' });
       S.ms.push(m);
       var preencher = cfg.i > 0 || cfg.dev, chave = P.chave(m), quando = function (dias) { return new Date(new Date(m.prazo + 'T12:00:00').getTime() + 86400000 * dias).toISOString(); };
       pl.indicadores.forEach(function (id, ix) {
@@ -448,14 +448,14 @@
         var t = x.t === 1 || x.t === 2 ? quando(-6 + k * 2) : new Date(Date.now() - 86400000 * (Math.max(2, 30 - cfg.d / 3) - k * 2)).toISOString();
         m.passos[k].concluido_em = t;
         m.passos[k].concluido_por = m.passos[k].responsavel === 'sistema' ? 'System' : m.passos[k].responsavel === 'unidade' ? nomeDe(m.unidade) : m.passos[k].responsavel.indexOf('area:') === 0 ? nomeDe(m.passos[k].responsavel.slice(5)) : 'Sustainability team';
-        m.eventos.push({ texto: (k === 0 ? 'Milestone submitted' : 'Step completed: ' + m.passos[k].nome) + '.', em: t, por: m.passos[k].concluido_por, wf: m.passos[k].responsavel === 'sistema' ? 'auto' : 'avanco', passo: m.passos[k].nome });
+        m.eventos.push({ texto: (k === 0 ? 'Task submitted' : 'Step completed: ' + m.passos[k].nome) + '.', em: t, por: m.passos[k].concluido_por, wf: m.passos[k].responsavel === 'sistema' ? 'auto' : 'avanco', passo: m.passos[k].nome });
       }
       m.passo_atual = cfg.i;
       /* O que ja passou da recolha entregou os ficheiros pedidos */
       if (cfg.i > 0) (FICHEIROS_BASE[pl.unidade] || []).forEach(function (f, ixF) { m.documentos_gerais.push({ ficheiro: f[3] + '-' + x.id.toLowerCase() + '-2026.' + f[2][0], por: nomeDe(pl.unidade), em: quando(-8), pedido: 'tipo:' + f[3] }); });
       if (cfg.dev) {
         m.comentarios.push({ autor: NOME_ESG, texto: 'A percentagem de veículos verdes parece baixa. Confirmem com a gestora da frota, por favor.', em: new Date(Date.now() - 86400000).toISOString(), passo: m.passos[2].nome, indicador: 'E09' });
-        m.eventos.splice(1, 0, { texto: 'Milestone submitted.', em: new Date(Date.now() - 86400000 * 6).toISOString(), por: nomeDe(m.unidade), wf: 'avanco', passo: m.passos[0].nome }, { texto: 'Automatic validation completed: 1 indicator(s) with alerts.', em: new Date(Date.now() - 86400000 * 6 + 60000).toISOString(), por: 'System', wf: 'auto', passo: m.passos[1].nome });
+        m.eventos.splice(1, 0, { texto: 'Task submitted.', em: new Date(Date.now() - 86400000 * 6).toISOString(), por: nomeDe(m.unidade), wf: 'avanco', passo: m.passos[0].nome }, { texto: 'Automatic validation completed: 1 indicator(s) with alerts.', em: new Date(Date.now() - 86400000 * 6 + 60000).toISOString(), por: 'System', wf: 'auto', passo: m.passos[1].nome });
         m.eventos.push({ texto: 'Returned to the unit.', em: new Date(Date.now() - 86400000).toISOString(), por: 'Sustainability team', wf: 'devolucao', passo: m.passos[2].nome });
       }
     });
@@ -724,7 +724,7 @@
         if (!m.tipos) delete m.tipos;
         S.ms.push(m);
         m.indicadores.forEach(function (i) { var ch = P.chave(m); if (!S.items[ch + ':' + i]) S.items[ch + ':' + i] = novoItem(i, ch, m.id, P.cat(i).tipo); });
-        ev(m, 'Milestone launched from the Backoffice for ' + per.nome + '.', u.nome, 'criada');
+        ev(m, 'Task launched from the Backoffice for ' + per.nome + '.', u.nome, 'criada');
         if (m.atribuido_a && P.user(m.atribuido_a)) ev(m, 'Assigned to ' + P.user(m.atribuido_a).nome + '.', u.nome);
         criadas.push(m);
       });
@@ -752,7 +752,10 @@
   };
   P.indAtivo = function (c) { return !!c && c.ativo !== false; };
   /* Responsavel: uma pessoa (quem submete na atribuicao) ou o grupo, que e o departamento inteiro */
-  P.responsavelInd = function (id) {
+  /* Responsavel de um indicador; com empresa, o dessa empresa (c.resp_emp), que pode ser outro departamento e outra pessoa */
+  P.responsavelInd = function (id, empId) {
+    var c = P.cat(id), re = empId && c && c.resp_emp ? c.resp_emp[empId] : null;
+    if (re && re.dep) { var px = re.pessoa ? P.user(re.pessoa) : null; return px ? { tipo: 'pessoa', login: px.login, nome: px.nome, dep: re.dep } : { tipo: 'grupo', login: '', nome: re.dep, dep: re.dep }; }
     var a = (S.atrib || {})[id], x = a && a.submete ? P.user(a.submete) : null, dep = P.donoIndicador(id);
     return x ? { tipo: 'pessoa', login: x.login, nome: x.nome, dep: dep } : { tipo: 'grupo', login: '', nome: dep, dep: dep };
   };
@@ -777,7 +780,7 @@
       if (!P.indAtivo(c)) return fora.push({ id: id, t: 'inactive' });
       var ja = P.tarefaInd(id, pid);
       if (ja) return fora.push({ id: id, t: 'already sent in ' + ja.nome });
-      var emp = P.reportaInd(c), r = P.responsavelInd(id);
+      var emp = P.reportaInd(c), r = P.responsavelInd(id, emp && emp.id);
       if (!emp) return fora.push({ id: id, t: 'no reporting company' });
       if (!r.dep) return fora.push({ id: id, t: 'no responsible department' });
       var k = emp.id + '|' + r.dep + '|' + r.login, g = grupos[k] || (grupos[k] = { empresa: emp, dep: r.dep, resp: r, ids: [], ms: null });
@@ -868,7 +871,7 @@
       if (P.doSistema(m, f.indicador)) return { preciso: false, porque: 'The value came from the system, so no evidence is needed.', faltam: [] };
       return { preciso: true, porque: it.valor === null ? 'Required evidence for this indicator.' : 'The value was typed in, so it needs supporting evidence.', faltam: [] };
     }
-    if (f.proprio) return { preciso: true, porque: f.motivo || 'Requested specifically for this milestone.', faltam: [] };
+    if (f.proprio) return { preciso: true, porque: f.motivo || 'Requested specifically for this task.', faltam: [] };
     var cols = P.colunasFolha ? P.colunasFolha(m, f) : [], cobre = [];
     cols.forEach(function (c) { (c.usa || []).forEach(function (id) { if (cobre.indexOf(id) < 0) cobre.push(id); }); });
     if (!cobre.length) cobre = m.indicadores.slice();
@@ -877,7 +880,7 @@
     return { preciso: true, porque: faltam.length + ' indicator' + (faltam.length === 1 ? ' has' : 's have') + ' no value from the system or on screen yet.', faltam: faltam };
   };
   P.entregarFicheiro = function (m, pid, nome, u, fid) {
-    if (!P.podePreencher(m, u)) return { erro: 'This milestone is not with you right now.' };
+    if (!P.podePreencher(m, u)) return { erro: 'This task is not with you right now.' };
     var f = P.ficheirosPedidos(m).filter(function (x) { return x.id === pid; })[0];
     if (!f) return { erro: 'That file is no longer requested.' };
     var ext = String(nome).split('.').pop().toLowerCase();
@@ -955,7 +958,7 @@
     return P.validarItem(it).alertas.length ? { txt: 'With alerts', cls: 'warn' } : { txt: 'In review', cls: 'rev' };
   };
   P.nomeResp = function (m, resp) {
-    if (resp === 'unidade') return m ? m.unidade : 'Milestone unit';
+    if (resp === 'unidade') return m ? m.unidade : 'Task unit';
     if (resp === 'esg') return 'Sustainability team';
     if (resp === 'admin') return 'Administrator';
     if (resp === 'sistema') return 'Automatic';
@@ -1001,13 +1004,13 @@
     }
   };
   P.submeter = function (m, u) {
-    if (!P.podePreencher(m, u)) return { erro: 'This milestone is not with you right now.' };
+    if (!P.podePreencher(m, u)) return { erro: 'This task is not with you right now.' };
     var f = P.faltasSubmissao(m);
     if (f.length) return { faltas: f };
     var p = P.passoAtual(m);
     p.concluido_em = agora(); p.concluido_por = u.nome;
     m.devolvida = false;
-    ev(m, 'Milestone submitted.', u.nome, 'avanco', p.nome);
+    ev(m, 'Task submitted.', u.nome, 'avanco', p.nome);
     m.passo_atual++;
     correrAutomaticos(m);
     guardar();
@@ -1017,7 +1020,7 @@
     if (!P.podeAgir(m, u)) return { erro: 'This step is not with you.' };
     var p = P.passoAtual(m);
     if (p.tipo === 'recolha') return P.submeter(m, u);
-    if (P.violaSegregacao && P.violaSegregacao(m, u)) return { erro: 'Segregation of duties: you submitted this milestone, so someone else has to decide on it.' };
+    if (P.violaSegregacao && P.violaSegregacao(m, u)) return { erro: 'Segregation of duties: you submitted this task, so someone else has to decide on it.' };
     p.concluido_em = agora(); p.concluido_por = u.nome;
     var verbo = p.tipo === 'parecer' ? 'Favourable opinion given' : p.tipo === 'aprovacao' ? 'Values approved and locked' : 'Review completed';
     ev(m, verbo + ': ' + p.nome + '.', u.nome, 'avanco', p.nome);
@@ -1029,7 +1032,7 @@
   };
   P.devolver = function (m, u, comentario) {
     if (!P.podeAgir(m, u) || P.passoAtual(m).tipo === 'recolha') return { erro: 'This step is not with you.' };
-    if (!comentario || !comentario.trim()) return { erro: 'Write a comment to return the milestone.' };
+    if (!comentario || !comentario.trim()) return { erro: 'Write a comment to return the task.' };
     var deOnde = P.passoAtual(m).nome;
     m.passos.forEach(function (p) { p.concluido_em = null; p.concluido_por = null; });
     m.passo_atual = 0;
@@ -1141,9 +1144,9 @@
     return null;
   };
   P.removerFicheiro = function (m, k, u) {
-    if (!P.podePreencher(m, u)) return { erro: 'Files can only be removed while the milestone is in collection with you.' };
+    if (!P.podePreencher(m, u)) return { erro: 'Files can only be removed while the task is in collection with you.' };
     var r = P.acharFicheiro(m, k);
-    if (!r) return { erro: 'This file is no longer in the milestone.' };
+    if (!r) return { erro: 'This file is no longer in the task.' };
     r.lista.splice(r.lista.indexOf(r.x), 1);
     if (P.apagarConteudo) P.apagarConteudo(r.x.fid);
     ev(m, (r.ind ? 'Evidence removed from ' + P.cat(r.ind).nome : 'Document removed') + ': ' + r.x.ficheiro + ' (uploaded by ' + (r.x.por || 'unknown') + (r.x.em ? ' on ' + P.fmtDataHora(r.x.em) : '') + ').', u.nome);
@@ -1258,7 +1261,7 @@
   };
   P.msPeriodo = function (pid) { return S.ms.filter(function (m) { return m.periodo === pid; }); };
   P.usarTrimestres = function (m, u, ids) {
-    if (!P.podePreencher(m, u)) return { erro: 'This milestone is read only for you right now.' };
+    if (!P.podePreencher(m, u)) return { erro: 'This task is read only for you right now.' };
     var n = 0, parciais = 0;
     (ids || m.indicadores).forEach(function (id) {
       var r = P.anualDosTrimestres(m, id);
@@ -1419,7 +1422,7 @@
       var rej = function (t) { r.estado = 'rejeitada'; r.motivos.push(t); };
       /* 2. Milestone e indicadores */
       if (String(l.milestone_id).trim() !== m.id) rej('milestone_id must be ' + m.id + '.');
-      if (m.indicadores.indexOf(id) < 0) rej('Indicator ' + (id || '(empty)') + ' does not belong to this milestone.');
+      if (m.indicadores.indexOf(id) < 0) rej('Indicator ' + (id || '(empty)') + ' does not belong to this task.');
       else if (vistos[id]) rej('Indicator repeated in the file.');
       var c = P.cat(id), n = lerNumero(l.value);
       /* 3. Tipos, ano e unidades */
@@ -1483,7 +1486,7 @@
     l.forEach(function (x) { var c = P.cat(x.indicator_id); x.value = valorDemo(c); if (c.evidencia_obrigatoria) x.evidence_ref = 'DOC-' + m.ano + '-0001'; x.justification = c.regras_coerencia.length ? 'Confirmed with the area.' : ''; });
     if (l[0]) l[0].unit = 'unidade-errada';
     if (l[1]) l[1].period = String(m.ano - 1);
-    l.push({ milestone_id: m.id, indicator_id: m.indicadores.indexOf('G01') > -1 ? 'A01' : 'G01', indicator_name: 'Indicator from another milestone', entity: 'Consolidado', period: String(m.ano), value: 10, unit: '€', justification: '', source_system: 'financial-system', evidence_ref: '', data_quality: 'measured', estimation_method: '' });
+    l.push({ milestone_id: m.id, indicator_id: m.indicadores.indexOf('G01') > -1 ? 'A01' : 'G01', indicator_name: 'Indicator from another task', entity: 'Consolidado', period: String(m.ano), value: 10, unit: '€', justification: '', source_system: 'financial-system', evidence_ref: '', data_quality: 'measured', estimation_method: '' });
     if (l[2]) { l[2].data_quality = 'estimated'; l[2].estimation_method = ''; }
     return l;
   };
@@ -1560,7 +1563,7 @@
   P.jsonSchema = function (m) {
     var uni = m.indicadores.map(function (id) { return { const: id, title: P.cat(id).nome }; });
     return {
-      $schema: 'https://json-schema.org/draft/2020-12/schema', title: 'Milestone submission ' + m.id, type: 'object', required: ['milestone_id', 'records'],
+      $schema: 'https://json-schema.org/draft/2020-12/schema', title: 'Task submission ' + m.id, type: 'object', required: ['milestone_id', 'records'],
       properties: {
         milestone_id: { const: m.id }, submitted_by: { type: 'string' }, source_system: { type: 'string' },
         records: { type: 'array', minItems: 1, items: { type: 'object', required: ['indicator_id', 'period', 'value', 'unit'], properties: {
@@ -1637,7 +1640,7 @@
     P.msCiclo(antigo).forEach(function (a) {
       var id = a.id.split('_')[0] + sufixo;
       var m = { id: id, nome: a.nome.split(String(antigo)).join(String(ano)), ano: ano, periodo: (a.periodo || antigo + '-A').replace(String(antigo), String(ano)), consolida: !!a.consolida, empresa: a.empresa, departamentos: a.departamentos.slice(), atribuido_a: a.atribuido_a || null, ficheiros_pedidos: (a.ficheiros_pedidos || []).slice(), unidade: a.unidade, periodicidade: a.periodicidade, prazo: diasDe(offset[a.periodicidade] || 90), indicadores: a.indicadores.slice(), passos: passosDe(S.wfbase), passo_atual: 0, devolvida: false, workflow_ajustado: false, documentos_gerais: [], comentarios: [], eventos: [] };
-      ev(m, 'Milestone created in the ' + ano + ' cycle.', u.nome);
+      ev(m, 'Task created in the ' + ano + ' cycle.', u.nome);
       S.ms.push(m);
       m.indicadores.forEach(function (i) { S.items[P.chave(m) + ':' + i] = novoItem(i, P.chave(m), id, P.cat(i).tipo); });
     });
@@ -1668,7 +1671,7 @@
   };
   P.apagarEmpresa = function (x) {
     var usos = S.ms.filter(function (m) { return m.empresa === x.nome; }).length + S.docs.filter(function (d) { return d.entidade === x.nome; }).length;
-    if (usos) return { erro: 'This company is in use by ' + usos + ' milestones or invoices.' };
+    if (usos) return { erro: 'This company is in use by ' + usos + ' tasks or invoices.' };
     S.ent.splice(S.ent.indexOf(x), 1);
     guardar(); return { ok: true };
   };
@@ -1705,7 +1708,7 @@
   };
   P.apagarDepartamento = function (x) {
     var usos = usosDepartamento(x.nome);
-    if (usos) return { erro: 'This department is in use by ' + usos + ' users, indicators or milestones.' };
+    if (usos) return { erro: 'This department is in use by ' + usos + ' users, indicators or tasks.' };
     S.deps.splice(S.deps.indexOf(x), 1);
     guardar(); return { ok: true };
   };

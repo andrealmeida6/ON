@@ -135,7 +135,7 @@
       t: rel.nome, s: rel.entidade + ', due ' + P.fmtDataAno(rel.data), largo: true,
       b: (pr.final ? '<div class="ps-aviso ok">Every value is approved. The file goes out as final.</div>' : '<div class="ps-aviso warn">' + (pr.total - pr.ok) + ' of ' + pr.total + ' values are not approved yet. You can generate a draft to check the layout; it is marked as draft in the name and on the cover.</div>') +
         '<dl class="ps-det sd-det-p"><dt>Goes to</dt><dd>' + e(f.destino) + '</dd><dt>Template</dt><dd>' + e(f.modelo) + '</dd><dt>Legal basis</dt><dd>' + e(rel.base || '-') + '</dd></dl>' +
-        tabela([{ t: 'Indicator' }, { t: 'Value', dir: 1 }, { t: 'Previous', dir: 1 }, { t: 'Status' }, { t: 'Milestone' }], linhas, 'No indicators feed this delivery.') +
+        tabela([{ t: 'Indicator' }, { t: 'Value', dir: 1 }, { t: 'Previous', dir: 1 }, { t: 'Status' }, { t: 'Task' }], linhas, 'No indicators feed this delivery.') +
         '<div><h3 class="ps-grupo-t">Files generated</h3>' + hist + '</div>',
       p: '<button type="button" class="ps-btn" data-a="fecharPainel">Close</button>' + (pode ? f.f.map(function (x, i) { return '<button type="button" class="ps-btn' + (i ? '' : ' pri') + '" data-a="sdGerar" data-v="' + e(rel.id) + '" data-f="' + x + '">' + (pr.final ? 'Generate ' : 'Generate draft ') + FMT_TXT[x] + '</button>'; }).join('') : '')
     };

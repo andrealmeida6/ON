@@ -175,7 +175,7 @@
   };
   var abaManual = function (usr) {
     var d = U.de, todos = preenchiveis(usr), lista = todos.filter(function (x) { return !d.norma || x.c.esrs === d.norma; });
-    if (!todos.length) return '<div class="ps-card">' + vazio('No milestone is in collection with you right now.') + '</div>';
+    if (!todos.length) return '<div class="ps-card">' + vazio('No task is in collection with you right now.') + '</div>';
     /* O mesmo KPI pode estar num trimestre e no ano: a escolha e sempre o par milestone e KPI */
     var x = lista.filter(function (y) { return y.id === d.id && y.m.id === d.ms; })[0];
     if (!x && lista.length) { x = lista[0]; carregarDe(x); }
@@ -201,7 +201,7 @@
       ic(cheio, cheio ? 'Required fields filled in' : 'Value missing') + ic(!bruto && !v.erros.length, bruto ? 'The value is not numeric' : v.erros[0] || 'Numeric value within range') + ic(true, 'Unit set by the indicator: ' + c.unidade_medida) + ic(S.ciclo.estado === 'aberto', 'Period ' + m.ano + ' open') + ic(!temAlerta, temAlerta ? 'Change of ' + variacaoTxt(v.variacao) + ' or a consistency rule to confirm' : v.variacao === null ? 'No prior year to compare' : 'Change of ' + variacaoTxt(v.variacao) + ' within the threshold', true) + '</div></div>' +
       (temAlerta ? '<div class="ps-de-alerta ps-mt" role="alert"><p><b>Review the value before saving.</b> Confirm the unit, the period and the evidence. If the value is correct, justify it.</p><ul>' + v.alertas.map(function (a) { return '<li>' + e(a) + '</li>'; }).join('') + '</ul>' + campo('de-just', 'Justification *', '<textarea id="de-just" class="ps-ta" data-c="deJust">' + e(d.just) + '</textarea>') + '<label class="ps-chk ps-mt"><input id="de-conf" type="checkbox" data-c="deConf"' + (d.conf ? ' checked' : '') + '> I reviewed the value and the evidence and the value is correct</label><p class="ps-small ps-mt">The approver sees this alert and the justification, and the event stays in the audit trail.</p></div>' : '') +
       '<div class="ps-sp ps-mt"><button type="button" id="de-evid" class="ps-btn" data-a="deEvid">' + (d.evid ? 'Evidence: ' + e(d.evid) : 'Attach evidence') + '</button>' + (c.evidencia_obrigatoria ? (P.item(c.id, P.chave(m)).evidencias.length || d.evid ? chip('Evidence attached', 'ok') : chip('Evidence required', 'warn')) : '') + '</div>' +
-      '<div class="ps-sp-b ps-mt"><a class="ps-small" href="' + rota('Milestone/' + m.id) + '">Open ' + e(m.nome) + '</a><span class="ps-sp"><button type="button" class="ps-btn" data-a="deSubmeter">Submit the milestone</button><button type="button" class="ps-btn pri" data-a="deGuardar">Save value</button></span></div></div></div>';
+      '<div class="ps-sp-b ps-mt"><a class="ps-small" href="' + rota('Milestone/' + m.id) + '">Open ' + e(m.nome) + '</a><span class="ps-sp"><button type="button" class="ps-btn" data-a="deSubmeter">Submit the task</button><button type="button" class="ps-btn pri" data-a="deGuardar">Save value</button></span></div></div></div>';
   };
   /* --- Excel offline: os KPIs em recolha com a pessoa, preenchidos fora e carregados de novo --- */
   U.off = { split: false, res: null, ids: null };
@@ -211,7 +211,7 @@
   };
   var cartaoOffline = function (usr) {
     var lista = msOffline(usr), nk = lista.reduce(function (a, m) { return a + m.indicadores.length; }, 0), ng = P.empresasGrupo().length, x = U.off.res;
-    var topo = '<div class="ps-off"><ol class="ps-off-p"><li><b>Download</b><span>' + nk + ' KPI(s) in ' + lista.length + ' milestone(s) in collection with you, with what is already saved.</span></li><li><b>Fill in offline</b><span>Only the value column is needed. The file explains the rest.</span></li><li><b>Upload it again</b><span>Every row is validated as if typed. Rows that did not change are skipped.</span></li></ol>' +
+    var topo = '<div class="ps-off"><ol class="ps-off-p"><li><b>Download</b><span>' + nk + ' KPI(s) in ' + lista.length + ' task(s) in collection with you, with what is already saved.</span></li><li><b>Fill in offline</b><span>Only the value column is needed. The file explains the rest.</span></li><li><b>Upload it again</b><span>Every row is validated as if typed. Rows that did not change are skipped.</span></li></ol>' +
       '<label class="ps-chk ps-mt"><input id="off-split" type="checkbox" data-c="offSplit"' + (U.off.split ? ' checked' : '') + '><span>One row per company (' + ng + ' companies in the group perimeter)<small class="ps-mut ps-blk">For KPIs you report for the whole group, company by company. The platform adds them up and keeps the value of each company.</small></span></label>' +
       '<div class="ps-sp ps-mt"><button type="button" class="ps-btn" data-a="offBaixar"' + (nk ? '' : ' disabled') + '>Download my KPIs (.xlsx)</button><button type="button" class="ps-btn pri" data-a="offCarregar"' + (lista.length ? '' : ' disabled') + '>' + X.svg(X.I.upload, 14) + 'Upload the filled-in file</button></div></div>';
     if (!x) return topo;
@@ -228,7 +228,7 @@
   };
   var abaExcel = function (usr) {
     if (U.off.ids) { U.off.ids = null; U.off.res = null; }
-    return '<div class="ps-card">' + cabCartao('Work offline in Excel', 'doc') + '<div class="ps-card-body">' + cartaoOffline(usr) + '<p class="ps-small ps-mut ps-mt">To paste straight from Excel, open a milestone and use its grid.</p></div></div>';
+    return '<div class="ps-card">' + cabCartao('Work offline in Excel', 'doc') + '<div class="ps-card-body">' + cartaoOffline(usr) + '<p class="ps-small ps-mut ps-mt">To paste straight from Excel, open a task and use its grid.</p></div></div>';
   };
   /* Home, Tasks: o mesmo cartao num painel, so com as milestones da lista */
   X.Pn.offline = function () {
@@ -238,7 +238,7 @@
   C.offSplit = function (el) { U.off.split = el.checked; };
   A.offBaixar = function () {
     var usr = u(), lista = msOffline(usr);
-    if (!lista.length) return toast('No milestone is in collection with you right now.', 'err');
+    if (!lista.length) return toast('No task is in collection with you right now.', 'err');
     P.escreverFolhas('my-kpis-' + S.ciclo.ano + (U.off.split ? '-by-company' : '') + '.xlsx', P.folhasOffline(lista, U.off.split));
     toast('File downloaded. Fill in the value column and upload it again.', 'ok');
   };
@@ -268,7 +268,7 @@
     if (!x || !x.grupos) return;
     x.grupos.forEach(function (g) { n += P.aplicarImportacao(g.m, g.rel, x.nome, u()); });
     U.off.res = null; U.de.id = '';
-    toast(n + ' value(s) saved. Submit each milestone when it is complete.', 'ok'); R();
+    toast(n + ' value(s) saved. Submit each task when it is complete.', 'ok'); R();
   };
   var abaApi = function (usr) {
     var ex = preenchiveis(usr)[0] || { id: 'A01', m: P.msDoIndicador('A01'), c: P.cat('A01') };
@@ -310,7 +310,7 @@
   A.deEvid = function () { X.escolherFicheiro('', function (f) { U.de.evid = f.name; U.de.evidF = f; R(); }); };
   A.deGuardar = function () {
     var d = U.de, usr = u(), m = msDe(), id = d.id;
-    if (!m || !P.podePreencher(m, usr)) return toast('This milestone is not with you right now.', 'err');
+    if (!m || !P.podePreencher(m, usr)) return toast('This task is not with you right now.', 'err');
     var c = P.cat(id), it = P.item(id, P.chave(m)), regra = regraDe(m, id);
     var total = d.multi ? P.agregar(d.linhas, regra.agreg) : P.lerNumero(d.valor);
     if (total === null) { toast(d.multi ? 'Enter at least one numeric value.' : 'The value must be numeric.', 'err'); var ve = document.getElementById(d.multi ? 'de-v-0' : 'de-val'); if (ve) ve.focus(); return; }
@@ -330,7 +330,7 @@
     var m = msDe(), r = m ? P.submeter(m, u()) : { erro: 'Choose a data point.' };
     if (r.erro) return toast(r.erro, 'err');
     if (r.faltas) { toast(r.faltas.length + ' item(s) missing. ' + r.faltas[0].msg, 'err'); return; }
-    U.de.id = ''; toast('Milestone submitted.', 'ok'); R();
+    U.de.id = ''; toast('Task submitted.', 'ok'); R();
   };
   A.apiNova = function () { res(P.novaLigacao(val('api-nome'), val('api-amb'), val('api-frq'), u()), 'Connection added.'); };
 
@@ -353,14 +353,14 @@
         }).join('') + '</tbody></table></div>' +
         (al.length ? '<div class="ps-aviso err ps-mt">' + al.map(function (id) { var it = P.item(id, P.chave(m)); return '<div><b>' + e(P.cat(id).nome) + '.</b> ' + e(P.validarItem(it).alertas[0]) + (it.justificacao ? ' Justification: "' + e(it.justificacao) + '"' : '') + '</div>'; }).join('') + '</div>' : '') +
         '<h3 class="ps-grupo-t">Evidence</h3>' + (function () { var ev = [], sis = m.indicadores.map(function (id) { return P.extracaoHtml ? P.extracaoHtml(m, id) : ''; }).filter(Boolean); m.indicadores.forEach(function (id) { P.item(id, P.chave(m)).evidencias.forEach(function (x) { ev.push(x); }); }); (m.documentos_gerais || []).forEach(function (x) { ev.push(x); }); return ev.length || sis.length ? '<ul class="ps-apr-ev">' + sis.map(function (h) { return '<li>' + h + '</li>'; }).join('') + ev.map(function (n) { return '<li>' + P.fichHtml(n, '', m) + '</li>'; }).join('') + '</ul>' : '<p class="ps-mut ps-small">No evidence attached.</p>'; })() +
-        (podeA ? (viola ? '<div class="ps-aviso warn ps-mt">You submitted this milestone, so someone else has to decide on it.</div>' : campo('apr-com', 'Comment (required to return)', '<textarea id="apr-com" class="ps-ta"></textarea>') + '<div class="ps-sp ps-mt ps-apr-acts"><button type="button" class="ps-btn" data-a="aprDevolver" data-v="' + e(m.id) + '">Return</button><button type="button" class="ps-btn pri" data-a="aprAprovar" data-v="' + e(m.id) + '">' + e(verbo) + '</button></div>') : '<p class="ps-small ps-mut ps-mt">This step is with ' + e(P.nomeResp(m, p.responsavel)) + '.</p>') +
-        '<p class="ps-small ps-mt"><a href="' + rota('Milestone/' + m.id) + '">Open the milestone</a></p></div></div>';
+        (podeA ? (viola ? '<div class="ps-aviso warn ps-mt">You submitted this task, so someone else has to decide on it.</div>' : campo('apr-com', 'Comment (required to return)', '<textarea id="apr-com" class="ps-ta"></textarea>') + '<div class="ps-sp ps-mt ps-apr-acts"><button type="button" class="ps-btn" data-a="aprDevolver" data-v="' + e(m.id) + '">Return</button><button type="button" class="ps-btn pri" data-a="aprAprovar" data-v="' + e(m.id) + '">' + e(verbo) + '</button></div>') : '<p class="ps-small ps-mut ps-mt">This step is with ' + e(P.nomeResp(m, p.responsavel)) + '.</p>') +
+        '<p class="ps-small ps-mt"><a href="' + rota('Milestone/' + m.id) + '">Open the task</a></p></div></div>';
     }
     return '<div class="ps-card ps-apr-passos">' + passos.map(function (p, i) { return '<div class="ps-apr-p"><i>' + (i + 1) + '</i><span><b>' + e(p.nome) + '</b><small>' + e(P.nomeResp(null, p.responsavel)) + '</small></span></div>'; }).join('') + '</div>' +
       '<div class="ps-grid-apr ps-mt"><div class="ps-card"><div class="ps-card-body">' + pills('aprFiltro', [['todas', 'All', todas.length], ['minhas', 'Waiting on me', minhas.length], ['alertas', 'With alerts', alerta.length]], f.filtro) + '<div class="ps-mt">' +
-      tabela([{ t: 'Milestone' }, { t: 'Perimeter' }, { t: 'Assigned to' }, { t: 'Alerts', dir: 1 }, { t: 'Deadline' }], lista.map(function (x) {
+      tabela([{ t: 'Task' }, { t: 'Perimeter' }, { t: 'Assigned to' }, { t: 'Alerts', dir: 1 }, { t: 'Deadline' }], lista.map(function (x) {
         return { attrs: (m && x.id === m.id ? 'class="ps-sel-l" aria-selected="true"' : ''), celulas: ['<button type="button" class="ps-btn liga" data-a="aprVer" data-v="' + e(x.id) + '">' + e(x.nome) + '</button>', emp(x.empresa), atribHtml(x), alertasMs(x).length, '<span class="ps-nowrap">' + e(X.prazoTxt(x)) + '</span>'] };
-      }), 'Nothing waiting here.') + '</div></div></div>' + (det || '<div class="ps-card">' + vazio('Choose a milestone.') + '</div>') + '</div>';
+      }), 'Nothing waiting here.') + '</div></div></div>' + (det || '<div class="ps-card">' + vazio('Choose a task.') + '</div>') + '</div>';
   };
   A.aprFiltro = function (d) { U.apr.filtro = d.v; U.apr.sel = ''; R(); };
   A.aprVer = function (d) { U.apr.sel = d.v; R(); };
@@ -390,7 +390,7 @@
       return '<button type="button" class="ps-ev-it ' + (c.id === atual.id ? 'on' : '') + '" data-a="evdVer" data-v="' + e(c.id) + '"><span><b>' + e(c.nome) + '</b><small>' + e(c.esrs_requisito || c.id) + ', ' + emp(P.msDoIndicador(c.id).empresa) + '</small></span>' + chip(n ? n + ' file' + (n > 1 ? 's' : '') : c.evidencia_obrigatoria ? 'Missing' : '0', cls) + '</button>';
     }).join('') + '</div></div>' +
       '<div class="ps-card">' + cabCartao(atual.nome, 'tarefa', '<span class="ps-mut ps-small">' + e(atual.esrs_requisito || atual.id) + ', ' + emp(m.empresa) + '</span>') + '<div class="ps-card-body">' +
-      (pode ? '<button type="button" class="ps-de-drop" data-a="evdAnexar" data-v="' + e(atual.id) + '"><b>Attach evidence to this KPI</b><span>PDF, Excel, images or ZIP. The file name stays recorded with the value it supports.</span></button>' : '<div class="ps-aviso">Evidence can be attached while the milestone is in collection, by whoever has it.</div>') +
+      (pode ? '<button type="button" class="ps-de-drop" data-a="evdAnexar" data-v="' + e(atual.id) + '"><b>Attach evidence to this KPI</b><span>PDF, Excel, images or ZIP. The file name stays recorded with the value it supports.</span></button>' : '<div class="ps-aviso">Evidence can be attached while the task is in collection, by whoever has it.</div>') +
       '<div class="ps-mt">' + tabela([{ t: 'Include' }, { t: 'File' }, { t: 'Company and period' }, { t: 'Supports the value', dir: 1 }, { t: 'Uploaded by' }, { t: 'Status' }], it.evidencias.map(function (x, i) {
         var k = chaveEv(atual.id, x), est = P.estadoKpi(atual.id);
         return ['<label class="ps-chk"><input id="evs-' + i + '" type="checkbox" data-c="evdInc" data-id="' + e(k) + '"' + (f.fora[k] ? '' : ' checked') + '><span class="ps-sr">Include ' + e(x.ficheiro) + ' in the package</span></label>', P.fichHtml({ ficheiro: x.ficheiro, fid: x.fid, id: x.id }, '', m), emp(m.empresa) + ', ' + e(m.ano), it.valor === null ? '-' : e(fmtV(atual.id, it.valor) + ' ' + atual.unidade_medida), e(x.por || '-') + (x.em ? '<small class="ps-mut ps-blk">' + e(P.fmtDataHora(x.em)) + '</small>' : ''), chip(est.txt, est.cls)];
@@ -400,21 +400,21 @@
   /* Remover um ficheiro carregado: pop-up com o que vai ser removido e quem o carregou; fica no historico da milestone */
   X.Pn.fichRem = function (a) {
     var m = P.ms(a.ms), r = m ? P.acharFicheiro(m, a.k) : null;
-    if (!r) return { t: 'Remove file', cls: 'conf', b: '<div class="ps-aviso">This file is no longer in the milestone.</div>', p: '<span class="ps-sp-flex"></span><button type="button" class="ps-btn" data-a="fecharPainel">Close</button>' };
+    if (!r) return { t: 'Remove file', cls: 'conf', b: '<div class="ps-aviso">This file is no longer in the task.</div>', p: '<span class="ps-sp-flex"></span><button type="button" class="ps-btn" data-a="fecharPainel">Close</button>' };
     var x = r.x;
     return { t: 'Remove this file?', s: m.nome, cls: 'conf',
       b: '<div class="ps-conf"><span class="ps-conf-ic" aria-hidden="true">' + X.svg('<path d="M3 6h18M8 6V4h8v2M6 6l1 15h10l1-15"/><path d="M10 11v6M14 11v6"/>', 26) + '</span><div>' +
-        '<p><b>' + e(x.ficheiro) + '</b> will be removed from ' + (r.ind ? 'the evidence of <b>' + e(P.cat(r.ind).nome) + '</b>' : 'the documents of this milestone') + '.</p>' +
+        '<p><b>' + e(x.ficheiro) + '</b> will be removed from ' + (r.ind ? 'the evidence of <b>' + e(P.cat(r.ind).nome) + '</b>' : 'the documents of this task') + '.</p>' +
         '<ul class="ps-conf-l"><li>Uploaded by <b class="fr-q">' + e(x.por || 'unknown') + '</b></li><li>On <b class="fr-q">' + e(x.em ? P.fmtDataHora(x.em) : 'unknown date') + '</b></li></ul>' +
-        '<p class="ps-small ps-mut">The removal stays in the milestone history, with who removed it, when, and who had uploaded it.' + (r.ind && P.cat(r.ind).evidencia_obrigatoria && r.lista.length === 1 ? ' This indicator requires evidence: the milestone cannot be submitted without another file.' : '') + '</p></div></div>',
+        '<p class="ps-small ps-mut">The removal stays in the task history, with who removed it, when, and who had uploaded it.' + (r.ind && P.cat(r.ind).evidencia_obrigatoria && r.lista.length === 1 ? ' This indicator requires evidence: the task cannot be submitted without another file.' : '') + '</p></div></div>',
       p: '<span class="ps-sp-flex"></span><button type="button" class="ps-btn" data-a="fecharPainel">Cancel</button><button type="button" class="ps-btn err cheio" data-a="fichRemoverSim">Remove file</button>' };
   };
   A.fichRemover = function (d) { var p = d.v.split('|'); X.abrePainel('fichRem', { ms: p[0], k: p.slice(1).join('|') }); };
   A.fichRemoverSim = function () {
-    var a = X.U.painel && X.U.painel.args, m = a ? P.ms(a.ms) : null, r = m ? P.removerFicheiro(m, a.k, u()) : { erro: 'Milestone not found.' };
+    var a = X.U.painel && X.U.painel.args, m = a ? P.ms(a.ms) : null, r = m ? P.removerFicheiro(m, a.k, u()) : { erro: 'Task not found.' };
     X.U.painel = null;
     if (r.erro) { R(); return toast(r.erro, 'err'); }
-    toast(r.nome + ' removed. It is in the milestone history.', 'ok'); R();
+    toast(r.nome + ' removed. It is in the task history.', 'ok'); R();
   };
   C.evdInc = function (el) { if (el.checked) delete U.evd.fora[el.dataset.id]; else U.evd.fora[el.dataset.id] = 1; };
   C.pacDest = function (el) { U.evd.dest = el.value; };
@@ -447,7 +447,7 @@
     var f = U.tr, lista = filtrarTrilho(), v = f.ver || P.verificarSelos(), mostra = lista.slice(0, f.n), tipos = ['Creation', 'Change', 'Workflow', 'Approval', 'Return', 'Calculation'];
     return '<div class="ps-filtros ps-sp"><button type="button" class="ps-btn" data-a="trVerificar">Verify integrity</button><button type="button" class="ps-btn" data-a="trExcel">Export to Excel</button></div>' +
       (v.ok ? '<div class="ps-aviso ps-sp-b" role="status"><span><b>Sealed log.</b> Each event carries a hash chained to the one before: ' + v.total + ' events, no breaks' + (f.ver ? ', verified at ' + e(P.fmtDataHora(f.ver.em)) : '') + '.</span></div>' : '<div class="ps-aviso err" role="alert"><b>Integrity broken at event ' + v.quebra.pos + ' of ' + v.total + '.</b> ' + e(v.quebra.motivo) + ' Reference: <span class="ps-mono">' + e(v.quebra.k) + '</span></div>') +
-      '<div class="ps-card ps-mt"><div class="ps-card-body"><div class="ps-form">' + campo('tr-q', 'Search', '<input id="tr-q" class="ps-in" placeholder="Data point, user, milestone" data-c="trF" data-id="q" value="' + e(f.q) + '">') +
+      '<div class="ps-card ps-mt"><div class="ps-card-body"><div class="ps-form">' + campo('tr-q', 'Search', '<input id="tr-q" class="ps-in" placeholder="Data point, user, task" data-c="trF" data-id="q" value="' + e(f.q) + '">') +
       campo('tr-norma', 'ESRS standard', '<select id="tr-norma" class="ps-sel" data-c="trF" data-id="norma">' + opt('', 'All', f.norma) + S.mat.map(function (x) { return opt(x.norma, x.norma, f.norma); }).join('') + '</select>') +
       campo('tr-emp', 'Company', '<select id="tr-emp" class="ps-sel" data-c="trF" data-id="empresa">' + opt('', 'All', f.empresa) + S.ent.map(function (x) { return opt(x.nome, x.nome, f.empresa); }).join('') + '</select>') +
       campo('tr-dias', 'Period', '<select id="tr-dias" class="ps-sel" data-c="trF" data-id="dias">' + opt('30', 'Last 30 days', f.dias) + opt('90', 'Last 90 days', f.dias) + opt('todos', 'Whole history', f.dias) + '</select>') + '</div><div class="ps-mt">' + pills('trTipo', [['todos', 'All']].concat(tipos.map(function (t) { return [t, t]; })), f.tipo) + '</div></div></div>' +
@@ -473,14 +473,14 @@
       '<div class="ps-col"><div class="ps-card">' + cabCartao('Scope 1 emissions', 'ativ', cod(P.cat('E06'))) + '<div class="ps-card-body"><p class="ps-small ps-mut">Change the quantities to simulate the result. The factors come from the library below, and are illustrative until confirmed.</p><div class="ps-tw ps-mt"><table class="ps-t ps-t-calc"><thead><tr><th>Source</th><th class="dir">Quantity</th><th>Unit</th><th>Factor</th><th class="dir">kgCO2e</th></tr></thead><tbody>' + calc.linhas.map(function (l) {
         return '<tr><td class="prim">' + e(l.f.nome) + '<br><small class="ps-mut">' + e(l.f.origem) + '</small></td><td class="dir"><input id="cf-q-' + e(l.f.id) + '" class="ps-in ps-num" inputmode="decimal" aria-label="Quantity of ' + e(l.f.nome) + '" data-c="calcQtd" data-id="' + e(l.f.id) + '" value="' + e(String(l.f.qtd).replace('.', ',')) + '"></td><td>' + e(l.f.unidade) + '</td><td class="ps-nowrap">' + e(P.fmtNum(l.f.fator) + ' ' + l.f.unidade_fator) + '</td><td class="dir ps-num"><b>' + e(P.fmtNum(l.kg, 0)) + '</b></td></tr>';
       }).join('') + '</tbody></table></div><div class="ps-calc-tot ps-mt"><span>Total Scope 1</span><span><b>' + e(P.fmtNum(calc.kg / 1000, 2)) + '</b> tCO2e</span></div>' +
-      '<div class="ps-sp-b ps-mt"><span class="ps-small ps-mut">Reported in ' + e(m ? m.nome : '-') + ': ' + (itE && itE.valor !== null ? e(fmtV('E06', itE.valor)) + ' kgCO2e' : 'no value') + '</span><button type="button" class="ps-btn pri" data-a="calcAplicar"' + (pode ? '' : ' disabled title="The Scope 1 milestone is not in collection with you"') + '>Use this result in the milestone</button></div></div></div>' +
+      '<div class="ps-sp-b ps-mt"><span class="ps-small ps-mut">Reported in ' + e(m ? m.nome : '-') + ': ' + (itE && itE.valor !== null ? e(fmtV('E06', itE.valor)) + ' kgCO2e' : 'no value') + '</span><button type="button" class="ps-btn pri" data-a="calcAplicar"' + (pode ? '' : ' disabled title="The Scope 1 task is not in collection with you"') + '>Use this result in the task</button></div></div></div>' +
       '<div class="ps-card">' + cabCartao('Emission factor library', 'tarefa', '<span class="ps-mut ps-small">Each change keeps the previous version and enters the audit trail</span>') + '<div class="ps-card-body">' + tabela([{ t: 'Source' }, { t: 'Factor', dir: 1 }, { t: 'Unit' }, { t: 'Version' }, { t: 'Previous versions' }], S.fatores.map(function (f) {
         return [e(f.nome), gere ? '<input id="cf-f-' + e(f.id) + '" class="ps-in ps-num" inputmode="decimal" aria-label="Factor of ' + e(f.nome) + '" data-c="calcFator" data-id="' + e(f.id) + '" value="' + e(String(f.fator).replace('.', ',')) + '">' : e(P.fmtNum(f.fator)), e(f.unidade_fator), e(f.versao), f.historico.length ? f.historico.map(function (h) { return e(P.fmtNum(h.fator) + ' (v' + h.versao + ')'); }).join(', ') : '-'];
       })) + '</div></div></div></div>';
   };
   C.calcQtd = function (el) { var n = P.lerNumero(el.value), f = S.fatores.filter(function (x) { return x.id === el.dataset.id; })[0]; if (n === null || n < 0) return toast('The quantity must be a number that is not negative.', 'err'); f.qtd = n; P.guardar(); };
   C.calcFator = function (el) { var f = S.fatores.filter(function (x) { return x.id === el.dataset.id; })[0], r = P.alterarFator(f, el.value, S.ciclo.ano, u()); if (r.erro) toast(r.erro, 'err'); };
-  A.calcAplicar = function () { res(P.aplicarCalculo(u()), 'Result written to the milestone, with the factors used.'); };
+  A.calcAplicar = function () { res(P.aplicarCalculo(u()), 'Result written to the task, with the factors used.'); };
 
   /* --- Empresas e perimetro ------------------------------------------------------------------ */
   U.per = { sel: '' };
@@ -490,7 +490,7 @@
     var adm = P.gereTudo(u()), inc = S.ent.filter(function (x) { return P.pesoConsolidacao(x) > 0; }).length;
     return '<div class="ps-card">' + cabCartao('Group companies (' + S.ent.length + ')', 'doc', adm ? '<button type="button" class="ps-btn pri peq" data-a="empNova">+ New company</button>' : '') + '<div class="ps-card-body">' +
       '<p class="ps-small ps-mut">' + inc + ' of ' + S.ent.length + ' companies count in the consolidated view: full and parent at 100%, proportional by ownership, equity method left out. Percentages and ratios are a weighted average.</p><div class="ps-mt">' +
-      tabela([{ t: 'Company' }, { t: 'Country' }, { t: 'Consolidation' }, { t: 'ESRS perimeter' }, { t: 'Counts at', dir: 1 }, { t: 'Departments', dir: 1 }, { t: 'Milestones', dir: 1 }, { t: 'Actions' }], S.ent.map(function (y) {
+      tabela([{ t: 'Company' }, { t: 'Country' }, { t: 'Consolidation' }, { t: 'ESRS perimeter' }, { t: 'Counts at', dir: 1 }, { t: 'Departments', dir: 1 }, { t: 'Tasks', dir: 1 }, { t: 'Actions' }], S.ent.map(function (y) {
         var nDep = P.depsDaEmpresa(y).length, nMs = cicloMs().filter(function (m) { return m.empresa === y.nome; }).length;
         return [(adm ? '<button type="button" class="ps-btn liga" data-a="empEditar" data-v="' + e(y.id) + '">' + emp(y.nome) + '</button>' : emp(y.nome)) + '<small class="ps-mut ps-blk">' + e([y.nipc ? 'Tax ' + y.nipc : '', y.nace ? 'NACE ' + y.nace : ''].filter(Boolean).join(', ') || ' ') + '</small>', e(y.pais || '-'), e(P.METODOS[y.metodo] || '-') + (y.metodo === 'mae' ? '' : '<small class="ps-mut ps-blk">' + e(P.fmtNum(y.detencao, 0)) + '% owned</small>'), y.perimetro_grupo ? chip('Included', 'ok') : chip('Excluded'), e(pesoTxt(y)), String(nDep), String(nMs),
           adm ? '<span class="ps-sp"><button type="button" class="ps-btn peq" data-a="empEditar" data-v="' + e(y.id) + '">Edit</button>' + (nMs ? '' : '<button type="button" class="ps-btn peq err" data-a="empApagar" data-v="' + e(y.id) + '">Remove</button>') + '</span>' : '-'];

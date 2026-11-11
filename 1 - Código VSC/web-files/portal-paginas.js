@@ -37,7 +37,7 @@
   var rotaEmp = function (nome) { var x = S.ent.filter(function (y) { return y.nome === nome; })[0]; return rota('Milestones' + (x ? '?empresa=' + encodeURIComponent(x.id) : '')); };
   /* A mesma regra em todas as tabelas de milestones: empresa e a quem esta atribuida */
   /* Perimeter e nao Company: o perimetro pode ser uma empresa ou uma unidade de negocio. O periodo tem coluna propria, para ler melhor. */
-  var COLS_MS = [{ t: 'Milestone' }, { t: 'Period' }, { t: 'Perimeter' }, { t: 'Assigned to' }, { t: 'Deadline' }, { t: 'Status' }];
+  var COLS_MS = [{ t: 'Task' }, { t: 'Period' }, { t: 'Perimeter' }, { t: 'Assigned to' }, { t: 'Deadline' }, { t: 'Status' }];
   /* Periodo de reporte e relatorios que a milestone alimenta */
   var tagPer = function (m) { var p = P.periodo(m.periodo); return p ? '<span class="ps-per' + (p.tipo === 'ano' ? ' ano' : '') + '" title="Reporting period ' + e(P.fmtData(p.ini)) + ' to ' + e(P.fmtData(p.fim)) + '">' + e(p.nome) + '</span>' : ''; };
   var tagsRel = function (m, max) {
@@ -169,7 +169,7 @@
     if (usr.perfil === 'ext') return ['Pedidos'];
     /* Quem contribui so precisa das suas milestones (com a folha) e do chat. O resto e para quem acompanha o reporte. */
     if (usr.perfil === 'resp') return ['Inicio', 'Milestones', 'Milestone'];
-    var base = ['Inicio', 'Milestones', 'Milestone', 'Timeline', 'Consolidado', 'Documentos', 'Evidencias', 'Relatorio', 'Saidas', 'Kpis', 'Historico', 'Auditoria'];
+    var base = ['Inicio', 'Milestones', 'Milestone', 'Timeline', 'Consolidado', 'Documentos', 'Evidencias', 'Relatorio', 'Saidas', 'Historico', 'Auditoria'];
     if (usr.perfil !== 'auditor') base.push('Dados');
     if (P.gereTudo(usr) || usr.perfil === 'auditor') base.push('Aprovacoes', 'Estado', 'Trilho');
     if (P.gereTudo(usr)) base.push('Backoffice');
@@ -251,7 +251,7 @@
       if (x.perfil === 'ext') return '';
       var minhas = P.msCiclo().filter(function (m) { return doUtilizador(m, x); }).length, esp = pendentesDe(x).length;
       if (!minhas && !esp) return '';
-      return '<span class="ps-ent-n">' + (esp ? '<b>' + esp + '</b> waiting' : minhas + ' milestone' + (minhas === 1 ? '' : 's')) + '</span>';
+      return '<span class="ps-ent-n">' + (esp ? '<b>' + esp + '</b> waiting' : minhas + ' task' + (minhas === 1 ? '' : 's')) + '</span>';
     };
     return ambienteHtml() + grupos.map(function (g) {
       return '<div class="ps-ent-grp"><h3>' + e(g[0]) + '</h3>' + S.users.filter(function (x) { return x.perfil === g[1]; }).map(function (x) {
@@ -262,10 +262,10 @@
   /* Cartao do ambiente: entrar no ambiente de testes, ou sair dele e limpa-lo */
   var ambienteHtml = function () {
     if (P.teste()) {
-      return '<div class="ps-amb on"><div><b>Test environment</b><p>Same people, companies, indicators and settings, with no milestones or values. What you do here never touches the main environment.' + (P.partilha && P.partilha.estado === 'ligado' ? ' It is shared online: everyone who opens this link sees the same and can enter as any profile.' : '') + '</p></div>' +
+      return '<div class="ps-amb on"><div><b>Test environment</b><p>Same people, companies, indicators and settings, with no tasks or values. What you do here never touches the main environment.' + (P.partilha && P.partilha.estado === 'ligado' ? ' It is shared online: everyone who opens this link sees the same and can enter as any profile.' : '') + '</p></div>' +
         '<div class="ps-amb-acts"><button type="button" class="ps-btn peq" data-a="ambienteLimpar">Clear test environment</button><button type="button" class="ps-btn peq pri" data-a="ambientePrincipal">Back to main environment</button></div></div>';
     }
-    return '<div class="ps-amb"><div><b>Test environment</b><p>Start from an empty platform: launch milestones, assign them and follow each person step by step.</p></div>' +
+    return '<div class="ps-amb"><div><b>Test environment</b><p>Start from an empty platform: launch tasks, assign them and follow each person step by step.</p></div>' +
       '<div class="ps-amb-acts"><button type="button" class="ps-btn peq" data-a="ambienteTeste">Open test environment</button></div></div>';
   };
 
@@ -363,7 +363,7 @@
       '<div class="ps-cal-mes">' + e(nomeMes) + '</div><div class="ps-cal-g">' + cel + '</div>' +
       '<div class="ps-cal-leg"><span><i></i>In collection</span><span><i class="err"></i>Overdue or returned</span><span><i class="rev"></i>In review</span><span><i class="ok"></i>Completed</span></div>' +
       '<div class="ps-cal-det"><h3>' + e(P.fmtDataAno(iso(ds))) + '</h3>' +
-      (msDia.length ? msDia.map(function (m) { return '<a href="' + rota('Milestone/' + m.id) + '">' + e(m.nome) + '</a>'; }).join('') : '<div class="ps-mut">No milestones due on this day.</div>') + '</div></aside>';
+      (msDia.length ? msDia.map(function (m) { return '<a href="' + rota('Milestone/' + m.id) + '">' + e(m.nome) + '</a>'; }).join('') : '<div class="ps-mut">No tasks due on this day.</div>') + '</div></aside>';
   };
   Blocos['inicio-calendario'] = function () { return calendario(P.msCiclo(), 'cal-'); };
 
@@ -376,7 +376,7 @@
     var estado = function (p) {
       var l = P.msPeriodo(p.id), conc = l.filter(P.concluida).length, atr = l.filter(function (m) { return P.estadoMs(m).cod === 'atraso'; }).length;
       var cls = l.length && conc === l.length ? 'ok' : hoje > p.fecho ? 'err' : hoje >= p.ini ? 'at' : '';
-      return { cls: atr && cls !== 'ok' ? 'err' : cls, txt: !l.length ? 'No milestones' : conc === l.length ? 'Approved' : conc + ' of ' + l.length + ' approved' + (atr ? ', ' + atr + ' overdue' : ''), n: l.length };
+      return { cls: atr && cls !== 'ok' ? 'err' : cls, txt: !l.length ? 'No tasks' : conc === l.length ? 'Approved' : conc + ' of ' + l.length + ' approved' + (atr ? ', ' + atr + ' overdue' : ''), n: l.length };
     };
     var meses = '';
     for (var k = 0; k < 19; k++) { var d = new Date(ano, k, 1), iso = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-01'; meses += '<span style="--x:' + x(iso).toFixed(2) + '">' + e(MESES_C[d.getMonth()]) + (d.getMonth() === 0 ? ' ' + d.getFullYear() : '') + '</span>'; }
@@ -437,15 +437,15 @@
     var nFalta = 0; l.forEach(function (m) { nFalta += faltaDe(m).length; });
     var pers = (S.periodos || []).filter(function (p) { return p.ano === ano && todas.some(function (m) { return m.periodo === p.id; }); });
     var filtros = '<div class="ps-filtros">' + campo('tl-per', 'Reporting period', '<select id="tl-per" class="ps-sel" data-c="tlEC" data-id="per">' + opt('', 'All periods', f.per) + pers.map(function (p) { return opt(p.id, p.nome + ' (' + todas.filter(function (m) { return m.periodo === p.id; }).length + ')', f.per); }).join('') + '</select>') +
-      '<label class="ps-chk"><input id="tl-falta" type="checkbox" data-c="tlECFalta"' + (f.falta ? ' checked' : '') + '> Only milestones with values still to report</label></div>';
+      '<label class="ps-chk"><input id="tl-falta" type="checkbox" data-c="tlECFalta"' + (f.falta ? ' checked' : '') + '> Only tasks with values still to report</label></div>';
     var linhas = l.map(function (m) {
       var fl = faltaDe(m), tot = m.indicadores.length, feitos = tot - fl.length, pct = tot ? Math.round(feitos / tot * 100) : 0, p = P.passoAtual(m);
       var falta = fl.length ? '<div class="tl-falta"><span class="tl-falta-n">' + fl.length + ' of ' + tot + ' to report</span><span class="tl-falta-l">' + fl.slice(0, 4).map(function (id) { return '<button type="button" class="ps-tag tl-kpi" data-a="ficha" data-v="' + e(id) + '" title="' + e(P.cat(id).nome) + '">' + e(P.cat(id).nome) + '</button>'; }).join('') + (fl.length > 4 ? '<span class="ps-mut ps-small">and ' + (fl.length - 4) + ' more</span>' : '') + '</span></div>'
         : '<span class="ps-mut ps-small">' + (p && p.tipo === 'recolha' ? 'All values in, to submit' : 'All values in, ' + e(p ? p.nome.toLowerCase() : 'done')) + '</span>';
       return ['<a href="' + rota('Milestone/' + m.id) + '"><b>' + e(m.nome) + '</b></a><span class="tl-prog" aria-label="' + feitos + ' of ' + tot + ' reported"><i style="width:' + pct + '%"></i></span>', tagPer(m) || e(P.rotPeriodo(m)), empHtml(m.empresa), atribHtml(m), '<span class="ps-nowrap">' + e(prazoTxt(m)) + '</span>', estChip(m), falta];
     });
-    return '<div class="ps-card ps-mt">' + cabCartao('Milestones in progress', 'tarefa', '<span class="ps-small ps-mut">' + l.length + ' milestone(s), ' + nFalta + ' value(s) still to report</span>') + '<div class="ps-card-body">' + filtros +
-      tabela([{ t: 'Milestone' }, { t: 'Period' }, { t: 'Perimeter' }, { t: 'Assigned to' }, { t: 'Deadline' }, { t: 'Status' }, { t: 'Still to report' }], linhas, f.falta ? 'Every milestone in progress already has all its values.' : 'No milestone in progress.') + '</div></div>';
+    return '<div class="ps-card ps-mt">' + cabCartao('Tasks in progress', 'tarefa', '<span class="ps-small ps-mut">' + l.length + ' task(s), ' + nFalta + ' value(s) still to report</span>') + '<div class="ps-card-body">' + filtros +
+      tabela([{ t: 'Task' }, { t: 'Period' }, { t: 'Perimeter' }, { t: 'Assigned to' }, { t: 'Deadline' }, { t: 'Status' }, { t: 'Still to report' }], linhas, f.falta ? 'Every task in progress already has all its values.' : 'No task in progress.') + '</div></div>';
   };
   Blocos['timeline'] = function () { return timeline() + emCurso(); };
 
@@ -473,12 +473,12 @@
     var f = U.msFiltro, ms = P.msCiclo();
     var cartao = function (href, nome, mono, l, on) {
       var conc = l.filter(P.concluida).length, atr = l.filter(function (m) { return P.estadoMs(m).cod === 'atraso'; }).length, pct = l.length ? Math.round((conc / l.length) * 100) : 0;
-      return '<a class="ps-emp' + (on ? ' on' : '') + '" href="' + href + '"' + (on ? ' aria-current="true"' : '') + '><span class="ps-emp-mono" aria-hidden="true">' + e(mono) + '</span><span class="ps-emp-txt"><b>' + e(nome) + '</b><small>' + l.length + (l.length === 1 ? ' milestone' : ' milestones') + (atr ? ', <em>' + atr + ' overdue</em>' : '') + '</small><span class="ps-emp-barra" aria-hidden="true"><i style="width:' + pct + '%"></i></span><small>' + conc + ' of ' + l.length + ' completed</small></span></a>';
+      return '<a class="ps-emp' + (on ? ' on' : '') + '" href="' + href + '"' + (on ? ' aria-current="true"' : '') + '><span class="ps-emp-mono" aria-hidden="true">' + e(mono) + '</span><span class="ps-emp-txt"><b>' + e(nome) + '</b><small>' + l.length + (l.length === 1 ? ' task' : ' tasks') + (atr ? ', <em>' + atr + ' overdue</em>' : '') + '</small><span class="ps-emp-barra" aria-hidden="true"><i style="width:' + pct + '%"></i></span><small>' + conc + ' of ' + l.length + ' completed</small></span></a>';
     };
     var daEmpresa = function (nome) { return ms.filter(function (m) { return m.empresa === nome; }); };
     var com = S.ent.filter(function (x) { return daEmpresa(x.nome).length; }), sem = S.ent.filter(function (x) { return !daEmpresa(x.nome).length; });
     var vis = com.concat(U.msEmpTodas ? sem : sem.filter(function (x) { return x.nome === f.empresa; }));
-    return '<div class="ps-card"><div class="ps-card-head"><h2>Companies</h2>' + (sem.length ? '<button type="button" class="ps-btn liga" data-a="msEmpTodas">' + (U.msEmpTodas ? 'Show only companies with milestones' : 'Show ' + sem.length + ' more with no milestones') + '</button>' : '') + '</div><div class="ps-emps">' +
+    return '<div class="ps-card"><div class="ps-card-head"><h2>Companies</h2>' + (sem.length ? '<button type="button" class="ps-btn liga" data-a="msEmpTodas">' + (U.msEmpTodas ? 'Show only companies with tasks' : 'Show ' + sem.length + ' more with no tasks') + '</button>' : '') + '</div><div class="ps-emps">' +
       cartao(rota('Milestones'), 'All companies', 'All', ms, !f.empresa) +
       vis.map(function (x) { return cartao(rota('Milestones?empresa=' + encodeURIComponent(x.id)), x.nome, iniciais(x.nome), daEmpresa(x.nome), f.empresa === x.nome); }).join('') + '</div></div>';
   };
@@ -491,7 +491,7 @@
     var wb = window.XLSX.utils.book_new(), ws = window.XLSX.utils.aoa_to_sheet(linhas);
     ws['!cols'] = [{ wch: 48 }, { wch: 12 }, { wch: 26 }, { wch: 32 }, { wch: 12 }, { wch: 18 }];
     window.XLSX.utils.book_append_sheet(wb, ws, 'Milestones');
-    window.XLSX.writeFile(wb, 'milestones.xlsx');
+    window.XLSX.writeFile(wb, 'tasks.xlsx');
     toast('Excel file exported.', 'ok');
   };
   Blocos['milestones'] = function () {
@@ -502,7 +502,7 @@
       '<label class="ps-chk"><input id="f-esrs" type="checkbox" data-c="msEsrs"' + (f.esrs ? ' checked' : '') + '> Include ESRS track</label></div>';
     var dir = '<div class="ps-sp"><div class="ps-seg" role="group" aria-label="View"><button type="button" class="' + (U.msVista === 'lista' ? 'on' : '') + '" data-a="msVista" data-v="lista">Table</button><button type="button" class="' + (U.msVista === 'board' ? 'on' : '') + '" data-a="msVista" data-v="board">Board</button></div>' + botaoTl('Timeline') + '<button type="button" class="ps-btn peq" data-a="msExcel"' + (lista.length ? '' : ' disabled') + '>Export to Excel</button></div>';
     var cab = cabCartao((f.empresa || 'All companies') + ' (' + lista.length + ')', 'tarefa', dir);
-    if (!lista.length) return filtros + '<div class="ps-card">' + cab + vazio('No milestones match these filters.') + '</div>';
+    if (!lista.length) return filtros + '<div class="ps-card">' + cab + vazio('No tasks match these filters.') + '</div>';
     if (U.msVista === 'board') {
       var cols = [['Collection', ['recolha', 'atraso', 'devolvida']], ['Review and opinion', ['revisao', 'parecer']], ['Approval', ['aprovacao']], ['Completed', ['concluida']]];
       return filtros + '<div class="ps-card">' + cab + '<div class="ps-card-body"><div class="ps-board">' + cols.map(function (c) {
@@ -523,7 +523,7 @@
   Blocos['milestone-cabecalho'] = function () {
     var m = msAtual(), d = P.diasAte(m.prazo);
     var ext = S.ext.filter(function (x) { return x.milestone_id === m.id; }).length;
-    return '<nav class="ps-mig" aria-label="Breadcrumb"><a href="' + rota('Inicio') + '">Home</a><span>/</span><a href="' + rota('Milestones') + '">Milestones</a><span>/</span>    <a href="' + rotaEmp(m.empresa) + '">' + empHtml(m.empresa) + '</a><span>/</span><b>' + e(m.nome) + '</b></nav>' +
+    return '<nav class="ps-mig" aria-label="Breadcrumb"><a href="' + rota('Inicio') + '">Home</a><span>/</span><a href="' + rota('Milestones') + '">Tasks</a><span>/</span>    <a href="' + rotaEmp(m.empresa) + '">' + empHtml(m.empresa) + '</a><span>/</span><b>' + e(m.nome) + '</b></nav>' +
           '<div class="ps-ban"><div class="ps-ban-top"><div><div class="ps-ban-tags"><span class="ps-ban-tag">' + avEmpresa() + e(m.empresa) + '</span><span class="ps-ban-tag forte">' + e(P.rotPeriodo(m)) + '</span><span class="ps-ban-tag">' + e(m.consolida ? 'Annual consolidation' : PERIODO_TXT[m.periodicidade] || m.periodicidade) + '</span>' + (m.periodicidade === 'Novos dados ESRS' ? '<span class="ps-ban-tag">ESRS track</span>' : '') + (m.workflow_ajustado ? '<span class="ps-ban-tag">Adjusted workflow</span>' : '') + '</div>' +
       '<h1>' + e(m.nome) + '</h1><div class="ps-ban-sub">' + (function () { var p = P.periodo(m.periodo); return p ? 'Data from ' + e(P.fmtDataAno(p.ini)) + ' to ' + e(P.fmtDataAno(p.fim)) : 'Reporting year ' + e(m.ano); })() + ', ' + e(m.unidade) + '</div>' + (P.relatoriosDe(m).length ? '<div class="ps-ban-rel"><span>Feeds</span>' + P.relatoriosDe(m).map(function (r) { return '<span class="ps-ban-tag" title="' + e(r.base) + '">' + e(r.sigla + ', ' + r.entidade + ', ' + P.fmtDataAno(r.data)) + '</span>'; }).join('') + '</div>' : '') + '</div>' +
       '<div class="ps-ban-dir"><div class="ps-ban-pill"><small>Due</small>' + e(P.fmtDataAno(m.prazo)) + '</div>' + estChip(m) + '</div></div>' +
@@ -533,7 +533,7 @@
   var podeReatribuir = function (m, usr) { var p = P.passoAtual(m); return !!p && !P.concluida(m) && p.tipo === 'recolha' && P.acompanha(m, usr); };
   Blocos['milestone-workflow'] = function () {
     var m = msAtual(), feitos = Math.min(m.passo_atual, m.passos.length), pct = Math.round((feitos / m.passos.length) * 100), abertoH = !!U.wfHist[m.id];
-    return '<div class="ps-card ps-mt">' + cabCartao('Milestone workflow', 'ativ', '<div class="ps-sp"><div class="ps-leg"><span><i class="ok"></i>Completed</span><span><i class="at"></i>Current</span><span><i></i>To do</span></div>' + '<button type="button" class="ps-wfh-btn' + (abertoH ? ' on' : '') + '" data-a="wfHist" aria-expanded="' + abertoH + '" aria-controls="wf-hist" title="' + (abertoH ? 'Hide the timeline' : 'Show the timeline of this workflow') + '"><span class="ps-wfh-ico">' + svg(I.relogio, 18) + '</span><span class="ps-wfh-txt">' + (abertoH ? 'Hide timeline' : 'Timeline') + '</span></button>' + (P.podeAlterarWorkflow(m, u()) ? '<button type="button" class="ps-btn peq" data-a="abrirWf">Change workflow</button>' : '') + '</div>') +
+    return '<div class="ps-card ps-mt">' + cabCartao('Task workflow', 'ativ', '<div class="ps-sp"><div class="ps-leg"><span><i class="ok"></i>Completed</span><span><i class="at"></i>Current</span><span><i></i>To do</span></div>' + '<button type="button" class="ps-wfh-btn' + (abertoH ? ' on' : '') + '" data-a="wfHist" aria-expanded="' + abertoH + '" aria-controls="wf-hist" title="' + (abertoH ? 'Hide the timeline' : 'Show the timeline of this workflow') + '"><span class="ps-wfh-ico">' + svg(I.relogio, 18) + '</span><span class="ps-wfh-txt">' + (abertoH ? 'Hide timeline' : 'Timeline') + '</span></button>' + (P.podeAlterarWorkflow(m, u()) ? '<button type="button" class="ps-btn peq" data-a="abrirWf">Change workflow</button>' : '') + '</div>') +
       '<div class="ps-wf-barra ps-mt" role="img" aria-label="' + pct + '% of steps completed"><i style="width:' + pct + '%"></i></div><div class="ps-wf">' + m.passos.map(function (p, i) {
         var c = i < m.passo_atual ? 'ok' : i === m.passo_atual ? (m.devolvida ? 'at dev' : 'at') : '';
         return '<div class="ps-wf-p ' + c + '"' + (i === m.passo_atual ? ' aria-current="step"' : '') + '><div class="ps-wf-n">' + e(p.nome) + '</div><div class="ps-wf-c">' + (i < m.passo_atual ? svg(I.tick, 18) : m.devolvida && i === m.passo_atual ? svg(I.voltar, 18) : i + 1) + '</div><div class="ps-wf-r">' + (p.concluido_em ? '<b>' + e(P.fmtData(p.concluido_em)) + '</b><span class="ps-wf-q">' + quemHtml(p.concluido_por) + '</span>' : i === m.passo_atual ? '<b>Current</b><span class="ps-wf-q">' + quemAtual(m) + (podeReatribuir(m, u()) ? '<button type="button" class="ps-wf-edit" data-a="msAtrAbrir" aria-label="Change who it is assigned to" title="Change who it is assigned to">' + svg(ICO_LAPIS, 14) + '</button>' : '') + '</span>' : '<span class="ps-wf-q">' + quemHtml(P.nomeResp(m, p.responsavel)) + '</span>') + '</div></div>';
@@ -573,7 +573,7 @@
       ['evidencias', 'Evidence and quality', 0, sepEvidencias(m)], ['externos', 'Assistance requests', nExt, sepExternos(m)], ['auditoria', 'Audit', nAud, sepAuditoria(m)], ['conversa', 'Conversation and history', m.comentarios.length, (P.ext.sepConversa ? P.ext.sepConversa(m) : sepConversa(m))]];
     var indice = [['dados', secs[0][1]]].concat(secs.slice(1).map(function (s) { return [s[0], s[1], s[2]]; }));
     var tab = U.msTab[m.id] || 'trabalho', nDados = m.indicadores.filter(function (id) { return P.podeVerIndicador(P.cat(id), usr); }).length;
-    var barra = '<div class="ps-mtabs" role="tablist" aria-label="Milestone views">' + [['trabalho', 'Work', ''], ['dados', 'Data store', nDados]].map(function (t) {
+    var barra = '<div class="ps-mtabs" role="tablist" aria-label="Task views">' + [['trabalho', 'Work', ''], ['dados', 'Data store', nDados]].map(function (t) {
       return '<button type="button" role="tab" id="mtab-' + t[0] + '" aria-selected="' + (tab === t[0]) + '" aria-controls="mpan-' + t[0] + '" class="' + (tab === t[0] ? 'on' : '') + '" data-a="msTab" data-v="' + t[0] + '">' + e(t[1]) + (t[2] ? ' <span class="ps-n">' + t[2] + '</span>' : '') + '</button>';
     }).join('') + '</div>';
     if (tab === 'dados') return barra + '<div id="mpan-dados" role="tabpanel" aria-labelledby="mtab-dados" class="ps-col">' + sepExplorar(m) + '</div>';
@@ -589,7 +589,7 @@
     }
     if (!P.podePreencher(m, usr)) return '';
     var f = P.faltasSubmissao(m).length, feitos = preenchidos(m);
-    return '<div class="ps-ms-acao" role="region" aria-label="Actions"><span class="ps-small" aria-live="polite"><b>' + feitos + ' of ' + m.indicadores.length + '</b> indicators with a value' + (f ? '<span class="ps-mut">, ' + f + ' item' + (f === 1 ? '' : 's') + ' still missing</span>' : '<span class="ps-txt-ok">, ready to submit</span>') + '</span><button type="button" id="btn-submeter" class="ps-btn pri" data-a="submeter">Submit milestone</button></div>';
+    return '<div class="ps-ms-acao" role="region" aria-label="Actions"><span class="ps-small" aria-live="polite"><b>' + feitos + ' of ' + m.indicadores.length + '</b> indicators with a value' + (f ? '<span class="ps-mut">, ' + f + ' item' + (f === 1 ? '' : 's') + ' still missing</span>' : '<span class="ps-txt-ok">, ready to submit</span>') + '</span><button type="button" id="btn-submeter" class="ps-btn pri" data-a="submeter">Submit task</button></div>';
   };
   var editorAtrib = function (m, usr) {
     var p = P.passoAtual(m);
@@ -675,7 +675,7 @@
         '<span class="rq-aba-ic" aria-hidden="true">' + svg(a[1], 18) + '</span><span class="rq-aba-t"><b>' + a[2] + '</b><small class="' + a[4] + '">' + e(a[3]) + '</small></span></button>';
     }).join('') + '</div>';
     var painelEcra = '<div class="rq-pan" role="tabpanel" id="rqp-ecra" aria-labelledby="rqa-ecra"' + (aberta ? ' data-dzx="' + e(m.id) + '"' : '') + '>' +
-      '<div class="rq-barra"><p class="ps-small ps-mut">' + (aberta ? 'Type each value, paste from Excel in the grid, or drop an Excel file here to import it.' : 'This milestone is closed.') + '</p>' + ferrEcra(m) + '</div>' +
+      '<div class="rq-barra"><p class="ps-small ps-mut">' + (aberta ? 'Type each value, paste from Excel in the grid, or drop an Excel file here to import it.' : 'This task is closed.') + '</p>' + ferrEcra(m) + '</div>' +
       (U.dadosVista === 'grid' ? corpoGrelha(m) : vistaLista) + (aberta ? '<div class="rq-solta-x" aria-hidden="true">' + svg(I.tabela, 26) + '<b>Drop the Excel to import its values</b><small>You choose what goes where before anything is saved.</small></div>' : '') + '</div>';
     var painelFic = '<div class="rq-pan rq-pan-fic" role="tabpanel" id="rqp-fic" aria-labelledby="rqa-fic"' + (aberta ? ' data-dz="' + e(m.id) + '"' : '') + '>' + cartaoFicheiros(m, true) + '</div>';
     return '<div class="ps-card rq-uni" id="rq-dados">' + cabCartao('Requested data', 'tarefa', '<div class="ps-sp">' + (P.fontesAcoes ? P.fontesAcoes(m) : '') + importar + pedir + '</div>') +
@@ -793,7 +793,7 @@
     var outros = gerais.length ? '<p class="ps-small ps-mut fp-outros">Other documents: ' + gerais.map(function (d) { return P.fichHtml(d, '', m); }).join('') + '</p>' : '';
     if (embutido) {
       var titulo = precisos.length ? '<div class="fp-tit"><h3>Requested files</h3>' + cab + '</div>' +
-        (solta ? '<p class="ps-small ps-mut fp-dica">' + svg(I.upload, 14) + 'Drag each file onto its row, or use Upload.</p>' : '') : '<p class="fp-zero">' + svg(I.tick, 16) + 'No file is required for this milestone. The data goes in on screen.</p>';
+        (solta ? '<p class="ps-small ps-mut fp-dica">' + svg(I.upload, 14) + 'Drag each file onto its row, or use Upload.</p>' : '') : '<p class="fp-zero">' + svg(I.tick, 16) + 'No file is required for this task. The data goes in on screen.</p>';
       var zona = solta ? '<div class="fp-outra" data-dz="' + e(m.id) + '"><span class="fp-outra-ic" aria-hidden="true">' + svg(I.upload, 22) + '</span><span class="fp-outra-t"><b>Other files</b><small>Drop any other supporting document here, for example a signed declaration or an invoice. Excel or PDF.</small></span>' +
         '<button type="button" class="ps-btn" data-a="fpOutros">Choose files</button></div>' : '';
       return '<div class="fp-emb">' + titulo + lista + zona + filaHtml + outros + disp + '</div>';
@@ -841,7 +841,7 @@
         toast(rel.aplicados + ' cell(s) updated from your copy.' + (rel.recusados.length + rel.ignorados.length ? ' See the notes under the grid.' : ''), rel.aplicados ? 'ok' : 'err');
         R();
       },
-      aoRecusar: function () { toast('This milestone is read only for you right now.', 'err'); },
+      aoRecusar: function () { toast('This task is read only for you right now.', 'err'); },
       aoAnular: function (n) { toast(n + ' cell(s) restored.', 'ok'); }
     };
   };
@@ -852,7 +852,7 @@
   };
   var aplicarDados = function (m, lista, origem) {
     var usr = u(), n = 0, rec = [];
-    if (!P.podePreencher(m, usr)) return { aplicados: 0, recusados: ['This milestone is read only for you right now.'], semAlteracao: true };
+    if (!P.podePreencher(m, usr)) return { aplicados: 0, recusados: ['This task is read only for you right now.'], semAlteracao: true };
     lista.forEach(function (a) {
       var c = P.cat(a.id), it = P.item(a.id, P.chave(m));
       if (a.k === 'valor') {
@@ -905,7 +905,7 @@
       if (!l.some(function (x) { return String(x).trim(); })) return;
       var ref = 'Row ' + (ix + base), c = achar(l[colId]) || (mapa.nome !== undefined ? achar(l[mapa.nome]) : null);
       if (!c) { ign.push(ref + ': "' + l[colId] + '" is not an indicator.'); return; }
-      if (m.indicadores.indexOf(c.id) < 0) { ign.push(ref + ': ' + c.nome + ' is not part of this milestone.'); return; }
+      if (m.indicadores.indexOf(c.id) < 0) { ign.push(ref + ': ' + c.nome + ' is not part of this task.'); return; }
       if (mapa.un !== undefined && String(l[mapa.un] || '').trim() && norm(l[mapa.un]) !== norm(c.unidade_medida)) { ign.push(ref + ': ' + c.nome + ' must be in ' + c.unidade_medida + ', not ' + l[mapa.un] + '.'); return; }
       ['valor', 'qual', 'metodo', 'just'].forEach(function (k) { if (mapa[k] !== undefined && l[mapa[k]] !== undefined) lista.push({ id: c.id, k: k, valor: l[mapa[k]] }); });
     });
@@ -986,7 +986,7 @@
     var q = norm(x.q), lista = dom.ok.filter(function (c) { return !q || norm(c.id + ' ' + c.nome).indexOf(q) > -1; });
     var perfil = P.PERFIS[usr.perfil] + (P.unidadesDe(usr).length ? ', ' + P.unidadesTxt(usr) : '');
     var cfg = cfgRelatorio(m);
-    return '<div class="ps-card"><div class="ps-exp"><div class="ps-exp-esq"><h2>Data store</h2><p class="ps-mut ps-small">The ' + doms.length + ' layer' + (doms.length === 1 ? '' : 's') + ' this milestone feeds. Pick one to browse it.</p>' + cilindro(doms, dom.tema) + '<div class="ps-exp-acesso"><b>' + totOk + ' of ' + totT + '</b> data points of this milestone open to you<br><span class="ps-mut">' + e(perfil) + '</span></div></div>' +
+    return '<div class="ps-card"><div class="ps-exp"><div class="ps-exp-esq"><h2>Data store</h2><p class="ps-mut ps-small">The ' + doms.length + ' layer' + (doms.length === 1 ? '' : 's') + ' this task feeds. Pick one to browse it.</p>' + cilindro(doms, dom.tema) + '<div class="ps-exp-acesso"><b>' + totOk + ' of ' + totT + '</b> data points of this task open to you<br><span class="ps-mut">' + e(perfil) + '</span></div></div>' +
       '<div class="ps-exp-dir"><div class="ps-sp-b"><div><h2>' + e(dom.tema) + '</h2><p class="ps-mut ps-small">' + dom.ok.length + ' data points available' + (dom.todos.length > dom.ok.length ? ', ' + (dom.todos.length - dom.ok.length) + ' outside your access' : '') + '</p></div><div class="ps-sp"><button type="button" class="ps-btn peq" data-a="expTodos">Select all</button><button type="button" class="ps-btn peq" data-a="expLimpar">Clear report</button></div></div>' +
       '<div class="ps-mt">' + campo('exp-q', 'Search this layer', '<input id="exp-q" class="ps-in" value="' + e(x.q) + '" data-c="expBusca" autocomplete="off">') + '</div>' +
       (lista.length ? '<ul class="ps-exp-lista">' + lista.map(function (c) {
@@ -1003,7 +1003,7 @@
     }))) + '<div class="ps-mt">' + campo('rev-com', 'Comment (required to return)', '<textarea id="rev-com" class="ps-ta"></textarea>') + '</div></div></div>';
   };
   var sepLeitura = function (m) {
-    var msg = P.concluida(m) ? 'Milestone completed. Approved values only change by restatement.' : 'The current step is with ' + P.nomeResp(m, P.passoAtual(m).responsavel) + '. You can view the values.';
+    var msg = P.concluida(m) ? 'Task completed. Approved values only change by restatement.' : 'The current step is with ' + P.nomeResp(m, P.passoAtual(m).responsavel) + '. You can view the values.';
     return '<div class="ps-card">' + cabCartao('Requested data', 'doc', ferrDados(m)) + '<div class="ps-card-body"><div class="ps-aviso">' + e(msg) + '</div>' + (P.fontesHtml ? P.fontesHtml(m) : '') + (U.dadosVista === 'grid' ? corpoGrelha(m) : tabela([{ t: 'Indicator' }, { t: 'Value', dir: 1 }, { t: String(m.ano - 1), dir: 1 }, { t: 'Status' }, { t: 'Quality' }], m.indicadores.map(function (id) {
       var est = P.estadoIndicador(m, id), it = P.item(id, P.chave(m)), ant = P.valorAnterior(id, P.chave(m));
       return [linkFicha(id) + infoFormula(id, true) + (P.botaoComentarInd ? ' ' + P.botaoComentarInd(m, id) : '') + marcaAmostra(id) + (it.reexpresso ? ' ' + chip('Restated', 'warn') : ''), celValor(m, id) + ' ' + e(P.cat(id).unidade_medida), ant === null || ant === undefined ? '-' : fmtV(id, ant), chip(est.txt, est.cls), e(P.QUALIDADE_TXT[it.qualidade])];
@@ -1015,7 +1015,7 @@
       tabela([{ t: 'Indicator' }, { t: 'Quality' }, { t: 'Method' }, { t: 'Evidence' }], m.indicadores.map(function (id) {
         var it = P.item(id, P.chave(m)), c = P.cat(id);
         return [linkFicha(id), e(P.QUALIDADE_TXT[it.qualidade]), e(it.metodo || '-'), (it.evidencias.length || (P.extracaoDe && P.extracaoDe(m, id)) ? '<span class="fc-l">' + (P.extracaoHtml ? P.extracaoHtml(m, id) : '') + P.fichLista(it.evidencias, m) + '</span>' : P.evidenciaPrecisa(m, id) ? chip('Required, missing', 'warn') : c.evidencia_obrigatoria ? chip('Not needed, from the system', 'ok') : '-')];
-      })) + '<h3 class="ps-grupo-t">General milestone documents</h3>' + (m.documentos_gerais.length ? '<ul class="ps-list">' + m.documentos_gerais.map(function (d) { return '<li class="ps-row"><span class="ps-row-ico">' + svg(I.doc, 18) + '</span><span class="ps-row-txt"><b>' + P.fichHtml({ ficheiro: d.ficheiro, fid: d.fid, id: d.id, em: d.em }, '', m) + '</b><span>Uploaded by ' + quemHtml(d.por) + '<span class="ps-q-sep">, </span>' + e(P.fmtDataHora(d.em)) + '</span></span></li>'; }).join('') + '</ul>' : '<p class="ps-mut ps-small">No general documents yet.</p>') +
+      })) + '<h3 class="ps-grupo-t">General task documents</h3>' + (m.documentos_gerais.length ? '<ul class="ps-list">' + m.documentos_gerais.map(function (d) { return '<li class="ps-row"><span class="ps-row-ico">' + svg(I.doc, 18) + '</span><span class="ps-row-txt"><b>' + P.fichHtml({ ficheiro: d.ficheiro, fid: d.fid, id: d.id, em: d.em }, '', m) + '</b><span>Uploaded by ' + quemHtml(d.por) + '<span class="ps-q-sep">, </span>' + e(P.fmtDataHora(d.em)) + '</span></span></li>'; }).join('') + '</ul>' : '<p class="ps-mut ps-small">No general documents yet.</p>') +
       (P.acompanha(m, usr) ? '<button type="button" class="ps-btn ps-mt" data-a="anexarGeral">Attach general document</button>' : '') + '</div></div>';
   };
   var sepExternos = function (m) {
@@ -1033,7 +1033,7 @@
     return '<div class="ps-card">' + cabCartao('Assistance requests', 'doc', pode ? '<button type="button" class="ps-btn peq" data-a="pedirAjuda">Request assistance</button>' : '') + '<div class="ps-card-body">' + form + tabela([{ t: 'Indicator' }, { t: 'Asked to' }, { t: 'Message' }, { t: 'Due' }, { t: 'Value' }, { t: 'Status' }], l.map(function (x) {
       var acao = x.estado === 'recebido' && P.podePreencher(m, usr) ? ' <button type="button" class="ps-btn peq" data-a="usarExt" data-v="' + e(x.id) + '">Use this value</button>' : '';
       return [e(P.cat(x.indicador_id).nome), x.tipo === 'ajuda' ? pessHtml(x.entidade_externa) + (x.pedido_por ? '<br><small class="ps-mut">Asked by ' + e(x.pedido_por) + '</small>' : '') : depHtml(x.entidade_externa), e(x.descricao) + (x.nota ? '<br><small class="ps-mut">Reply: ' + e(x.nota) + '</small>' : ''), e(P.fmtData(x.prazo)), x.valor === null ? '-' : e(fmtV(x.indicador_id, x.valor)), chip(EST[x.estado][0], EST[x.estado][1]) + acao];
-    }), 'No assistance requested on this milestone yet.') + '</div></div>';
+    }), 'No assistance requested on this task yet.') + '</div></div>';
   };
   var cartaoPedidos = function (lista) {
     var usr = u();
@@ -1050,7 +1050,7 @@
     var ped = S.aud.filter(function (a) { var x = P.msDoIndicador(a.indicador_id, m.ano); return x && x.id === m.id; });
     return '<div class="ps-card">' + cabCartao('Traceability matrix', 'doc') + '<div class="ps-card-body">' + tabela([{ t: 'Indicator' }, { t: 'Value', dir: 1 }, { t: 'ESRS' }, { t: 'GRI' }, { t: 'Submitted by' }, { t: 'Approved by' }, { t: 'Evidence' }], P.rastreabilidade(m).map(function (r) {
       return [linkFicha(r.indicador_id) + marcaAmostra(r.indicador_id), r.valor === null ? '-' : e(fmtV(r.indicador_id, r.valor)), e(r.esrs), e(r.gri), e(r.submetido_por || '-'), e(r.aprovado_por || '-'), e(r.evidencias || '-')];
-    })) + '</div></div><div class="ps-card">' + cabCartao('Requests on this milestone', 'ativ') + (ped.length ? cartaoPedidos(ped) : vazio('No auditor requests on this milestone.')) + '</div>';
+    })) + '</div></div><div class="ps-card">' + cabCartao('Requests on this task', 'ativ') + (ped.length ? cartaoPedidos(ped) : vazio('No auditor requests on this task.')) + '</div>';
   };
   var sepConversa = function (m) {
     var usr = u();
@@ -1100,7 +1100,7 @@
       if (!cs.length) return '';
       var s = situacao(cs), atraso = mss.some(function (m) { return P.estadoMs(m).cod === 'atraso'; });
       var est = s.a === s.t ? chip('All approved', 'ok') : atraso ? chip('Overdue', 'err') : s.a + s.r === s.t ? chip('All reported', 'rev') : chip('In progress', 'info');
-      return '<details class="ps-card ps-mt" id="area-' + e(un.replace(/\W/g, '')) + '"><summary class="ps-card-head ps-sp-b ps-sumario"><b>' + e(un) + '</b><span class="ps-sp">' + est + '<span class="ps-mut ps-small">' + s.a + ' of ' + s.t + ' approved, ' + mss.length + ' milestones</span></span></summary><div class="ps-card-body">' +
+      return '<details class="ps-card ps-mt" id="area-' + e(un.replace(/\W/g, '')) + '"><summary class="ps-card-head ps-sp-b ps-sumario"><b>' + e(un) + '</b><span class="ps-sp">' + est + '<span class="ps-mut ps-small">' + s.a + ' of ' + s.t + ' approved, ' + mss.length + ' tasks</span></span></summary><div class="ps-card-body">' +
         tabela([{ t: 'Indicator' }, { t: 'Value', dir: 1 }, { t: 'Status' }], cs.map(function (c) {
           var m = P.msDoIndicador(c.id), est2 = m ? P.estadoIndicador(m, c.id) : { txt: 'To collect', cls: '' }, it = P.item(c.id);
           return [linkFicha(c.id), it && it.valor !== null ? e(fmtV(c.id, it.valor) + ' ' + c.unidade_medida) : '-', chip(est2.txt, est2.cls)];
@@ -1108,7 +1108,7 @@
     }).join('');
     var quadros = P.QUADROS.filter(function (q) { return incl || q !== 'ESRS'; });
     return '<div class="ps-filtros"><label class="ps-chk"><input id="cons-esrs" type="checkbox" data-c="consEsrs"' + (incl ? ' checked' : '') + '> Include ESRS track</label></div>' +
-      '<div class="ps-kpis"><div class="ps-kpi"><span>Indicators reported by areas</span><b>' + (tot.a + tot.r) + '</b><small>of ' + tot.t + '</small></div><div class="ps-kpi"><span>Approved and consolidated</span><b>' + tot.a + '</b><small>' + Math.round((tot.a / Math.max(tot.t, 1)) * 100) + '% of the report</small></div><div class="ps-kpi"><span>Completed milestones</span><b>' + conc + '</b><small>of ' + ms.length + '</small></div></div>' +
+      '<div class="ps-kpis"><div class="ps-kpi"><span>Indicators reported by areas</span><b>' + (tot.a + tot.r) + '</b><small>of ' + tot.t + '</small></div><div class="ps-kpi"><span>Approved and consolidated</span><b>' + tot.a + '</b><small>' + Math.round((tot.a / Math.max(tot.t, 1)) * 100) + '% of the report</small></div><div class="ps-kpi"><span>Completed tasks</span><b>' + conc + '</b><small>of ' + ms.length + '</small></div></div>' +
       '<div class="ps-grid2 ps-mt"><div class="ps-card">' + cabCartao('Targets and trajectory', 'ativ') + '<div class="ps-card-body">' + metas + '</div></div><div class="ps-card">' + cabCartao('Data quality', 'tarefa') + '<div class="ps-card-body"><div class="ps-kpis"><div class="ps-kpi"><span>Measured</span><b>' + qual.medido + '</b></div><div class="ps-kpi"><span>Calculated</span><b>' + qual.calculado + '</b></div><div class="ps-kpi"><span>Estimated</span><b>' + qual.estimado + '</b></div></div><p class="ps-mut ps-small ps-mt">' + totQ + ' indicators with a value.</p></div></div></div>' +
       '<div class="ps-grid2 ps-mt"><div class="ps-card">' + cabCartao('By report table', 'doc') + '<div class="ps-card-body">' + LEG_V + quadros.map(function (q) { return barra(QUADRO_TXT[q] || q, situacao(cat.filter(function (c) { return c.quadro === q; }))); }).join('') + '</div></div><div class="ps-card">' + cabCartao('By topic', 'doc') + '<div class="ps-card-body">' + LEG_V + Object.keys(P.TEMAS).map(function (t) { return barra(t, situacao(cat.filter(function (c) { return c.tema === t; }))); }).join('') + '</div></div></div>' +
       '<h2 class="ps-grupo-t ps-mt-l">By area</h2>' + areas;
@@ -1211,10 +1211,10 @@
     return '<div class="ps-kpis"><div class="ps-kpi"><span>Approved with evidence</span><b>' + (apr.length ? Math.round((comEv / apr.length) * 100) : 0) + '%</b><small>' + comEv + ' of ' + apr.length + '</small></div><div class="ps-kpi"><span>Estimated values</span><b>' + est + '</b></div><div class="ps-kpi"><span>Restated values</span><b>' + reex + '</b></div><div class="ps-kpi"><span>Open requests</span><b>' + abertos.length + '</b></div></div>' +
       '<div class="ps-sp ps-mt">' + (podeAmostra ? '<button type="button" class="ps-btn pri" data-a="amostra">Select a sample of 5</button>' : '') + '<button type="button" class="ps-btn" data-a="dataRoom">Export data room (Excel)</button>' + (usr.perfil === 'auditor' || usr.perfil === 'admin' ? '<button type="button" class="ps-btn" data-a="novoPedAud">New information request</button>' : '') + '</div>' +
       (S.amostra.length ? '<div class="ps-card ps-mt">' + cabCartao('Sample', 'tarefa') + '<ul class="ps-list">' + S.amostra.map(function (id) { var m = P.msDoIndicador(id); return '<li class="ps-row"><span class="ps-row-txt">' + linkFicha(id) + '<span>' + e(m ? m.nome : '') + '</span></span></li>'; }).join('') + '</ul></div>' : '') +
-      '<div class="ps-card ps-mt">' + cabCartao('Milestones', 'doc', '<div class="ps-seg" role="group" aria-label="Filter">' + [['todas', 'All'], ['concluidas', 'Completed'], ['abertos', 'With open requests'], ['amostra', 'In the sample']].map(function (x) { return '<button type="button" class="' + (f === x[0] ? 'on' : '') + '" data-a="audFiltro" data-v="' + x[0] + '">' + x[1] + '</button>'; }).join('') + '</div>') + '<div class="ps-card-body">' + tabela([{ t: 'Milestone' }, { t: 'Company' }, { t: 'Assigned to' }, { t: 'Status' }, { t: 'Approved', dir: 1 }, { t: 'Required evidence', dir: 1 }, { t: 'Estimated', dir: 1 }, { t: 'Restated', dir: 1 }, { t: 'Open requests', dir: 1 }], lista.map(function (m) {
+      '<div class="ps-card ps-mt">' + cabCartao('Tasks', 'doc', '<div class="ps-seg" role="group" aria-label="Filter">' + [['todas', 'All'], ['concluidas', 'Completed'], ['abertos', 'With open requests'], ['amostra', 'In the sample']].map(function (x) { return '<button type="button" class="' + (f === x[0] ? 'on' : '') + '" data-a="audFiltro" data-v="' + x[0] + '">' + x[1] + '</button>'; }).join('') + '</div>') + '<div class="ps-card-body">' + tabela([{ t: 'Task' }, { t: 'Company' }, { t: 'Assigned to' }, { t: 'Status' }, { t: 'Approved', dir: 1 }, { t: 'Required evidence', dir: 1 }, { t: 'Estimated', dir: 1 }, { t: 'Restated', dir: 1 }, { t: 'Open requests', dir: 1 }], lista.map(function (m) {
         var ob = m.indicadores.filter(function (id) { return P.evidenciaPrecisa(m, id); }), okEv = ob.filter(function (id) { return P.item(id, P.chave(m)).evidencias.length; }).length;
         return ['<a href="' + rota('Milestone/' + m.id + '?sep=auditoria') + '">' + e(m.nome) + '</a>', empHtml(m.empresa), atribHtml(m), estChip(m), P.concluida(m) ? m.indicadores.length + '/' + m.indicadores.length : '0/' + m.indicadores.length, okEv + '/' + ob.length, m.indicadores.filter(function (id) { return P.item(id, P.chave(m)).qualidade === 'estimado'; }).length, m.indicadores.filter(function (id) { return P.item(id, P.chave(m)).reexpresso; }).length, pedidosDe(m)];
-      }), 'No milestones match this filter.') + '</div></div>' +
+      }), 'No tasks match this filter.') + '</div></div>' +
       '<div class="ps-card ps-mt">' + cabCartao('Information requests', 'ativ') + (S.aud.length ? cartaoPedidos(S.aud) : vazio('No requests yet.')) + '</div>';
   };
 
@@ -1255,11 +1255,23 @@
   B.materialidade = function () {
     var cob = S.mat.map(function (x) {
       var cs = S.cat.filter(function (c) { return c.esrs === x.norma; }), apr = cs.filter(function (c) { var m = P.msDoIndicador(c.id); return m && P.concluida(m); }).length;
-      return [ '<b>' + e(x.norma) + '</b> ' + e(x.tema), '<select id="mat-' + x.norma + '" class="ps-sel" aria-label="Assessment of ' + e(x.norma) + '" data-c="matAval" data-id="' + x.norma + '">' + ['material', 'não material', 'por avaliar'].map(function (o) { return opt(o, MAT_TXT[o], x.avaliacao); }).join('') + '</select>', '<input id="matj-' + x.norma + '" class="ps-in" aria-label="Justification of ' + e(x.norma) + '" value="' + e(x.justificacao) + '" data-c="matJust" data-id="' + x.norma + '">', cs.length + ' indicators, ' + apr + ' approved' + (x.avaliacao === 'material' && !cs.length ? ' ' + chip('No indicators', 'err') : '')];
+      return [ '<button type="button" class="ps-btn liga mat-t" data-a="matVer" data-v="' + e(x.norma) + '" title="See the indicators of ' + e(x.norma + ' ' + x.tema) + '"><b>' + e(x.norma) + '</b> ' + e(x.tema) + '</button>', '<select id="mat-' + x.norma + '" class="ps-sel" aria-label="Assessment of ' + e(x.norma) + '" data-c="matAval" data-id="' + x.norma + '">' + ['material', 'não material', 'por avaliar'].map(function (o) { return opt(o, MAT_TXT[o], x.avaliacao); }).join('') + '</select>', '<input id="matj-' + x.norma + '" class="ps-in" aria-label="Justification of ' + e(x.norma) + '" value="' + e(x.justificacao) + '" data-c="matJust" data-id="' + x.norma + '">', '<button type="button" class="ps-btn liga" data-a="matVer" data-v="' + e(x.norma) + '">' + cs.length + ' indicator' + (cs.length === 1 ? '' : 's') + '</button>, ' + apr + ' approved' + (x.avaliacao === 'material' && !cs.length ? ' ' + chip('No indicators', 'err') : '')];
     });
     var ref = S.cat.map(function (c) { var m = P.msDoIndicador(c.id), est = m ? P.estadoIndicador(m, c.id) : { txt: '-', cls: '' }; return [e(c.nome), e(m ? m.id : '-'), e(c.esrs_requisito), e(c.gri), e(c.utilizado_por.filter(function (x) { return x !== 'REL'; }).join(', ') || '-'), chip(est.txt, est.cls)]; });
-    return '<div class="ps-card">' + cabCartao('Materiality', 'tarefa') + '<div class="ps-card-body">' + tabela([{ t: 'Standard' }, { t: 'Assessment' }, { t: 'Justification' }, { t: 'Coverage' }], cob) + '<p class="ps-mut ps-small ps-mt">The mapping uses the 2023 ESRS numbering and must be reviewed once the delegated act for the simplified ESRS is published.</p></div></div>' +
-      '<div class="ps-card">' + cabCartao('One data point, several frameworks', 'doc') + '<div class="ps-card-body">' + tabela([{ t: 'Indicator' }, { t: 'Milestone' }, { t: 'ESRS' }, { t: 'GRI' }, { t: 'Other users' }, { t: 'Status' }], ref) + '</div></div>';
+    return '<div class="ps-card">' + cabCartao('Materiality', 'tarefa') + '<div class="ps-card-body">' + tabela([{ t: 'Topic' }, { t: 'Assessment' }, { t: 'Justification' }, { t: 'Coverage' }], cob) + '<p class="ps-small ps-mut ps-mt">Click a topic to see the indicators that feed it.</p>' + '<p class="ps-mut ps-small ps-mt">The mapping uses the 2023 ESRS numbering and must be reviewed once the delegated act for the simplified ESRS is published.</p></div></div>' +
+      '<div class="ps-card">' + cabCartao('One data point, several frameworks', 'doc') + '<div class="ps-card-body">' + tabela([{ t: 'Indicator' }, { t: 'Task' }, { t: 'ESRS' }, { t: 'GRI' }, { t: 'Other users' }, { t: 'Status' }], ref) + '</div></div>';
+  };
+  /* Indicadores de um topico de materialidade (norma ESRS) */
+  var pnMatInd = function (a) {
+    var x = S.mat.filter(function (y) { return y.norma === a.norma; })[0], cs = S.cat.filter(function (c) { return c.esrs === a.norma; });
+    var linhas = cs.map(function (c) {
+      var m = P.msDoIndicador(c.id), est = m ? P.estadoIndicador(m, c.id) : { txt: 'No task', cls: '' }, r = P.responsavelInd ? P.responsavelInd(c.id) : null;
+      return [linkFicha(c.id, c.id + ' ' + c.nome) + '<small class="ps-mut ps-blk">' + e((c.esrs_requisito || '') + (P.esrsDe(c.id).dps.length ? ', ' + P.esrsDe(c.id).dps.length + ' ESRS datapoint(s)' : '')) + '</small>',
+        P.empresasInd(c).map(function (y) { return empHtml(y.nome); }).join(' '), r ? (r.tipo === 'pessoa' ? pessHtml(r.nome) : depHtml(r.dep)) : depHtml(P.donoIndicador(c.id)), e(PERIODO_TXT[c.periodicidade] || c.periodicidade), chip(est.txt, est.cls)];
+    });
+    return { t: x ? x.norma + ' ' + x.tema : a.norma, s: (x ? MAT_TXT[x.avaliacao] : '') + ', ' + cs.length + ' indicator(s)', largo: true,
+      b: (x && x.justificacao ? '<div class="ps-aviso">' + e(x.justificacao) + '</div>' : '') + tabela([{ t: 'Indicator' }, { t: 'Companies' }, { t: 'Responsible' }, { t: 'Frequency' }, { t: 'Status' }], linhas, 'No indicator is mapped to this topic yet. Map one in Backoffice, Indicators (ESRS standard).'),
+      p: '<a class="ps-btn" href="' + rota('Backoffice?tab=indicadores') + '" data-a="fecharPainel">Open Indicators</a><span class="ps-sp-flex"></span><button type="button" class="ps-btn pri" data-a="fecharPainel">Close</button>' };
   };
   /* Utilizadores: so pessoas. O papel vem do perfil e os departamentos sao tags (uma pessoa pode ter varios).
      As entidades externas nao entram aqui: estao em External entities. O login gera-se a partir do nome. */
@@ -1288,13 +1300,13 @@
       }), 'No user matches the search.') + '<p class="ps-small ps-mut ps-mt">External entities (suppliers and partners that answer data requests) are managed in External entities.</p></div></div>';
   };
   B.externas = function () {
-    return '<div class="ps-card">' + cabCartao('External entities: requests and status', 'doc') + '<div class="ps-card-body">' + tabela([{ t: 'Entity' }, { t: 'Indicator' }, { t: 'Milestone' }, { t: 'Company' }, { t: 'Due' }, { t: 'Status' }], S.ext.map(function (x) {
+    return '<div class="ps-card">' + cabCartao('External entities: requests and status', 'doc') + '<div class="ps-card-body">' + tabela([{ t: 'Entity' }, { t: 'Indicator' }, { t: 'Task' }, { t: 'Company' }, { t: 'Due' }, { t: 'Status' }], S.ext.map(function (x) {
       var cl = { pendente: 'warn', recebido: 'info', aplicado: 'ok' }[x.estado], mx = P.ms(x.milestone_id);
       return [x.tipo === 'ajuda' ? pessHtml(x.entidade_externa) : e(x.entidade_externa), e(P.cat(x.indicador_id).nome), '<a href="' + rota('Milestone/' + x.milestone_id + '?sep=externos') + '">' + e(mx ? mx.nome : x.milestone_id) + '</a>', mx ? empHtml(mx.empresa) : '-', e(P.fmtData(x.prazo)), chip({ pendente: 'Pending', recebido: 'Received', aplicado: 'Applied' }[x.estado], cl)];
     }), 'No requests yet.') + '</div></div>';
   };
   B.wfbase = function () {
-    return '<div class="ps-card">' + cabCartao('Base workflow', 'ativ', '<button type="button" class="ps-btn peq" data-a="abrirWfBase">Change base workflow</button>') + '<div class="ps-card-body">' + tabela([{ t: 'Step' }, { t: 'Type' }, { t: 'Owner' }], S.wfbase.map(function (p, i) { return [(i + 1) + '. ' + e(p.nome), e(P.TIPOS_PASSO[p.tipo]), e(P.nomeResp(null, p.responsavel))]; })) + '<p class="ps-mut ps-small ps-mt">Applies to new milestones. When saving, you can also apply it to those not yet started and not adjusted.</p></div></div>';
+    return '<div class="ps-card">' + cabCartao('Base workflow', 'ativ', '<button type="button" class="ps-btn peq" data-a="abrirWfBase">Change base workflow</button>') + '<div class="ps-card-body">' + tabela([{ t: 'Step' }, { t: 'Type' }, { t: 'Owner' }], S.wfbase.map(function (p, i) { return [(i + 1) + '. ' + e(p.nome), e(P.TIPOS_PASSO[p.tipo]), e(P.nomeResp(null, p.responsavel))]; })) + '<p class="ps-mut ps-small ps-mt">Applies to new tasks. When saving, you can also apply it to those not yet started and not adjusted.</p></div></div>';
   };
   /* A pagina dos indicadores esta em portal-indicadores.js; aqui fica a lista das tasks (milestones) ja enviadas */
   B.indicadores = function () { return vazio('The indicators page did not load.'); };
@@ -1302,7 +1314,7 @@
   B.calculos = function () { return '<div class="ps-card"><div class="ps-card-body"><h2 class="ki-h2">Calculations</h2><p class="ps-mut ps-small">Configured formulas and a versioned emission factor library. The values of the indicators that use them are calculated from here.</p></div></div>' + (Blocos['calculos'] ? Blocos['calculos']() : ''); };
   B.perimetro = function () { return Blocos['perimetro'] ? Blocos['perimetro']() : ''; };
   B.milestones = function () {
-    return '<div class="ps-card">' + cabCartao('Milestones (' + P.msCiclo().length + ')', 'tarefa') + '<div class="ps-card-body">' + tabela([{ t: 'Milestone' }, { t: 'Company' }, { t: 'Assigned to' }, { t: 'Indicators', dir: 1 }, { t: 'Due' }, { t: 'Status' }], P.msCiclo().map(function (m) {
+    return '<div class="ps-card">' + cabCartao('Tasks (' + P.msCiclo().length + ')', 'tarefa') + '<div class="ps-card-body">' + tabela([{ t: 'Task' }, { t: 'Company' }, { t: 'Assigned to' }, { t: 'Indicators', dir: 1 }, { t: 'Due' }, { t: 'Status' }], P.msCiclo().map(function (m) {
         return ['<a href="' + rota('Milestone/' + m.id) + '">' + e(m.nome) + '</a>', '<select id="bo-emp-' + e(m.id) + '" class="ps-sel" aria-label="Company of ' + e(m.nome) + '" data-c="msEmpresa" data-id="' + e(m.id) + '">' + S.ent.map(function (x) { return opt(x.nome, x.nome, m.empresa); }).join('') + '</select>', P.concluida(m) || P.passoAtual(m).tipo !== 'recolha' ? atribHtml(m) : '<select id="bo-atr-' + e(m.id) + '" class="ps-sel" aria-label="Assigned to, ' + e(m.nome) + '" data-c="msAtrib" data-id="' + e(m.id) + '">' + opt('', m.unidade + ' (department)', m.atribuido_a || '') + P.atribuiveis(m).map(function (x) { return opt(x.login, x.nome, m.atribuido_a || ''); }).join('') + '</select>', m.indicadores.length, '<input id="pz-' + e(m.id) + '" class="ps-in" type="date" aria-label="Due date of ' + e(m.nome) + '" value="' + e(m.prazo) + '" data-c="msPrazo" data-id="' + e(m.id) + '">', estChip(m)];
       })) + '</div></div>';
   };
@@ -1310,7 +1322,7 @@
   B.calendario = function () {
     return '<div class="ps-card">' + cabCartao('Reporting windows', 'cal', '<button type="button" class="ps-btn peq" data-a="janNova">New window</button>') + '<div class="ps-card-body">' + tabela([{ t: 'Window' }, { t: 'Topic' }, { t: 'Months' }, { t: 'First day' }, { t: 'Last day' }, { t: 'Actions' }], S.janelas.map(function (j, i) {
       return ['<input id="jn-' + i + '" class="ps-in" aria-label="Window name" value="' + e(j.nome) + '" data-c="janNome" data-id="' + i + '">', '<select id="jt-' + i + '" class="ps-sel" aria-label="Topic" data-c="janTema" data-id="' + i + '">' + Object.keys(P.TEMAS).map(function (t) { return opt(t, t, j.tema); }).join('') + '</select>', '<input id="jm-' + i + '" class="ps-in" aria-label="Months, 1 to 12, comma separated" value="' + e(j.meses.join(', ')) + '" data-c="janMeses" data-id="' + i + '"><small class="ps-mut">' + (j.meses.length === 12 ? 'All' : j.meses.map(function (x) { return MESES[x - 1]; }).join(', ')) + '</small>', '<input id="ji-' + i + '" class="ps-in" type="number" min="1" max="31" aria-label="First day" value="' + j.dia_inicio + '" data-c="janIni" data-id="' + i + '">', '<input id="jf-' + i + '" class="ps-in" type="number" min="1" max="31" aria-label="Last day" value="' + j.dia_fim + '" data-c="janFim" data-id="' + i + '">', '<button type="button" class="ps-btn peq err" data-a="janApagar" data-v="' + i + '">Remove</button>'];
-    }), 'No windows yet.') + '<p class="ps-mut ps-small ps-mt">Windows set when data is collected. Each milestone due date sets when it is delivered.</p></div></div>';
+    }), 'No windows yet.') + '<p class="ps-mut ps-small ps-mt">Windows set when data is collected. Each task due date sets when it is delivered.</p></div></div>';
   };
   /* --- Tipos de dados ------------------------------------------------------ */
   var GRAN_TXT = { mensal: 'Monthly', trimestral: 'Quarterly', anual: 'Annual' };
@@ -1324,11 +1336,11 @@
         nc ? '<b>' + nc + '</b> fixed' : '<span class="ps-mut">From the indicators</span>', abertas + ' open, ' + usos.length + ' total', 'v' + t.versao + '<br><small class="ps-mut">' + e(P.fmtData(t.alterado_em)) + '</small>'];
     });
     return '<div class="ps-card">' + cabCartao('Data types', 'doc', '<button type="button" class="ps-btn pri peq" data-a="tipoNovo">New data type</button>') + '<div class="ps-card-body">' +
-      '<p class="ps-mut ps-small">What each department is asked to deliver: the file, the accepted formats, the columns and their granularity. A data type is used by every milestone of its department; changes apply to open milestones and are versioned. Columns map to the source databases, so contributors can pull them instead of typing.</p>' +
+      '<p class="ps-mut ps-small">What each department is asked to deliver: the file, the accepted formats, the columns and their granularity. A data type is used by every task of its department; changes apply to open tasks and are versioned. Columns map to the source databases, so contributors can pull them instead of typing.</p>' +
       '<div class="ps-filtros ps-mt">' + campo('dt-un', 'Department', '<select id="dt-un" class="ps-sel" data-c="tiposUn">' + opt('', 'All', f.un) + P.UNIDADES.map(function (d) { return opt(d, d, f.un); }).join('') + '</select>') +
       campo('dt-q', 'Search', '<input id="dt-q" class="ps-in" value="' + e(f.q || '') + '" data-c="tiposQ" autocomplete="off">') +
       '<label class="ps-chk ps-dt-arq"><input id="dt-arq" type="checkbox" data-c="tiposArq"' + (f.arq ? ' checked' : '') + '> Show archived</label></div>' +
-      tabela([{ t: 'Data type' }, { t: 'Department' }, { t: 'Formats' }, { t: 'Rows' }, { t: 'Columns' }, { t: 'Milestones' }, { t: 'Version' }], linhas, f.arq ? 'No archived data types.' : 'No data types match.') + '</div></div>';
+      tabela([{ t: 'Data type' }, { t: 'Department' }, { t: 'Formats' }, { t: 'Rows' }, { t: 'Columns' }, { t: 'Tasks' }, { t: 'Version' }], linhas, f.arq ? 'No archived data types.' : 'No data types match.') + '</div></div>';
   };
   /* Rascunho do editor: so grava ao carregar em Save */
   var rascunhoTipo = function (id) {
@@ -1349,7 +1361,7 @@
     var ordemDb = Object.keys(porDb).sort(function (a, b) { var ua = porDb[a].some(function (k) { return usados[k]; }), ub = porDb[b].some(function (k) { return usados[k]; }); return ua === ub ? 0 : ua ? -1 : 1; });
     var auto = !fixas.length, sugeridas = Object.keys(usados);
     var cols = '<fieldset class="ps-dt-cols"><legend>Columns</legend><div class="ps-seg" role="radiogroup" aria-label="How columns are chosen"><button type="button" role="radio" aria-checked="' + auto + '" class="' + (auto ? 'on' : '') + '" data-a="tipoColModo" data-v="auto">From the indicators</button><button type="button" role="radio" aria-checked="' + !auto + '" class="' + (!auto ? 'on' : '') + '" data-a="tipoColModo" data-v="fixas">Fixed list</button></div>' +
-      (auto ? '<p class="ps-small ps-mut ps-mt">Each milestone gets the columns its own indicators need' + (sugeridas.length ? ', today ' + sugeridas.length + ' for ' + e(t.unidade) : '') + '. Choose a fixed list when the file must always have the same layout.</p>' :
+      (auto ? '<p class="ps-small ps-mut ps-mt">Each task gets the columns its own indicators need' + (sugeridas.length ? ', today ' + sugeridas.length + ' for ' + e(t.unidade) : '') + '. Choose a fixed list when the file must always have the same layout.</p>' :
         '<p class="ps-small ps-mut ps-mt">' + fixas.length + ' column(s). Fields marked <span class="ps-dt-uso">used</span> feed an indicator of ' + e(t.unidade) + '.</p>' +
         ordemDb.map(function (db) {
           return '<div class="ps-dt-db"><h4>' + svg(I.base || I.doc, 14) + e(DBS[db] || db) + '</h4><ul>' + porDb[db].map(function (k) {
@@ -1357,17 +1369,17 @@
             return '<li><label class="ps-chk"><input id="dtc-' + e(k) + '" type="checkbox" data-c="tipoCol" data-id="' + e(k) + '"' + (on ? ' checked' : '') + '><span><b>' + e(c.rot) + '</b><small class="ps-mono">' + e(k) + ', ' + e(c.tab) + ', ' + e(c.agreg) + '</small></span>' + (usados[k] ? '<span class="ps-dt-uso">used</span>' : '') + '</label></li>';
           }).join('') + '</ul></div>';
         }).join('')) + '</fieldset>';
-    var aviso = t.id && abertas.length ? '<div class="ps-aviso warn">Saving updates ' + abertas.length + ' open milestone(s): ' + e(abertas.slice(0, 4).map(function (m) { return m.nome; }).join(', ')) + (abertas.length > 4 ? '…' : '') + '. Data already delivered keeps the version it was delivered with.</div>' : '';
+    var aviso = t.id && abertas.length ? '<div class="ps-aviso warn">Saving updates ' + abertas.length + ' open task(s): ' + e(abertas.slice(0, 4).map(function (m) { return m.nome; }).join(', ')) + (abertas.length > 4 ? '…' : '') + '. Data already delivered keeps the version it was delivered with.</div>' : '';
     var prev = '<div class="ps-dt-prev"><span class="ps-mut ps-small">Preview of the sheet contributors get</span><div class="ps-tw"><table class="ps-t ps-dt-prev-t"><thead><tr><th>Period</th>' + (auto ? sugeridas.slice(0, 4) : fixas.slice(0, 4)).map(function (k) { return '<th>' + e(CAMPOS[k] ? CAMPOS[k].rot : k) + '</th>'; }).join('') + ((auto ? sugeridas : fixas).length > 4 ? '<th>…</th>' : '') + '<th>Source reference</th></tr></thead><tbody>' +
       (t.granularidade === 'anual' ? ['Ano 2026'] : t.granularidade === 'trimestral' ? ['T1 2026', 'T2 2026', '…'] : ['Jan 2026', 'Feb 2026', '…']).map(function (r) { return '<tr><td>' + r + '</td>' + (auto ? sugeridas.slice(0, 4) : fixas.slice(0, 4)).map(function () { return '<td></td>'; }).join('') + ((auto ? sugeridas : fixas).length > 4 ? '<td></td>' : '') + '<td></td></tr>'; }).join('') + '</tbody></table></div></div>';
     return {
-      t: t.id ? 'Edit data type' : 'New data type', s: t.id ? 'Version ' + t.versao + ', used by ' + usos.length + ' milestone(s)' : 'Define once, used by every milestone of the department', largo: true,
+      t: t.id ? 'Edit data type' : 'New data type', s: t.id ? 'Version ' + t.versao + ', used by ' + usos.length + ' task(s)' : 'Define once, used by every task of the department', largo: true,
       b: '<div class="ps-form2">' + campo('dt-nome', 'Name', '<input id="dt-nome" class="ps-in" value="' + e(t.nome) + '" data-c="tipoCampo" data-id="nome" placeholder="e.g. Faturas de eletricidade do período">') +
         campo('dt-unid', 'Department that delivers it', '<select id="dt-unid" class="ps-sel" data-c="tipoCampo" data-id="unidade">' + P.UNIDADES.map(function (d) { return opt(d, d, t.unidade); }).join('') + '</select>') + '</div>' +
         campo('dt-mot', 'Why it is requested', '<input id="dt-mot" class="ps-in" value="' + e(t.motivo) + '" data-c="tipoCampo" data-id="motivo" placeholder="Shown to the contributor next to the request">') +
         '<div class="ps-form2"><fieldset class="ps-dt-fs"><legend>Accepted formats</legend><div class="ps-dt-chips">' + P.FORMATOS.map(function (x) { var on = t.formatos.indexOf(x) > -1; return '<label class="ps-dt-chip' + (on ? ' on' : '') + '"><input type="checkbox" data-c="tipoFmt" data-id="' + x + '"' + (on ? ' checked' : '') + '>' + x + '</label>'; }).join('') + '</div></fieldset>' +
         '<fieldset class="ps-dt-fs"><legend>Rows of the sheet</legend><div class="ps-seg" role="radiogroup" aria-label="Rows of the sheet">' + Object.keys(GRAN_TXT).map(function (g) { return '<button type="button" role="radio" aria-checked="' + (t.granularidade === g) + '" class="' + (t.granularidade === g ? 'on' : '') + '" data-a="tipoGran" data-v="' + g + '">' + GRAN_TXT[g] + '</button>'; }).join('') + '</div></fieldset></div>' +
-        '<label class="ps-chk"><input id="dt-obr" type="checkbox" data-c="tipoObr"' + (t.obrigatorio !== false ? ' checked' : '') + '> Required to submit the milestone</label>' +
+        '<label class="ps-chk"><input id="dt-obr" type="checkbox" data-c="tipoObr"' + (t.obrigatorio !== false ? ' checked' : '') + '> Required to submit the task</label>' +
         campo('dt-ins', 'Instructions for the contributor', '<textarea id="dt-ins" class="ps-ta" rows="2" data-c="tipoCampo" data-id="instrucoes" placeholder="Where to export it from, what period, who to ask">' + e(t.instrucoes || '') + '</textarea>') +
         cols + prev + aviso,
       p: (t.id ? '<button type="button" class="ps-btn liga" data-a="tipoArquivar">' + (t.ativo ? 'Archive' : 'Restore') + '</button>' : '') + '<span class="ps-sp-flex"></span><button type="button" class="ps-btn" data-a="fecharPainel">Cancel</button><button type="button" class="ps-btn pri" data-a="tipoGuardar">' + (t.id ? 'Save version ' + (t.versao + 1) : 'Create data type') + '</button>'
@@ -1402,7 +1414,7 @@
     var porLancar = function (p) { return uns.filter(function (un) { return !P.msExistente(un, p.id) && P.indicadoresSugeridos(un, p.id).length; }).length; };
     return '<div class="ps-card">' + cabCartao('By department and period', 'cal') + '<div class="ps-card-body">' +
       '<p class="ps-mut ps-small">Each cell is a department in a reporting period, with the status of its task. Open cells show how many indicators the plan expects: click one to send it, or use the button of a period to send every department at once. Indicators come from Reporting moments and can be adjusted before sending.</p>' +
-      '<div class="ps-kpis ps-mt"><div class="ps-kpi"><span>Milestones ' + ano + (empF ? ', ' + e(empF.nome) : '') + '</span><b>' + P.msCiclo().filter(function (m) { return !empF || m.empresa === empF.nome; }).length + '</b></div><div class="ps-kpi"><span>Planned, not launched</span><b>' + faltam + '</b></div></div>' +
+      '<div class="ps-kpis ps-mt"><div class="ps-kpi"><span>Tasks ' + ano + (empF ? ', ' + e(empF.nome) : '') + '</span><b>' + P.msCiclo().filter(function (m) { return !empF || m.empresa === empF.nome; }).length + '</b></div><div class="ps-kpi"><span>Planned, not launched</span><b>' + faltam + '</b></div></div>' +
       '<div class="ps-cob-sc ps-mt" tabindex="0" aria-label="Coverage by department and period"><table class="ps-cob-t"><thead><tr><th scope="col">Department</th>' + pers.map(function (p) { var n = porLancar(p); return '<th scope="col">' + e(p.nome) + '<small>close ' + e(P.fmtData(p.fecho)) + '</small>' + (n ? '<button type="button" class="ps-btn pri peq ps-cob-lanc" data-a="lancPeriodo" data-v="' + e(p.id) + '">Launch ' + e(p.nome) + '<small>' + n + ' department' + (n === 1 ? '' : 's') + '</small></button>' : '<span class="ps-cob-tudo">All launched</span>') + '</th>'; }).join('') + '</tr></thead><tbody>' +
       uns.map(function (un) { return '<tr><th scope="row">' + depHtml(un) + '</th>' + pers.map(function (p) { return '<td>' + cel(un, p) + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table></div></div></div>';
   };
@@ -1425,7 +1437,7 @@
         (aberto ? '<div class="ps-lc-un-b"><h4>Indicators</h4><div class="ps-dt-chips">' + (lista.length ? lista.map(function (id) { return chk('ind', 'lancInd', un + '|' + id, sel.indexOf(id) > -1, id, P.cat(id).nome); }).join('') : '<span class="ps-mut ps-small">The plan has no indicators for this department in the chosen periods.</span>') + '</div></div>' : '') + '</li>';
     }).join('');
     return {
-      t: 'Launch milestones', s: 'One milestone per department and period, with the base workflow', largo: true, cls: 'alto',
+      t: 'Launch tasks', s: 'One task per department and period, with the base workflow', largo: true, cls: 'alto',
       b: '<ol class="ps-lc">' +
         '<li><h3><span>1</span>Reporting periods</h3><div class="ps-dt-chips">' + pers.map(function (p) { var n = P.msPeriodo(p.id).length; return chk('', 'lancPer', p.id, L.periodos.indexOf(p.id) > -1, p.nome, n ? n + ' launched' : 'Close ' + P.fmtData(p.fecho)); }).join('') + '</div></li>' +
         '<li><h3><span>2</span>Departments</h3><div class="ps-sp-b"><span class="ps-small ps-mut">' + L.unidades.length + ' selected</span><span class="ps-sp"><button type="button" class="ps-btn liga" data-a="lancTodos">Select all with a plan</button><button type="button" class="ps-btn liga" data-a="lancNenhum">Clear</button></span></div><div class="ps-dt-chips">' + P.UNIDADES.map(function (un) { return chk('ps-dt-chip-dep', 'lancUnSel', un, L.unidades.indexOf(un) > -1, un, '', avEquipa()); }).join('') + '</div></li>' +
@@ -1433,37 +1445,50 @@
         '<li><h3><span>4</span>Company and due date</h3><div class="ps-form2">' + campo('lc-emp', 'Company', '<select id="lc-emp" class="ps-sel" data-c="lancEmp">' + S.ent.map(function (x) { return opt(x.nome, x.nome, L.empresa); }).join('') + '</select>') +
         campo('lc-prazo', 'Due date', '<select id="lc-prazo" class="ps-sel" data-c="lancPrazo">' + opt('fecho', 'Internal close of each period', L.prazo) + opt('data', 'A specific date', L.prazo) + '</select>') + '</div>' +
         (L.prazo === 'data' ? campo('lc-data', 'Date', '<input id="lc-data" type="date" class="ps-in" value="' + e(L.data) + '" data-c="lancData">') : '') + '</li></ol>' +
-        '<div class="ps-lc-res" aria-live="polite"><b>' + novas + ' milestone(s) will be created</b>' + (existem ? '<span>' + existem + ' already exist and will be skipped</span>' : '') +
+        '<div class="ps-lc-res" aria-live="polite"><b>' + novas + ' task(s) will be created</b>' + (existem ? '<span>' + existem + ' already exist and will be skipped</span>' : '') +
         (plano.length ? '<ul>' + plano.slice(0, 12).map(function (x) { return '<li class="' + (x.ex ? 'ex' : !x.n ? 'nada' : '') + '"><span class="ps-lc-res-t">' + e(x.un + ': ' + x.p.nome) + '<small>' + (x.ex ? 'exists' : x.n ? x.n + ' indicators' : 'no indicators') + '</small></span>' + (x.ex || !x.n ? '' : quem(x.un)) + '</li>'; }).join('') + (plano.length > 12 ? '<li>…</li>' : '') + '</ul>' : '') + '</div>',
-      p: '<span class="ps-sp-flex"></span><button type="button" class="ps-btn" data-a="fecharPainel">Cancel</button><button type="button" class="ps-btn pri" data-a="lancConfirmar"' + (novas ? '' : ' disabled') + '>Launch ' + novas + ' milestone(s)</button>'
+      p: '<span class="ps-sp-flex"></span><button type="button" class="ps-btn" data-a="fecharPainel">Cancel</button><button type="button" class="ps-btn pri" data-a="lancConfirmar"' + (novas ? '' : ' disabled') + '>Launch ' + novas + ' task(s)</button>'
     };
   };
   /* Momentos de report: que indicadores entram em cada periodo e em cada entrega externa */
+  /* Empresas de um indicador: a que reporta tem de estar entre elas */
+  var mudarEmpresasInd = function (c, ids) {
+    var antes = P.empresasInd(c).map(function (x) { return x.nome; }).join(', ');
+    c.empresas = S.ent.filter(function (x) { return ids.indexOf(x.id) > -1; }).map(function (x) { return x.id; });
+    var rep = P.reportaInd(c); if (!rep || c.empresas.indexOf(rep.id) < 0) c.reporta = c.empresas[0];
+    P.eventoGlobal('Indicator ' + c.id + ' ' + c.nome + ': Companies covered from ' + antes + ' to ' + P.empresasInd(c).map(function (x) { return x.nome; }).join(', ') + '.', u().nome, 'Change');
+    P.guardar();
+  };
+  /* Reporting moments: em que periodos (T1 a T4, Year) entra cada indicador, e para que empresas (tags editaveis) */
+  var empTags = function (c) {
+    var l = P.empresasInd(c), ids = l.map(function (x) { return x.id; }), livres = S.ent.filter(function (x) { return ids.indexOf(x.id) < 0; });
+    return '<div class="us-tags">' + l.map(function (x) { return '<span class="us-tag">' + avEmpresa() + e(x.nome) + (l.length > 1 ? '<button type="button" class="us-tag-x" data-a="momEmpTirar" data-v="' + e(c.id + '|' + x.id) + '" aria-label="Remove ' + e(x.nome) + ' from ' + e(c.nome) + '">×</button>' : '') + '</span>'; }).join('') +
+      (livres.length ? '<label class="ps-sr" for="moe-' + e(c.id) + '">Add a company to ' + e(c.nome) + '</label><select id="moe-' + e(c.id) + '" class="ps-sel us-add" data-c="momEmpJuntar" data-id="' + e(c.id) + '">' + opt('', '+ Add', '') + livres.map(function (x) { return opt(x.id, x.nome, ''); }).join('') + '</select>' : '') + '</div>';
+  };
   B.momentos = function () {
-    var q = norm(U.momBusca || ''), l = S.cat.filter(function (c) { return !q || norm(c.id + ' ' + c.nome + ' ' + P.donoIndicador(c.id)).indexOf(q) > -1; });
-    var tot = {}, todos = P.MOMENTOS_PER.concat(P.TIPOS_ENTREGA);
-    S.cat.forEach(function (c) { var mo = P.momentosDe(c.id); mo.per.concat(mo.ent).forEach(function (k) { tot[k] = (tot[k] || 0) + 1; }); });
-    var cx = function (c, grupo, k, on, rot) { return '<label class="ps-chk ps-mom-c"><input id="mo-' + e(c.id + '-' + k) + '" type="checkbox" data-c="momento" data-id="' + e(c.id + '|' + grupo + '|' + k) + '"' + (on ? ' checked' : '') + '><span class="ps-sr">' + e(rot + ', ' + c.id) + '</span></label>'; };
+    var q = norm(U.momBusca || ''), fe = U.momEmp || '', l = S.cat.filter(function (c) { return (!q || norm(c.id + ' ' + c.nome + ' ' + P.donoIndicador(c.id)).indexOf(q) > -1) && (!fe || P.empresasInd(c).some(function (x) { return x.id === fe; })); });
+    var tot = {};
+    S.cat.forEach(function (c) { P.momentosDe(c.id).per.forEach(function (k) { tot[k] = (tot[k] || 0) + 1; }); });
+    var cx = function (c, k, on, rot) { return '<label class="ps-chk ps-mom-c"><input id="mo-' + e(c.id + '-' + k) + '" type="checkbox" data-c="momento" data-id="' + e(c.id + '|per|' + k) + '"' + (on ? ' checked' : '') + '><span class="ps-sr">' + e(rot + ', ' + c.id) + '</span></label>'; };
     var linhas = l.map(function (c) {
       var mo = P.momentosDe(c.id);
-      return [linkFicha(c.id, c.id + ' ' + c.nome) + (mo.proprio ? '<small class="ps-mom-prop" data-fx-ignorar>Custom <button type="button" class="ps-btn liga" data-a="momRepor" data-v="' + e(c.id) + '">Reset</button></small>' : ''), depHtml(P.donoIndicador(c.id)), e(PERIODO_TXT[c.periodicidade] || c.periodicidade)]
-        .concat(P.MOMENTOS_PER.map(function (x) { return cx(c, 'per', x[0], mo.per.indexOf(x[0]) > -1, x[1]); }))
-        .concat(P.TIPOS_ENTREGA.map(function (x) { return cx(c, 'ent', x[0], mo.ent.indexOf(x[0]) > -1, x[2]); }));
+      return [linkFicha(c.id, c.id + ' ' + c.nome) + (mo.proprio ? '<small class="ps-mom-prop" data-fx-ignorar>Custom <button type="button" class="ps-btn liga" data-a="momRepor" data-v="' + e(c.id) + '">Reset</button></small>' : ''), empTags(c), depHtml(P.donoIndicador(c.id)), e(PERIODO_TXT[c.periodicidade] || c.periodicidade)]
+        .concat(P.MOMENTOS_PER.map(function (x) { return cx(c, x[0], mo.per.indexOf(x[0]) > -1, x[1]); }));
     });
     return '<div class="ps-card">' + cabCartao('Reporting moments', 'cal') + '<div class="ps-card-body">' +
-      '<p class="ps-mut ps-small">Which indicators go into each reporting period and each external delivery. Periods start from the frequency of the indicator; deliveries from the rules of each report. Ticking a box here overrides that for the indicator. Launching milestones, the tags of each milestone and the Outputs page all follow this table. Milestones already launched keep their indicators.</p>' +
-      '<div class="ps-mom-tot ps-mt">' + todos.map(function (x) { return '<span title="' + e(x[2] || x[1]) + '"><b>' + (tot[x[0]] || 0) + '</b>' + e(x[1]) + '</span>'; }).join('') + '</div>' +
-      '<div class="ps-mt">' + campo('mom-busca', 'Search', '<input id="mom-busca" class="ps-in" value="' + e(U.momBusca || '') + '" data-c="momBusca" autocomplete="off">') + '</div>' +
-      '<div class="ps-mt ps-mom">' + tabela([{ t: 'Indicator' }, { t: 'Department' }, { t: 'Frequency' }].concat(P.MOMENTOS_PER.map(function (x) { return { t: x[1] }; })).concat(P.TIPOS_ENTREGA.map(function (x) { return { t: x[1] }; })), linhas, 'No indicators found.') + '</div>' +
-      '<div class="ps-leg ps-mt ps-small">' + P.TIPOS_ENTREGA.map(function (x) { return '<span><b>' + e(x[1]) + '</b> ' + e(x[2]) + '</span>'; }).join('') + '</div></div></div>';
+      '<p class="ps-mut ps-small">Which indicators go into each reporting period, and for which companies. Periods start from the frequency of the indicator; ticking a box here overrides that for the indicator. Sending tasks and the tags of each task follow this table. Tasks already sent keep their indicators.</p>' +
+      '<div class="ps-mom-tot ps-mt">' + P.MOMENTOS_PER.map(function (x) { return '<span><b>' + (tot[x[0]] || 0) + '</b>' + e(x[1]) + '</span>'; }).join('') + '</div>' +
+      '<div class="ps-filtros ps-mt">' + campo('mom-busca', 'Search', '<input id="mom-busca" class="ps-in" value="' + e(U.momBusca || '') + '" data-c="momBusca" autocomplete="off">') +
+      campo('mom-emp', 'Company', '<select id="mom-emp" class="ps-sel" data-c="momEmpF">' + opt('', 'All companies', fe) + S.ent.map(function (x) { return opt(x.id, x.nome, fe); }).join('') + '</select>') + '</div>' +
+      '<div class="ps-mt ps-mom">' + tabela([{ t: 'Indicator' }, { t: 'Companies', info: 'The companies the indicator is reported for: Entidade A, Entidade B or both. With more than one, the value is entered per company and combined. Remove with ×, add with + Add.' }, { t: 'Department' }, { t: 'Frequency' }].concat(P.MOMENTOS_PER.map(function (x) { return { t: x[1] }; })), linhas, 'No indicators found.') + '</div></div></div>';
   };
   B.periodos = function () {
     var ano = S.ciclo.ano;
-    return '<div class="ps-card">' + cabCartao('Reporting periods', 'cal') + '<div class="ps-card-body">' + tabela([{ t: 'Period' }, { t: 'Data from' }, { t: 'Data to' }, { t: 'Internal close' }, { t: 'Milestones', dir: 1 }], (S.periodos || []).filter(function (p) { return p.ano === ano; }).map(function (p) {
+    return '<div class="ps-card">' + cabCartao('Reporting periods', 'cal') + '<div class="ps-card-body">' + tabela([{ t: 'Period' }, { t: 'Data from' }, { t: 'Data to' }, { t: 'Internal close' }, { t: 'Tasks', dir: 1 }], (S.periodos || []).filter(function (p) { return p.ano === ano; }).map(function (p) {
       return [e(p.nome), e(P.fmtDataAno(p.ini)), e(P.fmtDataAno(p.fim)), '<input id="pf-' + e(p.id) + '" class="ps-in" type="date" aria-label="Internal close of ' + e(p.nome) + '" value="' + e(p.fecho) + '" data-c="perFecho" data-id="' + e(p.id) + '">', String(P.msPeriodo(p.id).length)];
     })) + '<h3 class="ps-grupo-t">External deliveries</h3>' + tabela([{ t: 'Delivery' }, { t: 'Entity' }, { t: 'Period' }, { t: 'Due' }, { t: 'Legal basis' }], (S.relatorios || []).filter(function (r) { return r.periodo.indexOf(String(ano)) === 0; }).map(function (r) {
       return ['<b>' + e(r.sigla) + '</b> ' + e(r.nome), e(r.entidade), e((P.periodo(r.periodo) || {}).nome || r.periodo), '<input id="rd-' + e(r.id) + '" class="ps-in" type="date" aria-label="Due date of ' + e(r.nome) + '" value="' + e(r.data) + '" data-c="relData" data-id="' + e(r.id) + '">', '<span class="ps-small">' + e(r.base) + '</span>'];
-    })) + '<p class="ps-mut ps-small ps-mt">Quarterly milestones belong to a quarter; annual ones to the year, which reuses the quarters. The legal bases are a starting point to confirm with the legal team.</p></div></div>';
+    })) + '<p class="ps-mut ps-small ps-mt">Quarterly tasks belong to a quarter; annual ones to the year, which reuses the quarters. The legal bases are a starting point to confirm with the legal team.</p></div></div>';
   };
   B.regras = function () {
     var q = U.regraBusca.toLowerCase(), l = S.cat.filter(function (c) { return !q || (c.nome + ' ' + c.id).toLowerCase().indexOf(q) > -1; });
@@ -1493,7 +1518,7 @@
     })) + '</div></div>';
   };
   B.entidades = function () {
-    return '<div class="ps-card">' + cabCartao('Companies', 'doc') + '<div class="ps-card-body">' + tabela([{ t: 'Company' }, { t: 'Group perimeter' }, { t: 'Majority perimeter' }, { t: 'Milestones', dir: 1 }, { t: 'Actions' }], S.ent.map(function (x, i) {
+    return '<div class="ps-card">' + cabCartao('Companies', 'doc') + '<div class="ps-card-body">' + tabela([{ t: 'Company' }, { t: 'Group perimeter' }, { t: 'Majority perimeter' }, { t: 'Tasks', dir: 1 }, { t: 'Actions' }], S.ent.map(function (x, i) {
       return ['<input id="en-' + i + '" class="ps-in" aria-label="Company name" value="' + e(x.nome) + '" data-c="entNome" data-id="' + i + '">', '<label class="ps-chk"><input id="eg-' + i + '" type="checkbox" data-c="entGrupo" data-id="' + i + '"' + (x.perimetro_grupo ? ' checked' : '') + '> Yes</label>', '<label class="ps-chk"><input id="em-' + i + '" type="checkbox" data-c="entMaior" data-id="' + i + '"' + (x.perimetro_maioritario ? ' checked' : '') + '> Yes</label>', S.ms.filter(function (m) { return m.empresa === x.nome; }).length, '<button type="button" class="ps-btn peq err" data-a="entApagar" data-v="' + i + '">Remove</button>'];
     })) + '<h3 class="ps-grupo-t">New company</h3><div class="ps-sp">' + '<input id="ent-novo" class="ps-in ps-cresce" aria-label="New company name" placeholder="Company name">' + '<button type="button" class="ps-btn pri" data-a="entNova">Add company</button></div></div></div>';
   };
@@ -1506,7 +1531,7 @@
   };
   B.departamentos = function () {
     var f = U.depF, x = f.emp ? S.ent.filter(function (y) { return y.id === f.emp; })[0] : null;
-    var dica = 'How many people, indicators and milestones use this department: people who have it as one of their departments, indicators it reports, and milestones it owns, is tagged on or has a workflow step for. A department in use cannot be removed. Rename it instead: everything that uses it follows the new name.';
+    var dica = 'How many people, indicators and tasks use this department: people who have it as one of their departments, indicators it reports, and tasks it owns, is tagged on or has a workflow step for. A department in use cannot be removed. Rename it instead: everything that uses it follows the new name.';
     var lista = S.deps.map(function (d, i) { return { d: d, i: i }; }).filter(function (o) { return !x || !o.d.empresas || !o.d.empresas.length || o.d.empresas.indexOf(x.id) > -1; });
     var novo = '<div class="us-novo"><h3>New department</h3><div class="ps-sp"><input id="dep-novo" class="ps-in ps-cresce" aria-label="New department name" placeholder="Department name">' +
       '<label class="ps-sr" for="dep-novo-emp">Companies of the new department</label><select id="dep-novo-emp" class="ps-sel dp-novo-emp">' + opt('', 'In all companies', x ? x.id : '') + S.ent.map(function (y) { return opt(y.id, 'Only in ' + y.nome, x ? x.id : ''); }).join('') + '</select>' +
@@ -1515,10 +1540,10 @@
       '<p class="ps-small ps-mut dp-nota">' + (x ? lista.length + ' department(s) in ' + e(x.nome) + ', including those shared by all companies.' : 'A department can exist in every company or only in some. People, indicators and tasks then use the departments of their company.') + '</p></div>';
     return '<div class="ps-card">' + cabCartao('Departments', 'doc') + '<div class="ps-card-body">' + novo + filtro +
       '<div class="ps-mt">' + tabela([{ t: 'Department' }, { t: 'Companies', info: 'The companies where the department exists. "All companies" means it exists in every company of the group.' }, { t: 'In use', dir: 1, info: dica }, { t: 'Actions' }], lista.map(function (o) {
-        var d = o.d, i = o.i, u2 = P.usosDepartamentoDet(d.nome), tot = u2.pessoas + u2.indicadores + u2.milestones, txt = u2.pessoas + ' people, ' + u2.indicadores + ' indicators, ' + u2.milestones + ' milestones';
+        var d = o.d, i = o.i, u2 = P.usosDepartamentoDet(d.nome), tot = u2.pessoas + u2.indicadores + u2.milestones, txt = u2.pessoas + ' people, ' + u2.indicadores + ' indicators, ' + u2.milestones + ' tasks';
         return ['<input id="dp-' + i + '" class="ps-in" aria-label="Department name" value="' + e(d.nome) + '" data-c="depNome" data-id="' + i + '">', tagsEmpresasDep(d, i), tot ? '<span class="dp-uso" tabindex="0" data-tip="' + e(txt) + '">' + tot + '</span>' : '<span class="ps-mut">0</span>',
           tot ? '<button type="button" class="ps-btn peq" disabled title="In use: ' + e(txt) + '">Remove</button>' : '<button type="button" class="ps-btn peq err" data-a="depApagar" data-v="' + i + '">Remove</button>'];
-      }), 'No department in this company yet.') + '</div><p class="ps-mut ps-small ps-mt">Departments are the tags on milestones and people, and the groups that report indicators. Renaming one updates them all.</p></div></div>';
+      }), 'No department in this company yet.') + '</div><p class="ps-mut ps-small ps-mt">Departments are the tags on tasks and people, and the groups that report indicators. Renaming one updates them all.</p></div></div>';
   };
   B.dados = function () {
     return '<div class="ps-card">' + cabCartao('Data and storage', 'doc') + '<div class="ps-card-body"><div class="ps-sp"><button type="button" class="ps-btn" data-a="dadosExportar">Export all data</button>' + (P.online() ? '' : '<button type="button" class="ps-btn" data-a="dadosImportar">Import data</button><button type="button" class="ps-btn err" data-a="dadosRepor">Reset data</button>') + '</div></div></div>';
@@ -1528,6 +1553,7 @@
   var abrePainel = function (tipo, args) { U.painel = { tipo: tipo, args: args || {} }; U.painelFoco = true; R(); };
   var fechaPainel = function () { if (U.painel && U.painel.tipo === 'marca' && U.marca) { U.marca = null; U.logoEstado = ''; P.aplicarMarca(); } U.painel = null; R(); };
   var Pn = {};
+  Pn.matInd = function (a) { return pnMatInd(a); };
   Pn.tipo = pnTipo; Pn.lancar = pnLancar;
   /* Mudar a quem esta atribuida: fica no historico da milestone */
   Pn.atribuir = function () {
@@ -1541,7 +1567,7 @@
     if (escolhido && achados.indexOf(escolhido) < 0) achados.unshift(escolhido);
     var op = function (o, i) { return '<label class="ps-atr-op' + (sel === o.v ? ' on' : '') + '"><input type="radio" id="atr-' + i + '" name="atr-sel" data-c="atrMsSel" value="' + e(o.v) + '"' + (sel === o.v ? ' checked' : '') + '>' + o.ico + '<span>' + e(o.t) + '<small>' + e(o.s) + '</small></span>' + (o.v === atual ? '<em>Current</em>' : '') + '</label>'; };
     return { t: 'Assigned to', s: m.nome + ': ' + P.passoAtual(m).nome, cls: 'alto',
-      b: '<p class="ps-small ps-mut">Who fills in this milestone. Anyone in ' + e(m.unidade) + ' can still act on it, and so can the person it is assigned to, even from another department. The change is recorded in the history of the milestone.</p>' +
+      b: '<p class="ps-small ps-mut">Who fills in this task. Anyone in ' + e(m.unidade) + ' can still act on it, and so can the person it is assigned to, even from another department. The change is recorded in the history of the task.</p>' +
         '<h4 class="ps-atr-t">Team and data owner</h4><div class="ps-atr-esc ps-atr-col" role="radiogroup" aria-label="Team and data owner">' + sug.map(op).join('') + '</div>' +
         '<h4 class="ps-atr-t">Anyone else in the company</h4>' + campo('atr-busca', 'Search by name or department', '<input id="atr-busca" type="search" class="ps-in" autocomplete="off" value="' + e(U.atrBusca || '') + '" data-c="atrBusca" data-i="atrBuscaLive">') +
         '<div class="ps-atr-esc ps-atr-col ps-mt" role="radiogroup" aria-label="Anyone else in the company">' + (achados.length ? achados.map(function (x, i) { return op({ v: x.login, ico: avPessoa(x.nome), t: x.nome, s: x.unidade || P.PERFIS[x.perfil] }, 'o' + i); }).join('') : '<p class="ps-small ps-mut">No one matches.</p>') + '</div>',
@@ -1551,37 +1577,37 @@
   Pn.marca = function () { return { t: 'Brand', s: 'Logo, name and colours of the platform', largo: true, b: B.marca().replace(/<div class="ps-sticky ps-mt">[\s\S]*?<\/div>/, ''), p: '<span class="ps-sp-flex"></span><button type="button" class="ps-btn" data-a="fecharPainel">Cancel</button><button type="button" class="ps-btn pri" data-a="mcGuardar">Save brand</button>' }; };
   Pn.ficha = function (a) {
     var id = a.id, c = P.cat(id), m = P.msDoIndicador(id), it = P.item(id), usr = u();
-    if (!m || !it) return { t: c.nome, b: vazio('This indicator has no milestone in this cycle.') };
+    if (!m || !it) return { t: c.nome, b: vazio('This indicator has no task in this cycle.') };
     var v = P.validarItem(it), ant = P.valorAnterior(id, P.chave(m)), est = P.estadoIndicador(m, id);
     var refs = (S.mat.filter(function (x) { return x.norma === c.esrs; })[0] || {}).avaliacao;
     var b = '<div class="ps-sp">' + chip(est.txt, est.cls) + marcaAmostra(id) + (it.reexpresso ? chip('Restated', 'warn') : '') + '</div><div class="ps-kpis"><div class="ps-kpi"><span>' + (m.ano - 1) + '</span><b>' + (ant === null || ant === undefined ? '-' : e(fmtV(id, ant))) + '</b></div><div class="ps-kpi"><span>' + m.ano + '</span><b>' + (it.valor === null ? '-' : e(fmtV(id, it.valor))) + '</b></div><div class="ps-kpi"><span>Change</span><b>' + (v.variacao === null ? '-' : (v.variacao > 0 ? '+' : '') + P.fmtNum(v.variacao, 1) + '%') + '</b></div></div>' +
       (v.alertas.length ? '<div class="ps-aviso warn">' + v.alertas.map(e).join('<br>') + '</div>' : '') + (it.justificacao ? '<div><span class="ps-lab">Justification</span>' + e(it.justificacao) + '</div>' : '') +
       '<p class="ps-ficha-desc">' + e(P.esrsDe(id).desc) + '</p>' +
-      '<dl class="ps-det"><dt>Year and unit</dt><dd>' + m.ano + ', ' + e(c.unidade_medida) + '</dd><dt>Milestone</dt><dd>' + e(m.nome) + '</dd><dt>Type</dt><dd>' + (c.tipo === 'derivado' ? 'Derived' : 'Base data') + '</dd>' + (c.formula ? '<dt>Formula</dt><dd>' + e(c.formula) + '</dd>' : '') + '<dt>Threshold</dt><dd>' + P.limiarDe(c) + '%</dd><dt>Users</dt><dd>' + e(c.utilizado_por.join(', ')) + '</dd><dt>Quality</dt><dd>' + e(P.QUALIDADE_TXT[it.qualidade]) + (it.metodo ? ', ' + e(it.metodo) : '') + '</dd><dt>Evidence</dt><dd>' + (it.evidencias.map(function (x) { return e(x.ficheiro); }).join(', ') || '-') + '</dd><dt>ESRS datapoint</dt><dd>' + (P.esrsDe(id).dps.length ? '<span class="ps-mono">' + e(P.esrsDe(id).dps.join(', ')) + '</span>' : 'Entity-specific') + '</dd><dt>Frameworks</dt><dd>ESRS ' + e(c.esrs_requisito) + (refs ? ' (' + e(MAT_TXT[refs] || refs) + ')' : '') + ', GRI ' + e(c.gri) + '</dd></dl>' +
+      '<dl class="ps-det"><dt>Year and unit</dt><dd>' + m.ano + ', ' + e(c.unidade_medida) + '</dd><dt>Task</dt><dd>' + e(m.nome) + '</dd><dt>Type</dt><dd>' + (c.tipo === 'derivado' ? 'Derived' : 'Base data') + '</dd>' + (c.formula ? '<dt>Formula</dt><dd>' + e(c.formula) + '</dd>' : '') + '<dt>Threshold</dt><dd>' + P.limiarDe(c) + '%</dd><dt>Users</dt><dd>' + e(c.utilizado_por.join(', ')) + '</dd><dt>Quality</dt><dd>' + e(P.QUALIDADE_TXT[it.qualidade]) + (it.metodo ? ', ' + e(it.metodo) : '') + '</dd><dt>Evidence</dt><dd>' + (it.evidencias.map(function (x) { return e(x.ficheiro); }).join(', ') || '-') + '</dd><dt>ESRS datapoint</dt><dd>' + (P.esrsDe(id).dps.length ? '<span class="ps-mono">' + e(P.esrsDe(id).dps.join(', ')) + '</span>' : 'Entity-specific') + '</dd><dt>Frameworks</dt><dd>ESRS ' + e(c.esrs_requisito) + (refs ? ' (' + e(MAT_TXT[refs] || refs) + ')' : '') + ', GRI ' + e(c.gri) + '</dd></dl>' +
       '<div><h3 class="ps-grupo-t">Value history</h3>' + (it.versoes.length ? '<ul class="ps-ev ps-sem-pad">' + it.versoes.slice().reverse().map(function (x) { return '<li><b class="ps-num">' + e(fmtV(id, x.valor)) + '</b>, ' + e(x.origem) + (x.motivo ? '. Reason: ' + e(x.motivo) : '') + '<small>' + quemHtml(x.por) + '<span class="ps-q-sep">, </span>' + e(P.fmtDataHora(x.em)) + '</small></li>'; }).join('') + '</ul>' : '<p class="ps-mut ps-small">No values yet.</p>') + '</div>';
     if (P.concluida(m) && P.podeReexpressar(usr)) b += '<div class="ps-card ps-card-body"><h3 class="ps-grupo-t ps-sem-topo">Restate approved value</h3><div class="ps-form">' + campo('rx-val', 'New value', '<input id="rx-val" class="ps-in"' + numAttr(id) + '>') + campo('rx-mot', 'Reason (required)', '<input id="rx-mot" class="ps-in">') + '</div><button type="button" class="ps-btn pri ps-mt" data-a="reexpressar" data-v="' + e(id) + '">Restate value</button></div>';
     if (usr.perfil === 'auditor' || usr.perfil === 'admin') b += '<div class="ps-card ps-card-body"><h3 class="ps-grupo-t ps-sem-topo">Auditor information request</h3>' + campo('pa-txt', 'What you need to know', '<textarea id="pa-txt" class="ps-ta"></textarea>') + '<button type="button" class="ps-btn ps-mt" data-a="pedidoAud" data-v="' + e(id) + '">Send request</button></div>';
-    return { t: c.nome, s: c.id, b: b, p: '<a class="ps-btn" href="' + rota('Milestone/' + m.id) + '" data-a="fecharPainel" data-nao-impedir="1">Open the milestone</a>' };
+    return { t: c.nome, s: c.id, b: b, p: '<a class="ps-btn" href="' + rota('Milestone/' + m.id) + '" data-a="fecharPainel" data-nao-impedir="1">Open the task</a>' };
   };
   Pn.tecnica = function (a) {
     var m = msAtual(), sec = a.sec || 'schema', b = '<div class="ps-seg" role="group" aria-label="Tabs">' + [['schema', 'File schema'], ['json', 'JSON Schema'], ['tpl', 'Templates'], ['api', 'API and integrations']].map(function (s) { return '<button type="button" class="' + (sec === s[0] ? 'on' : '') + '" data-a="tecSec" data-v="' + s[0] + '">' + s[1] + '</button>'; }).join('') + '</div>';
     if (sec === 'schema') {
-      var D = [['milestone_id', 'string', 'Yes', 'Must be ' + m.id + '.'], ['indicator_id', 'string', 'Yes', 'Only this milestone\'s indicators: ' + m.indicadores.join(', ') + '.'], ['indicator_name', 'string', 'No', 'For human reading only. It is ignored.'], ['entity', 'string', 'No', 'Defaults to Consolidado.'], ['period', 'string', 'Yes', 'Must be ' + m.ano + '.'], ['value', 'number', 'Yes', 'Accepts a decimal comma or point.'], ['unit', 'string', 'Yes', 'Same as the indicator unit.'], ['justification', 'string', 'No', 'Required when there are alerts.'], ['source_system', 'string', 'No', 'Source system of the data.'], ['evidence_ref', 'string', 'No', 'Required for indicators with required evidence.'], ['data_quality', 'string', 'No', 'measured, calculated or estimated.'], ['estimation_method', 'string', 'No', 'Required when data_quality is estimated.']];
+      var D = [['milestone_id', 'string', 'Yes', 'Must be ' + m.id + '.'], ['indicator_id', 'string', 'Yes', 'Only this task\'s indicators: ' + m.indicadores.join(', ') + '.'], ['indicator_name', 'string', 'No', 'For human reading only. It is ignored.'], ['entity', 'string', 'No', 'Defaults to Consolidado.'], ['period', 'string', 'Yes', 'Must be ' + m.ano + '.'], ['value', 'number', 'Yes', 'Accepts a decimal comma or point.'], ['unit', 'string', 'Yes', 'Same as the indicator unit.'], ['justification', 'string', 'No', 'Required when there are alerts.'], ['source_system', 'string', 'No', 'Source system of the data.'], ['evidence_ref', 'string', 'No', 'Required for indicators with required evidence.'], ['data_quality', 'string', 'No', 'measured, calculated or estimated.'], ['estimation_method', 'string', 'No', 'Required when data_quality is estimated.']];
       b += tabela([{ t: 'Field' }, { t: 'Type' }, { t: 'Required' }, { t: 'Rule' }], D.map(function (x) { return ['<span class="ps-mono">' + x[0] + '</span>', x[1], x[2], e(x[3])]; }));
     } else if (sec === 'json') {
       b += '<div class="ps-sp"><button type="button" class="ps-btn peq" data-a="schemaCopiar">Copy</button><button type="button" class="ps-btn peq" data-a="schemaDesc">Download</button></div><pre class="ps-pre" tabindex="0">' + e(JSON.stringify(P.jsonSchema(m), null, 2)) + '</pre>';
     } else if (sec === 'tpl') {
-      b += '<p>Templates for this milestone, with the indicators and year already in place.</p><div class="ps-sp"><button type="button" class="ps-btn pri" data-a="tplExcel">Excel template</button></div>';
+      b += '<p>Templates for this task, with the indicators and year already in place.</p><div class="ps-sp"><button type="button" class="ps-btn pri" data-a="tplExcel">Excel template</button></div>';
     } else {
       var ex = { milestone_id: m.id, submitted_by: 'svc-integration@example.com', source_system: 'financial-system', records: [{ indicator_id: m.indicadores[0], entity: 'Consolidado', period: String(m.ano), value: 10, unit: P.cat(m.indicadores[0]).unidade_medida, data_quality: 'measured' }] };
-      b += '<div class="ps-aviso warn">Planned integration contract.</div><dl class="ps-det"><dt>Get the schema</dt><dd class="ps-mono">GET /api/v1/milestones/' + e(m.id) + '/schema</dd><dt>Send values</dt><dd class="ps-mono">POST /api/v1/milestones/' + e(m.id) + '/submissions</dd><dt>Webhook</dt><dd class="ps-mono">milestone.step_completed</dd></dl><pre class="ps-pre" tabindex="0">' + e(JSON.stringify(ex, null, 2)) + '</pre>';
+      b += '<div class="ps-aviso warn">Planned integration contract.</div><dl class="ps-det"><dt>Get the schema</dt><dd class="ps-mono">GET /api/v1/milestones/' + e(m.id) + '/schema</dd><dt>Send values</dt><dd class="ps-mono">POST /api/v1/milestones/' + e(m.id) + '/submissions</dd><dt>Webhook</dt><dd class="ps-mono">task.step_completed</dd></dl><pre class="ps-pre" tabindex="0">' + e(JSON.stringify(ex, null, 2)) + '</pre>';
     }
     return { t: 'Technical view', s: m.nome, b: b, largo: true };
   };
   /* Pedir ajuda: qualquer pessoa da empresa pode ser chamada a colaborar num indicador, com uma mensagem para ela */
   var msgAjuda = function (m, id, login) {
     var c = P.cat(id), x = login ? P.user(login) : null;
-    return 'Hi' + (x ? ' ' + x.nome.split(' ')[0] : '') + ', could you help me with "' + c.nome + '" (' + c.unidade_medida + ') for ' + m.nome + ', ' + P.rotPeriodo(m) + '? Please add the value in the milestone and attach any supporting document you have.';
+    return 'Hi' + (x ? ' ' + x.nome.split(' ')[0] : '') + ', could you help me with "' + c.nome + '" (' + c.unidade_medida + ') for ' + m.nome + ', ' + P.rotPeriodo(m) + '? Please add the value in the task and attach any supporting document you have.';
   };
   Pn.pedirAjuda = function () {
     var m = msAtual(), usr = u(), a = U.ajuda, q = norm(a.q || '');
@@ -1592,7 +1618,7 @@
     if (escolhido && achados.indexOf(escolhido) < 0) achados.unshift(escolhido);
     var op = function (x, i) { return '<label class="ps-atr-op' + (a.sel === x.login ? ' on' : '') + '"><input type="radio" id="aj-p' + i + '" name="aj-sel" data-c="ajSel" value="' + e(x.login) + '"' + (a.sel === x.login ? ' checked' : '') + '>' + avPessoa(x.nome) + '<span>' + e(x.nome) + '<small>' + e((x.unidade || P.PERFIS[x.perfil]) + (x.unidade === m.unidade ? ', same department' : '')) + '</small></span></label>'; };
     return { t: 'Request assistance', s: m.nome, cls: 'alto',
-      b: '<p class="ps-small ps-mut">Ask anyone in the company to help with an indicator. They get your message, can open this milestone and add the value, and you decide whether to use it.</p>' +
+      b: '<p class="ps-small ps-mut">Ask anyone in the company to help with an indicator. They get your message, can open this task and add the value, and you decide whether to use it.</p>' +
         campo('aj-ind', 'Indicator', '<select id="aj-ind" class="ps-sel" data-c="ajInd">' + m.indicadores.map(function (id) { return opt(id, P.cat(id).nome, a.ind); }).join('') + '</select>') +
         '<h4 class="ps-atr-t">Who you are asking</h4>' + campo('aj-busca', 'Search by name or department', '<input id="aj-busca" type="search" class="ps-in" autocomplete="off" value="' + e(a.q || '') + '" data-i="ajBuscaLive">') +
         '<div class="ps-atr-esc ps-atr-col ps-mt ps-aj-pess" role="radiogroup" aria-label="Who you are asking">' + (achados.length ? achados.map(op).join('') : '<p class="ps-small ps-mut">No one matches.</p>') + '</div>' +
@@ -1603,7 +1629,7 @@
   Pn.pedirFicheiro = function () {
     var m = msAtual();
     return { t: 'Request a file', s: m.nome,
-      b: '<p class="ps-small ps-mut">Ask for a file that is not covered by the system or the screen, for example a signed declaration. It appears under Requested files at the top of the milestone until it is delivered.</p>' +
+      b: '<p class="ps-small ps-mut">Ask for a file that is not covered by the system or the screen, for example a signed declaration. It appears under Requested files at the top of the task until it is delivered.</p>' +
         '<div class="ps-form">' + campo('fp-nome', 'Name of the requested file', '<input id="fp-nome" class="ps-in">') + '<label class="ps-chk"><input id="fp-obr" type="checkbox" checked> Required</label></div>',
       p: '<span class="ps-sp-flex"></span><button type="button" class="ps-btn" data-a="fecharPainel">Cancel</button><button type="button" class="ps-btn pri" data-a="ficPedir">Add to the request</button>' };
   };
@@ -1785,7 +1811,7 @@
       }));
       b = '<div class="wz-kpis"><div class="wz-k ok"><b>' + novos + '</b><span>New values</span></div><div class="wz-k warn"><b>' + subst + '</b><span>Values replaced</span></div><div class="wz-k"><b>' + iguais + '</b><span>Unchanged</span></div></div>' +
         (alertas ? '<div class="ps-aviso warn">' + alertas + ' value' + (alertas === 1 ? ' differs' : 's differ') + ' a lot from last year. After importing, add a justification on screen.</div>' : '') + tab +
-        '<label class="ps-chk wz-guardar"><input type="checkbox" data-c="wzGuardar"' + (w.guardar ? ' checked' : '') + '> Keep ' + e(w.nome) + ' as a supporting document of this milestone</label>';
+        '<label class="ps-chk wz-guardar"><input type="checkbox" data-c="wzGuardar"' + (w.guardar ? ' checked' : '') + '> Keep ' + e(w.nome) + ' as a supporting document of this task</label>';
       p = voltar + '<button type="button" class="ps-btn pri" data-a="wzAplicar"' + (esc.length ? '' : ' disabled') + '>' + svg(I.tick, 14) + 'Fill in ' + esc.length + ' value' + (esc.length === 1 ? '' : 's') + '</button>';
     }
     return { t: 'Import from Excel', s: m.nome + ', ' + P.rotPeriodo(m), largo: true, cls: 'alto wz', b: passos + '<div class="wz-corpo">' + b + '</div>', p: p };
@@ -1795,7 +1821,7 @@
     return { t: 'New information request', b: campo('na-ind', 'Indicator', '<select id="na-ind" class="ps-sel">' + apr.map(function (c) { return opt(c.id, c.nome); }).join('') + '</select>') + campo('na-txt', 'What you need to know', '<textarea id="na-txt" class="ps-ta"></textarea>'), p: '<button type="button" class="ps-btn pri" data-a="naCriar">Send request</button>' };
   };
   var respOpts = function (sel) {
-    return [opt('unidade', 'Milestone unit', sel), opt('esg', 'Sustainability team', sel), opt('admin', 'Administrator', sel)].concat(P.UNIDADES.map(function (x) { return opt('area:' + x, x, sel); })).join('');
+    return [opt('unidade', 'Task unit', sel), opt('esg', 'Sustainability team', sel), opt('admin', 'Administrator', sel)].concat(P.UNIDADES.map(function (x) { return opt('area:' + x, x, sel); })).join('');
   };
   Pn.wf = function (a) {
     var base = a.base, m = base ? null : msAtual(), d = U.wfDraft, atual = m ? m.passo_atual : -1;
@@ -1809,8 +1835,8 @@
       var primeiraMov = i - 1 > Math.max(atual, 0);
       return '<div class="ps-wfe ' + (feito ? 'bloq' : '') + '"><span class="ps-wfe-n">' + (feito ? svg(I.tick, 14) : i + 1) + '</span><div class="ps-wfe-c">' + nome + tipo + resp + '</div><div class="ps-wfe-a">' + (mov ? '<button type="button" id="wfc-' + i + '" data-a="wfMover" data-v="' + i + '" data-d="-1" aria-label="Move up"' + (primeiraMov ? '' : ' disabled') + '>' + svg(I.cima, 14) + '</button><button type="button" id="wfb-' + i + '" data-a="wfMover" data-v="' + i + '" data-d="1" aria-label="Move down"' + (ultimaMov ? '' : ' disabled') + '>' + svg(I.baixo, 14) + '</button>' : '') + (fixo ? '' : '<button type="button" id="wfx-' + i + '" data-a="wfRemover" data-v="' + i + '" aria-label="Remove">' + svg(I.lixo, 14) + '</button>') + '</div></div>';
     }).join('');
-    return { t: base ? 'Change base workflow' : 'Change workflow', s: base ? 'Applies to new milestones.' : m.nome,
-      b: (m ? '<div class="ps-aviso">Completed steps are locked. On the current step, only the name and owner can change.</div>' : '') + '<div class="ps-col">' + linhas + '</div><div class="ps-sp"><button type="button" class="ps-btn" data-a="wfAdd">Add step</button>' + (m ? '<button type="button" class="ps-btn" data-a="wfRepor">Reset from the base workflow</button>' : '') + '</div>' + (base ? '<label class="ps-chk"><input id="wf-aplica" type="checkbox"> Also apply to milestones not yet started and not adjusted</label>' : ''),
+    return { t: base ? 'Change base workflow' : 'Change workflow', s: base ? 'Applies to new tasks.' : m.nome,
+      b: (m ? '<div class="ps-aviso">Completed steps are locked. On the current step, only the name and owner can change.</div>' : '') + '<div class="ps-col">' + linhas + '</div><div class="ps-sp"><button type="button" class="ps-btn" data-a="wfAdd">Add step</button>' + (m ? '<button type="button" class="ps-btn" data-a="wfRepor">Reset from the base workflow</button>' : '') + '</div>' + (base ? '<label class="ps-chk"><input id="wf-aplica" type="checkbox"> Also apply to tasks not yet started and not adjusted</label>' : ''),
       p: '<button type="button" class="ps-btn" data-a="fecharPainel">Cancel</button><button type="button" class="ps-btn pri" data-a="wfGuardar">Save workflow</button>', largo: true };
   };
   var pintarPainel = function () {
@@ -1857,6 +1883,8 @@
     if (pag === 'Atribuicao') { pag = 'Backoffice'; q.tab = 'indicadores'; }
     if (pag === 'Perimetro') { pag = 'Backoffice'; q.tab = 'perimetro'; }
     if (pag === 'Calculos') { pag = 'Backoffice'; q.tab = 'calculos'; }
+    /* KPI master saiu: o que la estava vive no painel de cada indicador (Backoffice, Indicators) */
+    if (pag === 'Kpis') { pag = 'Backoffice'; q.tab = 'indicadores'; }
     var usr = u(), per = paginasPermitidas(usr);
     if (per.indexOf(pag) < 0 || (pag === 'Milestone' && !P.ms(arg))) pag = usr ? (usr.perfil === 'ext' ? 'Pedidos' : pag === 'Milestone' ? 'Milestones' : 'Inicio') : 'Entrada';
     return { pag: pag, arg: arg, q: q };
@@ -1874,8 +1902,8 @@
     /* Aberta pelo separador My tasks, a pagina mostra o que espera por mim */
     if (pag === 'Milestones') {
       var tt = document.querySelector('[data-campo="ms-titulo"]'), ts = document.querySelector('[data-campo="ms-sub"]');
-      if (tt) tt.textContent = U.msFiltro.minhas ? 'My tasks' : 'Milestones';
-      if (ts) ts.textContent = U.msFiltro.minhas ? 'Deliveries waiting on you. Untick Waiting on me to see every milestone.' : 'Choose a company to see its deliveries.';
+      if (tt) tt.textContent = U.msFiltro.minhas ? 'My tasks' : 'Tasks';
+      if (ts) ts.textContent = U.msFiltro.minhas ? 'Deliveries waiting on you. Untick Waiting on me to see every task.' : 'Choose a company to see its deliveries.';
     }
     var sec = document.querySelector('[data-pagina="' + pag + '"]');
     if (sec) sec.querySelectorAll('[data-bloco]').forEach(function (b) {
@@ -1950,12 +1978,14 @@
   var A = {
     entrar: function (d) { P.entrar(d.v); var usr = P.user(d.v); P.irPara(usr.perfil === 'ext' ? 'Pedidos' : 'Inicio'); },
     msAtrAbrir: function () { U.atrSel = undefined; U.atrBusca = ''; abrePainel('atribuir', {}); },
-    msAtrGuardar: function () { var m = msAtual(), v = U.atrSel === undefined ? (m.atribuido_a || '') : U.atrSel; U.painel = null; U.atrSel = undefined; res(P.atribuir(m, v, u()), 'Assignment saved. It is in the history of the milestone.'); },
+    msAtrGuardar: function () { var m = msAtual(), v = U.atrSel === undefined ? (m.atribuido_a || '') : U.atrSel; U.painel = null; U.atrSel = undefined; res(P.atribuir(m, v, u()), 'Assignment saved. It is in the history of the task.'); },
+    matVer: function (d) { abrePainel('matInd', { norma: d.v }); },
+    momEmpTirar: function (d) { var p2 = d.v.split('|'), c = P.cat(p2[0]), ids = P.empresasInd(c).map(function (x) { return x.id; }).filter(function (k) { return k !== p2[1]; }); if (!ids.length) return toast('An indicator needs at least one company.', 'err'); mudarEmpresasInd(c, ids); R(); },
     momRepor: function (d) { res(P.reporMomentos(d.v, u()), 'Back to the default for ' + d.v + '.'); },
     marcaAbrir: function () { U.menu = null; U.marca = null; U.logoEstado = ''; abrePainel('marca'); },
     ambienteTeste: function () { P.sair(); P.mudarAmbiente(true); },
     ambientePrincipal: function () { P.sair(); P.mudarAmbiente(false); },
-    ambienteLimpar: function () { if (!window.confirm('Clear the test environment? Every milestone, value and comment created here will be removed' + (P.partilha && P.partilha.estado === 'ligado' ? ', for everyone who uses it' : '') + '.')) return; P.reporDemonstracao(); U.menu = null; U.imp = {}; U.cal = null; toast('Test environment cleared.', 'ok'); P.irPara('Inicio'); },
+    ambienteLimpar: function () { if (!window.confirm('Clear the test environment? Every task, value and comment created here will be removed' + (P.partilha && P.partilha.estado === 'ligado' ? ', for everyone who uses it' : '') + '.')) return; P.reporDemonstracao(); U.menu = null; U.imp = {}; U.cal = null; toast('Test environment cleared.', 'ok'); P.irPara('Inicio'); },
     sair: function () { P.sair(); if (P.online()) { window.PortalBackend.sair(); P.estadoVazio(); } U.menu = null; U.cal = null; P.irPara('Entrada'); },
     menuNotif: function () { U.menu = U.menu === 'notif' ? null : 'notif'; R(); },
     menuConta: function () { U.menu = U.menu === 'conta' ? null : 'conta'; R(); },
@@ -1984,7 +2014,7 @@
       R();
     },
     tipoGuardar: function () { var r = P.guardarTipo(U.tipoEd, u()); if (r.erro) return toast(r.erro, 'err'); toast(r.novo ? 'Data type created.' : 'Saved as version ' + r.tipo.versao + '.', 'ok'); fechaPainel(); },
-    tipoArquivar: function () { var t = U.tipoEd, r = P.arquivarTipo(t.id, !t.ativo, u()); if (r.erro) return toast(r.erro, 'err'); toast(t.ativo ? 'Archived. It is no longer requested in open milestones.' : 'Restored.', 'ok'); fechaPainel(); },
+    tipoArquivar: function () { var t = U.tipoEd, r = P.arquivarTipo(t.id, !t.ativo, u()); if (r.erro) return toast(r.erro, 'err'); toast(t.ativo ? 'Archived. It is no longer requested in open tasks.' : 'Restored.', 'ok'); fechaPainel(); },
     lancAbrir: function () { lancEstado(); abrePainel('lancar', {}); },
     /* Um periodo inteiro: todos os departamentos que ainda tem o que lancar nesse periodo */
     lancPeriodo: function (d) { U.lanc = null; var L = lancEstado(); L.periodos = [d.v]; L.unidades = P.UNIDADES.filter(function (un) { return !P.msExistente(un, d.v) && P.indicadoresSugeridos(un, d.v).length; }); L.aberto = ''; empLanc(L); abrePainel('lancar', {}); },
@@ -1995,7 +2025,7 @@
     lancConfirmar: function () {
       var L = lancEstado(), r = P.lancarMilestones({ periodos: L.periodos, unidades: L.unidades, empresa: L.empresa, prazo: L.prazo === 'data' ? L.data : 'fecho', indicadores: L.indicadores, tipos: L.tipos, atribuido: L.atrib }, u());
       if (r.erro) return toast(r.erro, 'err');
-      toast(r.criadas.length + ' milestone(s) launched' + (r.ignoradas.length ? ', ' + r.ignoradas.length + ' skipped' : '') + '.', r.criadas.length ? 'ok' : 'err');
+      toast(r.criadas.length + ' task(s) launched' + (r.ignoradas.length ? ', ' + r.ignoradas.length + ' skipped' : '') + '.', r.criadas.length ? 'ok' : 'err');
       U.lanc = null; fechaPainel();
     },
     colRelFechar: function () { delete U.colRel[msAtual().id]; R(); },
@@ -2034,7 +2064,7 @@
     wzNenhum: function () { U.wiz.incl = {}; R(); },
     wzAplicar: function () {
       var w = U.wiz, m = P.ms(w.ms), usr = u();
-      if (!P.podePreencher(m, usr)) return toast('This milestone is not with you right now.', 'err');
+      if (!P.podePreencher(m, usr)) return toast('This task is not with you right now.', 'err');
       var ids = wzIds(m).filter(function (id) { return w.incl[id] && wzCheck(w, m, id).ok; });
       ids.forEach(function (id) { P.gravarValor(m, id, String(wzCheck(w, m, id).n), usr, 'import from Excel'); });
       P.evento(m, ids.length + ' value' + (ids.length === 1 ? '' : 's') + ' imported from ' + w.nome + '.', usr.nome);
@@ -2053,7 +2083,7 @@
     dzLimpar: function () { U.dzFila[msAtual().id] = []; R(); },
     dzEnviar: function () {
       var m = msAtual(), usr = u(), ok = 0, erros = [], fica = [];
-      if (!P.podePreencher(m, usr)) return toast('This milestone is not with you right now.', 'err');
+      if (!P.podePreencher(m, usr)) return toast('This task is not with you right now.', 'err');
       filaDe(m).forEach(function (x) {
         if (x.cat === 'geral') { m.documentos_gerais.push({ ficheiro: x.nome, por: usr.nome, em: new Date().toISOString(), fid: P.guardarFicheiro(x.file) }); P.evento(m, 'Supporting document uploaded: ' + x.nome + '.', usr.nome); ok++; return; }
         var fid = P.novoFid(), r = P.entregarFicheiro(m, x.cat, x.nome, usr, fid);
@@ -2092,10 +2122,10 @@
         if (el) el.focus();
         return;
       }
-      toast('Milestone submitted.', 'ok'); R();
+      toast('Task submitted.', 'ok'); R();
     },
     concluirPasso: function () { var m = msAtual(), t = P.passoAtual(m).tipo, r = P.concluirPasso(m, u(), val('rev-com')); res(r, t === 'parecer' ? 'Opinion given.' : t === 'aprovacao' ? 'Values approved and locked.' : 'Review completed.'); },
-    devolver: function () { var r = P.devolver(msAtual(), u(), val('rev-com')); if (r.erro) { toast(r.erro, 'err'); var c = document.getElementById('rev-com'); if (c) c.focus(); return; } U.sep = 'dados'; toast('Milestone returned to the unit.', 'ok'); R(); },
+    devolver: function () { var r = P.devolver(msAtual(), u(), val('rev-com')); if (r.erro) { toast(r.erro, 'err'); var c = document.getElementById('rev-com'); if (c) c.focus(); return; } U.sep = 'dados'; toast('Task returned to the unit.', 'ok'); R(); },
     comentar: function () { var t = val('chat-txt').trim(), m = msAtual(); if (!t) return toast('Write a comment.', 'err'); m.comentarios.push({ autor: u().nome, texto: t, em: new Date().toISOString() }); P.guardar(); R(); },
     pedirAjuda: function (d) { var m = msAtual(), id = d.v || m.indicadores[0]; U.ajuda = { ind: id, sel: '', q: '', msg: msgAjuda(m, id, ''), editada: false, prazo: P.diasDe(7) }; abrePainel('pedirAjuda'); },
     ajEnviar: function () {
@@ -2127,7 +2157,7 @@
     },
     distribuir: function (d) { var x = S.docs.filter(function (y) { return y.id === d.v; })[0]; x.estado = 'distribuída'; P.guardar(); toast('Invoice distributed.', 'ok'); R(); },
     boTab: function (d) { if (U.marca) { U.marca = null; U.logoEstado = ''; P.aplicarMarca(); } U.boTab = d.v; R(); },
-    abrirCiclo: function () { if (!window.confirm('Open the ' + (S.ciclo.ano + 1) + ' cycle? The current cycle will be closed.')) return; var r = P.abrirCiclo(u()); if (res(r, 'Cycle ' + r.ano + ' opened with ' + r.criadas + ' milestones.')) { U.cal = null; } },
+    abrirCiclo: function () { if (!window.confirm('Open the ' + (S.ciclo.ano + 1) + ' cycle? The current cycle will be closed.')) return; var r = P.abrirCiclo(u()); if (res(r, 'Cycle ' + r.ano + ' opened with ' + r.criadas + ' tasks.')) { U.cal = null; } },
     userNovo: function () {
       var nu = U.userNovo || {}, n = String(nu.nome || '').trim().replace(/\s+/g, ' ');
       if (n.split(' ').length < 2) { toast('Write the first and last name.', 'err'); var f = document.getElementById('nu-nome'); if (f) f.focus(); return; }
@@ -2164,7 +2194,7 @@
       if (U.painel.args.base) {
         var ap = document.getElementById('wf-aplica'), r = P.guardarWorkflowBase(U.wfDraft, ap && ap.checked);
         if (r.erro) return toast(r.erro, 'err');
-        U.painel = null; toast('Base workflow saved' + (r.aplicadas ? ' and applied to ' + r.aplicadas + ' milestones.' : '.'), 'ok'); return R();
+        U.painel = null; toast('Base workflow saved' + (r.aplicadas ? ' and applied to ' + r.aplicadas + ' tasks.' : '.'), 'ok'); return R();
       }
       var q = P.guardarWorkflow(msAtual(), U.wfDraft, u());
       if (q.erro) return toast(q.erro, 'err');
@@ -2245,7 +2275,7 @@
     indFreq: function (el) {
       var r = P.mudarFrequencia(el.dataset.id, el.value, u());
       if (r.erro) return toast(r.erro, 'err');
-      toast('Frequency saved. New milestones follow it' + (r.abertas.length ? '; ' + r.abertas.length + ' open milestone(s) keep it as launched: ' + r.abertas.slice(0, 3).map(function (m) { return m.nome; }).join(', ') + (r.abertas.length > 3 ? '…' : '') : '') + '.', 'ok');
+      toast('Frequency saved. New tasks follow it' + (r.abertas.length ? '; ' + r.abertas.length + ' open task(s) keep it as launched: ' + r.abertas.slice(0, 3).map(function (m) { return m.nome; }).join(', ') + (r.abertas.length > 3 ? '…' : '') : '') + '.', 'ok');
     },
     momento: function (el) {
       var x = el.dataset.id.split('|'), r = P.definirMomento(x[0], x[1], x[2], el.checked, u());
@@ -2253,6 +2283,8 @@
     },
     evObrig: function (el) { P.cat(el.dataset.id).evidencia_obrigatoria = el.checked; P.guardar(); },
     msPrazo: function (el) { if (el.value) { var m = P.ms(el.dataset.id); m.prazo = el.value; P.evento(m, 'Due date changed to ' + P.fmtData(el.value) + '.', u().nome); P.guardar(); } },
+    momEmpF: function (el) { U.momEmp = el.value; },
+    momEmpJuntar: function (el) { if (!el.value) return; var c = P.cat(el.dataset.id), ids = P.empresasInd(c).map(function (x) { return x.id; }); ids.push(el.value); mudarEmpresasInd(c, ids); },
     matAval: function (el) { S.mat.filter(function (x) { return x.norma === el.dataset.id; })[0].avaliacao = el.value; P.guardar(); },
     matJust: function (el) { S.mat.filter(function (x) { return x.norma === el.dataset.id; })[0].justificacao = el.value; P.guardar(); },
     userPerfil: function (el) {

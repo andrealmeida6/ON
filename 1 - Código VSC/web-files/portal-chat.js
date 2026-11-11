@@ -63,7 +63,7 @@
   var compositor = function (pref, m, indFixo) {
     var inds = m.indicadores;
     return '<div class="ps-cm-comp"><div class="ps-cm-comp-t"><span class="ps-cm-passo agora" title="This comment will be tagged with the current step">' + svg(I.relogio || I.cal, 11) + e(passoDe(m)) + '</span>' +
-      (indFixo ? '<span class="ps-cm-ind">' + e(indFixo) + '</span>' : '<label class="ps-sr" for="' + pref + '-ind">About</label><select id="' + pref + '-ind" class="ps-cm-sel" data-c="cmInd" data-id="' + pref + '"><option value="">Whole milestone</option>' + inds.map(function (id) { return '<option value="' + e(id) + '"' + ((U.cmInd || {})[pref] === id ? ' selected' : '') + '>' + e(id + ': ' + P.cat(id).nome) + '</option>'; }).join('') + '</select>') + '</div>' +
+      (indFixo ? '<span class="ps-cm-ind">' + e(indFixo) + '</span>' : '<label class="ps-sr" for="' + pref + '-ind">About</label><select id="' + pref + '-ind" class="ps-cm-sel" data-c="cmInd" data-id="' + pref + '"><option value="">Whole task</option>' + inds.map(function (id) { return '<option value="' + e(id) + '"' + ((U.cmInd || {})[pref] === id ? ' selected' : '') + '>' + e(id + ': ' + P.cat(id).nome) + '</option>'; }).join('') + '</select>') + '</div>' +
       '<div class="ps-cm-comp-b"><label class="ps-sr" for="' + pref + '-txt">Message</label><textarea id="' + pref + '-txt" class="ps-cm-txt" rows="1" placeholder="Write a message" data-enviar="' + pref + '">' + e((U.cmRasc || {})[pref] || '') + '</textarea>' +
       '<button type="button" class="ps-cm-env" data-a="cmEnviar" data-v="' + pref + '" aria-label="Send">' + svg('<path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4z"/>', 18) + '</button></div></div>';
   };
@@ -120,12 +120,12 @@
         '<span class="ps-ch-it-l2"><span class="ps-ch-prev">' + (l ? (l.autor === usr.nome ? 'You: ' : e(l.autor.split(' ')[0]) + ': ') + e(l.texto) : '<i>' + e(est.txt) + ', no messages yet</i>') + '</span>' + (k ? '<span class="ps-ch-n" aria-label="' + k + ' unread">' + k + '</span>' : '') + '</span></span></button></li>';
     }).join('');
     var FILTROS = [['todas', 'All'], ['ativas', 'With messages'], ['porLer', 'Unread'], ['comigo', 'With me']];
-    var esq = '<div class="ps-ch-esq"><div class="ps-ch-esq-h"><h2>Chats</h2><span>' + lista.length + ' milestones</span></div>' +
-      '<div class="ps-ch-pesq"><label class="ps-sr" for="ch-q">Search milestones</label>' + svg('<circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>', 15) + '<input id="ch-q" placeholder="Search milestones" value="' + e(st.q || '') + '" data-c="chatQ" autocomplete="off"></div>' +
+    var esq = '<div class="ps-ch-esq"><div class="ps-ch-esq-h"><h2>Chats</h2><span>' + lista.length + ' tasks</span></div>' +
+      '<div class="ps-ch-pesq"><label class="ps-sr" for="ch-q">Search tasks</label>' + svg('<circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>', 15) + '<input id="ch-q" placeholder="Search tasks" value="' + e(st.q || '') + '" data-c="chatQ" autocomplete="off"></div>' +
       '<div class="ps-ch-filt" role="tablist" aria-label="Filter chats">' + FILTROS.map(function (f) { return '<button type="button" role="tab" aria-selected="' + (st.filtro === f[0]) + '" class="' + (st.filtro === f[0] ? 'on' : '') + '" data-a="chatFiltro" data-v="' + f[0] + '">' + f[1] + '</button>'; }).join('') + '</div>' +
-      '<ul class="ps-ch-lista">' + (itens || '<li class="ps-ch-nada">No milestones match.</li>') + '</ul></div>';
+      '<ul class="ps-ch-lista">' + (itens || '<li class="ps-ch-nada">No tasks match.</li>') + '</ul></div>';
     var dir;
-    if (!ativa) dir = '<div class="ps-ch-dir vazio"><div>' + svg('<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>', 40) + '<h3>One chat per milestone</h3><p>Pick a milestone to talk with the people working on it. Every message is tagged with the workflow step the milestone was in.</p></div></div>';
+    if (!ativa) dir = '<div class="ps-ch-dir vazio"><div>' + svg('<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>', 40) + '<h3>One chat per task</h3><p>Pick a task to talk with the people working on it. Every message is tagged with the workflow step the task was in.</p></div></div>';
     else {
       var est = P.estadoMs(ativa), msgs = P.comentariosDe(ativa);
       dir = '<div class="ps-ch-dir"><div class="ps-ch-dir-h"><button type="button" class="ps-ch-volta" data-a="chatVolta" aria-label="Back to chats">' + svg('<path d="m15 18-6-6 6-6"/>', 20) + '</button>' +
@@ -134,7 +134,7 @@
         '<ul class="ps-cm-lista ps-ch-msgs" aria-label="Messages" aria-live="polite">' + (P.htmlMensagens(msgs, usr) || '<li class="ps-cm-vazio">No messages yet. Say what you need: the message is tagged with “' + e(passoDe(ativa)) + '”.</li>') + '</ul>' + compositor('chc', ativa) + '</div>';
     }
     raiz.setAttribute('data-ms', ativa ? ativa.id : '');
-    raiz.innerHTML = fab + '<section id="ps-chat-jan" class="ps-ch' + (ativa ? ' com-ms' : '') + '" role="dialog" aria-label="Milestone chats">' + esq + dir + '</section>';
+    raiz.innerHTML = fab + '<section id="ps-chat-jan" class="ps-ch' + (ativa ? ' com-ms' : '') + '" role="dialog" aria-label="Task chats">' + esq + dir + '</section>';
     var ms = raiz.querySelector('.ps-ch-msgs');
     if (ms) ms.scrollTop = noFundo || msAnt !== (ativa && ativa.id) ? ms.scrollHeight : sy;
   };

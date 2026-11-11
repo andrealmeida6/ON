@@ -762,6 +762,27 @@ Pedido do André a 11 de novembro de 2026.
 - **Supabase:** `016_esg_departamentos_empresas.sql` acrescenta `empresas text[]` a `esg_departamentos`. A sincronização já envia e lê esta coluna.
 - **CSS:** secção 52 de `global.css`.
 
+### Milestones passam a Tasks, Reporting moments, Materiality, responsável por empresa e saída do KPI master
+
+Pedidos do André a 11 de novembro de 2026.
+
+- **Milestone → Task em toda a plataforma:** mudam todos os textos que o utilizador vê: títulos, colunas, botões, mensagens, cabeçalhos e snippets. A troca foi feita só dentro das strings de JavaScript (com um tokenizador) e do texto dos HTML.
+  - **Não mudam:** os identificadores e rotas (`Milestone/`, `Milestones?`), os nomes das web pages Power Pages (`Milestones`, `Milestone`), as chaves de dados (`milestone_id` no Excel, no JSON e nas tabelas do Supabase) e o histórico já gravado.
+- **Reporting moments:**
+  - Ficam só as colunas T1, T2, T3, T4 e Year. As entregas externas (QA, PCQA, RQS…) continuam nos dados, para as Outputs e as tags das tasks, mas saem desta tabela.
+  - Coluna **Companies** com as tags das empresas de cada indicador (Entidade A, B ou ambas), editáveis com + Add e ×. É preciso pelo menos uma empresa, e a empresa que reporta tem de estar entre elas (`mudarEmpresasInd`).
+  - Novo filtro por empresa.
+- **Materiality and frameworks:** a coluna "Standard" passa a **Topic**. O nome do tópico e o número de indicadores abrem um painel (`Pn.matInd`) com os indicadores desse tópico: empresas, responsável, frequência e estado.
+- **Painel do indicador:** a secção **Companies** fica em cima. Para cada empresa abrangida escolhe-se o **departamento** (os dessa empresa) e a **pessoa ou grupo** responsável, que podem ser diferentes de empresa para empresa (`c.resp_emp`). "Reports it" marca a empresa que recebe a task.
+  - O departamento e a pessoa dessa empresa passam a ser os gerais do indicador.
+  - `P.responsavelInd(id, empresa)` e o envio de tasks usam o responsável da empresa.
+  - Review and validation fica numa secção à parte.
+  - Validação: departamento obrigatório em cada empresa, e quem reporta numa empresa não pode rever nem validar.
+- **Limite:** cada indicador continua com um valor por período, que a empresa que reporta envia (com valores por empresa, se houver mais de uma). Ainda não há uma task separada para cada empresa: isso exige guardar os valores por empresa em todo o lado.
+- **KPI master saiu:** o link, a web page `Kpis` e o snippet foram removidos. `#/Kpis` abre Backoffice > Indicators, onde o painel de cada indicador já tem os mesmos campos (disponibilidade, fonte, controlos, divulgação, ESRS). `portal-master.js` continua carregado, porque guarda as funções de mapeamento ESRS usadas noutros sítios.
+- **Supabase:** `resp_emp` vai no `config` do indicador.
+- **CSS:** secções 53 e 54 de `global.css`.
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.

@@ -248,7 +248,7 @@
   };
   P.aplicarCalculo = function (u) {
     var m = P.msDoIndicador('E06'), it = P.item('E06');
-    if (!m || !P.podePreencher(m, u)) return { erro: 'The Scope 1 milestone is not in collection with you, so the result cannot be written to it.' };
+    if (!m || !P.podePreencher(m, u)) return { erro: 'The Scope 1 task is not in collection with you, so the result cannot be written to it.' };
     var kg = Number(P.calcularFatores().kg.toFixed(P.cat('E06').casas_decimais));
     it.valor = kg; it.rascunho = null; it.qualidade = 'calculado';
     it.versoes.push({ valor: kg, em: agora(), por: u.nome, origem: 'calculation: ' + S.fatores.map(function (f) { return f.id + ' ' + f.fator + ' v' + f.versao; }).join(', '), motivo: '' });

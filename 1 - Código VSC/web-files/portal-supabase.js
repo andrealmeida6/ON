@@ -8,7 +8,7 @@
 (function () {
   'use strict';
   var B = (window.PortalBackend = {});
-  var CONFIG_IND = ['ativo', 'empresas', 'reporta', 'unidade_reporte', 'desc_propria', 'subtema_proprio', 'dr_proprio', 'divulgacao_tipo', 'tipo_dado', 'criado_backoffice', 'limiar_proprio'];
+  var CONFIG_IND = ['ativo', 'empresas', 'reporta', 'unidade_reporte', 'desc_propria', 'subtema_proprio', 'dr_proprio', 'divulgacao_tipo', 'tipo_dado', 'criado_backoffice', 'limiar_proprio', 'resp_emp'];
   var CFG = window.PORTAL_BACKEND || null;
   B.ativo = !!CFG;
   B.configurar = function (c) { CFG = c; B.ativo = true; };

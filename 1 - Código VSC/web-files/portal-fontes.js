@@ -152,7 +152,7 @@
   /* --- Puxar, calcular e preencher ------------------------------------------- */
   var podePuxar = function (m, usr) { return P.podePreencher(m, usr); };
   P.puxarDados = function (m, usr) {
-    if (!podePuxar(m, usr)) return { erro: 'You can only pull data while the milestone is in collection with you.' };
+    if (!podePuxar(m, usr)) return { erro: 'You can only pull data while the task is in collection with you.' };
     if (!S.puxados) S.puxados = {};
     var vals = {}, n = 0, bases = {};
     P.camposMilestone(m).forEach(function (k) { var l = P.registosCampo(k, m); vals[k] = agregarRegistos(k, l); n += l.length; bases[CAMPOS[k].db] = 1; });
@@ -176,7 +176,7 @@
     });
   };
   P.preencherCalculados = function (m, usr, ids) {
-    if (!podePuxar(m, usr)) return { erro: 'This milestone is read only for you right now.' };
+    if (!podePuxar(m, usr)) return { erro: 'This task is read only for you right now.' };
     var n = 0;
     P.calculosMilestone(m).forEach(function (r) {
       if (r.valor === null || (ids && ids.indexOf(r.id) < 0)) return;
@@ -249,9 +249,9 @@
     return n;
   };
   P.aplicarPuxar = function (m, usr) {
-    if (!podePuxar(m, usr)) return { erro: 'You can only pull data while the milestone is in collection with you.' };
+    if (!podePuxar(m, usr)) return { erro: 'You can only pull data while the task is in collection with you.' };
     var l = P.previewPuxar(m).filter(function (x) { return x.ligada && x.novo !== null; });
-    if (!l.length) return { erro: 'None of the systems of this milestone is connected.' };
+    if (!l.length) return { erro: 'None of the systems of this task is connected.' };
     var st = estadoFonte(m), regs = 0, dbs = {};
     l.forEach(function (x) { st.vals[x.k] = x.novo; delete (st.editados || {})[x.k]; regs += x.registos; dbs[x.db] = 1; });
     st.em = new Date().toISOString(); st.por = usr.nome; st.registos = regs;
@@ -277,7 +277,7 @@
     return { campos: l.length, indicadores: n, ext: ext.id };
   };
   P.definirFonte = function (m, k, bruto, usr) {
-    if (!podePuxar(m, usr)) return { erro: 'This milestone is read only for you right now.' };
+    if (!podePuxar(m, usr)) return { erro: 'This task is read only for you right now.' };
     var s = String(bruto === null || bruto === undefined ? '' : bruto).trim(), st = estadoFonte(m), v = s === '' ? null : P.lerNumero(s);
     if (s !== '' && v === null) return { erro: 'Enter a number.' };
     if (v !== null && campoInt(CAMPOS[k]) && Math.round(v) !== v) return { erro: 'Whole numbers only. This data counts units, so it cannot have decimals.' };
@@ -288,7 +288,7 @@
     return { ok: true };
   };
   P.limparFontes = function (m, usr) {
-    if (!podePuxar(m, usr)) return { erro: 'This milestone is read only for you right now.' };
+    if (!podePuxar(m, usr)) return { erro: 'This task is read only for you right now.' };
     if (S.puxados) delete S.puxados[m.id];
     m.indicadores.forEach(function (id) { var it = P.item(id, P.chave(m)); if (it) delete it.extracao; });
     var n = P.sincronizarCalculados(m, usr);
@@ -306,7 +306,7 @@
     var usr = u(), pode = podePuxar(m, usr), px = (S.puxados || {})[m.id], tem = px && Object.keys(px.vals || {}).length;
     if (!pode || !P.camposMilestone(m).length) return '';
     var puxar = P.podePuxarSistemas(m) ? '<button type="button" class="ps-btn pri peq" data-a="fdAbrir">Pull data from system</button>'
-      : '<span class="ps-tip-alvo" tabindex="0" data-tip="The data source this milestone uses is not connected yet, so the data has to be typed in. The administrator connects it in Connections to other systems."><button type="button" class="ps-btn peq" disabled>Pull data from system</button></span>';
+      : '<span class="ps-tip-alvo" tabindex="0" data-tip="The data source this task uses is not connected yet, so the data has to be typed in. The administrator connects it in Connections to other systems."><button type="button" class="ps-btn peq" disabled>Pull data from system</button></span>';
     return puxar + (tem ? '<button type="button" class="ps-btn peq" data-a="fdLimpar">Clear source data</button>' : '');
   };
   /* Bloco "Source data" dentro de Requested data: o que cada indicador usa, de que sistema vem e o valor, editavel */
@@ -322,9 +322,9 @@
         pode ? '<span class="fd-val"><input id="fd-' + e(k) + '" class="ps-in ps-num fd-in' + (ed[k] ? ' ed' : '') + '"' + (campoInt(f) ? ' inputmode="numeric" data-int="1"' : ' inputmode="decimal"') + ' autocomplete="off" aria-label="' + e(f.rot) + '" value="' + e(v === null ? '' : String(Number(v.toFixed(4))).replace('.', ',')) + '" data-c="fdValor" data-id="' + e(k) + '">' + orig + '</span>'
           : (v === null ? '<span class="ps-mut">-</span>' : '<b class="ps-num">' + e(num(v)) + '</b>' + orig)];
     });
-    var nota = px && px.em ? 'Last pull ' + P.fmtDataHora(px.em) + ' by ' + px.por + '.' : pode ? 'Pull the data from system or type it in. The indicators below that are calculated from it fill in by themselves.' : 'Data the indicators of this milestone are calculated from.';
+    var nota = px && px.em ? 'Last pull ' + P.fmtDataHora(px.em) + ' by ' + px.por + '.' : pode ? 'Pull the data from system or type it in. The indicators below that are calculated from it fill in by themselves.' : 'Data the indicators of this task are calculated from.';
     return '<div class="fd-bloco"><div class="fd-bloco-h"><h3>Source data</h3><span class="ps-small ps-mut">' + e(nota) + '</span></div>' +
-      tabela([{ t: 'Data' }, { t: 'Unit' }, { t: 'Used by', info: 'The indicators of this milestone that are calculated from this data. Change the value here and they update by themselves. Click an indicator to see its definition and formula.' }, { t: 'Source' }, { t: 'Value ' + P.rotPeriodo(m) }], linhas) + '</div>';
+      tabela([{ t: 'Data' }, { t: 'Unit' }, { t: 'Used by', info: 'The indicators of this task that are calculated from this data. Change the value here and they update by themselves. Click an indicator to see its definition and formula.' }, { t: 'Source' }, { t: 'Value ' + P.rotPeriodo(m) }], linhas) + '</div>';
   };
   /* Dados de um indicador, para ficarem logo por cima dele em Requested data.
      Um dado que ja apareceu num indicador anterior volta so como referencia, sem campo, para nao haver dois sitios a mudar o mesmo valor. */
@@ -390,8 +390,8 @@
       t: 'Pull data from system', s: m.nome, largo: true,
       b: '<div class="fd-topo' + (naoLive.length || !ligs.length ? '' : ' live') + '"><b>' + e(topo) + '</b><span>' + (!ligs.length ? 'The administrator connects it in Connections to other systems.' : naoLive.length ? 'The source is not live: what comes in is what it had at its last update.' : 'The source sends its data as it happens.') + (off ? ' ' + off + ' data item' + (off === 1 ? '' : 's') + ' cannot be pulled yet.' : '') + '</span></div>' +
         '<div class="px-cab"><h3 class="ps-grupo-t">What will be filled in</h3><span class="ps-small ps-mut">Expand an indicator to see its data and where it comes from.</span><button type="button" class="ps-btn liga" data-a="pxTodos">Expand all</button></div>' +
-        '<div class="px-lista">' + (linhas || '<p class="ps-mut">No indicator of this milestone is calculated from source data.</p>') + '</div>' +
-        '<p class="ps-small ps-mut ps-mt">After filling in you can still change any value, or clear the source data, while the milestone is in collection.</p>',
+        '<div class="px-lista">' + (linhas || '<p class="ps-mut">No indicator of this task is calculated from source data.</p>') + '</div>' +
+        '<p class="ps-small ps-mut ps-mt">After filling in you can still change any value, or clear the source data, while the task is in collection.</p>',
       p: '<span class="ps-sp-flex"></span><button type="button" class="ps-btn" data-a="fecharPainel">Cancel</button><button type="button" class="ps-btn pri" data-a="fdAplicar"' + (lig.length ? '' : ' disabled') + '>Fill in ' + lig.length + ' value' + (lig.length === 1 ? '' : 's') + (muda && muda < lig.length ? ' (' + muda + ' change)' : '') + '</button>'
     };
   };
@@ -411,7 +411,7 @@
   var segundos = function (iso) { var d = new Date(iso); return P.fmtDataHora(iso) + ':' + String(d.getSeconds()).padStart(2, '0'); };
   X.Pn.extracao = function (a) {
     var m = P.ms(a.ms), st = (S.puxados || {})[a.ms] || {}, x = (st.extracoes || []).filter(function (y) { return y.id === a.ext; })[0];
-    if (!m || !x) return { t: 'System extract', b: '<div class="ps-aviso warn">This extract is no longer available: the source data of the milestone was cleared or pulled again.</div>', p: '<span class="ps-sp-flex"></span><button type="button" class="ps-btn" data-a="fecharPainel">Close</button>' };
+    if (!m || !x) return { t: 'System extract', b: '<div class="ps-aviso warn">This extract is no longer available: the source data of the task was cleared or pulled again.</div>', p: '<span class="ps-sp-flex"></span><button type="button" class="ps-btn" data-a="fecharPainel">Close</button>' };
     var inds = a.id ? x.indicadores.filter(function (i) { return i.id === a.id; }) : x.indicadores;
     var ks = []; inds.forEach(function (i) { i.campos.forEach(function (k) { if (ks.indexOf(k) < 0) ks.push(k); }); });
     var cons = a.id ? x.consultas.filter(function (q) { return ks.indexOf(q.k) > -1; }) : x.consultas;
@@ -447,7 +447,7 @@
     return {
       t: 'Clear source data?', s: m.nome, cls: 'conf',
       b: '<div class="ps-conf"><span class="ps-conf-ic" aria-hidden="true">' + X.svg('<path d="M3 6h18M8 6V4h8v2M6 6l1 15h10l1-15"/><path d="M10 11v6M14 11v6"/>', 26) + '</span><div>' +
-        '<p><b>Are you sure?</b> The source data of this milestone will be deleted.</p>' +
+        '<p><b>Are you sure?</b> The source data of this task will be deleted.</p>' +
         '<ul class="ps-conf-l"><li><b>' + nCampos + '</b> source data field(s) pulled from the system or typed in</li><li><b>' + calc.length + '</b> indicator value(s) calculated from them will be emptied</li></ul>' +
         (calc.length ? '<ul class="ps-conf-ind">' + lista + '</ul>' : '') +
         '<p class="ps-small ps-mut">Values you typed in yourself stay as they are. This cannot be undone, but you can pull the data from the system again.</p></div></div>',
