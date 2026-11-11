@@ -2194,3 +2194,15 @@ button.ps-est-i:hover{border-color:rgba(255,255,255,.4);background:rgba(255,255,
 .tlr-prox .tlr-ent>span{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
 .tlr-prox .tlr-ent>em{font-style:normal;font-weight:700;text-align:right;display:flex;flex-direction:column;white-space:nowrap}
 .tlr-prox li.feito .tlr-ent>b{background:var(--muted)}
+
+/* 56. DROPDOWNS COM PESQUISA (portal-pesquisa.js) E "ASSIGN TO ME" */
+.ps-pq{position:fixed;z-index:1350;display:flex;flex-direction:column;gap:6px;padding:8px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--sh-md)}
+.ps-pq.cima{flex-direction:column-reverse}
+.ps-pq-in{width:100%}
+.ps-pq-l{list-style:none;margin:0;padding:0;max-height:260px;overflow:auto}
+.ps-pq-o{padding:7px 10px;border-radius:6px;font-size:13.5px;cursor:pointer;color:var(--text)}
+.ps-pq-o:hover,.ps-pq-o.at{background:var(--primary-50)}
+.ps-pq-o.sel{font-weight:700;color:var(--primary)}
+.ps-pq-g{padding:8px 10px 3px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted)}
+.ps-pq-vazio{padding:10px;font-size:13px;color:var(--muted)}
+.ke-eu{font-size:12px;padding:0}

@@ -1700,6 +1700,9 @@
   P.usosDepartamento = usosDepartamento;
   /* Departamentos de cada empresa: d.empresas tem os ids; vazio quer dizer todas as empresas */
   P.empresasDoDep = function (d) { return d && d.empresas && d.empresas.length ? S.ent.filter(function (x) { return d.empresas.indexOf(x.id) > -1; }) : S.ent.slice(); };
+  /* Empresas de uma pessoa: cada empresa tem as suas pessoas. Sem nenhuma marcada, a pessoa trabalha em todas. */
+  P.empresasUser = function (x) { return x && x.empresas && x.empresas.length ? S.ent.filter(function (y) { return x.empresas.indexOf(y.id) > -1; }) : S.ent.slice(); };
+  P.userNaEmpresa = function (x, empresa) { if (!empresa) return true; return P.empresasUser(x).some(function (y) { return y.nome === empresa || y.id === empresa; }); };
   P.depsDaEmpresa = function (empresa) {
     var x = !empresa ? null : typeof empresa === 'string' ? S.ent.filter(function (y) { return y.nome === empresa || y.id === empresa; })[0] : empresa;
     return S.deps.filter(function (d) { return !x || !d.empresas || !d.empresas.length || d.empresas.indexOf(x.id) > -1; }).map(function (d) { return d.nome; });

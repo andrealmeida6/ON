@@ -1322,21 +1322,29 @@
     return '<div class="us-tags">' + l.map(function (d) { return '<span class="us-tag">' + avEquipa() + e(d) + '<button type="button" class="us-tag-x" data-a="userUnTirar" data-v="' + e(x.login + '|' + d) + '" aria-label="Remove ' + e(d) + ' from ' + e(x.nome) + '">×</button></span>'; }).join('') +
       (livres.length ? '<label class="ps-sr" for="' + id + '">Add a department to ' + e(x.nome) + '</label><select id="' + id + '" class="ps-sel us-add" data-c="userUnJuntar" data-id="' + e(x.login) + '">' + opt('', l.length ? '+ Add' : '+ Add department', '') + livres.map(function (d) { return opt(d, d, ''); }).join('') + '</select>' : '') + '</div>';
   };
+  /* Empresas de uma pessoa: um chip por empresa; todas marcadas quando a pessoa trabalha em todas */
+  var tagsEmpresas = function (x, pref) {
+    var on = P.empresasUser(x).map(function (y) { return y.id; });
+    return '<div class="ps-dt-chips" role="group" aria-label="Companies of ' + e(x.nome) + '">' + S.ent.map(function (y) { var ck = on.indexOf(y.id) > -1; return '<label class="ps-dt-chip' + (ck ? ' on' : '') + '"><input type="checkbox" id="' + pref + e(x.login) + '-' + e(y.id) + '" data-c="userEmp" data-id="' + e(x.login + '|' + y.id) + '"' + (ck ? ' checked' : '') + '>' + e(y.nome) + '</label>'; }).join('') + '</div>';
+  };
   B.utilizadores = function () {
-    var q = norm(U.userBusca || ''), pessoas2 = S.users.filter(function (x) { return x.perfil !== 'ext'; });
-    var l = pessoas2.filter(function (x) { return !q || norm(x.nome + ' ' + P.PERFIS[x.perfil] + ' ' + P.unidadesTxt(x)).indexOf(q) > -1; }).sort(function (a, b) { return PERFIS_PESSOA.indexOf(a.perfil) - PERFIS_PESSOA.indexOf(b.perfil) || a.nome.localeCompare(b.nome); });
+    var q = norm(U.userBusca || ''), fe = U.userEmpF || '', pessoas2 = S.users.filter(function (x) { return x.perfil !== 'ext'; });
+    var l = pessoas2.filter(function (x) { return P.userNaEmpresa(x, fe); }).filter(function (x) { return !q || norm(x.nome + ' ' + P.PERFIS[x.perfil] + ' ' + P.unidadesTxt(x)).indexOf(q) > -1; }).sort(function (a, b) { return PERFIS_PESSOA.indexOf(a.perfil) - PERFIS_PESSOA.indexOf(b.perfil) || a.nome.localeCompare(b.nome); });
     var n = function (k) { return pessoas2.filter(function (x) { return x.perfil === k; }).length; };
-    var nu = U.userNovo || (U.userNovo = { nome: '', perfil: 'resp', unidades: [] });
+    var nu = U.userNovo || (U.userNovo = { nome: '', perfil: 'resp', unidades: [], empresas: [] });
+    if (!nu.empresas) nu.empresas = [];
     var novo = '<div class="us-novo"><h3>New user</h3><div class="us-novo-g">' + campo('nu-nome', 'Full name', '<input id="nu-nome" class="ps-in" autocomplete="off" placeholder="First and last name" value="' + e(nu.nome) + '" data-c="userNovoC" data-f="nome">') +
       campo('nu-perfil', 'Profile', '<select id="nu-perfil" class="ps-sel" data-c="userNovoC" data-f="perfil">' + PERFIS_PESSOA.map(function (k) { return opt(k, P.PERFIS[k], nu.perfil); }).join('') + '</select>') +
       '<div class="ps-campo"><span class="ps-lab">Departments</span>' + tagsUnidades({ login: '__novo', nome: 'the new user', unidades: nu.unidades }, 'nu-un-') + '</div>' +
+      '<div class="ps-campo"><span class="ps-lab">Companies</span>' + tagsEmpresas({ login: '__novo', nome: 'the new user', empresas: nu.empresas }, 'nu-em-') + '</div>' +
       '<button type="button" class="ps-btn pri" data-a="userNovo">Add user</button></div><small class="ps-mut">' + e(PERFIL_AJUDA[nu.perfil]) + '. The sign-in name is created from the full name.</small></div>';
     return '<div class="ps-card">' + cabCartao('Users and profiles', 'tarefa', '<span class="ps-sp ps-small ps-mut">' + PERFIS_PESSOA.map(function (k) { return n(k) + ' ' + P.PERFIS[k].toLowerCase(); }).join(' · ') + '</span>') + '<div class="ps-card-body">' + novo +
-      '<div class="ps-filtros ps-mt">' + campo('us-q', 'Search', '<input id="us-q" class="ps-in" placeholder="Name, profile or department" value="' + e(U.userBusca || '') + '" data-c="userBusca">') + '</div>' +
-      tabela([{ t: 'Name' }, { t: 'Profile', info: 'The profile sets what the person can do. Administrator: everything, including the Backoffice. Sustainability team: follows, reviews and approves all reporting. Data owner: fills in and submits the data of their departments. Auditor: reads everything and changes nothing.' }, { t: 'Departments', info: 'A person can be responsible for several departments. Data owners see and fill in the tasks of all their departments, and can be chosen as the responsible person of their indicators.' }, { t: 'Actions' }], l.map(function (x) {
+      '<div class="ps-filtros ps-mt">' + campo('us-q', 'Search', '<input id="us-q" class="ps-in" placeholder="Name, profile or department" value="' + e(U.userBusca || '') + '" data-c="userBusca">') +
+        campo('us-emp', 'Company', '<select id="us-emp" class="ps-sel" data-c="userEmpF">' + opt('', 'All companies', fe) + S.ent.map(function (y) { return opt(y.id, y.nome, fe); }).join('') + '</select>') + '</div>' +
+      tabela([{ t: 'Name' }, { t: 'Profile', info: 'The profile sets what the person can do. Administrator: everything, including the Backoffice. Sustainability team: follows, reviews and approves all reporting. Data owner: fills in and submits the data of their departments. Auditor: reads everything and changes nothing.' }, { t: 'Departments', info: 'A person can be responsible for several departments. Data owners see and fill in the tasks of all their departments, and can be chosen as the responsible person of their indicators.' }, { t: 'Companies', info: 'The companies the person works for. Each company has its own people: only they appear as responsible for that company. With every company marked, the person works for all.' }, { t: 'Actions' }], l.map(function (x) {
         var eu = u() && u().login === x.login;
         return [pessHtml(x.nome) + (eu ? ' <span class="ps-chip info">You</span>' : ''), '<select id="up-' + e(x.login) + '" class="ps-sel" aria-label="Profile of ' + e(x.nome) + '" data-c="userPerfil" data-id="' + e(x.login) + '"' + (eu ? ' disabled title="You cannot change your own profile"' : '') + '>' + PERFIS_PESSOA.map(function (k) { return opt(k, P.PERFIS[k], x.perfil); }).join('') + '</select>',
-          tagsUnidades(x, 'uu-'), eu ? '<span class="ps-mut ps-small">-</span>' : '<button type="button" class="ps-btn peq err" data-a="userApagar" data-v="' + e(x.login) + '">Remove</button>'];
+          tagsUnidades(x, 'uu-'), tagsEmpresas(x, 'ue-'), eu ? '<span class="ps-mut ps-small">-</span>' : '<button type="button" class="ps-btn peq err" data-a="userApagar" data-v="' + e(x.login) + '">Remove</button>'];
       }), 'No user matches the search.') + '<p class="ps-small ps-mut ps-mt">External entities (suppliers and partners that answer data requests) are managed in External entities.</p></div></div>';
   };
   B.externas = function () {
@@ -2223,7 +2231,7 @@
       if (n.split(' ').length < 2) { toast('Write the first and last name.', 'err'); var f = document.getElementById('nu-nome'); if (f) f.focus(); return; }
       if (S.users.some(function (x) { return norm(x.nome) === norm(n); })) return toast('There is already a user called ' + n + '.', 'err');
       if (nu.perfil === 'resp' && !nu.unidades.length) return toast('Add at least one department to a data owner.', 'err');
-      var x = { login: P.loginDe(n), nome: n, perfil: nu.perfil }; P.definirUnidades(x, nu.unidades); S.users.push(x);
+      var x = { login: P.loginDe(n), nome: n, perfil: nu.perfil }; P.definirUnidades(x, nu.unidades); if (nu.empresas && nu.empresas.length && nu.empresas.length < S.ent.length) x.empresas = nu.empresas.slice(); S.users.push(x);
       P.eventoGlobal('User added: ' + n + ', ' + P.PERFIS[x.perfil] + (x.unidades.length ? ', ' + x.unidades.join(', ') : '') + '.', u().nome, 'Creation');
       U.userNovo = null; P.guardar(); toast(n + ' added.', 'ok'); R();
     },
@@ -2365,6 +2373,17 @@
     userUnJuntar: function (el) { if (!el.value) return; if (el.dataset.id === '__novo') { U.userNovo.unidades.push(el.value); return; } var x = P.user(el.dataset.id); P.definirUnidades(x, P.unidadesDe(x).concat([el.value])); P.eventoGlobal(x.nome + ' added to ' + el.value + '.', u().nome); P.guardar(); },
     userNovoC: function (el) { U.userNovo[el.dataset.f] = el.value; },
     userBusca: function (el) { U.userBusca = el.value; },
+    userEmpF: function (el) { U.userEmpF = el.value; R(); },
+    userEmp: function (el) {
+      var p = el.dataset.id.split('|'), x = p[0] === '__novo' ? U.userNovo : P.user(p[0]);
+      if (!x) return;
+      var on = P.empresasUser(x).map(function (y) { return y.id; }).filter(function (k) { return k !== p[1]; });
+      if (el.checked) on.push(p[1]);
+      if (!on.length) { toast('A person needs at least one company.', 'err'); R(); return; }
+      x.empresas = on.length === S.ent.length ? [] : on;
+      if (p[0] !== '__novo') { P.eventoGlobal('User ' + x.nome + ': companies set to ' + P.empresasUser(x).map(function (y) { return y.nome; }).join(', ') + '.', u().nome, 'Change'); P.guardar(); }
+      R();
+    },
     tlEC: function (el) { U.tlEC[el.dataset.id] = el.value; },
     tlECFalta: function (el) { U.tlEC.falta = el.checked; },
     limiar: function (el) { var n = Number(el.value), c = P.cat(el.dataset.id); if (el.value !== '' && n >= 0) { c.limiar_variacao_pct = n; c.limiar_proprio = true; P.guardar(); } },

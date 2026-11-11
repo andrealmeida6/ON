@@ -344,12 +344,18 @@
     var linhas = cobre.map(function (nome, i) {
       var r = (d.respEmp || {})[nome] || { dep: '', resp: GRUPO_TXT }, deps = P.depsDaEmpresa ? P.depsDaEmpresa(nome) : P.UNIDADES, rep = d.reporta === nome;
       if (r.dep && deps.indexOf(r.dep) < 0) deps = deps.concat([r.dep]);
-      var doDep = pessoas('submete').filter(function (x) { return x.perfil === 'esg' || P.temUnidade(x, r.dep); }), outras = pessoas('submete').filter(function (x) { return doDep.indexOf(x) < 0; });
-      var selResp = '<select id="ker-p-' + i + '" class="ps-sel" data-c="indRespEmp" data-id="' + e(nome) + '" data-f="resp">' + opt(GRUPO_TXT, 'Whole department' + (r.dep ? ': ' + r.dep : ''), r.resp) +
+      /* So as pessoas desta empresa (Users and profiles, Companies) */
+      var daEmp = pessoas('submete').filter(function (x) { return P.userNaEmpresa(x, nome); });
+      var doDep = daEmp.filter(function (x) { return x.perfil === 'esg' || P.temUnidade(x, r.dep); }), outras = daEmp.filter(function (x) { return doDep.indexOf(x) < 0; });
+      /* Quem tem a sessao aberta aparece sempre, para se poder atribuir a si proprio */
+      var eu = u(), todas = doDep.concat(outras);
+      var soltos = [eu.nome].concat(r.resp && r.resp !== GRUPO_TXT ? [r.resp] : []).filter(function (n, k, a) { return a.indexOf(n) === k && !todas.some(function (x) { return x.nome === n; }); });
+      var selResp = '<select id="ker-p-' + i + '" class="ps-sel" data-pesq data-c="indRespEmp" data-id="' + e(nome) + '" data-f="resp">' + opt(GRUPO_TXT, 'Whole department' + (r.dep ? ': ' + r.dep : ''), r.resp) +
+        (soltos.length ? '<optgroup label="You">' + soltos.map(function (n) { return opt(n, n === eu.nome ? 'Me: ' + n : n, r.resp); }).join('') + '</optgroup>' : '') +
         (doDep.length ? '<optgroup label="People of this department">' + doDep.map(function (x) { return opt(x.nome, x.nome, r.resp); }).join('') + '</optgroup>' : '') + (outras.length ? '<optgroup label="Other people">' + outras.map(function (x) { return opt(x.nome, x.nome + ' (' + P.unidadesTxt(x) + ')', r.resp); }).join('') + '</optgroup>' : '') + '</select>';
       return '<div class="ke-er' + (rep ? ' rep' : '') + '"><div class="ke-er-e">' + X.empHtml(nome) + '<label class="ps-chk ke-er-rep"><input type="radio" name="ke-rep" id="ker-r-' + i + '" data-c="indRep" data-id="' + e(nome) + '"' + (rep ? ' checked' : '') + '> Reports it</label></div>' +
-        '<div class="ps-campo"><label class="ps-lab" for="ker-d-' + i + '">Department *</label><select id="ker-d-' + i + '" class="ps-sel" data-c="indRespEmp" data-id="' + e(nome) + '" data-f="dep">' + (r.dep ? '' : opt('', 'Choose', '')) + deps.map(function (x) { return opt(x, x, r.dep); }).join('') + '</select></div>' +
-        '<div class="ps-campo"><label class="ps-lab" for="ker-p-' + i + '">Responsible: person or group *</label>' + selResp + '</div></div>';
+        '<div class="ps-campo"><label class="ps-lab" for="ker-d-' + i + '">Department *</label><select id="ker-d-' + i + '" class="ps-sel" data-pesq data-c="indRespEmp" data-id="' + e(nome) + '" data-f="dep">' + (r.dep ? '' : opt('', 'Choose', '')) + deps.map(function (x) { return opt(x, x, r.dep); }).join('') + '</select></div>' +
+        '<div class="ps-campo"><span class="ps-sp-b"><label class="ps-lab" for="ker-p-' + i + '">Responsible: person or group *</label>' + (r.resp === u().nome ? '<small class="ps-mut">Assigned to you</small>' : '<button type="button" class="ps-btn liga ke-eu" data-a="indRespEu" data-v="' + e(nome) + '">Assign to me</button>') + '</span>' + selResp + '</div></div>';
     }).join('');
     return secao('emp', '<div class="ki-full"><span class="ps-lab">Companies covered *</span>' + chk + '</div>' +
       '<div class="ki-full ke-ers">' + (linhas || '<p class="ps-mut ps-small">Choose at least one company.</p>') + '</div>' +
@@ -425,6 +431,14 @@
   };
   /* A empresa que reporta da o departamento e a pessoa gerais do indicador (os que o resto da plataforma usa) */
   var sincRep = function (d) { var r = (d.respEmp || {})[d.reporta]; if (r) { d.dep = r.dep; d.resp = r.resp || GRUPO_TXT; } };
+  /* Atribuir a si proprio: a pessoa com a sessao aberta; sem departamento, fica com o primeiro dela */
+  A.indRespEu = function (d2) {
+    var d = U.ind.ed.d, eu = u(); d.respEmp = d.respEmp || {};
+    var r = (d.respEmp[d2.v] = d.respEmp[d2.v] || { dep: '', resp: GRUPO_TXT });
+    r.resp = eu.nome;
+    if (!r.dep) { var un = P.unidadesDe ? P.unidadesDe(eu) : []; if (un.length) r.dep = un[0]; }
+    sincRep(d); toast(d2.v + ': assigned to you.', 'ok'); R();
+  };
   C.indRespEmp = function (el) { var d = U.ind.ed.d, r = (d.respEmp[el.dataset.id] = d.respEmp[el.dataset.id] || { dep: '', resp: GRUPO_TXT }); r[el.dataset.f] = el.value; sincRep(d); };
   C.indRep = function (el) { var d = U.ind.ed.d; d.reporta = el.dataset.id; sincRep(d); };
   var guardarEd = function () {

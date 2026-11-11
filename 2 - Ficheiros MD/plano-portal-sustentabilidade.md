@@ -843,6 +843,23 @@ Pedido do André a 11 de novembro de 2026.
   - Não é preciso ir à página Indicators.
 - O que se acrescenta aqui vale só para as tasks criadas neste painel. O plano do indicador no Backoffice não muda.
 
+### Dropdowns com pesquisa, Assign to me e utilizadores por empresa
+
+Pedido do André a 11 de novembro de 2026.
+
+- **Dropdowns com pesquisa** (`web-files/portal-pesquisa.js`):
+  - Funcionam em qualquer `select.ps-sel` com `data-pesq` ou com 10 ou mais opções.
+  - Abrem uma lista com caixa de pesquisa. A pesquisa ignora acentos e também procura no nome do grupo.
+  - Usam-se pelo teclado (setas, Enter e Esc). O `select` continua a guardar o valor e dispara o `change`.
+  - Os campos Department e Responsible do painel do indicador têm `data-pesq`.
+- **Assign to me:** está ao lado de "Responsible" em cada empresa do indicador.
+  - Atribui a responsabilidade a quem tem a sessão aberta. Se a empresa ainda não tiver departamento, usa o primeiro departamento dessa pessoa.
+  - Quem tem a sessão aberta aparece sempre na lista, como "Me: nome".
+- **Utilizadores por empresa:** o Users and profiles tem agora uma coluna Companies, as empresas no formulário New user e um filtro por empresa.
+  - Cada pessoa guarda as suas empresas em `user.empresas`. Uma pessoa sem empresas marcadas trabalha em todas. Usam-se `P.empresasUser` e `P.userNaEmpresa`.
+  - No painel do indicador, o Responsible de cada empresa só mostra as pessoas dessa empresa.
+  - Para produção falta guardar `empresas` na tabela dos utilizadores no Supabase, tal como já acontece com as `unidades`.
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.
