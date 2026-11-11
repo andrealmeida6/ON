@@ -534,6 +534,23 @@ Pedido do André a 11 de novembro de 2026.
 - **Links antigos:** `Backoffice?tab=lancar` abre esta vista.
 - **CSS:** secção 40 de `global.css`.
 
+### Indicators: empresa no topo, pesquisa em tudo, filtros por coluna e Timeline
+
+Pedido do André a 11 de novembro de 2026.
+
+- **Empresa no topo:** "All companies", "Entidade A" e "Entidade B", cada uma com o número de indicadores. Escolher uma empresa mostra só os indicadores que ela tem de reportar (`c.reporta`), e os cartões, a lista e a vista By department passam a contar só essa empresa.
+- **Cada empresa em separado:**
+  - Por omissão, um indicador abrange só a empresa que o reporta (`P.empresasInd`). Para juntar várias empresas, escolhem-se no painel do indicador.
+  - "One row per company", no Data entry e no Excel offline, usa as empresas escolhidas no indicador ou, se não houver, todo o perímetro do grupo (`P.empresasLinhas`).
+  - Envio de tasks: a empresa escolhida passa para o painel de lançamento.
+- **Pesquisa:** uma barra larga por cima dos filtros procura em todos os campos do indicador, mesmo os que a tabela não mostra: descrição, fórmula, fonte, controlos, tema, ESRS, responsável, empresas e estado da task.
+  - Filtra enquanto se escreve (`Live.indBusca`).
+  - Todas as palavras têm de aparecer.
+  - Quando encontra num campo escondido, a linha mostra o campo e um excerto, com a palavra destacada.
+- **Filtros por coluna:** a tabela passou a usar os filtros tipo Excel das outras tabelas (`portal-filtros.js`). O período escolhe-se nos filtros, já não no cabeçalho.
+- **Timeline:** é a terceira vista da página (By indicator, By department, Timeline), com a timeline dos períodos e das entregas externas, para se ver onde estamos e o que já foi lançado. A timeline mostra o grupo todo, mesmo com uma empresa escolhida.
+- **CSS:** secção 41 de `global.css`.
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.

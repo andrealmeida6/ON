@@ -166,7 +166,7 @@
   var rotCurto = function (k) { return campoK[k].t.replace(/^.* - /, '').replace(/ \[.*\]$/, ''); };
 
   /* --- Estado da pagina -------------------------------------------------------------- */
-  U.ind = { vista: 'lista', q: '', tema: '', dep: '', emp: '', resp: '', est: 'todos', inativos: false, per: '', sel: {}, lim: 60, ed: null, lote: null, env: null, imp: null };
+  U.ind = { vista: 'lista', q: '', tema: '', dep: '', emp: '', resp: '', est: 'todos', inativos: false, per: '', sel: {}, lim: 200, ed: null, lote: null, env: null, imp: null };
   var periodos = function () { return (S.periodos || []).filter(function (p) { return p.ano === S.ciclo.ano; }); };
   var perAtual = function () {
     var f = U.ind, l = periodos();
@@ -176,17 +176,43 @@
     f.per = x ? x.id : '';
     return x || null;
   };
+  /* Pesquisa em tudo o que se sabe do indicador, mesmo o que a tabela nao mostra (descricao, formula, fonte, controlos...).
+     Todas as palavras tem de aparecer, em qualquer campo. Devolve o primeiro campo escondido onde apareceu, para o mostrar na linha. */
+  var VISIVEIS = ['id', 'nome', 'dr', 'unidade', 'freq', 'dep', 'resp', 'reporta', 'empresas'];
+  var achado = function (c, q) {
+    var d = lerInd(c), txt = {}, todo = '';
+    CAMPOS.forEach(function (f) { txt[f.k] = norm(d[f.k]); todo += ' ' + txt[f.k]; });
+    var s2 = per2(c); todo += ' ' + norm(s2);
+    var pal = q.split(' ').filter(Boolean);
+    if (!pal.every(function (w) { return todo.indexOf(w) > -1; })) return null;
+    var vis = VISIVEIS.map(function (k) { return txt[k]; }).join(' ') + ' ' + norm(s2);
+    if (pal.every(function (w) { return vis.indexOf(w) > -1; })) return { vis: true };
+    var k = CAMPOS.filter(function (f) { return VISIVEIS.indexOf(f.k) < 0 && pal.some(function (w) { return txt[f.k].indexOf(w) > -1; }); })[0];
+    return k ? { campo: k, valor: String(d[k.k]) } : { vis: true };
+  };
+  var per2 = function (c) { var per = P.periodo(U.ind.per); return per ? P.estadoTarefaInd(c.id, per.id).txt : ''; };
+  /* Excerto com as palavras pesquisadas a negrito */
+  var excerto = function (txt, q) {
+    var t = String(txt), n = norm(t), pal = q.split(' ').filter(Boolean), pos = -1;
+    pal.forEach(function (w) { var k = n.indexOf(w); if (k > -1 && (pos < 0 || k < pos)) pos = k; });
+    var ini = Math.max(0, pos - 50), fim = Math.min(t.length, (pos < 0 ? 0 : pos) + 110), parte = t.slice(ini, fim);
+    var html = e(parte);
+    pal.forEach(function (w) { if (w.length < 2) return; var re = new RegExp('(' + w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'ig'); html = html.replace(re, '<mark>$1</mark>'); });
+    return (ini ? '…' : '') + html + (fim < t.length ? '…' : '');
+  };
+  /* Empresa escolhida no topo: cada empresa ve so os indicadores que tem de reportar */
+  var daEmpresa = function (c) { var f = U.ind; return !f.emp || (P.reportaInd(c) || {}).id === f.emp; };
   var filtrados = function () {
     var f = U.ind, q = norm(f.q), per = perAtual();
     return S.cat.filter(function (c) {
       if (!f.inativos && !P.indAtivo(c)) return false;
       if (f.tema && (c.tema || '') !== f.tema) return false;
       if (f.dep && P.donoIndicador(c.id) !== f.dep) return false;
-      if (f.emp && !P.empresasInd(c).some(function (x) { return x.id === f.emp; }) && (P.reportaInd(c) || {}).id !== f.emp) return false;
+      if (!daEmpresa(c)) return false;
       if (f.resp === '__grupo' && atrL(c.id).submete) return false;
       if (f.resp && f.resp !== '__grupo' && atrL(c.id).submete !== f.resp) return false;
       if (f.est !== 'todos' && per) { var s = P.estadoTarefaInd(c.id, per.id).cod; if (f.est === 'aberta' ? ['aberta', 'atraso', 'revisao'].indexOf(s) < 0 : s !== f.est) return false; }
-      if (q && norm(c.id + ' ' + c.nome + ' ' + (c.esrs_requisito || '') + ' ' + (c.tema || '') + ' ' + P.donoIndicador(c.id) + ' ' + nomeDe(atrL(c.id).submete)).indexOf(q) < 0) return false;
+      if (q && !achado(c, q)) return false;
       return true;
     });
   };
@@ -199,14 +225,16 @@
   };
   var respHtml = function (c) {
     var r = P.responsavelInd(c.id);
-    return (r.tipo === 'pessoa' ? X.pessHtml(r.nome) + '<small class="ki-sub">' + e(r.dep) + '</small>' : X.depHtml(r.dep) + '<small class="ki-sub">Whole department</small>');
+    return (r.tipo === 'pessoa' ? X.pessHtml(r.nome) + '<small class="ki-sub" data-fx-ignorar>' + e(r.dep) + '</small>' : X.depHtml(r.dep) + '<small class="ki-sub" data-fx-ignorar>Whole department</small>');
   };
   var empHtmlInd = function (c) {
     var rep = P.reportaInd(c), l = P.empresasInd(c);
-    return '<span class="ki-emp">' + (rep ? X.empHtml(rep.nome) : '<span class="ps-mut">-</span>') + '<small class="ki-sub">Covers ' + (l.length === S.ent.length && l.length > 1 ? 'all ' + l.length + ' companies' : e(l.map(function (x) { return x.nome; }).join(', '))) + '</small></span>';
+    return '<span class="ki-emp">' + (rep ? X.empHtml(rep.nome) : '<span class="ps-mut">-</span>') + '<small class="ki-sub" data-fx-ignorar>Covers ' + (l.length === S.ent.length && l.length > 1 ? 'all ' + l.length + ' companies' : e(l.map(function (x) { return x.nome; }).join(', '))) + '</small></span>';
   };
   B.indicadores = function () {
-    var f = U.ind, usr = u(), per = perAtual(), todos = S.cat.filter(P.indAtivo), l = filtrados(), sel = selecionados(), vis = l.slice(0, f.lim);
+    var f = U.ind, usr = u(), per = perAtual(), todos = S.cat.filter(function (c) { return P.indAtivo(c) && daEmpresa(c); }), l = filtrados(), sel = selecionados(), vis = l.slice(0, f.lim);
+    var empSel = f.emp ? S.ent.filter(function (x) { return x.id === f.emp; })[0] : null;
+    if (f.emp && !empSel) f.emp = '';
     var est = function (cod) { return todos.filter(function (c) { var s = per ? P.estadoTarefaInd(c.id, per.id).cod : 'nao'; return cod === 'aberta' ? ['aberta', 'atraso', 'revisao'].indexOf(s) > -1 : s === cod; }).length; };
     var semPessoa = todos.filter(function (c) { return !atrL(c.id).submete; }).length;
     var tile = function (t, v, s, cls, alvo) { return '<button type="button" class="ps-kpi ki-tile ' + (cls || '') + (alvo && (alvo[0] === 'est' ? f.est === alvo[1] : f.resp === alvo[1]) ? ' on' : '') + '"' + (alvo ? ' data-a="indTile" data-v="' + alvo.join('|') + '"' : ' disabled') + '><span>' + e(t) + '</span><b>' + v + '</b><small>' + e(s) + '</small></button>'; };
@@ -214,19 +242,21 @@
     var temas = []; S.cat.forEach(function (c) { if (c.tema && temas.indexOf(c.tema) < 0) temas.push(c.tema); });
     var topo = '<div class="ki-topo"><div><h2>Indicators</h2><p class="ps-mut ps-small">One place for every KPI: what it is, who reports it, which companies it covers, and the tasks sent for each period.</p></div>' +
       '<div class="ps-sp"><button type="button" class="ps-btn" data-a="indImportar">' + svg(I.upload, 15) + 'Import Excel</button><button type="button" class="ps-btn" data-a="indExportar">' + svg(ICO.descarregar, 15) + 'Export Excel</button><button type="button" class="ps-btn pri" data-a="indNovo">' + svg(ICO.mais, 15) + 'New indicator</button></div></div>';
-    var tiles = '<div class="ps-kpis ki-tiles">' + tile('Active indicators', todos.length, S.cat.length - todos.length ? (S.cat.length - todos.length) + ' inactive' : 'in the catalogue') +
+    var tiles = '<div class="ps-kpis ki-tiles">' + tile('Active indicators', todos.length, empSel ? 'reported by ' + empSel.nome : S.cat.length - todos.length ? (S.cat.length - todos.length) + ' inactive' : 'in the catalogue') +
       tile('Owned by a department', semPessoa, 'no person named', semPessoa ? 'k-warn' : '', ['resp', '__grupo']) +
       tile('Not sent, ' + (per ? per.nome : ''), est('nao'), 'no task for this period', est('nao') ? 'k-warn' : '', ['est', 'nao']) +
       tile('Open tasks', est('aberta'), est('atraso') + ' overdue', 'k-info', ['est', 'aberta']) +
       tile('Approved', est('feito'), per ? per.nome : '', 'k-ok', ['est', 'feito']) + '</div>';
-    var filtros = '<div class="ps-filtros ki-filtros">' + campo('ki-q', 'Search', '<input id="ki-q" class="ps-in" placeholder="Name, ID, ESRS, owner" value="' + e(f.q) + '" data-c="indF" data-id="q">') +
+    var pesquisa = '<div class="ki-busca" role="search"><span class="ki-busca-ic" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></span>' +
+      '<label class="ps-sr" for="ki-q">Search the indicators</label><input id="ki-q" class="ki-busca-in" type="search" autocomplete="off" placeholder="Search anything: name, ID, description, formula, source, owner, company, controls…" value="' + e(f.q) + '" data-i="indBusca" data-c="indF" data-id="q">' +
+      (f.q ? '<button type="button" class="ki-busca-x" data-a="indBuscaLimpar" aria-label="Clear the search">×</button>' : '') + '</div>';
+    var filtros = pesquisa + '<div class="ps-filtros ki-filtros">' +
       campo('ki-tema', 'Topic', '<select id="ki-tema" class="ps-sel" data-c="indF" data-id="tema">' + opt('', 'All', f.tema) + temas.map(function (t) { return opt(t, t, f.tema); }).join('') + '</select>') +
       campo('ki-dep', 'Department', '<select id="ki-dep" class="ps-sel" data-c="indF" data-id="dep">' + opt('', 'All', f.dep) + P.UNIDADES.map(function (t) { return opt(t, t, f.dep); }).join('') + '</select>') +
-      campo('ki-emp', 'Company', '<select id="ki-emp" class="ps-sel" data-c="indF" data-id="emp">' + opt('', 'All', f.emp) + S.ent.map(function (x) { return opt(x.id, x.nome, f.emp); }).join('') + '</select>') +
       campo('ki-resp', 'Responsible', '<select id="ki-resp" class="ps-sel" data-c="indF" data-id="resp">' + opt('', 'Anyone', f.resp) + opt('__grupo', 'Whole department (no person)', f.resp) + pessoas('submete').map(function (x) { return opt(x.login, x.nome, f.resp); }).join('') + '</select>') +
-      campo('ki-est', 'Task, ' + (per ? per.nome : ''), '<select id="ki-est" class="ps-sel" data-c="indF" data-id="est">' + [['todos', 'Any status'], ['nao', 'Not sent'], ['aberta', 'Open'], ['atraso', 'Overdue'], ['revisao', 'In review'], ['feito', 'Approved']].map(function (x) { return opt(x[0], x[1], f.est); }).join('') + '</select>') +
+      campo('ki-per', 'Reporting period', perSel) + campo('ki-est', 'Task, ' + (per ? per.nome : ''), '<select id="ki-est" class="ps-sel" data-c="indF" data-id="est">' + [['todos', 'Any status'], ['nao', 'Not sent'], ['aberta', 'Open'], ['atraso', 'Overdue'], ['revisao', 'In review'], ['feito', 'Approved']].map(function (x) { return opt(x[0], x[1], f.est); }).join('') + '</select>') +
       '<label class="ps-chk"><input id="ki-inat" type="checkbox" data-c="indInativos"' + (f.inativos ? ' checked' : '') + '> Show inactive</label>' +
-      (f.q || f.tema || f.dep || f.emp || f.resp || f.est !== 'todos' ? '<button type="button" class="ps-btn liga" data-a="indLimpar">Clear filters</button>' : '') + '</div>';
+      (f.q || f.tema || f.dep || f.resp || f.est !== 'todos' ? '<button type="button" class="ps-btn liga" data-a="indLimpar">Clear filters</button>' : '') + '</div>';
     var todosSel = l.length > 0 && l.every(function (c) { return f.sel[c.id]; });
     var lote = sel.length ? '<div class="ki-lote" role="region" aria-label="Actions for the selected indicators"><b>' + sel.length + ' selected</b><span class="ps-sp">' +
       '<button type="button" class="ps-btn pri peq" data-a="indEnviarAbrir">' + svg(ICO.enviar, 14) + 'Send tasks</button><button type="button" class="ps-btn peq" data-a="indLembrar">' + svg(ICO.sino, 14) + 'Send reminder</button>' +
@@ -234,29 +264,39 @@
       '<button type="button" class="ps-btn liga" data-a="indSelLimpar">Clear selection</button></span></div>' : '';
     var linhas = vis.map(function (c) {
       var s = per ? P.estadoTarefaInd(c.id, per.id) : { cod: 'nao', txt: 'Not sent', cls: '' }, on = !!f.sel[c.id], id = e(c.id);
-      var tarefa = s.m ? '<a class="ki-tar" href="' + rota('Milestone/' + s.m.id) + '" title="' + e(s.m.nome + ', due ' + P.fmtData(s.m.prazo)) + '">' + chip(s.txt, s.cls) + '<small class="ki-sub">due ' + e(P.fmtData(s.m.prazo)) + '</small></a>'
+      var tarefa = s.m ? '<a class="ki-tar" href="' + rota('Milestone/' + s.m.id) + '" title="' + e(s.m.nome + ', due ' + P.fmtData(s.m.prazo)) + '">' + chip(s.txt, s.cls) + '<small class="ki-sub" data-fx-ignorar>due ' + e(P.fmtData(s.m.prazo)) + '</small></a>'
         : P.indAtivo(c) ? '<button type="button" class="ps-btn peq ki-env1" data-a="indEnviar1" data-v="' + id + '">' + svg(ICO.enviar, 13) + 'Send</button>' : chip('Inactive');
       return '<tr class="' + (on ? 'ki-on' : '') + (P.indAtivo(c) ? '' : ' ki-off') + '"><td class="ki-c"><input id="ks-' + id + '" type="checkbox" aria-label="Select ' + e(c.nome) + '" data-c="indSel" data-id="' + id + '"' + (on ? ' checked' : '') + '></td>' +
-        '<td class="prim"><button type="button" class="ki-nome" data-a="indEditar" data-v="' + id + '"><b>' + e(c.nome) + '</b><small><span class="ps-cod">' + id + '</span>' + e((c.esrs_requisito || 'No ESRS') + ' · ' + (c.unidade_medida || 'no unit') + ' · ' + campoK.freq.get(c)) + (c.tipo === 'derivado' ? ' · derived' : '') + '</small></button></td>' +
+        '<td class="prim"><button type="button" class="ki-nome" data-a="indEditar" data-v="' + id + '"><b>' + e(c.nome) + '</b><small data-fx-ignorar><span class="ps-cod">' + id + '</span>' + e((c.esrs_requisito || 'No ESRS') + ' · ' + (c.unidade_medida || 'no unit') + ' · ' + campoK.freq.get(c)) + (c.tipo === 'derivado' ? ' · derived' : '') + '</small></button>' + (function () { if (!f.q) return ''; var a = achado(c, norm(f.q)); return a && a.campo ? '<span class="ki-achado" data-fx-ignorar><b>' + e(rotCurto(a.campo.k)) + ':</b> ' + excerto(a.valor, norm(f.q)) + '</span>' : ''; })() + '</td>' +
         '<td data-l="Responsible">' + respHtml(c) + '</td><td data-l="Reported by">' + empHtmlInd(c) + '</td><td data-l="Task">' + tarefa + '</td>' +
         '<td class="ki-ac"><button type="button" class="ps-btn peq" data-a="indEditar" data-v="' + id + '" aria-label="Edit ' + e(c.nome) + '">' + svg(ICO.lapis, 14) + 'Edit</button></td></tr>';
     }).join('');
-    var tabela = l.length ? '<div class="ps-tw"><table class="ki-t"><thead><tr><th class="ki-c"><input id="ks-todos" type="checkbox" aria-label="Select all ' + l.length + ' indicators in the list" data-c="indSelTodos"' + (todosSel ? ' checked' : '') + '></th><th scope="col">Indicator</th><th scope="col">Responsible</th><th scope="col">Reported by</th><th scope="col">Task for ' + perSel + '</th><th><span class="ps-sr">Actions</span></th></tr></thead><tbody>' + linhas + '</tbody></table></div>' +
-      (l.length > vis.length ? '<div class="ps-sp ps-mt"><button type="button" class="ps-btn" data-a="indMais">Show ' + Math.min(60, l.length - vis.length) + ' more</button><span class="ps-mut ps-small">' + vis.length + ' of ' + l.length + '</span></div>' : '')
+    var tabela = l.length ? '<div class="ps-tw"><table class="ps-t ki-t"><thead><tr><th class="ki-c"><input id="ks-todos" type="checkbox" aria-label="Select all ' + l.length + ' indicators in the list" data-c="indSelTodos"' + (todosSel ? ' checked' : '') + '></th><th scope="col">Indicator</th><th scope="col">Responsible</th><th scope="col">Reported by</th><th scope="col">Task, ' + e(per ? per.nome : '') + '</th><th><span class="ps-sr">Actions</span></th></tr></thead><tbody>' + linhas + '</tbody></table></div>' +
+      (l.length > vis.length ? '<div class="ps-sp ps-mt"><button type="button" class="ps-btn" data-a="indMais">Show ' + Math.min(200, l.length - vis.length) + ' more</button><span class="ps-mut ps-small">' + vis.length + ' of ' + l.length + '</span></div>' : '')
       : vazio(S.cat.length ? 'No indicator matches these filters.' : 'No indicators yet. Create one or import your KPI list in Excel.');
     /* Duas vistas no mesmo ecra: a lista dos indicadores e o mapa por departamento e periodo (o antigo Launch by department) */
-    var vistas = '<div class="ki-vistas" role="tablist" aria-label="View">' + [['lista', 'By indicator', l.length + ' indicators'], ['dep', 'By department', 'coverage per period']].map(function (v) { return '<button type="button" role="tab" aria-selected="' + (f.vista === v[0]) + '" class="ki-vista' + (f.vista === v[0] ? ' on' : '') + '" data-a="indVista" data-v="' + v[0] + '"><b>' + v[1] + '</b><small>' + e(v[2]) + '</small></button>'; }).join('') + '</div>';
-    if (f.vista === 'dep') return topo + tiles + vistas + B.lancar();
-    return topo + tiles + vistas + '<div class="ps-card ki-card"><div class="ps-card-body">' + filtros + lote + '<div class="ki-conta ps-small ps-mut">' + l.length + ' indicator(s)' + (P.gereTudo(usr) ? '' : ', read only') + '</div>' + tabela + '</div></div>';
+    var vistas = '<div class="ki-vistas" role="tablist" aria-label="View">' + [['lista', 'By indicator', l.length + ' indicators'], ['dep', 'By department', 'coverage per period'], ['tl', 'Timeline', 'where we are and what was sent']].map(function (v) { return '<button type="button" role="tab" aria-selected="' + (f.vista === v[0]) + '" class="ki-vista' + (f.vista === v[0] ? ' on' : '') + '" data-a="indVista" data-v="' + v[0] + '"><b>' + v[1] + '</b><small>' + e(v[2]) + '</small></button>'; }).join('') + '</div>';
+    var empresas = '<div class="ki-ents" role="tablist" aria-label="Company">' + [{ id: '', nome: 'All companies' }].concat(S.ent).map(function (x) {
+      var n = S.cat.filter(function (c) { return P.indAtivo(c) && (!x.id || (P.reportaInd(c) || {}).id === x.id); }).length;
+      return '<button type="button" role="tab" aria-selected="' + (f.emp === x.id) + '" class="ki-ent' + (f.emp === x.id ? ' on' : '') + '" data-a="indEmp" data-v="' + e(x.id) + '">' + (x.id ? X.avEmpresa() : '') + '<b>' + e(x.nome) + '</b><span class="n">' + n + '</span></button>';
+    }).join('') + '</div>';
+    if (f.vista === 'dep') return topo + empresas + tiles + vistas + B.lancar();
+    if (f.vista === 'tl') return topo + empresas + tiles + vistas + '<div class="ki-tl">' + (X.Blocos2.timeline ? X.Blocos2.timeline() : vazio('The timeline did not load.')) + '</div>';
+    return topo + empresas + tiles + vistas + '<div class="ps-card ki-card"><div class="ps-card-body">' + filtros + lote + '<div class="ki-conta ps-small ps-mut">' + l.length + ' indicator(s)' + (P.gereTudo(usr) ? '' : ', read only') + '</div>' + tabela + '</div></div>';
   };
-  C.indF = function (el) { U.ind[el.dataset.id] = el.value; U.ind.lim = 60; };
+  C.indF = function (el) { U.ind[el.dataset.id] = el.value; U.ind.lim = 200; };
   C.indInativos = function (el) { U.ind.inativos = el.checked; };
   C.indSel = function (el) { if (el.checked) U.ind.sel[el.dataset.id] = true; else delete U.ind.sel[el.dataset.id]; };
   C.indSelTodos = function (el) { filtrados().forEach(function (c) { if (el.checked) U.ind.sel[c.id] = true; else delete U.ind.sel[c.id]; }); };
   A.indSelLimpar = function () { U.ind.sel = {}; R(); };
-  A.indLimpar = function () { var f = U.ind; f.q = ''; f.tema = ''; f.dep = ''; f.emp = ''; f.resp = ''; f.est = 'todos'; R(); };
+  A.indLimpar = function () { var f = U.ind; f.q = ''; f.tema = ''; f.dep = ''; f.resp = ''; f.est = 'todos'; R(); };
+  A.indBuscaLimpar = function () { U.ind.q = ''; R(); var x = document.getElementById('ki-q'); if (x) x.focus(); };
+  /* A pesquisa filtra enquanto se escreve, com uma pequena pausa */
+  var tBusca = null;
+  X.Live.indBusca = function (el) { U.ind.q = el.value; U.ind.lim = 200; clearTimeout(tBusca); tBusca = setTimeout(R, 180); };
+  A.indEmp = function (d) { U.ind.emp = d.v; U.ind.sel = {}; R(); };
   A.indVista = function (d) { U.ind.vista = d.v; R(); };
-  A.indMais = function () { U.ind.lim += 60; R(); };
+  A.indMais = function () { U.ind.lim += 200; R(); };
   A.indTile = function (d) { var p = d.v.split('|'), f = U.ind; if (p[0] === 'est') f.est = f.est === p[1] ? 'todos' : p[1]; else f.resp = f.resp === p[1] ? '' : p[1]; R(); };
 
   /* --- Painel do indicador: tudo num sitio -------------------------------------------- */

@@ -260,7 +260,7 @@
   C.deLinha = function (el) { U.de.linhas[+el.dataset.id][el.dataset.f] = el.value; };
   /* Quem reporta o grupo empresa a empresa: uma linha por empresa do perimetro, sem as escrever a mao */
   A.deEmpresas = function () {
-    var d = U.de, ja = {}, grupo = P.empresasInd(P.cat(d.id));
+    var d = U.de, ja = {}, grupo = P.empresasLinhas(P.cat(d.id));
     d.linhas.forEach(function (l) { ja[String(l.local).trim()] = l; });
     var outras = d.linhas.filter(function (l) { var n = String(l.local).trim(); return n && String(l.valor).trim() && !grupo.some(function (x) { return x.nome === n; }); });
     d.linhas = grupo.map(function (x) { return ja[x.nome] || { local: x.nome, doc: '', valor: '', peso: '' }; }).concat(outras);

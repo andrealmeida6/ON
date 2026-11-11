@@ -732,13 +732,18 @@
   /* Empresas abrangidas pelo indicador (por omissao, todo o perimetro do grupo) e empresa que o reporta */
   P.empresasInd = function (c) {
     var l = c && c.empresas && c.empresas.length ? S.ent.filter(function (x) { return c.empresas.indexOf(x.id) > -1; }) : [];
-    return l.length ? l : S.ent.filter(function (x) { return x.perimetro_grupo; });
+    if (l.length) return l;
+    var r = P.reportaInd(c);
+    return r ? [r] : [];
   };
+  /* Linhas por empresa (Data entry e Excel offline): as empresas escolhidas no indicador, ou todo o perimetro do grupo */
+  P.empresasLinhas = function (c) { var l = c && c.empresas && c.empresas.length > 1 ? P.empresasInd(c) : []; return l.length ? l : P.empresasGrupo(); };
   P.reportaInd = function (c) {
     var x = c && c.reporta ? S.ent.filter(function (y) { return y.id === c.reporta; })[0] : null;
     if (x) return x;
     var m = c ? S.ms.filter(function (y) { return y.indicadores.indexOf(c.id) > -1; }).sort(function (a, b) { return a.prazo < b.prazo ? 1 : -1; })[0] : null;
-    return (m && S.ent.filter(function (y) { return y.nome === m.empresa; })[0]) || P.empresasInd(c)[0] || S.ent[0] || null;
+    var x2 = c && c.empresas && c.empresas.length ? S.ent.filter(function (y) { return c.empresas.indexOf(y.id) > -1; })[0] : null;
+    return (m && S.ent.filter(function (y) { return y.nome === m.empresa; })[0]) || x2 || S.ent[0] || null;
   };
   P.indAtivo = function (c) { return !!c && c.ativo !== false; };
   /* Responsavel: uma pessoa (quem submete na atribuicao) ou o grupo, que e o departamento inteiro */
@@ -1502,7 +1507,7 @@
         if (!porEmpresa) { dados.push(base); return; }
         var ents = it.entradas || [];
         /* As empresas sao as que o indicador abrange (Backoffice, Indicators); por omissao, o perimetro do grupo */
-        P.empresasInd(c).forEach(function (x) {
+        P.empresasLinhas(c).forEach(function (x) {
           var l = {}; Object.keys(base).forEach(function (k) { l[k] = base[k]; });
           var e0 = ents.filter(function (y) { return y.local === x.nome; })[0];
           l.entity = x.nome; l.value = e0 ? e0.valor : ''; l.justification = ''; l.prior_value = '';

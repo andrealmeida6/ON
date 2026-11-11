@@ -1352,6 +1352,8 @@
   };
 
   /* --- Lancar milestones -------------------------------------------------- */
+  /* A empresa escolhida no topo da pagina Indicators passa para o lancamento */
+  var empLanc = function (L) { var x = U.ind && U.ind.emp ? S.ent.filter(function (y) { return y.id === U.ind.emp; })[0] : null; if (x) L.empresa = x.nome; };
   var lancEstado = function () {
     if (!U.lanc) {
       /* Comeca no primeiro periodo com departamentos planeados ainda por lancar */
@@ -1363,8 +1365,11 @@
   B.lancar = function () {
     var ano = S.ciclo.ano, pers = (S.periodos || []).filter(function (p) { return p.ano === ano; }), uns = P.UNIDADES;
     /* Mapa de cobertura: departamento x periodo, com o estado de cada milestone */
+    /* Com uma empresa escolhida no topo da pagina Indicators, cada celula mostra a task dessa empresa */
+    var empF = U.ind && U.ind.emp ? (S.ent.filter(function (x) { return x.id === U.ind.emp; })[0] || null) : null;
     var cel = function (un, p) {
-      var m = P.msExistente(un, p.id) || S.ms.filter(function (x) { return x.unidade === un && x.periodo === p.id; })[0];
+      var l = S.ms.filter(function (x) { return x.unidade === un && x.periodo === p.id; }), m = empF ? l.filter(function (x) { return x.empresa === empF.nome; }).sort(function (a, b) { return (a.consolida ? 1 : 0) - (b.consolida ? 1 : 0); })[0] : P.msExistente(un, p.id) || l[0];
+      if (!m && empF && l.length) return '<span class="ps-cob nada" title="' + e(l[0].nome + ' belongs to ' + l[0].empresa) + '">In ' + e(l[0].empresa) + '</span>';
       if (m) { var st = P.estadoMs(m); return '<a class="ps-cob ' + (P.concluida(m) ? 'ok' : st.cls) + '" href="' + rota('Milestone/' + m.id) + '" title="' + e(m.nome + ', ' + st.txt) + '">' + e(P.concluida(m) ? 'Done' : st.txt) + '</a>'; }
       var sug = P.indicadoresSugeridos(un, p.id).length;
       return sug ? '<button type="button" class="ps-cob vazio" data-a="lancCel" data-v="' + e(un + '|' + p.id) + '" title="Launch ' + e(un + ': ' + p.nome) + '">+ Launch<small>' + sug + ' indicators</small></button>' : '<span class="ps-cob nada" title="No indicators planned">-</span>';
@@ -1374,7 +1379,7 @@
     var porLancar = function (p) { return uns.filter(function (un) { return !P.msExistente(un, p.id) && P.indicadoresSugeridos(un, p.id).length; }).length; };
     return '<div class="ps-card">' + cabCartao('By department and period', 'cal') + '<div class="ps-card-body">' +
       '<p class="ps-mut ps-small">Each cell is a department in a reporting period, with the status of its task. Open cells show how many indicators the plan expects: click one to send it, or use the button of a period to send every department at once. Indicators come from Reporting moments and can be adjusted before sending.</p>' +
-      '<div class="ps-kpis ps-mt"><div class="ps-kpi"><span>Milestones ' + ano + '</span><b>' + P.msCiclo().length + '</b></div><div class="ps-kpi"><span>Planned, not launched</span><b>' + faltam + '</b></div></div>' +
+      '<div class="ps-kpis ps-mt"><div class="ps-kpi"><span>Milestones ' + ano + (empF ? ', ' + e(empF.nome) : '') + '</span><b>' + P.msCiclo().filter(function (m) { return !empF || m.empresa === empF.nome; }).length + '</b></div><div class="ps-kpi"><span>Planned, not launched</span><b>' + faltam + '</b></div></div>' +
       '<div class="ps-cob-sc ps-mt" tabindex="0" aria-label="Coverage by department and period"><table class="ps-cob-t"><thead><tr><th scope="col">Department</th>' + pers.map(function (p) { var n = porLancar(p); return '<th scope="col">' + e(p.nome) + '<small>close ' + e(P.fmtData(p.fecho)) + '</small>' + (n ? '<button type="button" class="ps-btn pri peq ps-cob-lanc" data-a="lancPeriodo" data-v="' + e(p.id) + '">Launch ' + e(p.nome) + '<small>' + n + ' department' + (n === 1 ? '' : 's') + '</small></button>' : '<span class="ps-cob-tudo">All launched</span>') + '</th>'; }).join('') + '</tr></thead><tbody>' +
       uns.map(function (un) { return '<tr><th scope="row">' + depHtml(un) + '</th>' + pers.map(function (p) { return '<td>' + cel(un, p) + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table></div></div></div>';
   };
@@ -1944,8 +1949,8 @@
     tipoArquivar: function () { var t = U.tipoEd, r = P.arquivarTipo(t.id, !t.ativo, u()); if (r.erro) return toast(r.erro, 'err'); toast(t.ativo ? 'Archived. It is no longer requested in open milestones.' : 'Restored.', 'ok'); fechaPainel(); },
     lancAbrir: function () { lancEstado(); abrePainel('lancar', {}); },
     /* Um periodo inteiro: todos os departamentos que ainda tem o que lancar nesse periodo */
-    lancPeriodo: function (d) { U.lanc = null; var L = lancEstado(); L.periodos = [d.v]; L.unidades = P.UNIDADES.filter(function (un) { return !P.msExistente(un, d.v) && P.indicadoresSugeridos(un, d.v).length; }); L.aberto = ''; abrePainel('lancar', {}); },
-    lancCel: function (d) { var x = d.v.split('|'); U.lanc = null; var L = lancEstado(); L.periodos = [x[1]]; L.unidades = [x[0]]; L.aberto = x[0]; abrePainel('lancar', {}); },
+    lancPeriodo: function (d) { U.lanc = null; var L = lancEstado(); L.periodos = [d.v]; L.unidades = P.UNIDADES.filter(function (un) { return !P.msExistente(un, d.v) && P.indicadoresSugeridos(un, d.v).length; }); L.aberto = ''; empLanc(L); abrePainel('lancar', {}); },
+    lancCel: function (d) { var x = d.v.split('|'); U.lanc = null; var L = lancEstado(); L.periodos = [x[1]]; L.unidades = [x[0]]; L.aberto = x[0]; empLanc(L); abrePainel('lancar', {}); },
     lancUn: function (d) { var L = lancEstado(); L.aberto = L.aberto === d.v ? '' : d.v; R(); },
     lancTodos: function () { var L = lancEstado(); L.unidades = P.UNIDADES.filter(function (un) { return L.periodos.some(function (pid) { return P.indicadoresSugeridos(un, pid).length; }); }); R(); },
     lancNenhum: function () { var L = lancEstado(); L.unidades = []; R(); },
@@ -2412,6 +2417,6 @@
     }
   };
   /* As paginas de controlo (portal-gestao.js) acrescentam-se aqui */
-  P.ext = { B: B, linkFicha: linkFicha, PERIODO_TXT: PERIODO_TXT, fechaPainel: function () { fechaPainel(); }, pessHtml: pessHtml, depHtml: depHtml, empHtml: empHtml, avPessoa: avPessoa, avEquipa: avEquipa, avEmpresa: avEmpresa, msAtual: function () { return msAtual(); }, Pn: Pn, abrePainel: function (t, a) { abrePainel(t, a); }, Blocos: Blocos, A: A, C: C, U: U, e: e, svg: svg, I: I, rota: rota, chip: chip, estChip: estChip, cabCartao: cabCartao, vazio: vazio, opt: opt, campo: campo, ficheiroHtml: ficheiroHtml, numAttr: numAttr, infoFormula: infoFormula, tabela: tabela, toast: toast, R: R, val: val, res: res, escolherFicheiro: escolherFicheiro, atribHtml: atribHtml, iniciais: iniciais, u: u, fmtV: fmtV, prazoTxt: prazoTxt };
+  P.ext = { Live: Live, Blocos2: Blocos, B: B, linkFicha: linkFicha, PERIODO_TXT: PERIODO_TXT, fechaPainel: function () { fechaPainel(); }, pessHtml: pessHtml, depHtml: depHtml, empHtml: empHtml, avPessoa: avPessoa, avEquipa: avEquipa, avEmpresa: avEmpresa, msAtual: function () { return msAtual(); }, Pn: Pn, abrePainel: function (t, a) { abrePainel(t, a); }, Blocos: Blocos, A: A, C: C, U: U, e: e, svg: svg, I: I, rota: rota, chip: chip, estChip: estChip, cabCartao: cabCartao, vazio: vazio, opt: opt, campo: campo, ficheiroHtml: ficheiroHtml, numAttr: numAttr, infoFormula: infoFormula, tabela: tabela, toast: toast, R: R, val: val, res: res, escolherFicheiro: escolherFicheiro, atribHtml: atribHtml, iniciais: iniciais, u: u, fmtV: fmtV, prazoTxt: prazoTxt };
   document.addEventListener('DOMContentLoaded', P.iniciar);
 })();

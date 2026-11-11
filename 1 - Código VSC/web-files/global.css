@@ -2002,3 +2002,26 @@ button.ps-est-i:hover{border-color:rgba(255,255,255,.4);background:rgba(255,255,
 .ki-vista:hover{background:var(--neutro-50)}
 .ki-vista.on{background:var(--primary);color:color-mix(in srgb,#fff 80%,var(--primary))}
 .ki-vista.on b{color:#fff}
+
+/* 41. INDICATORS: EMPRESA NO TOPO, PESQUISA EM TUDO, FILTROS POR COLUNA E TIMELINE */
+.ki-ents{display:flex;flex-wrap:wrap;gap:8px}
+.ki-ent{display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border:1px solid var(--line);border-radius:999px;background:var(--surface);font:inherit;font-size:13.5px;color:var(--text);cursor:pointer}
+.ki-ent b{font-weight:600}
+.ki-ent .n{min-width:24px;padding:1px 8px;border-radius:999px;background:var(--neutro-50);color:var(--muted);font-size:12px;font-weight:700;text-align:center}
+.ki-ent:hover{border-color:var(--secondary)}
+.ki-ent.on{background:var(--primary);border-color:var(--primary);color:#fff}
+.ki-ent.on .n{background:rgba(255,255,255,.2);color:#fff}
+.ki-ent.on .ps-ave{background:rgba(255,255,255,.18);color:#fff}
+.ki-busca{position:relative;display:flex;align-items:center;margin-bottom:14px}
+.ki-busca-ic{position:absolute;left:16px;color:var(--muted);display:flex}
+.ki-busca-in{width:100%;min-height:50px;padding:12px 48px 12px 46px;border:1.5px solid var(--line);border-radius:14px;background:var(--surface);font:inherit;font-size:15px;color:var(--text)}
+.ki-busca-in:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-100)}
+.ki-busca-in::-webkit-search-cancel-button{display:none}
+.ki-busca-x{position:absolute;right:10px;width:32px;height:32px;border:0;border-radius:50%;background:var(--neutro-50);color:var(--muted);font-size:17px;cursor:pointer}
+.ki-busca-x:hover{background:var(--line)}
+.ki-achado{display:block;margin-top:5px;max-width:460px;padding:5px 9px;border-radius:8px;background:var(--warn-50);font-size:12px;line-height:1.4;color:var(--text)}
+.ki-achado b{color:var(--warn)}
+.ki-achado mark{background:color-mix(in srgb,var(--warn) 28%,#fff);color:inherit;border-radius:3px;padding:0 1px}
+.ki-t .ki-c .fx-th{display:contents}
+.ki-t .ki-c .fx-b{display:none}
+.ki-tl{min-width:0}
