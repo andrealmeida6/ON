@@ -1129,6 +1129,26 @@
     var s = String(bruto || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     return { measured: 'medido', medido: 'medido', calculated: 'calculado', calculado: 'calculado', estimated: 'estimado', estimado: 'estimado' }[s] || null;
   };
+  /* Ficheiro de uma milestone pela chave: evidencia de um indicador ou documento geral */
+  P.acharFicheiro = function (m, k) {
+    for (var i = 0; i < m.indicadores.length; i++) {
+      var it = P.item(m.indicadores[i], P.chave(m)), l = (it && it.evidencias) || [];
+      for (var j = 0; j < l.length; j++) if (P.chaveFich(l[j]) === k) return { lista: l, x: l[j], ind: m.indicadores[i] };
+    }
+    var d = m.documentos_gerais || [];
+    for (var n = 0; n < d.length; n++) if (P.chaveFich(d[n]) === k) return { lista: d, x: d[n], ind: null };
+    return null;
+  };
+  P.removerFicheiro = function (m, k, u) {
+    if (!P.podePreencher(m, u)) return { erro: 'Files can only be removed while the milestone is in collection with you.' };
+    var r = P.acharFicheiro(m, k);
+    if (!r) return { erro: 'This file is no longer in the milestone.' };
+    r.lista.splice(r.lista.indexOf(r.x), 1);
+    if (P.apagarConteudo) P.apagarConteudo(r.x.fid);
+    ev(m, (r.ind ? 'Evidence removed from ' + P.cat(r.ind).nome : 'Document removed') + ': ' + r.x.ficheiro + ' (uploaded by ' + (r.x.por || 'unknown') + (r.x.em ? ' on ' + P.fmtDataHora(r.x.em) : '') + ').', u.nome);
+    guardar();
+    return { ok: true, nome: r.x.ficheiro };
+  };
   P.anexar = function (it, nome, u, fid) { var x = { id: 'ev' + Date.now() + Math.random().toString(36).slice(2, 5), ficheiro: nome, por: u.nome, em: agora() }; if (fid) x.fid = fid; it.evidencias.push(x); guardar(); };
 
   /* --- Contributos externos (secao 9) ------------------------------------ */

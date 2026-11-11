@@ -313,7 +313,7 @@
           return '<tr><td class="prim">' + e(c.nome) + '</td><td class="dir ps-num">' + (it.valor === null ? '-' : e(fmtV(id, it.valor) + ' ' + c.unidade_medida)) + '</td><td class="dir ps-num">' + (ant === null || ant === undefined ? '-' : e(fmtV(id, ant))) + '</td><td class="dir ps-num ' + (v.alertas.length ? 'ps-txt-err' : '') + '">' + e(variacaoTxt(v.variacao)) + '</td></tr>';
         }).join('') + '</tbody></table></div>' +
         (al.length ? '<div class="ps-aviso err ps-mt">' + al.map(function (id) { var it = P.item(id, P.chave(m)); return '<div><b>' + e(P.cat(id).nome) + '.</b> ' + e(P.validarItem(it).alertas[0]) + (it.justificacao ? ' Justification: "' + e(it.justificacao) + '"' : '') + '</div>'; }).join('') + '</div>' : '') +
-        '<h3 class="ps-grupo-t">Evidence</h3>' + (function () { var ev = [], sis = m.indicadores.map(function (id) { return P.extracaoHtml ? P.extracaoHtml(m, id) : ''; }).filter(Boolean); m.indicadores.forEach(function (id) { P.item(id, P.chave(m)).evidencias.forEach(function (x) { ev.push(x); }); }); (m.documentos_gerais || []).forEach(function (x) { ev.push(x); }); return ev.length || sis.length ? '<ul class="ps-apr-ev">' + sis.map(function (h) { return '<li>' + h + '</li>'; }).join('') + ev.map(function (n) { return '<li>' + P.fichHtml(n) + '</li>'; }).join('') + '</ul>' : '<p class="ps-mut ps-small">No evidence attached.</p>'; })() +
+        '<h3 class="ps-grupo-t">Evidence</h3>' + (function () { var ev = [], sis = m.indicadores.map(function (id) { return P.extracaoHtml ? P.extracaoHtml(m, id) : ''; }).filter(Boolean); m.indicadores.forEach(function (id) { P.item(id, P.chave(m)).evidencias.forEach(function (x) { ev.push(x); }); }); (m.documentos_gerais || []).forEach(function (x) { ev.push(x); }); return ev.length || sis.length ? '<ul class="ps-apr-ev">' + sis.map(function (h) { return '<li>' + h + '</li>'; }).join('') + ev.map(function (n) { return '<li>' + P.fichHtml(n, '', m) + '</li>'; }).join('') + '</ul>' : '<p class="ps-mut ps-small">No evidence attached.</p>'; })() +
         (podeA ? (viola ? '<div class="ps-aviso warn ps-mt">You submitted this milestone, so someone else has to decide on it.</div>' : campo('apr-com', 'Comment (required to return)', '<textarea id="apr-com" class="ps-ta"></textarea>') + '<div class="ps-sp ps-mt ps-apr-acts"><button type="button" class="ps-btn" data-a="aprDevolver" data-v="' + e(m.id) + '">Return</button><button type="button" class="ps-btn pri" data-a="aprAprovar" data-v="' + e(m.id) + '">' + e(verbo) + '</button></div>') : '<p class="ps-small ps-mut ps-mt">This step is with ' + e(P.nomeResp(m, p.responsavel)) + '.</p>') +
         '<p class="ps-small ps-mt"><a href="' + rota('Milestone/' + m.id) + '">Open the milestone</a></p></div></div>';
     }
@@ -354,10 +354,29 @@
       (pode ? '<button type="button" class="ps-de-drop" data-a="evdAnexar" data-v="' + e(atual.id) + '"><b>Attach evidence to this KPI</b><span>PDF, Excel, images or ZIP. The file name stays recorded with the value it supports.</span></button>' : '<div class="ps-aviso">Evidence can be attached while the milestone is in collection, by whoever has it.</div>') +
       '<div class="ps-mt">' + tabela([{ t: 'Include' }, { t: 'File' }, { t: 'Company and period' }, { t: 'Supports the value', dir: 1 }, { t: 'Uploaded by' }, { t: 'Status' }], it.evidencias.map(function (x, i) {
         var k = chaveEv(atual.id, x), est = P.estadoKpi(atual.id);
-        return ['<label class="ps-chk"><input id="evs-' + i + '" type="checkbox" data-c="evdInc" data-id="' + e(k) + '"' + (f.fora[k] ? '' : ' checked') + '><span class="ps-sr">Include ' + e(x.ficheiro) + ' in the package</span></label>', P.fichHtml(x), emp(m.empresa) + ', ' + e(m.ano), it.valor === null ? '-' : e(fmtV(atual.id, it.valor) + ' ' + atual.unidade_medida), e(x.por), chip(est.txt, est.cls)];
+        return ['<label class="ps-chk"><input id="evs-' + i + '" type="checkbox" data-c="evdInc" data-id="' + e(k) + '"' + (f.fora[k] ? '' : ' checked') + '><span class="ps-sr">Include ' + e(x.ficheiro) + ' in the package</span></label>', P.fichHtml({ ficheiro: x.ficheiro, fid: x.fid, id: x.id }, '', m), emp(m.empresa) + ', ' + e(m.ano), it.valor === null ? '-' : e(fmtV(atual.id, it.valor) + ' ' + atual.unidade_medida), e(x.por || '-') + (x.em ? '<small class="ps-mut ps-blk">' + e(P.fmtDataHora(x.em)) + '</small>' : ''), chip(est.txt, est.cls)];
       }), 'No evidence yet.') + '</div>' + (atual.evidencia_obrigatoria && !it.evidencias.length ? '<div class="ps-aviso warn ps-mt">Evidence is required for this KPI. The reported value has no support in the auditor package.</div>' : '') + '</div></div></div>';
   };
   A.evdVer = function (d) { U.evd.sel = d.v; R(); };
+  /* Remover um ficheiro carregado: pop-up com o que vai ser removido e quem o carregou; fica no historico da milestone */
+  X.Pn.fichRem = function (a) {
+    var m = P.ms(a.ms), r = m ? P.acharFicheiro(m, a.k) : null;
+    if (!r) return { t: 'Remove file', cls: 'conf', b: '<div class="ps-aviso">This file is no longer in the milestone.</div>', p: '<span class="ps-sp-flex"></span><button type="button" class="ps-btn" data-a="fecharPainel">Close</button>' };
+    var x = r.x;
+    return { t: 'Remove this file?', s: m.nome, cls: 'conf',
+      b: '<div class="ps-conf"><span class="ps-conf-ic" aria-hidden="true">' + X.svg('<path d="M3 6h18M8 6V4h8v2M6 6l1 15h10l1-15"/><path d="M10 11v6M14 11v6"/>', 26) + '</span><div>' +
+        '<p><b>' + e(x.ficheiro) + '</b> will be removed from ' + (r.ind ? 'the evidence of <b>' + e(P.cat(r.ind).nome) + '</b>' : 'the documents of this milestone') + '.</p>' +
+        '<ul class="ps-conf-l"><li>Uploaded by <b class="fr-q">' + e(x.por || 'unknown') + '</b></li><li>On <b class="fr-q">' + e(x.em ? P.fmtDataHora(x.em) : 'unknown date') + '</b></li></ul>' +
+        '<p class="ps-small ps-mut">The removal stays in the milestone history, with who removed it, when, and who had uploaded it.' + (r.ind && P.cat(r.ind).evidencia_obrigatoria && r.lista.length === 1 ? ' This indicator requires evidence: the milestone cannot be submitted without another file.' : '') + '</p></div></div>',
+      p: '<span class="ps-sp-flex"></span><button type="button" class="ps-btn" data-a="fecharPainel">Cancel</button><button type="button" class="ps-btn err cheio" data-a="fichRemoverSim">Remove file</button>' };
+  };
+  A.fichRemover = function (d) { var p = d.v.split('|'); X.abrePainel('fichRem', { ms: p[0], k: p.slice(1).join('|') }); };
+  A.fichRemoverSim = function () {
+    var a = X.U.painel && X.U.painel.args, m = a ? P.ms(a.ms) : null, r = m ? P.removerFicheiro(m, a.k, u()) : { erro: 'Milestone not found.' };
+    X.U.painel = null;
+    if (r.erro) { R(); return toast(r.erro, 'err'); }
+    toast(r.nome + ' removed. It is in the milestone history.', 'ok'); R();
+  };
   C.evdInc = function (el) { if (el.checked) delete U.evd.fora[el.dataset.id]; else U.evd.fora[el.dataset.id] = 1; };
   C.pacDest = function (el) { U.evd.dest = el.value; };
   A.evdAnexar = function (d) { var m = P.msDoIndicador(d.v), usr = u(); X.escolherFicheiro('', function (f) { P.anexar(P.item(d.v), f.name, usr, P.guardarFicheiro(f)); P.evento(m, 'Evidence attached to ' + P.cat(d.v).nome + ': ' + f.name + '.', usr.nome); P.guardar(); toast('Evidence attached.', 'ok'); R(); }); };

@@ -2105,3 +2105,9 @@ button.ps-est-i:hover{border-color:rgba(255,255,255,.4);background:rgba(255,255,
 .ex-refs{margin-top:10px}
 .ex-refs .ps-tw{max-height:220px;overflow:auto}
 @media (max-width:720px){.ex-dl{grid-template-columns:1fr}}
+
+/* 47. FICHEIROS: QUEM CARREGOU, QUANDO E REMOVER */
+.fc-meta{font-size:11.5px;font-weight:500;color:var(--muted);margin-left:4px;white-space:nowrap}
+.fc-rem:hover{background:var(--err-50);border-color:color-mix(in srgb,var(--err) 30%,#fff);color:var(--err)}
+.fc{flex-wrap:wrap}
+.ps-conf-l b.fr-q{color:var(--text);font-size:13.5px}

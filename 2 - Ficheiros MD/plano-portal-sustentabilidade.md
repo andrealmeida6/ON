@@ -660,6 +660,16 @@ Pedido do André a 11 de novembro de 2026: quando o valor vem do sistema, a evid
 - **Evidência obrigatória:** continua dispensada quando o valor vem do sistema. O registo da extração é a evidência para o auditor.
 - **CSS:** secção 46 de `global.css`.
 
+### Remover evidências e ver quem as carregou e quando
+
+Pedido do André a 11 de novembro de 2026.
+
+- **Quem e quando:** cada ficheiro carregado mostra ao lado quem o carregou e a data e hora (`P.fichHtml(ref, extra, m)`). Aparece na linha do indicador, em Requested files e Other documents, em Evidence and quality, nos documentos gerais ("Uploaded by"), nas Approvals e na página Evidence (coluna Uploaded by, com a data).
+- **Remove:** um botão com o caixote do lixo junto a Open e Download. Só aparece enquanto a milestone está em recolha com a pessoa (`P.podePreencher`). Depois de submetida, já ninguém remove nada, nem nas Approvals.
+- **Confirmação** (`Pn.fichRem`): um pop-up mostra o nome do ficheiro, a que indicador pertence, quem o carregou e quando. Avisa se o indicador exige evidência e esta for a última.
+- **Registo** (`P.removerFicheiro`): a remoção fica no histórico da milestone, com quem removeu e quando, e quem tinha carregado o ficheiro e em que data. O conteúdo é apagado do armazenamento do browser.
+- **CSS:** secção 47 de `global.css`.
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.

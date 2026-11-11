@@ -70,15 +70,26 @@
   /* Nome do ficheiro com Open e Download; sem conteudo guardado, so o nome (ficheiros de demonstracao ou antigos) */
   var ICO_ABRIR = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3h7v7"/><path d="M10 14 21 3"/><path d="M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5"/></svg>';
   var ICO_DESC = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><path d="M12 15V3"/></svg>';
-  P.fichHtml = function (ref, extra) {
-    var nome = ref && (ref.ficheiro || ref.nome) || '';
-    if (!P.temConteudo(ref)) return '<span class="fc fc-so" title="Only the file name was recorded">' + esc(nome) + (extra || '') + '</span>';
+  /* Chave de um ficheiro na milestone (evidencia ou documento), para o remover */
+  P.chaveFich = function (ref) { return ref.id || ref.fid || (ref.ficheiro + '|' + ref.em); };
+  var ICO_X = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M6 6l1 15h10l1-15"/></svg>';
+  /* m: a milestone, para mostrar quem carregou e quando e o botao Remove (so enquanto esta em recolha com a pessoa) */
+  P.fichHtml = function (ref, extra, m) {
+    var nome = ref && (ref.ficheiro || ref.nome) || '', usr = P.sessao ? P.sessao() : null;
+    var meta = ref && ref.por ? '<small class="fc-meta" data-fx-ignorar>' + esc(ref.por) + (ref.em ? ', ' + esc(P.fmtDataHora(ref.em)) : '') + '</small>' : '';
+    var rem = m && usr && P.podePreencher(m, usr) && ref.origem !== 'grid' ? '<button type="button" class="fc-b fc-rem" data-a="fichRemover" data-v="' + esc(m.id + '|' + P.chaveFich(ref)) + '" aria-label="Remove ' + esc(nome) + '" title="Remove">' + ICO_X + '</button>' : '';
+    if (!P.temConteudo(ref)) return '<span class="fc fc-so"><span title="Only the file name was recorded">' + esc(nome) + '</span>' + (extra || '') + meta + rem + '</span>';
     var d = ' data-fich="' + esc(ref.fid) + '" data-fich-n="' + esc(nome) + '"';
     return '<span class="fc"><button type="button" class="fc-n" data-fich-op="abrir"' + d + ' title="Open ' + esc(nome) + '">' + esc(nome) + '</button>' + (extra || '') +
       '<button type="button" class="fc-b" data-fich-op="abrir"' + d + ' aria-label="Open ' + esc(nome) + '" title="Open">' + ICO_ABRIR + '</button>' +
-      '<button type="button" class="fc-b" data-fich-op="desc"' + d + ' aria-label="Download ' + esc(nome) + '" title="Download">' + ICO_DESC + '</button></span>';
+      '<button type="button" class="fc-b" data-fich-op="desc"' + d + ' aria-label="Download ' + esc(nome) + '" title="Download">' + ICO_DESC + '</button>' + rem + meta + '</span>';
   };
-  P.fichLista = function (l) { return (l || []).map(function (x) { return P.fichHtml(x); }).join(''); };
+  P.fichLista = function (l, m) { return (l || []).map(function (x) { return P.fichHtml(x, '', m); }).join(''); };
+  P.apagarConteudo = function (fid) {
+    if (!fid) return;
+    delete memoria[fid];
+    abrirBD().then(function (db) { db.transaction(LOJA, 'readwrite').objectStore(LOJA).delete(chave(fid)); }).catch(function () { /* nada a apagar */ });
+  };
   document.addEventListener('click', function (ev) {
     var b = ev.target.closest && ev.target.closest('[data-fich-op]');
     if (!b) return;
