@@ -686,6 +686,7 @@
     if (tab === 'dados') return barra + '<div id="mpan-dados" role="tabpanel" aria-labelledby="mtab-dados" class="ps-col">' + sepExplorar(m) + '</div>';
     return barra + '<div id="mpan-trabalho" role="tabpanel" aria-labelledby="mtab-trabalho"><div class="ps-grid-side ps-ms-corrida"><div class="ps-col">' + secs.map(function (s) { return '<section id="sec-' + s[0] + '" class="ps-sec ps-col" aria-label="' + e(s[1]) + '">' + s[3] + '</section>'; }).join('') + barraAcao(m, usr, decide) + '</div>' +
       '<div class="ps-col ps-ms-lado"><nav class="ps-card ps-ms-indice" aria-label="On this page">' + cabCartao('On this page') + '<ul>' + indice.map(function (s) { return '<li><button type="button" class="ps-btn liga" data-a="sep" data-v="' + s[0] + '">' + e(s[1]) + (s[2] ? ' <span class="ps-n">' + s[2] + '</span>' : '') + '</button></li>'; }).join('') + '</ul></nav>' +
+      '<button type="button" class="ps-btn ms-matriz-btn" data-a="matrizAbrir">' + svg(I.tabela, 16) + 'Traceability matrix</button>' +
       '<div class="ps-card">' + cabCartao('Details') + '<div class="ps-card-body"><dl class="ps-det"><dt>Company</dt><dd>' + (P.gereTudo(usr) ? '<span class="ps-empr">' + avEmpresa() + '<select id="ms-emp" class="ps-sel" aria-label="Company" data-c="msEmpresa">' + S.ent.map(function (x) { return opt(x.nome, x.nome, m.empresa); }).join('') + '</select></span>' : empHtml(m.empresa)) + '</dd><dt>Departments</dt><dd>' + editorTags(m, usr) + '</dd><dt>Unit</dt><dd>' + e(m.unidade) + '</dd><dt>Current step</dt><dd>' + e(P.concluida(m) ? 'Completed' : P.passoAtual(m).nome) + '</dd><dt>Assigned to</dt><dd>' + editorAtrib(m, usr) + '</dd><dt>Due</dt><dd>' + e(prazoTxt(m)) + '</dd><dt>Indicators</dt><dd>' + m.indicadores.length + '</dd></dl></div></div></div></div></div>';
   };
   /* Barra de acao: fica sempre a vista no fundo do ecra enquanto se trabalha na milestone */
@@ -781,7 +782,7 @@
         : pendente ? '<div class="ps-aviso">Waiting for ' + e(pendente.entidade_externa) + ', due ' + e(P.fmtData(pendente.prazo)) + '.</div>' : '';
       return '<div class="rq2-it on ' + cls + '" id="ind-' + e(id) + '">' + linha + '<div class="rq2-det" id="rqd-' + e(id) + '"><div class="rq2-det-g' + (origem ? '' : ' um') + '">' + defin + origem + '</div>' + just + qual + ajuda + '</div></div>';
     }).join('');
-    var acomp = '<div class="rq2-acomp" role="group" aria-label="Submission"><div class="rq2-prog"><b>' + est.submetidos + ' of ' + est.total + ' submitted</b><span class="rq2-barra" aria-hidden="true"><i style="width:' + (est.total ? Math.round(est.submetidos / est.total * 100) : 0) + '%"></i></span><small>' + (est.faltam ? est.faltam + ' still to submit' + (est.prontos.length ? ', ' + est.prontos.length + ' ready now' : '') : 'All indicators submitted. Submit the task to send it for review.') + '</small></div>' +
+    var acomp = '<div class="rq2-acomp" role="group" aria-label="Submission"><div class="rq2-prog"><b>' + est.submetidos + ' of ' + est.total + ' submitted</b><span class="rq2-barra" aria-hidden="true"><i style="width:' + (est.total ? Math.round(est.submetidos / est.total * 100) : 0) + '%"></i></span><small>' + (P.concluida(m) ? 'Task completed.' : P.passoAtual(m).tipo !== 'recolha' ? 'Task submitted. Now at: ' + e(P.passoAtual(m).nome) + '.' : est.faltam ? est.faltam + ' still to submit' + (pode && est.prontos.length ? ', ' + est.prontos.length + ' ready now' : '') : 'All indicators submitted. Submit the task to send it for review.') + '</small></div>' +
       '<div class="ps-seg" role="group" aria-label="Show">' + [['todos', 'All ' + m.indicadores.length], ['falta', 'To submit ' + est.faltam], ['sub', 'Submitted ' + est.submetidos]].map(function (x) { return '<button type="button" class="' + (fil === x[0] ? 'on' : '') + '" data-a="rqSubFil" data-v="' + x[0] + '">' + e(x[1]) + '</button>'; }).join('') + '</div>' +
       (pode && est.prontos.length ? '<button type="button" class="ps-btn peq pri" data-a="indSubmeterProntos">Submit the ' + est.prontos.length + ' ready</button>' : '') + '</div>';
     var vistaLista = bannerRev(m) + acomp + '<div class="rq2"><div class="rq2-cab"><button type="button" class="ps-btn liga rq2-todos" data-a="rqTodos">' + (todosAbertos ? 'Collapse all' : 'Expand all') + '</button><span>Indicator</span><span class="rq2-dir">' + e(P.rotAnterior(P.chave(m))) + '</span><span class="rq2-dir">Value ' + e(P.rotPeriodo(m)) + '</span><span class="rq2-dir">Change</span><span>Status</span></div>' + (linhas || '<p class="ps-mut ps-small rq2-vazio">' + (fil === 'sub' ? 'Nothing submitted yet.' : 'Nothing left to submit.') + '</p>') + '</div>';
@@ -1192,11 +1193,15 @@
         (a.estado === 'respondido' && (usr.perfil === 'auditor' || usr.perfil === 'admin') ? '<button type="button" class="ps-btn ps-mt" data-a="resolverAud" data-v="' + e(a.id) + '">Mark as resolved</button>' : '') + '</div>';
     }).join('');
   };
+  /* Matriz de rastreabilidade da task: abre num pop-up a partir do botao do painel da direita */
+  var matrizHtml = function (m) {
+    return tabela([{ t: 'Indicator' }, { t: 'Value', dir: 1 }, { t: 'ESRS' }, { t: 'GRI' }, { t: 'Submitted by' }, { t: 'Approved by' }, { t: 'Evidence' }], P.rastreabilidade(m).map(function (r) {
+      return [linkFicha(r.indicador_id) + marcaAmostra(r.indicador_id), r.valor === null ? '-' : e(fmtV(r.indicador_id, r.valor)), e(r.esrs), e(r.gri), e(r.submetido_por || '-'), e(r.aprovado_por || '-'), e(r.evidencias || '-')];
+    }));
+  };
   var sepAuditoria = function (m) {
     var ped = S.aud.filter(function (a) { var x = P.msDoIndicador(a.indicador_id, m.ano); return x && x.id === m.id; });
-    return '<div class="ps-card">' + cabCartao('Traceability matrix', 'doc') + '<div class="ps-card-body">' + tabela([{ t: 'Indicator' }, { t: 'Value', dir: 1 }, { t: 'ESRS' }, { t: 'GRI' }, { t: 'Submitted by' }, { t: 'Approved by' }, { t: 'Evidence' }], P.rastreabilidade(m).map(function (r) {
-      return [linkFicha(r.indicador_id) + marcaAmostra(r.indicador_id), r.valor === null ? '-' : e(fmtV(r.indicador_id, r.valor)), e(r.esrs), e(r.gri), e(r.submetido_por || '-'), e(r.aprovado_por || '-'), e(r.evidencias || '-')];
-    })) + '</div></div><div class="ps-card">' + cabCartao('Requests on this task', 'ativ') + (ped.length ? cartaoPedidos(ped) : vazio('No auditor requests on this task.')) + '</div>';
+    return '<div class="ps-card">' + cabCartao('Requests on this task', 'ativ') + (ped.length ? cartaoPedidos(ped) : vazio('No auditor requests on this task.')) + '</div>';
   };
   var sepConversa = function (m) {
     var usr = u();
@@ -1745,6 +1750,7 @@
   var abrePainel = function (tipo, args) { U.painel = { tipo: tipo, args: args || {} }; U.painelFoco = true; R(); };
   var fechaPainel = function () { if (U.painel && U.painel.tipo === 'marca' && U.marca) { U.marca = null; U.logoEstado = ''; P.aplicarMarca(); } U.painel = null; R(); };
   var Pn = {};
+  Pn.matriz = function () { var m = msAtual(); return { t: 'Traceability matrix', s: m.nome + ': each indicator with its value, ESRS and GRI references, who submitted and approved it, and the evidence', largo: true, b: matrizHtml(m), p: '<span class="ps-sp-flex"></span><button type="button" class="ps-btn" data-a="fecharPainel">Close</button>' }; };
   Pn.devInd = function (a) {
     var c = P.cat(a.id), m = msAtual(), it = P.item(a.id, P.chave(m));
     return { t: 'Return ' + c.nome, s: 'It goes back to ' + (P.atribuido(m) ? P.atribuido(m).nome : 'the unit') + ' to change, the rest of the task is not affected',
@@ -2354,6 +2360,7 @@
       toast(P.cat(d.v).nome + ' approved.' + (resto.length ? ' ' + resto.length + ' more to review.' : ' Nothing else to review here.'), 'ok'); R();
       if (resto.length) irParaIndicador(resto[0]);
     },
+    matrizAbrir: function () { abrePainel('matriz', {}); },
     revDevolver: function (d) { abrePainel('devInd', { id: d.v }); },
     revDevConfirmar: function (d) {
       var m = msAtual(), el = document.getElementById('dev-ind-com'), r = P.devolverIndicador(m, d.v, u(), el ? el.value : '');

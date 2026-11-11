@@ -2302,3 +2302,6 @@ tr.rev-pend>td:first-child{box-shadow:inset 3px 0 0 var(--rev)}
 .ms-dn-l{display:flex;align-items:flex-start;gap:10px;min-width:180px}
 .ms-dn-l>.dn{margin-top:1px}
 .ms-dn-l>.ps-ms-cel{min-width:0}
+
+/* 65. TASK: BOTAO DA MATRIZ DE RASTREABILIDADE NO PAINEL DA DIREITA (abre em pop-up) */
+.ms-matriz-btn{width:100%;justify-content:center}

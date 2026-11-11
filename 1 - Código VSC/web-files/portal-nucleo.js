@@ -754,7 +754,8 @@
      Fica bloqueado para edicao, conta como submetido nos calculos dos outputs, e a task mostra
      sempre quantos faltam. A task avanca no workflow com "Submit task", quando estiver tudo. */
   P.faltasIndicador = function (m, id) { return P.faltasSubmissao(m).filter(function (f) { return f.id === id; }); };
-  P.indSubmetido = function (m, id) { var it = P.item(id, P.chave(m)); return !!(it && it.submetido); };
+  /* Submetido: o indicador foi submetido sozinho, ou a task ja saiu da recolha (todos foram com ela) */
+  P.indSubmetido = function (m, id) { var it = P.item(id, P.chave(m)), pa = P.passoAtual(m); if (P.concluida(m) || (pa && pa.tipo !== 'recolha')) return true; return !!(it && it.submetido); };
   P.estadoSubmissao = function (m) {
     var ids = m.indicadores.filter(function (id) { return !P.eOutput(P.cat(id)); });
     var sub = ids.filter(function (id) { return P.indSubmetido(m, id); });

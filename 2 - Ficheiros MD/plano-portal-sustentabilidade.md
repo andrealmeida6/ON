@@ -1083,6 +1083,13 @@ Pedido do André a 11 de novembro de 2026.
   - O Status é a ação da pessoa, com o Overdue ao lado.
   - Cada KPI abre a task já nesse indicador.
 
+### Matriz de rastreabilidade em pop-up
+
+Pedido do André a 11 de novembro de 2026.
+
+- A **Traceability matrix** já não ocupa um cartão na secção Audit da task. No painel da direita há um botão **Traceability matrix**, entre "On this page" e "Details", que abre a matriz num pop-up largo (`Pn.matriz`, `matrizHtml`). A secção Audit fica só com "Requests on this task".
+- **Correção:** uma task que já saiu da recolha conta todos os indicadores como submetidos ("10 of 10 submitted") e diz em que passo está. Antes dizia "0 of 10 submitted, 10 ready now".
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.
