@@ -77,6 +77,7 @@
         if (mapa[r.chave]) { P.S[mapa[r.chave]] = r.valor; mudou = true; }
       });
       maxHora(rows);
+      if (mudou && P.migrarDados) P.migrarDados();
       if (mudou && P.render) { P.render(); var quem = rows[rows.length - 1].atualizado_por; if (quem && P.ext && P.ext.toast) P.ext.toast('Updated with changes from ' + quem + '.', 'ok'); }
     }).catch(function () { /* tenta outra vez na proxima volta */ });
   };

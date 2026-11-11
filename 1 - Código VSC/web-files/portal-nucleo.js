@@ -522,11 +522,10 @@
     guardar();
   };
   var semearAmbiente = function () { if (TESTE) semearTeste(); else semear(); };
-  P.carregar = function () {
-    if (P.online()) { estadoVazio(); return; }
-    if (!ler(CHAVES.ms) || ler('esg_versao') !== VERSAO_DADOS) { P.cat = catBoot; semearAmbiente(); escrever('esg_versao', VERSAO_DADOS); return; }
-    Object.keys(CHAVES).forEach(function (n) { S[n] = ler(CHAVES[n]); });
-    /* A validacao automatica saiu do workflow de base: sai do base gravado e das tasks que seguem o base */
+  /* Acertos aos dados gravados antes das mudancas do workflow. Corre ao carregar e quando chegam alteracoes
+     de outras pessoas no ambiente de testes partilhado (que substituem o estado sem passar pelo carregar). */
+  var WF_NOVO_DESDE = '2026-11-11T12:39:33Z';
+  P.migrarDados = function () {
     /* Workflow de base novo (area head e equipa de sustentabilidade). O base gravado que era o antigo passa ao novo,
        e as tasks no base perdem a validacao automatica; as que ainda estao na recolha passam ao workflow novo. */
     var NOMES_ANTIGOS = 'Recolha e submissão dos dados|Validação automática|Revisão pela equipa de sustentabilidade|Aprovação final|Publicação nos quadros do relatório';
@@ -537,6 +536,19 @@
       if (m.passo_atual === 0 && !m.passos.some(function (p) { return p.tipo === 'area'; })) m.passos = passosDe(WF_BASE());
     });
     (S.deps || []).forEach(function (d) { if (d.chefe === undefined) { var x = (S.users || []).filter(function (u) { return u.perfil === 'resp' && P.temUnidade(u, d.nome); })[0]; d.chefe = x ? x.login : ''; } });
+    /* Indicadores submetidos um a um antes de existir o passo do responsavel de area: iam direto para a
+       sustentabilidade, por isso esse passo fica dado como passado */
+    Object.keys(S.items || {}).forEach(function (k) {
+      var it = S.items[k];
+      if (it && it.submetido && !it.aprovadoArea && !it.revisto && String(it.submetido.em) < WF_NOVO_DESDE) it.aprovadoArea = { em: it.submetido.em, por: 'System (submitted before the area head step)', auto: true };
+    });
+  };
+  P.carregar = function () {
+    if (P.online()) { estadoVazio(); return; }
+    if (!ler(CHAVES.ms) || ler('esg_versao') !== VERSAO_DADOS) { P.cat = catBoot; semearAmbiente(); escrever('esg_versao', VERSAO_DADOS); return; }
+    Object.keys(CHAVES).forEach(function (n) { S[n] = ler(CHAVES[n]); });
+    /* A validacao automatica saiu do workflow de base: sai do base gravado e das tasks que seguem o base */
+    P.migrarDados();
     /* Os pedidos de dados aceitam so Excel, tambem nos dados ja gravados neste navegador */
     (S.tipos || []).forEach(function (t) { t.formatos = ['xlsx']; });
     /* Ligacoes gravadas antes de terem estado: passam a ter o estado de base */
@@ -795,7 +807,7 @@
      Um indicador submetido antes da task segue logo para a equipa de sustentabilidade, que o pode aprovar
      ou devolver sem esperar pelo resto. Quem o submeteu nao o pode rever (segregacao de funcoes). */
   /* Etapa de um indicador submetido antes da task: 'area' (responsavel de area), 'esg' (equipa de sustentabilidade) ou '' */
-  P.etapaInd = function (m, id) { var it = P.item(id, P.chave(m)); if (!it || !it.submetido || it.revisto) return ''; return it.aprovadoArea ? 'esg' : 'area'; };
+  P.etapaInd = function (m, id) { var it = P.item(id, P.chave(m)), pa = P.passoAtual(m); if (!it || !it.submetido || it.revisto || P.concluida(m) || !pa || pa.tipo !== 'recolha') return ''; return it.aprovadoArea ? 'esg' : 'area'; };
   P.podeReverInd = function (m, id, u) {
     var it = P.item(id, P.chave(m)), et = P.etapaInd(m, id);
     if (!u || !et || P.concluida(m) || it.submetido.por === u.nome) return false;

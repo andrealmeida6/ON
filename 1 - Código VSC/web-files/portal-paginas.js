@@ -739,7 +739,9 @@
     /* Submeter indicadores um a um: o filtro mostra o que falta submeter, nada se perde de vista */
     var est = P.estadoSubmissao(m), fil = (U.rqSub || {})[m.id] || 'todos';
     var linhas = m.indicadores.filter(function (id) { var sb = P.indSubmetido(m, id); return fil === 'todos' || (fil === 'sub' ? sb : !sb && !P.eOutput(P.cat(id))); }).map(function (id) {
-      var c = P.cat(id), it = P.item(id, P.chave(m)), v = P.validarItem(it), ant = P.valorAnterior(id, P.chave(m)), aberto = rqAberto(m, id), sub = it.submetido, saida = P.eOutput(c);
+      /* O estado submetido de cada indicador so conta na recolha; depois, o indicador segue o passo da task */
+      var emRec = !P.concluida(m) && P.passoAtual(m) && P.passoAtual(m).tipo === 'recolha';
+      var c = P.cat(id), it = P.item(id, P.chave(m)), v = P.validarItem(it), ant = P.valorAnterior(id, P.chave(m)), aberto = rqAberto(m, id), sub = emRec && it.submetido, saida = P.eOutput(c);
       var calc = calcs.filter(function (r) { return r.id === id; })[0], emCalc = !!(calc && calc.x && calc.valor !== null && it.daFonte);
       var txtBruto = it.rascunho || (it.valor === null ? '' : String(it.valor).replace('.', ','));
       var cls = v.erros.length ? 'erro' : v.alertas.length ? 'alerta' : '';

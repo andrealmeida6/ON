@@ -1090,6 +1090,15 @@ Pedido do André a 11 de novembro de 2026.
 - A **Traceability matrix** já não ocupa um cartão na secção Audit da task. No painel da direita há um botão **Traceability matrix**, entre "On this page" e "Details", que abre a matriz num pop-up largo (`Pn.matriz`, `matrizHtml`). A secção Audit fica só com "Requests on this task".
 - **Correção:** uma task que já saiu da recolha conta todos os indicadores como submetidos ("10 of 10 submitted") e diz em que passo está. Antes dizia "0 of 10 submitted, 10 ready now".
 
+### Correção: tasks com a sustentabilidade apareciam com o responsável de área
+
+Reportado pelo André a 11 de novembro de 2026, no ambiente de testes.
+
+- **Causa:** na lista da task, um indicador marcado como submetido mostrava a etapa da revisão por indicador ("With the area head" ou "With sustainability"), mesmo depois de a task inteira ter avançado. Uma task no passo da sustentabilidade mostrava, por isso, "With the area head" em todas as linhas.
+- **Correção:** a etapa por indicador (`P.etapaInd`) e o estado "submitted" de cada linha só contam enquanto a task está na recolha. Depois, cada indicador segue o passo da task.
+- **Dados antigos** (`P.migrarDados`): os indicadores submetidos um a um antes de existir o passo do responsável de área (antes de 11/11/2026 12:39 UTC) ficam com esse passo dado como passado, porque já estavam com a sustentabilidade.
+  - Estes acertos e os do workflow passaram para `P.migrarDados`. Correm ao carregar e também quando o ambiente de testes partilhado recebe alterações de outras pessoas.
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.
