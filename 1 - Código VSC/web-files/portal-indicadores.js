@@ -80,7 +80,7 @@
     { k: 'natureza', g: 'car', t: 'Input / Output', w: 13, d: 'Input: data someone has to enter. Output: calculated by the platform from the inputs, with the codes in "Calculation (KPI codes)".', vals: ['Input', 'Output'], al: ['base or derived', 'input output', 'input/output'],
       get: function (c) { return c.tipo === 'derivado' ? 'Output' : 'Input'; }, res: lista([['input', 'Input'], ['output', 'Output'], ['base', 'Input'], ['derived', 'Output'], ['derivado', 'Output']], 'Input / Output'), set: function (c, v) { c.tipo = v === 'Output' ? 'derivado' : 'base'; } },
     { k: 'calc', g: 'car', t: 'Calculation (KPI codes)', w: 26, d: 'For outputs: the calculation with the KPI codes, for example A01 + A02 or (E01 - E02) / A01 * 100. It runs by itself once all the inputs of the period are submitted.', al: ['calculation kpi codes', 'calculation codes', 'kpi formula'],
-      get: function (c) { if (c.calc_codigos) return c.calc_codigos; var sg = c.tipo === 'derivado' && P.sugerirCalc ? P.sugerirCalc(c.id) : null; return sg ? sg.calc : ''; }, res: function (v, c) { var s = String(v || '').trim(); var er = P.validarCalc(s, c && c.id, idsImport); return er ? { erro: er } : { val: s.toUpperCase().replace(/\s+/g, ' ') }; }, set: function (c, v) { c.calc_codigos = v || ''; if (v) c.tipo = 'derivado'; } },
+      get: function (c) { if (c.calc_codigos) return c.calc_codigos; var sg = c.tipo === 'derivado' && P.sugerirCalc ? P.sugerirCalc(c.id) : null; return sg ? sg.calc : ''; }, res: function (v, c) { var s = String(v || '').trim(); var er = P.validarCalc(s, c && c.id, idsImport); return er ? { erro: er } : { val: P.textoCalc(P.tokensCalc(s)) }; }, set: function (c, v) { c.calc_codigos = v || ''; if (v) c.tipo = 'derivado'; } },
     { k: 'formula', g: 'car', t: 'Calculation methodology', w: 44, longo: true, d: 'Calculation methodology, formula in words or key assumptions.', al: ['formula', 'calculation method', 'calculation'],
       get: function (c) { return c.formula || ''; }, res: okv, set: function (c, v) { c.formula = v || null; } },
     { k: 'freq', g: 'car', t: 'Reporting Frequency', w: 14, d: 'How often the indicator is reported.', vals: FREQ.map(function (f) { return f[1]; }), al: ['frequency', 'periodicidade'],
@@ -340,6 +340,75 @@
   var area = function (k, d) { return '<textarea id="ke-' + k + '" class="ps-ta" rows="3" data-c="indCampo" data-f="' + k + '">' + e(d[k] || '') + '</textarea>'; };
   var sel = function (k, d, ops, vazioTxt) { return '<select id="ke-' + k + '" class="ps-sel" data-c="indCampo" data-f="' + k + '">' + (vazioTxt === undefined ? '' : opt('', vazioTxt, d[k])) + ops.map(function (o) { return opt(o, o, d[k]); }).join('') + '</select>'; };
   var cmp = function (k, rot, html, ajuda) { return '<div class="ps-campo"><label class="ps-lab" for="ke-' + k + '">' + e(rot) + '</label>' + html + (ajuda ? '<small class="ps-mut">' + e(ajuda) + '</small>' : '') + '</div>'; };
+  /* --- Editor do calculo: a formula em tags ---------------------------------------------------
+     Cada indicador e uma tag (verde: input, azul: output, amarela: correspondencia sugerida a confirmar),
+     os fatores de emissao sao tags roxas e os inputs que ainda nao existem como indicador sao tags vermelhas,
+     com o botao para os criar. O texto continua editavel em "Edit as text". */
+  var OPS_TXT = { '*': '×', '/': '÷', '-': '−', '+': '+', '(': '(', ')': ')' };
+  var editorCalc = function (d) {
+    var E = U.ind.ed, id = E.id || d.id, toks = P.tokensCalc(d.calc), sug = d.calcSug || [], er = d.calc ? P.validarCalc(d.calc, id) : null;
+    var tags = toks.map(function (k, i) {
+      var x = '<button type="button" class="fx-x" data-a="fxTirar" data-v="' + i + '" aria-label="Remove">×</button>';
+      if (k.t === 'kpi') {
+        var c = P.cat(k.v), out = c && c.tipo === 'derivado', sg = sug.indexOf(k.v) > -1;
+        return '<span class="fx-tag ' + (!c ? 'mau' : sg ? 'sug' : out ? 'out' : 'in') + '" role="listitem" data-tip="' + e(!c ? 'Unknown KPI code' : (out ? 'Output' : 'Input') + ': ' + c.nome + ' (' + c.unidade_medida + ')' + (sg ? '. Suggested match: check it is the right indicator.' : '')) + '"><b>' + e(k.v) + '</b><small>' + e(c ? c.nome : 'unknown') + '</small>' + x + '</span>';
+      }
+      if (k.t === 'fator') { var f = (S.fatores || []).filter(function (y) { return y.id === k.v; })[0]; return '<span class="fx-tag fe" role="listitem" data-tip="Emission factor from the library"><b>Factor</b><small>' + e(f ? f.nome + ', ' + f.fator + ' ' + f.unidade_fator : k.v) + '</small>' + x + '</span>'; }
+      if (k.t === 'falta') return '<span class="fx-tag falta" role="listitem"><b>Missing input</b><small>' + e(k.v) + '</small><button type="button" class="ps-btn liga fx-criar" data-a="fxCriar" data-v="' + i + '">Create input KPI</button>' + x + '</span>';
+      if (k.t === 'op') return '<span class="fx-op" role="listitem">' + e(OPS_TXT[k.v] || k.v) + '<button type="button" class="fx-x" data-a="fxTirar" data-v="' + i + '" aria-label="Remove ' + e(k.v) + '">×</button></span>';
+      return '<span class="fx-num" role="listitem">' + e(k.v) + '<button type="button" class="fx-x" data-a="fxTirar" data-v="' + i + '" aria-label="Remove">×</button></span>';
+    }).join('');
+    var outros = S.cat.filter(function (c) { return c.id !== id; }), ins = outros.filter(function (c) { return c.tipo !== 'derivado'; }), outs = outros.filter(function (c) { return c.tipo === 'derivado'; });
+    var faltam = P.faltasCalc(d.calc), cods = P.codigosCalc(d.calc);
+    var estado = !d.calc ? '<span class="ps-mut">No calculation: this indicator is typed in (input).</span>'
+      : er ? '<span class="fx-est err">' + e(er) + '</span>'
+      : faltam.length ? '<span class="fx-est warn">' + faltam.length + ' input(s) do not exist as indicators yet, so it does not run. Create them with "Create input KPI" or pick an existing indicator instead.</span>' + (faltam.length > 1 ? ' <button type="button" class="ps-btn liga" data-a="fxCriarTodos">Create all ' + faltam.length + ' inputs</button>' : '')
+      : '<span class="fx-est ok">Complete. It runs by itself once ' + cods.join(', ') + ' are submitted.</span>';
+    return '<div class="ki-full fx"><div class="ps-sp-b"><span class="ps-lab" id="fx-l">Calculation (KPI codes)</span><button type="button" class="ps-btn liga" data-a="indCalcSug">Fill from the methodology</button></div>' +
+      (d.calcAuto ? '<div class="ps-aviso info ps-small">Filled in automatically from ' + e(d.calcAuto) + '. ' + ((d.calcSug || []).length ? 'Check the yellow tags (suggested matches) and save.' : 'Check it and save.') + '</div>' : '') +
+      '<div class="fx-linha" role="list" aria-labelledby="fx-l">' + (tags || '<span class="ps-mut ps-small">Add indicators and operators below.</span>') + '</div>' +
+      '<div class="fx-barra"><label class="ps-sr" for="fx-add">Add an indicator</label><select id="fx-add" class="ps-sel" data-pesq data-c="fxAdd"><option value="">+ Indicator…</option><optgroup label="Inputs">' + ins.map(function (c) { return '<option value="' + e(c.id) + '">' + e(c.id + '  ' + c.nome) + '</option>'; }).join('') + '</optgroup><optgroup label="Outputs">' + outs.map(function (c) { return '<option value="' + e(c.id) + '">' + e(c.id + '  ' + c.nome) + '</option>'; }).join('') + '</optgroup>' +
+        ((S.fatores || []).length ? '<optgroup label="Emission factors">' + S.fatores.map(function (f) { return '<option value="fator.' + e(f.id) + '">' + e('Factor: ' + f.nome) + '</option>'; }).join('') + '</optgroup>' : '') + '</select>' +
+        '<span class="fx-ops" role="group" aria-label="Operators">' + ['+', '-', '*', '/', '(', ')'].map(function (o) { return '<button type="button" class="ps-btn peq" data-a="fxOp" data-v="' + e(o) + '" aria-label="Add ' + e(o) + '">' + e(OPS_TXT[o]) + '</button>'; }).join('') + '</span>' +
+        '<label class="ps-sr" for="fx-n">Number</label><input id="fx-n" class="ps-in fx-n" inputmode="decimal" placeholder="Number" autocomplete="off"><button type="button" class="ps-btn peq" data-a="fxNum">Add number</button></div>' +
+      '<div class="fx-est-l">' + estado + '</div>' +
+      '<details class="fx-txt"><summary>Edit as text</summary>' + inp('calc', d, ' placeholder="For example (A01 - A02) / A01 * 100" autocomplete="off"') + '<small class="ps-mut">KPI codes, fator.gas for emission factors, [name] for an input that does not exist yet, numbers and + - * / ( ).</small></details></div>';
+  };
+  var fxSet = function (toks) { var d = U.ind.ed.d; d.calc = P.textoCalc(toks); d.calcAuto = ''; if (d.calc) d.natureza = 'Output'; R(); };
+  A.fxTirar = function (x) { var d = U.ind.ed.d, t = P.tokensCalc(d.calc), k = t[+x.v]; t.splice(+x.v, 1); if (k && d.calcSug) d.calcSug = d.calcSug.filter(function (y) { return y !== k.v; }); fxSet(t); };
+  A.fxOp = function (x) { var t = P.tokensCalc(U.ind.ed.d.calc); t.push({ t: 'op', v: x.v }); fxSet(t); };
+  A.fxNum = function () { var el = document.getElementById('fx-n'), n = el ? P.lerNumero(el.value) : null; if (n === null) return toast('Write a number first.', 'err'); var t = P.tokensCalc(U.ind.ed.d.calc); t.push({ t: 'num', v: String(n) }); fxSet(t); };
+  C.fxAdd = function (el) { if (!el.value) return; var t = P.tokensCalc(U.ind.ed.d.calc); t.push(/^fator\./.test(el.value) ? { t: 'fator', v: el.value.slice(6) } : { t: 'kpi', v: el.value }); fxSet(t); };
+  /* Cria um input em falta como indicador: proximo codigo livre com a letra do output, a unidade do dado de origem
+     quando se conhece, o departamento, a frequencia e as empresas do output */
+  var criarInput = function (rot, d, usr) {
+    var ja = S.cat.filter(function (c) { return semAcI(c.nome) === semAcI(rot); })[0];
+    if (ja) return ja.id;
+    var pref = String(U.ind.ed.id || d.id || 'X').replace(/\d.*$/, '') || 'X', n = 1, id;
+    do { id = pref + String(n).padStart(2, '0'); n++; } while (P.cat(id));
+    var info = P.dadoPorNome ? P.dadoPorNome(rot) : null, base = P.cat(U.ind.ed.id || d.id);
+    var c = novoCat(id); S.cat.push(c); atr(c.id);
+    c.nome = rot; c.unidade_medida = info ? info.un : (base ? base.unidade_medida : ''); c.tipo = 'base';
+    c.unidade_reporte = d.dep || (base && P.donoIndicador(base.id)) || P.UNIDADES[0];
+    if (base) { c.periodicidade = base.periodicidade; if (base.empresas) c.empresas = base.empresas.slice(); if (base.reporta) c.reporta = base.reporta; c.tema = base.tema; c.esrs = base.esrs; }
+    if (info) { reg(c.id).fonte = info.campo; c.agregacao = info.agreg; }
+    P.eventoGlobal('Indicator ' + id + ' ' + rot + ': created as an input of the calculation of ' + (U.ind.ed.id || d.id) + '.', usr.nome, 'Creation');
+    return id;
+  };
+  var semAcI = function (t) { return String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim(); };
+  A.fxCriar = function (x) {
+    if (!P.gereTudo(u())) return toast('No permission.', 'err');
+    var d = U.ind.ed.d, t = P.tokensCalc(d.calc), k = t[+x.v];
+    if (!k || k.t !== 'falta') return;
+    var id = criarInput(k.v, d, u()); t[+x.v] = { t: 'kpi', v: id };
+    P.guardar(); toast(id + ' ' + k.v + ' created as an input indicator. Set its responsible in its own panel.', 'ok'); fxSet(t);
+  };
+  A.fxCriarTodos = function () {
+    if (!P.gereTudo(u())) return toast('No permission.', 'err');
+    var d = U.ind.ed.d, t = P.tokensCalc(d.calc), novos = [];
+    t = t.map(function (k) { if (k.t !== 'falta') return k; var id = criarInput(k.v, d, u()); if (novos.indexOf(id) < 0) novos.push(id); return { t: 'kpi', v: id }; });
+    P.guardar(); toast(novos.length + ' input indicator(s) created: ' + novos.join(', ') + '.', 'ok'); fxSet(t);
+  };
   var secao = function (g, corpo, ajuda) { var x = GRUPOS.filter(function (y) { return y[0] === g; })[0]; return '<section class="ki-sec" style="--gc:#' + x[2] + '"><h3>' + e(x[1]) + (ajuda ? '<small>' + e(ajuda) + '</small>' : '') + '</h3><div class="ki-g">' + corpo + '</div></section>'; };
   /* Companies, no topo do painel: que empresas o indicador abrange e, em cada uma, o departamento e a pessoa que reportam */
   var secaoEmpresas = function (d) {
@@ -398,7 +467,7 @@
         cmp('valida', 'Validator', sel('valida', d, pessoas('valida').map(function (x) { return x.nome; }), 'Not set'), 'Validates at the end.'), 'Who reviews and validates') +
       secao('car', cmp('unidade', 'Unit *', inp('unidade', d), 'For example m³, MWh, %, n.º') + cmp('casas', 'Decimals', inp('casas', d, ' inputmode="numeric"')) +
         cmp('freq', 'Reporting frequency *', sel('freq', d, freqs)) + cmp('recolha', 'Data collection frequency', sel('recolha', d, campoK.recolha.vals, 'Same as reporting')) +
-        cmp('agreg', 'Aggregation', sel('agreg', d, AGREG.map(function (f) { return f[1]; })), 'How companies and periods are combined.') + cmp('natureza', 'Input / Output', sel('natureza', d, ['Input', 'Output']), 'Output: calculated from other indicators.') + cmp('calc', 'Calculation (KPI codes)', inp('calc', d, ' placeholder="For example A01 + A02" autocomplete="off"') + '<button type="button" class="ps-btn liga ke-eu" data-a="indCalcSug">Fill from the methodology</button>', 'Runs by itself once the inputs are submitted.') +
+        cmp('agreg', 'Aggregation', sel('agreg', d, AGREG.map(function (f) { return f[1]; })), 'How companies and periods are combined.') + cmp('natureza', 'Input / Output', sel('natureza', d, ['Input', 'Output']), 'Output: calculated from other indicators.') + editorCalc(d) +
         cmp('div_tipo', 'Disclosure type', sel('div_tipo', d, ['Quantitative', 'Qualitative'])) + cmp('tipo_dado', 'Data type', sel('tipo_dado', d, campoK.tipo_dado.vals.indexOf(d.tipo_dado) < 0 && d.tipo_dado ? campoK.tipo_dado.vals.concat([d.tipo_dado]) : campoK.tipo_dado.vals)) +
         '<div class="ki-full">' + cmp('formula', 'Calculation methodology', area('formula', d), 'Methodology in words or key assumptions.') + '</div>') +
       secao('esrs', cmp('esrs', 'ESRS standard', sel('esrs', d, (S.mat || []).map(function (x) { return x.norma; }), 'Entity-specific'), d.esrs_tema || '') + cmp('dr', 'ESRS DR', inp('dr', d), 'Disclosure Requirement, for example E3-4.') +
@@ -412,7 +481,7 @@
     return { t: E.novo ? 'New indicator' : d.nome || E.id, s: E.novo ? 'Define what it is, who reports it and which companies it covers' : E.id + ', ' + (d.dr || 'no ESRS') + ', ' + d.freq, largo: true, cls: 'alto ki-pan', b: corpo,
       p: (E.novo ? '' : '<button type="button" class="ps-btn" data-a="indEnviar1" data-v="' + e(E.id) + '">' + svg(ICO.enviar, 14) + 'Send task</button>') + '<span class="ps-sp-flex"></span><button type="button" class="ps-btn" data-a="fecharPainel">Cancel</button><button type="button" class="ps-btn pri" data-a="indGuardar">' + (E.novo ? 'Create indicator' : 'Save changes') + '</button>' };
   };
-  A.indEditar = function (d) { var c = P.cat(d.v); if (!c) return; var dd = lerInd(c); dd.respEmp = respEmpDe(c, dd); U.ind.ed = { id: c.id, novo: false, d: dd, erros: [] }; X.abrePainel('indEd'); };
+  A.indEditar = function (d) { var c = P.cat(d.v); if (!c) return; var dd = lerInd(c); dd.respEmp = respEmpDe(c, dd); if (!c.calc_codigos && dd.calc && P.sugerirCalc) { var sg0 = P.sugerirCalc(c.id); if (sg0) { dd.calcSug = sg0.sugeridos || []; dd.calcAuto = sg0.fonte; } } U.ind.ed = { id: c.id, novo: false, d: dd, erros: [] }; X.abrePainel('indEd'); };
   A.indNovo = function () {
     var c = novoCat(''), d = lerInd(c);
     d.dep = U.ind.dep || ''; d.resp = GRUPO_TXT; d.reve = ''; d.valida = (pessoas('valida')[0] || {}).nome || ''; d.reporta = (S.ent.filter(function (x) { return x.id === U.ind.emp; })[0] || S.ent[0] || {}).nome || ''; d.freq = 'Annual';
@@ -789,7 +858,8 @@
   A.indCalcSug = function () {
     var d = U.ind.ed.d, sg = P.sugerirCalc ? P.sugerirCalc(U.ind.ed.id || d.id, d.formula) : null;
     if (!sg) return toast('The methodology does not name the indicators clearly enough. Write the calculation with the KPI codes.', 'err');
-    d.calc = sg.calc; d.natureza = 'Output'; toast('Calculation filled in from ' + sg.fonte + ': ' + sg.calc, 'ok'); R();
+    d.calc = sg.calc; d.natureza = 'Output'; d.calcSug = sg.sugeridos || []; d.calcAuto = sg.fonte;
+    toast('Calculation filled in from ' + sg.fonte + (sg.faltam && sg.faltam.length ? '. ' + sg.faltam.length + ' input(s) do not exist yet as indicators.' : '.'), 'ok'); R();
   };
   A.indImportar = function () { U.ind.imp = { rel: null, criar: true }; X.abrePainel('indImp'); };
   C.indImpCriar = function (el) { U.ind.imp.criar = el.checked; };

@@ -611,19 +611,37 @@
   /* --- Outputs: indicadores calculados pelos codigos de outros (ex.: A01 + A02) -----------
      Input: dado que alguem tem de colocar. Output: calculado pela plataforma a partir dos inputs,
      logo que todos os inputs desse periodo estao submetidos. */
-  var RE_COD = /\b[A-Z]{1,4}\d{1,3}[A-Z]?\b/g;
-  P.codigosCalc = function (txt) { var l = String(txt || '').toUpperCase().match(RE_COD) || []; return l.filter(function (x, i) { return l.indexOf(x) === i; }); };
-  /* Valida a expressao: so codigos, numeros, + - * / ( ) e espacos; codigos conhecidos e sem se usar a si propria */
+  /* Linguagem do calculo: codigos de KPI (A01), fatores de emissao da biblioteca (fator.gas),
+     inputs que ainda nao existem como KPI ([Perdas reais]), numeros e + - * / ( ). */
+  var RE_TOK = /\[[^\]]*\]|fator\.[A-Za-z0-9_]+|[A-Za-z]{1,4}\d{1,3}[A-Za-z]?(?![A-Za-z0-9])|\d+(?:[.,]\d+)?|[-+*/()]|\s+|[^\s]/g;
+  P.tokensCalc = function (txt) {
+    return (String(txt || '').match(RE_TOK) || []).filter(function (t) { return !/^\s+$/.test(t); }).map(function (t) {
+      if (t.charAt(0) === '[') return { t: 'falta', v: t.slice(1, -1).trim() };
+      if (/^fator\./i.test(t)) return { t: 'fator', v: t.slice(6).toLowerCase() };
+      if (/^[A-Za-z]{1,4}\d/.test(t)) return { t: 'kpi', v: t.toUpperCase() };
+      if (/^\d/.test(t)) return { t: 'num', v: t.replace(',', '.') };
+      if (/^[-+*/()]$/.test(t)) return { t: 'op', v: t };
+      return { t: 'mau', v: t };
+    });
+  };
+  P.textoCalc = function (toks) { return toks.map(function (k) { return k.t === 'falta' ? '[' + k.v + ']' : k.t === 'fator' ? 'fator.' + k.v : k.v; }).join(' ').replace(/\( /g, '(').replace(/ \)/g, ')'); };
+  P.codigosCalc = function (txt) { var l = P.tokensCalc(txt).filter(function (k) { return k.t === 'kpi'; }).map(function (k) { return k.v; }); return l.filter(function (x, i) { return l.indexOf(x) === i; }); };
+  P.faltasCalc = function (txt) { return P.tokensCalc(txt).filter(function (k) { return k.t === 'falta'; }).map(function (k) { return k.v; }); };
+  var fatorDe = function (id) { var f = (S.fatores || []).filter(function (x) { return x.id === id; })[0]; return f ? Number(f.fator) : null; };
+  /* Valida a expressao; os inputs em falta ([..]) sao aceites mas o calculo so corre quando ja nao houver nenhum */
   P.validarCalc = function (txt, idProprio, idsExtra) {
     var s = String(txt || '').trim();
     if (!s) return null;
-    if (/[^A-Za-z0-9.,+\-*/()\s]/.test(s)) return 'Use only KPI codes, numbers and + - * / ( ).';
+    var toks = P.tokensCalc(s), mau = toks.filter(function (k) { return k.t === 'mau'; });
+    if (mau.length) return 'Use only KPI codes, emission factors (fator.gas), [missing inputs], numbers and + - * / ( ). Not understood: ' + mau.map(function (k) { return k.v; }).join(' ') + '.';
     var cods = P.codigosCalc(s);
-    if (!cods.length) return 'The calculation needs at least one KPI code, for example A01 + A02.';
+    if (!cods.length && !P.faltasCalc(s).length) return 'The calculation needs at least one KPI code, for example A01 + A02.';
     if (idProprio && cods.indexOf(String(idProprio).toUpperCase()) > -1) return 'An indicator cannot use itself in its calculation.';
     var mal = cods.filter(function (k) { return !P.cat(k) && (!idsExtra || idsExtra.indexOf(k) < 0); });
     if (mal.length) return 'Unknown KPI code(s) in the calculation: ' + mal.join(', ') + '.';
-    var teste = s.toUpperCase().replace(RE_COD, '1').replace(/,/g, '.');
+    var fmal = toks.filter(function (k) { return k.t === 'fator' && fatorDe(k.v) === null; });
+    if (fmal.length) return 'Unknown emission factor: ' + fmal[0].v + '. See Calculations, emission factor library.';
+    var teste = toks.map(function (k) { return k.t === 'op' ? k.v : k.t === 'num' ? k.v : '1'; }).join(' ');
     try { var r = Function('"use strict";return (' + teste + ');')(); if (typeof r !== 'number') throw 0; } catch (x) { return 'The calculation is not a valid expression: ' + s + '.'; }
     return null;
   };
@@ -633,6 +651,7 @@
     var it = S.items[ch + ':' + id];
     if (!it || it.valor === null) return null;
     if (P.eOutput(P.cat(id))) return it.valor;
+    if (it.submetido) return it.valor;
     var m = it.milestone_id ? P.ms(it.milestone_id) : null;
     if (m && !P.concluida(m) && P.passoAtual(m) && P.passoAtual(m).tipo === 'recolha') return null;
     return it.valor;
@@ -644,11 +663,12 @@
       var mudou = 0;
       S.cat.forEach(function (c) {
         if (!P.eOutput(c)) return;
+        if (P.faltasCalc(c.calc_codigos).length) return;
         var cods = P.codigosCalc(c.calc_codigos), vals = {}, falta = false;
         cods.forEach(function (k) { var v = inputSubmetido(k, ch); if (v === null) falta = true; vals[k] = v; });
         var it = S.items[ch + ':' + c.id];
         if (falta) return;
-        var expr = String(c.calc_codigos).toUpperCase().replace(RE_COD, function (k) { return '(' + vals[k] + ')'; }).replace(/,/g, '.'), r;
+        var expr = P.tokensCalc(c.calc_codigos).map(function (k) { return k.t === 'kpi' ? '(' + vals[k.v] + ')' : k.t === 'fator' ? '(' + fatorDe(k.v) + ')' : k.v; }).join(' '), r;
         try { r = Function('"use strict";return (' + expr + ');')(); } catch (x) { r = null; }
         if (typeof r !== 'number' || !isFinite(r)) return;
         r = Number(r.toFixed(c.casas_decimais === undefined ? 2 : c.casas_decimais));

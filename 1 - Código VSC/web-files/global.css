@@ -2206,3 +2206,33 @@ button.ps-est-i:hover{border-color:rgba(255,255,255,.4);background:rgba(255,255,
 .ps-pq-g{padding:8px 10px 3px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted)}
 .ps-pq-vazio{padding:10px;font-size:13px;color:var(--muted)}
 .ke-eu{font-size:12px;padding:0}
+
+/* 57. CALCULO EM TAGS (Calculation (KPI codes) no painel do indicador) */
+.fx{display:flex;flex-direction:column;gap:8px}
+.fx-linha{display:flex;flex-wrap:wrap;align-items:center;gap:6px;min-height:46px;padding:8px;border:1px solid var(--line);border-radius:var(--r);background:var(--bg)}
+.fx-tag{display:inline-flex;align-items:center;gap:6px;padding:4px 6px 4px 9px;border-radius:999px;border:1px solid;font-size:12.5px;max-width:100%}
+.fx-tag b{font-family:var(--mono);font-size:12px}
+.fx-tag small{color:var(--muted);max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fx-tag.in{background:var(--ok-50);border-color:var(--ok);color:var(--ok)}
+.fx-tag.out{background:var(--info-50);border-color:var(--info);color:var(--info)}
+.fx-tag.sug{background:var(--warn-50);border-color:var(--warn);color:var(--warn);border-style:dashed}
+.fx-tag.fe{background:var(--esrs-50);border-color:var(--esrs);color:var(--esrs)}
+.fx-tag.falta,.fx-tag.mau{background:var(--err-50);border-color:var(--err);color:var(--err);border-style:dashed}
+.fx-criar{font-size:12px;padding:0}
+.fx-op,.fx-num{display:inline-flex;align-items:center;gap:2px;font-family:var(--mono);font-size:15px;font-weight:700;color:var(--text);padding:0 2px}
+.fx-num{font-size:13px;font-weight:600}
+.fx-x{border:0;background:none;color:inherit;opacity:.55;cursor:pointer;font-size:14px;line-height:1;padding:0 2px}
+.fx-x:hover,.fx-x:focus-visible{opacity:1}
+.fx-op .fx-x,.fx-num .fx-x{font-size:11px}
+.fx-barra{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.fx-barra .ps-sel{min-width:220px;flex:1 1 220px}
+.fx-ops{display:inline-flex;gap:4px}
+.fx-ops .ps-btn{min-width:34px;justify-content:center;font-family:var(--mono);font-weight:700}
+.fx-n{width:110px}
+.fx-est{font-size:12.5px;font-weight:600}
+.fx-est.ok{color:var(--ok)}
+.fx-est.warn{color:var(--warn)}
+.fx-est.err{color:var(--err)}
+.fx-txt summary{cursor:pointer;font-size:12.5px;color:var(--muted)}
+.fx-txt .ps-in{margin-top:6px;font-family:var(--mono)}
+
