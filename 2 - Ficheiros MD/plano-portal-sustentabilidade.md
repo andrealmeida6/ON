@@ -949,6 +949,15 @@ Pedido do André a 11 de novembro de 2026.
   - Por baixo da timeline está a secção **Outputs**, com os números e os cartões de cada entrega, para gerar os ficheiros (`P.saidasHtml`). A seguir vêm as Tasks in progress.
 - Foram removidos a web page `Saidas`, o snippet `Saidas/Introducao` e o link do menu. A rota antiga `Saidas` passa a abrir a `Timeline`.
 
+### Data entry escondido e Connections no Backoffice
+
+Pedido do André a 11 de novembro de 2026.
+
+- **Data entry** já não aparece no menu Data. O link tem a classe `ps-oculto` (`display:none`, secção 59 do `global.css`), mas o código e a página ficam, por isso continua a abrir pelo URL. Para voltar a mostrá-lo, basta tirar a classe em `web-templates/cabecalho.html`.
+  - A entrada manual e o Excel já se fazem na task: lista, grelha, Import from Excel, Submit por indicador e Save. O Excel offline também está em Home → Tasks.
+  - Só há uma coisa que fica sem outro sítio: os vários valores por empresa no mesmo KPI ("One row per company"), que só existiam no Data entry.
+- **Connections** passou a ser um separador do Backoffice → Platform (`B.ligacoes` usa `P.ligacoesHtml`). Tem o estado de cada ligação, a criação de uma nova ligação e o contrato da API. As mensagens do "Pull data from system" apontam agora para lá.
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.

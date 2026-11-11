@@ -286,6 +286,7 @@
       (P.gereTudo(usr) ? '<h3 class="ps-grupo-t">New connection</h3><div class="ps-form">' + campo('api-nome', 'System', '<input id="api-nome" class="ps-in">') + campo('api-amb', 'What it provides', '<input id="api-amb" class="ps-in">') + campo('api-frq', 'Frequency', '<select id="api-frq" class="ps-sel">' + opt('Hourly') + opt('Daily') + opt('Weekly') + opt('Monthly') + '</select>') + '</div><button type="button" class="ps-btn pri ps-mt" data-a="apiNova">Add connection</button>' : '') + '</div></div>' +
       '<div class="ps-card ps-mt">' + cabCartao('Contract for direct integration', 'doc') + '<div class="ps-card-body"><p class="ps-small ps-mut">Each system sends this format. It follows the same validation as a file.</p><pre class="ps-pre ps-mt">POST /api/v1/datapoints\n' + e(corpoJson) + '</pre></div></div>';
   };
+  P.ligacoesHtml = function () { return abaApi(u()); };
   Blocos['data-entry'] = function () {
     var usr = u(), t = U.de.tab;
     return '<div class="ps-filtros">' + pills('deTab', [['manual', 'Manual'], ['excel', 'Excel upload'], ['api', 'API connection']], t) + '</div>' + (t === 'excel' ? abaExcel(usr) : t === 'api' ? abaApi(usr) : abaManual(usr));

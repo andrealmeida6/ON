@@ -393,7 +393,7 @@
     var usr = u(), pode = podePuxar(m, usr), px = (S.puxados || {})[m.id], tem = px && Object.keys(px.vals || {}).length;
     if (!pode || !P.camposMilestone(m).length) return '';
     var puxar = P.podePuxarSistemas(m) ? '<button type="button" class="ps-btn pri peq" data-a="fdAbrir">Pull data from system</button>'
-      : '<span class="ps-tip-alvo" tabindex="0" data-tip="The data source this task uses is not connected yet, so the data has to be typed in. The administrator connects it in Connections to other systems."><button type="button" class="ps-btn peq" disabled>Pull data from system</button></span>';
+      : '<span class="ps-tip-alvo" tabindex="0" data-tip="The data source this task uses is not connected yet, so the data has to be typed in. The administrator connects it in Backoffice, Connections."><button type="button" class="ps-btn peq" disabled>Pull data from system</button></span>';
     return puxar + (tem ? '<button type="button" class="ps-btn peq" data-a="fdLimpar">Clear source data</button>' : '');
   };
   /* Valor e origem de um dado: puxado do sistema, escrito no dado, ou escrito no indicador que e so esse dado.
@@ -501,7 +501,7 @@
     }).join('');
     return {
       t: 'Pull data from system', s: m.nome, largo: true,
-      b: '<div class="fd-topo' + (naoLive.length || !ligs.length ? '' : ' live') + '"><b>' + e(topo) + '</b><span>' + (!ligs.length ? 'The administrator connects it in Connections to other systems.' : naoLive.length ? 'The source is not live: what comes in is what it had at its last update.' : 'The source sends its data as it happens.') + (off ? ' ' + off + ' data item' + (off === 1 ? '' : 's') + ' cannot be pulled yet.' : '') + '</span></div>' +
+      b: '<div class="fd-topo' + (naoLive.length || !ligs.length ? '' : ' live') + '"><b>' + e(topo) + '</b><span>' + (!ligs.length ? 'The administrator connects it in Backoffice, Connections.' : naoLive.length ? 'The source is not live: what comes in is what it had at its last update.' : 'The source sends its data as it happens.') + (off ? ' ' + off + ' data item' + (off === 1 ? '' : 's') + ' cannot be pulled yet.' : '') + '</span></div>' +
         '<div class="px-cab"><h3 class="ps-grupo-t">What will be filled in</h3><span class="ps-small ps-mut">Expand an indicator to see its data and where it comes from.</span><button type="button" class="ps-btn liga" data-a="pxTodos">Expand all</button></div>' +
         '<div class="px-lista">' + (linhas || '<p class="ps-mut">No indicator of this task is calculated from source data.</p>') + '</div>' +
         '<p class="ps-small ps-mut ps-mt">After filling in you can still change any value, or clear the source data, while the task is in collection.</p>',

@@ -1325,7 +1325,7 @@
     ['Indicators', [['indicadores', 'Indicators'], ['milestones', 'Tasks sent']]],
     ['Organisation', [['perimetro', 'Companies and perimeter'], ['departamentos', 'Departments'], ['utilizadores', 'Users and profiles'], ['externas', 'External entities']]],
     ['Reporting set-up', [['periodos', 'Reporting periods'], ['momentos', 'Reporting moments'], ['calculos', 'Calculations'], ['wfbase', 'Base workflow'], ['calendario', 'Calendar'], ['materialidade', 'Materiality and frameworks']]],
-    ['Platform', [['areas', 'Data consumer areas'], ['dados', 'Data and storage']]]
+    ['Platform', [['areas', 'Data consumer areas'], ['ligacoes', 'Connections'], ['dados', 'Data and storage']]]
   ];
   var BO = []; BO_GRUPOS.forEach(function (g) { g[1].forEach(function (t) { BO.push(t); }); });
   var B = {};
@@ -1640,6 +1640,8 @@
           tot ? '<button type="button" class="ps-btn peq" disabled title="In use: ' + e(txt) + '">Remove</button>' : '<button type="button" class="ps-btn peq err" data-a="depApagar" data-v="' + i + '">Remove</button>'];
       }), 'No department in this company yet.') + '</div><p class="ps-mut ps-small ps-mt">Departments are the tags on tasks and people, and the groups that report indicators. Renaming one updates them all.</p></div></div>';
   };
+  /* Connections to other systems: estado das ligacoes, nova ligacao e o contrato da API (vinha do Data entry) */
+  B.ligacoes = function () { return P.ligacoesHtml ? P.ligacoesHtml() : vazio('The connections did not load.'); };
   B.dados = function () {
     return '<div class="ps-card">' + cabCartao('Data and storage', 'doc') + '<div class="ps-card-body"><div class="ps-sp"><button type="button" class="ps-btn" data-a="dadosExportar">Export all data</button>' + (P.online() ? '' : '<button type="button" class="ps-btn" data-a="dadosImportar">Import data</button><button type="button" class="ps-btn err" data-a="dadosRepor">Reset data</button>') + '</div></div></div>';
   };
