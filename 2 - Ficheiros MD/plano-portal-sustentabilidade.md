@@ -569,7 +569,7 @@ Pedido do André a 11 de novembro de 2026: filtrar as tasks por indicador e por 
   - Grupo de indicadores: por norma ESRS ou por tema da empresa, com contagem.
   - Estado: To report, Overdue, Filled in to submit, In review or approval ou Approved.
   - Os filtros por coluna continuam.
-- **Folha de reporte** (`Pn.tarFolha`, botão "Open as spreadsheet"): todas as tasks filtradas numa grelha (`portal-grelha.js`), com uma linha por KPI e período.
+- **Folha de reporte** (`Pn.tarFolha`, botão "Open grid view" (antes "Open as spreadsheet")): todas as tasks filtradas numa grelha (`portal-grelha.js`), com uma linha por KPI e período.
   - **Colunas:** ID, Indicator, Group, Period, Perimeter, Unit, Prior period, Value, Change %, Data quality, Justification, Status, Entered by, Entered on e Deadline.
   - **Edição:** Value, Data quality e Justification editam-se nas linhas em recolha com a pessoa (`P.podePreencher`). As outras linhas são só de leitura. Dá para escrever, colar um bloco do Excel (Ctrl+V) e anular (Ctrl+Z).
   - **Gravação:** a mesma da grelha da milestone, por milestone (`aplicarDados`), com as mesmas validações, alertas e versões.

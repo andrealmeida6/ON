@@ -1,7 +1,7 @@
 /* ============================================================================
    portal-tarefas.js - Home, cartao Tasks e folha de reporte
    Filtros por indicador, grupo de indicadores (norma ESRS ou tema) e estado.
-   "Open as spreadsheet" abre todas as tasks filtradas numa grelha tipo Excel:
+   "Open grid view" abre todas as tasks filtradas numa grelha tipo Excel:
    preenche-se como no Excel (escrever, colar, anular), e cada valor mostra quem
    o inseriu e quando, com o historico da celula na tooltip.
    A grelha e a de portal-grelha.js; a gravacao e a mesma da milestone (aplicarDados).
@@ -69,7 +69,7 @@
     var l = filtrar(E.linhas), mostrar = U.tarTodas ? l : l.slice(0, 12);
     var offline = E.lista.filter(function (m) { return P.podePreencher(m, usr); });
     var dir = '<div class="ps-sp">' + (E.gere ? '<div class="ps-seg" role="group" aria-label="Whose tasks"><button type="button" class="' + (E.esc === 'minhas' ? 'on' : '') + '" data-a="tarEsc" data-v="minhas">Mine <span class="n">' + nK(E.minhas) + '</span></button><button type="button" class="' + (E.esc === 'todas' ? 'on' : '') + '" data-a="tarEsc" data-v="todas">Everyone <span class="n">' + nK(E.todas) + '</span></button></div>' : '') +
-      '<button type="button" class="ps-btn pri peq tf-abrir" data-a="tarFolha"' + (l.length ? '' : ' disabled') + '><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>Open as spreadsheet</button>' +
+      '<button type="button" class="ps-btn pri peq tf-abrir" data-a="tarFolha"' + (l.length ? '' : ' disabled') + '><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>Open grid view</button>' +
       '<button type="button" class="ps-btn peq" data-a="tarOffline"' + (offline.length ? '' : ' disabled title="Nothing in collection with you in this list"') + '>Excel (offline)</button>' + X.botaoTl('Timeline') + '</div>';
     var cols = [{ t: 'KPI' }, { t: 'Period' }, { t: 'Perimeter' }, { t: 'Assigned to' }, { t: 'Deadline' }, { t: 'Status' }];
     var corpo = '<div class="ps-card-body">' + (E.linhas.length ? filtrosHtml(E.linhas, 'tf') : '') + (mostrar.length ? tabela(cols, mostrar.map(function (x) {
@@ -94,7 +94,7 @@
   var cfgFolha = function () {
     var usr = u(), E = escopo(), l = filtrar(E.linhas);
     return {
-      id: 'gr-tarefas', titulo: 'Tasks spreadsheet', vazio: 'No task matches these filters.',
+      id: 'gr-tarefas', titulo: 'Tasks grid view', vazio: 'No task matches these filters.',
       dica: 'White cells can be edited: type, double-click, or paste a block from Excel with Ctrl+V. Ctrl+Z undoes. Grey rows are read only. Hover "Entered by" to see the history of the value.',
       cols: [{ k: 'id', t: 'ID' }, { k: 'nome', t: 'Indicator', larg: 240 }, { k: 'grupo', t: 'Group' }, { k: 'per', t: 'Period' }, { k: 'emp', t: 'Perimeter' }, { k: 'un', t: 'Unit' },
         { k: 'ant', t: 'Prior period', dir: 1 }, { k: 'valor', t: 'Value', dir: 1, edita: true, larg: 110 }, { k: 'var', t: 'Change %', dir: 1 }, { k: 'qual', t: 'Data quality', edita: true, larg: 110 },
@@ -133,7 +133,7 @@
     var pct = l.length ? Math.round((feitos.length / l.length) * 100) : 0;
     var resumo = '<div class="tf-res"><div class="tf-res-b"><b>' + feitos.length + ' of ' + l.length + '</b> reported<span class="tf-barra" aria-hidden="true"><i style="width:' + pct + '%"></i></span></div>' +
       '<span>' + pode.length + ' you can fill in</span><span>' + (l.length - pode.length) + ' read only</span><span>' + outros + ' entered by someone else</span></div>';
-    return { t: 'Tasks spreadsheet', s: (E.esc === 'minhas' ? 'Your tasks' : 'Everyone\'s open tasks') + ', ' + l.length + ' row(s)', largo: true, cls: 'folha tf-pan',
+    return { t: 'Tasks grid view', s: (E.esc === 'minhas' ? 'Your tasks' : 'Everyone\'s open tasks') + ', ' + l.length + ' row(s)', largo: true, cls: 'folha tf-pan',
       b: filtrosHtml(E.linhas, 'tfs') + resumo + window.PortalGrelha.html(cfg),
       p: '<button type="button" class="ps-btn" data-a="tarFolhaExcel"' + (l.length ? '' : ' disabled') + '>Export to Excel</button><span class="ps-sp-flex"></span><button type="button" class="ps-btn pri" data-a="fecharPainel">Done</button>' };
   };
