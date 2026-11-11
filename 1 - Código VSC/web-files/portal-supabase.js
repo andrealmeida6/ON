@@ -8,7 +8,7 @@
 (function () {
   'use strict';
   var B = (window.PortalBackend = {});
-  var CONFIG_IND = ['ativo', 'empresas', 'reporta', 'unidade_reporte', 'desc_propria', 'subtema_proprio', 'dr_proprio', 'divulgacao_tipo', 'tipo_dado', 'criado_backoffice'];
+  var CONFIG_IND = ['ativo', 'empresas', 'reporta', 'unidade_reporte', 'desc_propria', 'subtema_proprio', 'dr_proprio', 'divulgacao_tipo', 'tipo_dado', 'criado_backoffice', 'limiar_proprio'];
   var CFG = window.PORTAL_BACKEND || null;
   B.ativo = !!CFG;
   B.configurar = function (c) { CFG = c; B.ativo = true; };
@@ -94,7 +94,7 @@
     var por = function (t, chave, l) { o[t][chave] = l; };
 
     (S.ciclo.fechados || []).forEach(function (a) { por('esg_ciclos', a, { ano: a, estado: 'fechado' }); });
-    por('esg_ciclos', S.ciclo.ano, { ano: S.ciclo.ano, estado: 'aberto', data_abertura: S.ciclo.data_abertura });
+    por('esg_ciclos', S.ciclo.ano, { ano: S.ciclo.ano, estado: 'aberto', data_abertura: S.ciclo.data_abertura, limiar_padrao: S.ciclo.limiar_padrao === undefined ? null : S.ciclo.limiar_padrao });
     S.users.forEach(function (u) { por('esg_utilizadores', u.login, { login: u.login, nome: u.nome, perfil: u.perfil, unidade: nulo(unidadesDe(u)[0]), unidades: unidadesDe(u) }); });
     var esrs = function (id) { return window.Portal && window.Portal.esrsDe ? window.Portal.esrsDe(id) : { rel: 'especifico', dps: [] }; };
     S.cat.forEach(function (c) {
@@ -151,7 +151,7 @@
   /* Das tabelas para o estado */
   var hidratar = function (S, d, login) {
     var aberto = d.esg_ciclos.filter(function (c) { return c.estado === 'aberto'; })[0] || d.esg_ciclos[d.esg_ciclos.length - 1] || { ano: new Date().getFullYear(), data_abertura: null };
-    S.ciclo = { ano: aberto.ano, estado: 'aberto', data_abertura: aberto.data_abertura, fechados: d.esg_ciclos.filter(function (c) { return c.estado === 'fechado'; }).map(function (c) { return c.ano; }) };
+    S.ciclo = { ano: aberto.ano, estado: 'aberto', data_abertura: aberto.data_abertura, limiar_padrao: aberto.limiar_padrao === null || aberto.limiar_padrao === undefined ? undefined : Number(aberto.limiar_padrao), fechados: d.esg_ciclos.filter(function (c) { return c.estado === 'fechado'; }).map(function (c) { return c.ano; }) };
     S.users = d.esg_utilizadores.map(function (u) { var l = u.unidades && u.unidades.length ? u.unidades : u.unidade ? [u.unidade] : []; return { login: u.login, nome: u.nome, perfil: u.perfil, unidades: l, unidade: l[0] || '' }; });
     S.cat = d.esg_indicadores.map(function (c) {
       var o = Object.assign({}, c);

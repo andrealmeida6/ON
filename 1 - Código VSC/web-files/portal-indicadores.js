@@ -114,7 +114,7 @@
       get: function (c) { return regL(c.id).fonte || ''; }, res: okv, set: function (c, v) { reg(c.id).fonte = v; } },
 
     { k: 'limiar', g: 'ctrl', t: 'Change threshold (%)', w: 13, d: 'A change above this percentage against the prior period raises an alert and asks for a justification.', al: ['threshold', 'threshold pct', 'limiar'],
-      get: function (c) { return String(c.limiar_variacao_pct === undefined ? 10 : c.limiar_variacao_pct); }, res: function (v) { var n = P.lerNumero(v); return n === null || n < 0 ? { erro: 'Change threshold must be a number, 0 or above.' } : { val: String(n) }; }, set: function (c, v) { c.limiar_variacao_pct = Number(v); } },
+      get: function (c) { return String(P.limiarDe(c)); }, res: function (v) { var n = P.lerNumero(v); return n === null || n < 0 ? { erro: 'Change threshold must be a number, 0 or above.' } : { val: String(n) }; }, set: function (c, v) { c.limiar_variacao_pct = Number(v); c.limiar_proprio = Number(v) !== P.limiarPadrao() || !!c.limiar_proprio; } },
     { k: 'evid', g: 'ctrl', t: 'Evidence required [yes/no]', w: 13, d: 'When Yes, a supporting document must be attached before the task is submitted.', vals: ['Yes', 'No'], al: ['required evidence', 'evidence required'],
       get: function (c) { return c.evidencia_obrigatoria ? 'Yes' : 'No'; }, res: lista(SIM, 'Evidence required'), set: function (c, v) { c.evidencia_obrigatoria = v === 'Yes'; } },
     { k: 'ctrl', g: 'ctrl', t: 'Controls - Control Description', w: 40, longo: true, d: 'Other controls performed over the collection, calculation and review of the KPI.', al: ['control description'],
@@ -130,7 +130,7 @@
   var campoK = {}; CAMPOS.forEach(function (f) { campoK[f.k] = f; });
   var lerInd = function (c) { var o = {}; CAMPOS.forEach(function (f) { o[f.k] = f.get(c); }); return o; };
   var novoCat = function (id) {
-    return { id: id, nome: '', unidade_medida: '', unidade_negocio: P.UNIDADES[0] || '', tipo: 'base', periodicidade: 'Anual', perimetro: 'Grupo', quadro: 'ESRS', esrs: '', esrs_requisito: '', gri: '-', limiar_variacao_pct: 10, evidencia_obrigatoria: false, utilizado_por: [], novo_esrs: false, tema: '', formula: null, regras_coerencia: [], casas_decimais: 2, ano_anterior: null, criado_backoffice: true };
+    return { id: id, nome: '', unidade_medida: '', unidade_negocio: P.UNIDADES[0] || '', tipo: 'base', periodicidade: 'Anual', perimetro: 'Grupo', quadro: 'ESRS', esrs: '', esrs_requisito: '', gri: '-', limiar_variacao_pct: null, evidencia_obrigatoria: false, utilizado_por: [], novo_esrs: false, tema: '', formula: null, regras_coerencia: [], casas_decimais: 2, ano_anterior: null, criado_backoffice: true };
   };
   /* Valida um conjunto de valores (so as chaves presentes). Devolve os textos canonicos e os erros. */
   var resolver = function (dados, c) {
@@ -223,6 +223,13 @@
     mais: '<path d="M12 5v14M5 12h14"/>', descarregar: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><path d="M12 15V3"/>',
     enviar: '<path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/>', sino: '<path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/>', lapis: '<path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="m14 6 4 4"/>'
   };
+  /* Limiar na tabela: editavel por indicador; vazio volta ao limiar por omissao */
+  var limiarCel = function (c) {
+    var proprio = !!c.limiar_proprio, v = P.limiarDe(c), adm = P.gereTudo(u());
+    var txt = '<span class="ki-lim-t" data-fx-valor>' + e(P.fmtNum(v, v % 1 ? 1 : 0)) + '%</span>';
+    if (!adm) return txt + '<small class="ki-sub" data-fx-ignorar>' + (proprio ? 'own' : 'default') + '</small>';
+    return '<label class="ps-sr" for="kl-lim-' + e(c.id) + '">Change threshold of ' + e(c.nome) + '</label><span class="ki-lim-in' + (proprio ? ' proprio' : '') + '"><input id="kl-lim-' + e(c.id) + '" class="ps-in ps-num" inputmode="decimal" autocomplete="off" placeholder="' + e(P.limiarPadrao()) + '" value="' + e(v) + '" data-c="indLimiar" data-id="' + e(c.id) + '" title="Empty uses the default of ' + e(P.limiarPadrao()) + '%"><i aria-hidden="true">%</i></span><small class="ki-sub" data-fx-ignorar>' + (proprio ? 'own threshold' : 'default') + '</small>';
+  };
   var respHtml = function (c) {
     var r = P.responsavelInd(c.id);
     return (r.tipo === 'pessoa' ? X.pessHtml(r.nome) + '<small class="ki-sub" data-fx-ignorar>' + e(r.dep) + '</small>' : X.depHtml(r.dep) + '<small class="ki-sub" data-fx-ignorar>Whole department</small>');
@@ -256,7 +263,8 @@
       campo('ki-resp', 'Responsible', '<select id="ki-resp" class="ps-sel" data-c="indF" data-id="resp">' + opt('', 'Anyone', f.resp) + opt('__grupo', 'Whole department (no person)', f.resp) + pessoas('submete').map(function (x) { return opt(x.login, x.nome, f.resp); }).join('') + '</select>') +
       campo('ki-per', 'Reporting period', perSel) + campo('ki-est', 'Task, ' + (per ? per.nome : ''), '<select id="ki-est" class="ps-sel" data-c="indF" data-id="est">' + [['todos', 'Any status'], ['nao', 'Not sent'], ['aberta', 'Open'], ['atraso', 'Overdue'], ['revisao', 'In review'], ['feito', 'Approved']].map(function (x) { return opt(x[0], x[1], f.est); }).join('') + '</select>') +
       '<label class="ps-chk"><input id="ki-inat" type="checkbox" data-c="indInativos"' + (f.inativos ? ' checked' : '') + '> Show inactive</label>' +
-      (f.q || f.tema || f.dep || f.resp || f.est !== 'todos' ? '<button type="button" class="ps-btn liga" data-a="indLimpar">Clear filters</button>' : '') + '</div>';
+      (f.q || f.tema || f.dep || f.resp || f.est !== 'todos' ? '<button type="button" class="ps-btn liga" data-a="indLimpar">Clear filters</button>' : '') + '</div>' +
+      (P.gereTudo(usr) ? '<div class="ki-limp"><span class="ki-limp-t"><b>Default change threshold</b><small>Above it, the platform raises an alert and asks for a justification. Indicators with their own threshold keep it.</small></span><label class="ps-sr" for="ki-limp">Default change threshold (%)</label><span class="ki-lim-in"><input id="ki-limp" class="ps-in ps-num" inputmode="decimal" value="' + e(P.limiarPadrao()) + '" data-c="indLimPadrao"><i aria-hidden="true">%</i></span><span class="ps-small ps-mut">' + S.cat.filter(function (c) { return c.limiar_proprio; }).length + ' with own threshold</span><button type="button" class="ps-btn peq" data-a="indLimTodos">Apply to all indicators</button></div>' : '');
     var todosSel = l.length > 0 && l.every(function (c) { return f.sel[c.id]; });
     var lote = sel.length ? '<div class="ki-lote" role="region" aria-label="Actions for the selected indicators"><b>' + sel.length + ' selected</b><span class="ps-sp">' +
       '<button type="button" class="ps-btn pri peq" data-a="indEnviarAbrir">' + svg(ICO.enviar, 14) + 'Send tasks</button><button type="button" class="ps-btn peq" data-a="indLembrar">' + svg(ICO.sino, 14) + 'Send reminder</button>' +
@@ -268,10 +276,10 @@
         : P.indAtivo(c) ? '<button type="button" class="ps-btn peq ki-env1" data-a="indEnviar1" data-v="' + id + '">' + svg(ICO.enviar, 13) + 'Send</button>' : chip('Inactive');
       return '<tr class="' + (on ? 'ki-on' : '') + (P.indAtivo(c) ? '' : ' ki-off') + '"><td class="ki-c"><input id="ks-' + id + '" type="checkbox" aria-label="Select ' + e(c.nome) + '" data-c="indSel" data-id="' + id + '"' + (on ? ' checked' : '') + '></td>' +
         '<td class="prim"><button type="button" class="ki-nome" data-a="indEditar" data-v="' + id + '"><b>' + e(c.nome) + '</b><small data-fx-ignorar><span class="ps-cod">' + id + '</span>' + e((c.esrs_requisito || 'No ESRS') + ' · ' + (c.unidade_medida || 'no unit') + ' · ' + campoK.freq.get(c)) + (c.tipo === 'derivado' ? ' · derived' : '') + '</small></button>' + (function () { if (!f.q) return ''; var a = achado(c, norm(f.q)); return a && a.campo ? '<span class="ki-achado" data-fx-ignorar><b>' + e(rotCurto(a.campo.k)) + ':</b> ' + excerto(a.valor, norm(f.q)) + '</span>' : ''; })() + '</td>' +
-        '<td data-l="Responsible">' + respHtml(c) + '</td><td data-l="Reported by">' + empHtmlInd(c) + '</td><td data-l="Task">' + tarefa + '</td>' +
+        '<td data-l="Threshold" class="ki-lim">' + limiarCel(c) + '</td><td data-l="Responsible">' + respHtml(c) + '</td><td data-l="Reported by">' + empHtmlInd(c) + '</td><td data-l="Task">' + tarefa + '</td>' +
         '<td class="ki-ac"><button type="button" class="ps-btn peq" data-a="indEditar" data-v="' + id + '" aria-label="Edit ' + e(c.nome) + '">' + svg(ICO.lapis, 14) + 'Edit</button></td></tr>';
     }).join('');
-    var tabela = l.length ? '<div class="ps-tw"><table class="ps-t ki-t"><thead><tr><th class="ki-c"><input id="ks-todos" type="checkbox" aria-label="Select all ' + l.length + ' indicators in the list" data-c="indSelTodos"' + (todosSel ? ' checked' : '') + '></th><th scope="col">Indicator</th><th scope="col">Responsible</th><th scope="col">Reported by</th><th scope="col">Task, ' + e(per ? per.nome : '') + '</th><th><span class="ps-sr">Actions</span></th></tr></thead><tbody>' + linhas + '</tbody></table></div>' +
+    var tabela = l.length ? '<div class="ps-tw"><table class="ps-t ki-t"><thead><tr><th class="ki-c"><input id="ks-todos" type="checkbox" aria-label="Select all ' + l.length + ' indicators in the list" data-c="indSelTodos"' + (todosSel ? ' checked' : '') + '></th><th scope="col">Indicator</th><th scope="col">Threshold</th><th scope="col">Responsible</th><th scope="col">Reported by</th><th scope="col">Task, ' + e(per ? per.nome : '') + '</th><th><span class="ps-sr">Actions</span></th></tr></thead><tbody>' + linhas + '</tbody></table></div>' +
       (l.length > vis.length ? '<div class="ps-sp ps-mt"><button type="button" class="ps-btn" data-a="indMais">Show ' + Math.min(200, l.length - vis.length) + ' more</button><span class="ps-mut ps-small">' + vis.length + ' of ' + l.length + '</span></div>' : '')
       : vazio(S.cat.length ? 'No indicator matches these filters.' : 'No indicators yet. Create one or import your KPI list in Excel.');
     /* Duas vistas no mesmo ecra: a lista dos indicadores e o mapa por departamento e periodo (o antigo Launch by department) */
@@ -294,6 +302,30 @@
   /* A pesquisa filtra enquanto se escreve, com uma pequena pausa */
   var tBusca = null;
   X.Live.indBusca = function (el) { U.ind.q = el.value; U.ind.lim = 200; clearTimeout(tBusca); tBusca = setTimeout(R, 180); };
+  /* Limiar de um indicador, direto na tabela */
+  C.indLimiar = function (el) {
+    var c = P.cat(el.dataset.id), usr = u(), t = String(el.value).trim(), antes = P.limiarDe(c) + '%' + (c.limiar_proprio ? '' : ' (default)');
+    if (!c || !P.gereTudo(usr)) return;
+    if (t === '') { if (!c.limiar_proprio) return; c.limiar_proprio = false; }
+    else { var n = P.lerNumero(t); if (n === null || n < 0) { toast('The threshold must be a number, 0 or above.', 'err'); el.value = P.limiarDe(c); return; } if (n === P.limiarDe(c)) return; c.limiar_variacao_pct = n; c.limiar_proprio = true; }
+    P.eventoGlobal('Indicator ' + c.id + ' ' + c.nome + ': Change threshold (%) from ' + antes + ' to ' + P.limiarDe(c) + '%' + (c.limiar_proprio ? '' : ' (default)') + '.', usr.nome, 'Change');
+    P.guardar();
+  };
+  /* Limiar por omissao: vale para todos os indicadores sem limiar proprio; "Apply to all" tira os limiares proprios */
+  C.indLimPadrao = function (el) {
+    var n = P.lerNumero(el.value), usr = u();
+    if (n === null || n < 0) { toast('The default threshold must be a number, 0 or above.', 'err'); el.value = P.limiarPadrao(); return; }
+    if (n === P.limiarPadrao()) return;
+    var antes = P.limiarPadrao(); S.ciclo.limiar_padrao = n;
+    P.eventoGlobal('Default change threshold from ' + antes + '% to ' + n + '%.', usr.nome, 'Change'); P.guardar();
+  };
+  A.indLimTodos = function () {
+    var usr = u(), v = P.limiarPadrao(), prop = S.cat.filter(function (c) { return c.limiar_proprio; });
+    if (prop.length && !window.confirm('Use ' + v + '% for every indicator? ' + prop.length + ' indicator(s) with their own threshold go back to the default.')) return;
+    prop.forEach(function (c) { c.limiar_proprio = false; });
+    P.eventoGlobal('Change threshold of ' + v + '% applied to all indicators' + (prop.length ? ' (' + prop.length + ' own threshold(s) removed)' : '') + '.', usr.nome, 'Change');
+    P.guardar(); toast(v + '% applied to all ' + S.cat.length + ' indicators.', 'ok'); R();
+  };
   A.indEmp = function (d) { U.ind.emp = d.v; U.ind.sel = {}; R(); };
   A.indVista = function (d) { U.ind.vista = d.v; R(); };
   A.indMais = function () { U.ind.lim += 200; R(); };

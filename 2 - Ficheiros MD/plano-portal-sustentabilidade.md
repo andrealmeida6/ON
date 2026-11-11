@@ -609,6 +609,21 @@ Pedido do André a 11 de novembro de 2026: ter no Reporting a vista consolidada 
 
 **CSS:** secção 43 de `global.css`.
 
+### Limiar de variação: 50% por omissão e por indicador
+
+Pedido do André a 11 de novembro de 2026.
+
+- **Por omissão:** uma variação acima de **50%** face ao período anterior levanta um alerta e pede uma justificação (`P.LIMIAR_BASE`, `P.limiarPadrao`, guardado em `S.ciclo.limiar_padrao`).
+- **Por indicador:** `c.limiar_proprio` com `c.limiar_variacao_pct`. Todas as regras e todos os textos usam `P.limiarDe(c)`: validação e alertas, Data entry, ficha do indicador, KPI master, template e Excel offline.
+- **Os limiares do catálogo de origem** (10%, 15%...) não estão marcados como próprios, por isso passam a usar os 50% por omissão. Um limiar só é próprio quando é definido no Backoffice.
+- **Backoffice > Indicators:**
+  - **Faixa "Default change threshold":** o valor por omissão, editável, com quantos indicadores têm limiar próprio. O botão **Apply to all indicators** põe o valor por omissão em todos e tira os limiares próprios, depois de confirmação.
+  - **Coluna Threshold:** editável indicador a indicador. Mostra o limiar em vigor, a cheio e a negrito quando é próprio ("own threshold") e esbatido quando é o por omissão ("default"). Apagar o valor volta ao limiar por omissão. Os filtros por coluna funcionam nesta coluna.
+  - O painel do indicador e o Excel (exportar e importar) usam o mesmo campo.
+  - Cada mudança fica no registo de configuração.
+- **Supabase:** `014_esg_limiar_padrao.sql` acrescenta `limiar_padrao` ao ciclo (50 no ciclo aberto). `limiar_proprio` vai no `config` do indicador.
+- **CSS:** secção 44 de `global.css`.
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.

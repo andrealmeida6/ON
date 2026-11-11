@@ -2054,3 +2054,15 @@ button.ps-est-i:hover{border-color:rgba(255,255,255,.4);background:rgba(255,255,
 .rp-v.on .ps-ave{background:rgba(255,255,255,.18);color:#fff}
 .rp-sig{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;background:var(--primary-50);color:var(--primary);font-weight:700;font-size:15px}
 .rp-v.on .rp-sig{background:rgba(255,255,255,.18);color:#fff}
+
+/* 44. LIMIAR DE VARIACAO: POR OMISSAO E POR INDICADOR */
+.ki-limp{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;padding:10px 14px;margin:-2px 0 12px;border-radius:12px;background:var(--neutro-50)}
+.ki-limp-t{display:flex;flex-direction:column;flex:1 1 300px;min-width:0}
+.ki-limp-t b{font-size:13px}
+.ki-limp-t small{font-size:12px;color:var(--muted)}
+.ki-lim-in{position:relative;display:inline-flex;align-items:center}
+.ki-lim-in .ps-in{width:76px;min-height:34px;padding:5px 24px 5px 9px;text-align:right}
+.ki-lim-in i{position:absolute;right:9px;font-style:normal;font-size:12px;color:var(--muted);pointer-events:none}
+.ki-t .ki-lim{white-space:nowrap}
+.ki-t .ki-lim-in:not(.proprio) .ps-in{color:var(--muted);background:var(--neutro-50)}
+.ki-t .ki-lim-in.proprio .ps-in{font-weight:700;border-color:var(--primary)}

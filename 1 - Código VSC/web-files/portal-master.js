@@ -17,7 +17,7 @@
   var FREQ_PT = { Mensal: 'Monthly', Trimestral: 'Quarterly', Semestral: 'Half-yearly', Anual: 'Annually' };
   var freqDe = function (c) { return FREQ_PT[c.periodicidade] || c.periodicidade; };
   var controlosPlataforma = function (c) {
-    var t = 'Change threshold of ±' + c.limiar_variacao_pct + '% against the prior year; review and approval in the workflow; audit trail';
+    var t = 'Change threshold of ±' + P.limiarDe(c) + '% against the prior year; review and approval in the workflow; audit trail';
     return t + (c.evidencia_obrigatoria ? '; evidence required.' : '.');
   };
   var registo = function (id) { return S.kpim[id] || (S.kpim[id] = {}); };

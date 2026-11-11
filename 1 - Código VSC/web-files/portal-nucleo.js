@@ -580,6 +580,10 @@
     if (c.inteiro === true || c.inteiro === false) return c.inteiro;
     return /^(n\.?\s?º|nº|n\.?o|número|number|count)$/i.test(String(c.unidade_medida || '').trim());
   };
+  /* Limiar de variacao: o de cada indicador, se foi definido no Backoffice; senao, o limiar por omissao (50%) */
+  P.LIMIAR_BASE = 50;
+  P.limiarPadrao = function () { var v = S.ciclo && S.ciclo.limiar_padrao; return v === undefined || v === null || v === '' ? P.LIMIAR_BASE : Number(v); };
+  P.limiarDe = function (c) { return c && c.limiar_proprio && c.limiar_variacao_pct !== undefined && c.limiar_variacao_pct !== null ? Number(c.limiar_variacao_pct) : P.limiarPadrao(); };
   P.validar = function (c, valor, ano) {
     var r = { erros: [], alertas: [], variacao: null };
     if (valor === null || valor === undefined) return r;
@@ -590,8 +594,8 @@
     var ant = P.valorAnterior(c.id, ano);
     if (ant !== null && ant !== undefined && ant !== 0) {
       r.variacao = ((valor - ant) / Math.abs(ant)) * 100;
-      if (Math.abs(r.variacao) > c.limiar_variacao_pct) {
-        r.alertas.push('Change of ' + (r.variacao > 0 ? '+' : '') + P.fmtNum(r.variacao, 1) + '% against ' + P.rotAnterior(ano) + ', above the ' + c.limiar_variacao_pct + '% threshold.');
+      if (Math.abs(r.variacao) > P.limiarDe(c)) {
+        r.alertas.push('Change of ' + (r.variacao > 0 ? '+' : '') + P.fmtNum(r.variacao, 1) + '% against ' + P.rotAnterior(ano) + ', above the ' + P.limiarDe(c) + '% threshold.');
       }
     }
     (c.regras_coerencia || []).forEach(function (t) { r.alertas.push(t); });
@@ -1491,7 +1495,7 @@
       dados: linhasTemplate(m),
       instrucoes: m.indicadores.map(function (id) {
         var c = P.cat(id), ant = P.valorAnterior(id, P.chave(m));
-        return { indicador: id, nome: c.nome, unidade: c.unidade_medida, ano_anterior: ant === null || ant === undefined ? '' : ant, limiar_pct: c.limiar_variacao_pct, evidencia_obrigatoria: c.evidencia_obrigatoria ? 'Yes' : 'No', regra: 'period = ' + m.ano + '; unit as stated; numeric value; justification required when there is an alert; estimation_method required when data_quality is estimated.' };
+        return { indicador: id, nome: c.nome, unidade: c.unidade_medida, ano_anterior: ant === null || ant === undefined ? '' : ant, limiar_pct: P.limiarDe(c), evidencia_obrigatoria: c.evidencia_obrigatoria ? 'Yes' : 'No', regra: 'period = ' + m.ano + '; unit as stated; numeric value; justification required when there is an alert; estimation_method required when data_quality is estimated.' };
       })
     };
   };
@@ -1503,7 +1507,7 @@
     lista.forEach(function (m) {
       m.indicadores.forEach(function (id) {
         var c = P.cat(id), it = P.item(id, P.chave(m)), ant = P.valorAnterior(id, P.chave(m));
-        var base = { milestone_id: m.id, indicator_id: id, indicator_name: c.nome, perimeter: m.empresa, period: P.rotPeriodo(m), deadline: m.prazo, entity: m.empresa, value: fmt(it.valor), unit: c.unidade_medida, prior_value: fmt(ant), threshold_pct: c.limiar_variacao_pct, justification: it.justificacao || '', data_quality: ({ medido: 'measured', calculado: 'calculated', estimado: 'estimated' })[it.qualidade] || 'measured', estimation_method: it.metodo || '', evidence_ref: '', source_system: it.fonte || '' };
+        var base = { milestone_id: m.id, indicator_id: id, indicator_name: c.nome, perimeter: m.empresa, period: P.rotPeriodo(m), deadline: m.prazo, entity: m.empresa, value: fmt(it.valor), unit: c.unidade_medida, prior_value: fmt(ant), threshold_pct: P.limiarDe(c), justification: it.justificacao || '', data_quality: ({ medido: 'measured', calculado: 'calculated', estimado: 'estimated' })[it.qualidade] || 'measured', estimation_method: it.metodo || '', evidence_ref: '', source_system: it.fonte || '' };
         if (!porEmpresa) { dados.push(base); return; }
         var ents = it.entradas || [];
         /* As empresas sao as que o indicador abrange (Backoffice, Indicators); por omissao, o perimetro do grupo */
