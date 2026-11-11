@@ -1040,6 +1040,22 @@ Pedido do André a 11 de novembro de 2026.
   - **Workflow da task:** cada passo mostra quantos indicadores estão nele ("1 to approve" no passo da área, "1 approved" no passo da sustentabilidade).
 - **Dados gravados:** o base antigo passa ao novo; as tasks no base perdem a validação automática; as que ainda estão na recolha passam aos 4 passos novos; os departamentos ganham o responsável de área.
 
+### Um só ecrã da task para todos os perfis
+
+Pedido do André a 11 de novembro de 2026.
+
+- Quem preenche, o responsável de área, a equipa de sustentabilidade e o auditor veem exatamente o mesmo ecrã da task (`sepRecolha`):
+  - os separadores "Fill in on screen" e "Upload files";
+  - a barra de submissão com os filtros;
+  - a lista com o cabeçalho fixo e o detalhe de cada indicador;
+  - a grelha e o export.
+- O que muda é só o que cada pessoa pode editar, conforme o estado de cada indicador:
+  - **Editável:** só para quem tem a recolha e enquanto o indicador não foi submetido.
+  - **Só de leitura:** os valores aparecem como texto, a qualidade e o método ficam bloqueados, a justificação aparece como texto, e não há Attach evidence, Request assistance nem Import.
+- A linha por cima da lista diz o que se pode fazer: preencher; "This step is with you…" para quem decide; ou "Read only for you at this step…" com o passo e quem o tem.
+- Quem decide o passo vê, por baixo, o cartão do passo com o comentário para devolver (`caixaDecisao`). Os botões Return e Approve ficam na barra de ações.
+- A tabela antiga da revisão (`sepRevisao`) e a vista só de leitura (`sepLeitura`) já não são usadas, mas o código ficou.
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.

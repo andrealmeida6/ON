@@ -619,7 +619,7 @@
     var nExt = S.ext.filter(function (x) { return x.milestone_id === m.id && x.estado !== 'aplicado'; }).length;
     /* Uma so pagina, pela ordem do trabalho: pedido, fontes e calculos, dados, ficheiros, exploracao, qualidade, terceiros, auditoria e conversa */
     var recolhe = !decide && P.podePreencher(m, usr);
-    var secs = [['dados', decide ? 'Review' : 'Requested data', 0, (recolhe ? '' : cartaoFicheiros(m)) + cartaoTrimestres(m) + (decide ? sepRevisao(m) : recolhe ? sepRecolha(m) : sepLeitura(m))],
+    var secs = [['dados', 'Requested data', 0, cartaoTrimestres(m) + sepRecolha(m) + (decide ? caixaDecisao(m) : '')],
       ['evidencias', 'Evidence and quality', 0, sepEvidencias(m)], ['externos', 'Assistance requests', nExt, sepExternos(m)], ['auditoria', 'Audit', nAud, sepAuditoria(m)], ['conversa', 'Conversation and history', m.comentarios.length, (P.ext.sepConversa ? P.ext.sepConversa(m) : sepConversa(m))]];
     var indice = [['dados', secs[0][1]]].concat(secs.slice(1).map(function (s) { return [s[0], s[1], s[2]]; }));
     var tab = U.msTab[m.id] || 'trabalho', nDados = m.indicadores.filter(function (id) { return P.podeVerIndicador(P.cat(id), usr); }).length;
@@ -673,6 +673,9 @@
     return '<span class="rq2-al' + (falta ? '' : ' ok') + '" tabindex="0" role="img" aria-label="' + e(v.alertas.length + ' alert(s). ' + txt) + '" data-tip="' + e(txt) + '">' + svg(ICO_ALERTA, 15) + '<b>' + v.alertas.length + '</b></span>';
   };
   var sepRecolha = function (m) {
+    /* Um so ecra para todos os perfis: o mesmo layout e os mesmos menus. So muda o que cada pessoa pode editar,
+       pelo estado de cada indicador (em recolha com ela e ainda nao submetido). */
+    var pode = P.podePreencher(m, u());
     var usr = u(), calcs = P.calculosMilestone ? P.calculosMilestone(m) : [], comFontes = P.camposMilestone ? P.camposMilestone(m).length > 0 : false, vistos = {};
     var todosAbertos = m.indicadores.every(function (id) { return rqAberto(m, id); });
     /* Submeter indicadores um a um: o filtro mostra o que falta submeter, nada se perde de vista */
@@ -683,7 +686,7 @@
       var txtBruto = it.rascunho || (it.valor === null ? '' : String(it.valor).replace('.', ','));
       var cls = v.erros.length ? 'erro' : v.alertas.length ? 'alerta' : '';
       var res = v.erros.length ? chip('Error', 'err') : v.alertas.length ? alertaHtml(m, id, v, it) : it.valor !== null ? chip('Valid', 'ok') : chip('To fill in');
-      var prontoInd = !sub && !saida && !P.faltasIndicador(m, id).length;
+      var ed = pode && !sub && !saida, prontoInd = pode && !sub && !saida && !P.faltasIndicador(m, id).length;
       if (saida) res = it.valor !== null ? chip('Calculated', 'info') : '<span class="ps-tip-alvo" tabindex="0" data-tip="Calculated by the platform from ' + e(P.codigosCalc(c.calc_codigos).join(', ')) + ' once they are submitted.">' + chip('Waiting for inputs') + '</span>';
       else if (sub && (it.revisto || P.podeReverInd(m, id, usr))) res = estadoRevHtml(m, id);
       else if (sub) res = '<span class="rq2-sub">' + chip(P.etapaInd(m, id) === 'area' ? 'With the area head' : 'With sustainability', 'rev') + '<small>' + e(sub.por + ', ' + P.fmtDataHora(sub.em)) + '</small><button type="button" class="ps-btn liga" data-a="indReabrir" data-v="' + e(id) + '">Reopen</button></span>';
@@ -694,7 +697,7 @@
       var evTxt = P.evidenciaPrecisa(m, id) ? (it.evidencias.length ? '' : '<span class="rq2-b warn">Evidence required</span>') : '';
       var marcas = (emCalc ? '<span class="rq2-b calc">Calculated</span>' : '') + (P.inteiro(c) ? '<span class="rq2-b">Whole number</span>' : '') + evTxt + (it.evidencias.length ? '<span class="rq2-b">' + it.evidencias.length + ' evidence</span>' : '') +
         (it.qualidade === 'estimado' ? '<span class="rq2-b">Estimated</span>' : '') + (recebido ? '<span class="rq2-b ok">Value received</span>' : pendente ? '<span class="rq2-b">Assistance requested</span>' : '');
-      var valor = (sub || saida) && !emCalc ? '<span class="rq2-calc ps-num rq2-fixo" title="' + (saida ? 'Calculated from ' + e(c.calc_codigos) : 'Submitted: reopen it to change') + '">' + (it.valor === null ? '-' : e(fmtV(id, it.valor))) + '</span>' : emCalc ? '<span class="rq2-calc ps-num ' + cls + '" title="Calculated from the source data">' + e(fmtV(id, it.valor)) + '</span>'
+      var valor = !ed && !emCalc ? '<span class="rq2-calc ps-num rq2-fixo" title="' + (saida ? 'Calculated from ' + e(c.calc_codigos) : sub && pode ? 'Submitted: reopen it to change' : 'Read only at this step') + '">' + (it.valor === null ? '-' : e(fmtV(id, it.valor))) + '</span>' : emCalc ? '<span class="rq2-calc ps-num ' + cls + '" title="Calculated from the source data">' + e(fmtV(id, it.valor)) + '</span>'
         : '<input id="v-' + e(id) + '" class="ps-in ps-num rq2-in ' + cls + '"' + numAttr(id) + ' autocomplete="off" aria-label="Value ' + e(P.rotPeriodo(m) + ', ' + c.nome) + '" placeholder="-" value="' + e(txtBruto) + '" data-c="valor" data-id="' + e(id) + '"' + (v.erros.length ? ' aria-invalid="true" aria-describedby="err-' + e(id) + '"' : '') + '>';
       var linha = '<div class="rq2-l"><button type="button" class="rq2-seta" data-a="rqAbrir" data-v="' + e(id) + '" aria-expanded="' + aberto + '" aria-controls="rqd-' + e(id) + '" aria-label="' + (aberto ? 'Hide' : 'Show') + ' the details of ' + e(c.nome) + '">' + svg(I.baixo, 16) + '</button>' +
         '<div class="rq2-nome"><span class="rq2-nl"><button type="button" class="rq2-n" data-a="ficha" data-v="' + e(id) + '">' + e(c.nome) + '</button>' + infoFormula(id, emCalc) + '</span><small>' + e(id) + ', ' + e(c.unidade_medida) + marcas + '</small></div>' +
@@ -712,25 +715,25 @@
         (P.formulaTxt ? '<p class="ps-ind-form"><b>Formula:</b> ' + e(P.formulaTxt(id)) + '</p>' : '') +
         (emCalc ? '<p class="rq2-calc-f"><span class="ps-mono">' + e(calc.subst) + '</span> = <b>' + e(fmtV(id, calc.valor)) + '</b><small>Calculated from the source data. Change those values to change it.</small></p>' : calc && calc.x && comFontes ? '<p class="ps-small ps-mut">Fill in the source data and this value is calculated, or type it in the line above.</p>' : '') + '</div>';
       var origem = fontes ? '<div class="rq2-bl"><h4>Source data</h4>' + fontes + '</div>' : '';
-      var just = v.alertas.length ? '<div class="ps-ind-just"><ul>' + v.alertas.map(function (a) { return '<li>' + e(a) + '</li>'; }).join('') + '</ul><label class="ps-lab" for="j-' + e(id) + '">Justification (required)</label><textarea id="j-' + e(id) + '" class="ps-ta" data-c="just" data-id="' + e(id) + '">' + e(it.justificacao) + '</textarea></div>' : '';
-      var qual = '<div class="rq2-ac">' + campo('q-' + id, 'Data quality', '<select id="q-' + e(id) + '" class="ps-sel" data-c="qual" data-id="' + e(id) + '">' + opt('medido', 'Measured', it.qualidade) + opt('calculado', 'Calculated', it.qualidade) + opt('estimado', 'Estimated', it.qualidade) + '</select>') +
-        (it.qualidade === 'estimado' ? campo('m-' + id, 'Estimation method (required)', '<input id="m-' + e(id) + '" class="ps-in" value="' + e(it.metodo) + '" data-c="metodo" data-id="' + e(id) + '">') : '') +
-        '<div class="ps-sp"><button type="button" id="e-' + e(id) + '" class="ps-btn peq" data-a="anexar" data-v="' + e(id) + '">Attach evidence</button>' + (P.evidenciaPrecisa(m, id) ? (it.evidencias.length ? chip('Evidence attached', 'ok') : chip('Evidence required', 'warn')) : (it.evidencias.length ? chip(it.evidencias.length + ' evidence item(s)', 'ok') : '')) +
-        '<button type="button" class="ps-btn peq" data-a="pedirAjuda" data-v="' + e(id) + '">Request assistance</button></div>' + (it.evidencias.length || (P.extracaoDe && P.extracaoDe(m, id)) ? '<div class="fc-l rq2-ev"><span class="ps-lab">Evidence</span>' + (P.extracaoHtml ? P.extracaoHtml(m, id) : '') + P.fichLista(it.evidencias, m) + '</div>' : '') + '</div>';
+      var just = v.alertas.length ? '<div class="ps-ind-just"><ul>' + v.alertas.map(function (a) { return '<li>' + e(a) + '</li>'; }).join('') + '</ul>' + (ed ? '<label class="ps-lab" for="j-' + e(id) + '">Justification (required)</label><textarea id="j-' + e(id) + '" class="ps-ta" data-c="just" data-id="' + e(id) + '">' + e(it.justificacao) + '</textarea>' : '<span class="ps-lab">Justification</span><p class="ps-small">' + (String(it.justificacao || '').trim() ? e(it.justificacao) : '<span class="ps-mut">None given.</span>') + '</p>') + '</div>' : '';
+      var qual = '<div class="rq2-ac">' + campo('q-' + id, 'Data quality', '<select id="q-' + e(id) + '" class="ps-sel" data-c="qual" data-id="' + e(id) + '"' + (ed ? '' : ' disabled') + '>' + opt('medido', 'Measured', it.qualidade) + opt('calculado', 'Calculated', it.qualidade) + opt('estimado', 'Estimated', it.qualidade) + '</select>') +
+        (it.qualidade === 'estimado' ? campo('m-' + id, 'Estimation method' + (ed ? ' (required)' : ''), '<input id="m-' + e(id) + '" class="ps-in" value="' + e(it.metodo) + '" data-c="metodo" data-id="' + e(id) + '"' + (ed ? '' : ' readonly') + '>') : '') +
+        '<div class="ps-sp">' + (ed ? '<button type="button" id="e-' + e(id) + '" class="ps-btn peq" data-a="anexar" data-v="' + e(id) + '">Attach evidence</button>' : '') + (P.evidenciaPrecisa(m, id) ? (it.evidencias.length ? chip('Evidence attached', 'ok') : chip('Evidence required', 'warn')) : (it.evidencias.length ? chip(it.evidencias.length + ' evidence item(s)', 'ok') : '')) +
+        (ed ? '<button type="button" class="ps-btn peq" data-a="pedirAjuda" data-v="' + e(id) + '">Request assistance</button>' : '') + '</div>' + (it.evidencias.length || (P.extracaoDe && P.extracaoDe(m, id)) ? '<div class="fc-l rq2-ev"><span class="ps-lab">Evidence</span>' + (P.extracaoHtml ? P.extracaoHtml(m, id) : '') + P.fichLista(it.evidencias, m) + '</div>' : '') + '</div>';
       var ajuda = recebido ? '<div class="ps-aviso ok">' + e(recebido.entidade_externa) + ' sent ' + e(fmtV(id, recebido.valor)) + ' ' + e(c.unidade_medida) + (recebido.nota ? ': "' + e(recebido.nota) + '"' : '') + '. <button type="button" class="ps-btn peq" data-a="usarExt" data-v="' + e(recebido.id) + '">Use this value</button></div>'
         : pendente ? '<div class="ps-aviso">Waiting for ' + e(pendente.entidade_externa) + ', due ' + e(P.fmtData(pendente.prazo)) + '.</div>' : '';
       return '<div class="rq2-it on ' + cls + '" id="ind-' + e(id) + '">' + linha + '<div class="rq2-det" id="rqd-' + e(id) + '"><div class="rq2-det-g' + (origem ? '' : ' um') + '">' + defin + origem + '</div>' + just + qual + ajuda + '</div></div>';
     }).join('');
     var acomp = '<div class="rq2-acomp" role="group" aria-label="Submission"><div class="rq2-prog"><b>' + est.submetidos + ' of ' + est.total + ' submitted</b><span class="rq2-barra" aria-hidden="true"><i style="width:' + (est.total ? Math.round(est.submetidos / est.total * 100) : 0) + '%"></i></span><small>' + (est.faltam ? est.faltam + ' still to submit' + (est.prontos.length ? ', ' + est.prontos.length + ' ready now' : '') : 'All indicators submitted. Submit the task to send it for review.') + '</small></div>' +
       '<div class="ps-seg" role="group" aria-label="Show">' + [['todos', 'All ' + m.indicadores.length], ['falta', 'To submit ' + est.faltam], ['sub', 'Submitted ' + est.submetidos]].map(function (x) { return '<button type="button" class="' + (fil === x[0] ? 'on' : '') + '" data-a="rqSubFil" data-v="' + x[0] + '">' + e(x[1]) + '</button>'; }).join('') + '</div>' +
-      (est.prontos.length ? '<button type="button" class="ps-btn peq pri" data-a="indSubmeterProntos">Submit the ' + est.prontos.length + ' ready</button>' : '') + '</div>';
+      (pode && est.prontos.length ? '<button type="button" class="ps-btn peq pri" data-a="indSubmeterProntos">Submit the ' + est.prontos.length + ' ready</button>' : '') + '</div>';
     var vistaLista = bannerRev(m) + acomp + '<div class="rq2"><div class="rq2-cab"><button type="button" class="ps-btn liga rq2-todos" data-a="rqTodos">' + (todosAbertos ? 'Collapse all' : 'Expand all') + '</button><span>Indicator</span><span class="rq2-dir">' + e(P.rotAnterior(P.chave(m))) + '</span><span class="rq2-dir">Value ' + e(P.rotPeriodo(m)) + '</span><span class="rq2-dir">Change</span><span>Status</span></div>' + (linhas || '<p class="ps-mut ps-small rq2-vazio">' + (fil === 'sub' ? 'Nothing submitted yet.' : 'Nothing left to submit.') + '</p>') + '</div>';
     /* Um so cartao: os valores entram no separador do ecra, os ficheiros no separador de upload */
-    var tab = abaRecolha(m), aberta = !P.concluida(m);
+    var tab = abaRecolha(m), aberta = !P.concluida(m) && pode, fechada = P.concluida(m);
     var porPreencher = m.indicadores.filter(function (id) { return P.item(id, P.chave(m)).valor === null; }).length;
     var fpFalta = P.ficheirosPedidos(m).filter(function (f) { return f.preciso && f.obrigatorio && !f.entregues.length; }).length, fpTotal = P.ficheirosPedidos(m).filter(function (f) { return f.preciso; }).length;
     var importar = aberta ? '<button type="button" class="ps-btn peq" data-a="wzAbrir">' + svg(I.tabela, 14) + 'Import from Excel</button>' : '';
-    var pedir = P.gereTudo(usr) && aberta ? '<button type="button" class="ps-btn peq" data-a="ficPedirAbrir">' + svg(I.upload, 14) + 'Request a file</button>' : '';
+    var pedir = P.gereTudo(usr) && !fechada ? '<button type="button" class="ps-btn peq" data-a="ficPedirAbrir">' + svg(I.upload, 14) + 'Request a file</button>' : '';
     var abas = [['ecra', I.lapis, 'Fill in on screen', porPreencher ? porPreencher + ' of ' + m.indicadores.length + ' to fill in' : 'All ' + m.indicadores.length + ' filled in', porPreencher ? 'warn' : 'ok'],
       ['fic', I.upload, 'Upload files', fpTotal ? (fpFalta ? fpFalta + ' to upload' : 'All delivered') : 'None required, other files welcome', fpFalta ? 'warn' : 'ok']];
     var barraAbas = '<div class="rq-abas" role="tablist" aria-label="How to enter the data">' + abas.map(function (a) {
@@ -738,7 +741,7 @@
         '<span class="rq-aba-ic" aria-hidden="true">' + svg(a[1], 18) + '</span><span class="rq-aba-t"><b>' + a[2] + '</b><small class="' + a[4] + '">' + e(a[3]) + '</small></span></button>';
     }).join('') + '</div>';
     var painelEcra = '<div class="rq-pan" role="tabpanel" id="rqp-ecra" aria-labelledby="rqa-ecra"' + (aberta ? ' data-dzx="' + e(m.id) + '"' : '') + '>' +
-      '<div class="rq-barra"><p class="ps-small ps-mut">' + (aberta ? 'Type each value, paste from Excel in the grid, or drop an Excel file here to import it.' : 'This task is closed.') + '</p>' + ferrEcra(m) + '</div>' +
+      '<div class="rq-barra"><p class="ps-small ps-mut">' + (aberta ? 'Type each value, paste from Excel in the grid, or drop an Excel file here to import it.' : fechada ? 'Task completed. Approved values only change by restatement.' : (P.podeAgir(m, usr) ? 'This step is with you (' + e(P.passoAtual(m).nome) + '). Check the values below, then approve or return at the bottom.' : 'Read only for you at this step: ' + e(P.passoAtual(m).nome) + ', with ' + e(P.nomeResp(m, P.passoAtual(m).responsavel)) + '.')) + '</p>' + ferrEcra(m) + '</div>' +
       (U.dadosVista === 'grid' ? corpoGrelha(m) : vistaLista) + (aberta ? '<div class="rq-solta-x" aria-hidden="true">' + svg(I.tabela, 26) + '<b>Drop the Excel to import its values</b><small>You choose what goes where before anything is saved.</small></div>' : '') + '</div>';
     var painelFic = '<div class="rq-pan rq-pan-fic" role="tabpanel" id="rqp-fic" aria-labelledby="rqa-fic"' + (aberta ? ' data-dz="' + e(m.id) + '"' : '') + '>' + cartaoFicheiros(m, true) + '</div>';
     return '<div class="ps-card rq-uni" id="rq-dados">' + cabCartao('Requested data', 'tarefa', '<div class="ps-sp">' + (P.fontesAcoes ? P.fontesAcoes(m) : '') + importar + pedir + '</div>') +
@@ -1058,6 +1061,11 @@
         return '<li><label><input id="exp-' + e(c.id) + '" type="checkbox" data-c="expSel" data-id="' + e(c.id) + '"' + (x.sel.indexOf(c.id) > -1 ? ' checked' : '') + '><span class="ps-mono">' + e(c.id) + '</span><span class="n">' + e(c.nome) + '</span><span class="v ps-num">' + (pt ? e(fmtV(c.id, pt.v)) + ' <small>' + e(c.unidade_medida) + ', ' + pt.ano + '</small>' : '<small>No value yet</small>') + '</span>' + chip(est.txt, est.cls) + '</label></li>';
       }).join('') + '</ul>' : vazio(dom.ok.length ? 'Nothing matches your search.' : 'You have no access to this layer.')) + '</div></div></div>' +
       '<div class="ps-card">' + cabCartao('Your report (' + cfg.linhas.length + ')', 'ativ', '<button type="button" class="ps-btn peq pri" data-a="expExcel"' + (cfg.linhas.length ? '' : ' disabled') + '>Export to Excel</button>') + '<div class="ps-card-body">' + window.PortalGrelha.html(cfg) + '</div></div>';
+  };
+  /* Quem decide um passo (area ou sustentabilidade) ve o mesmo ecra de quem preencheu; por baixo, o comentario para devolver */
+  var caixaDecisao = function (m) {
+    var p = P.passoAtual(m);
+    return '<div class="ps-card ps-mt" id="rev-caixa">' + cabCartao(p.nome, 'tarefa') + '<div class="ps-card-body">' + campo('rev-com', 'Comment (required to return)', '<textarea id="rev-com" class="ps-ta" placeholder="What needs to change, if you return it"></textarea>') + '<p class="ps-small ps-mut">Approve or return with the buttons at the bottom of the screen.</p></div></div>';
   };
   var sepRevisao = function (m) {
     var p = P.passoAtual(m), rot = p.tipo === 'parecer' ? 'Give favourable opinion' : p.tipo === 'aprovacao' ? 'Approve and lock' : p.tipo === 'area' ? 'Approve and send to sustainability' : 'Complete review';
