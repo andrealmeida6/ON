@@ -1056,6 +1056,19 @@ Pedido do André a 11 de novembro de 2026.
 - Quem decide o passo vê, por baixo, o cartão do passo com o comentário para devolver (`caixaDecisao`). Os botões Return e Approve ficam na barra de ações.
 - A tabela antiga da revisão (`sepRevisao`) e a vista só de leitura (`sepLeitura`) já não são usadas, mas o código ficou.
 
+### O estado diz o que há para fazer; tooltips com os indicadores no workflow
+
+Pedido do André a 11 de novembro de 2026.
+
+- **Estado das tasks e dos KPIs** (`estChip`, `estadoTarefa`, `P.chipEstadoTarefa`):
+  - Quando a task está com a pessoa, o estado é a ação dela: **To approve**, To review, To give opinion, To fill in ou Returned, to fix.
+  - Se o prazo passou, aparece ao lado um segundo badge **Overdue**, com a data e os dias de atraso na tooltip. Já não substitui o estado.
+  - Aplica-se à Home (Tasks), à página Tasks e ao cabeçalho da task.
+  - Os KPIs submetidos um a um mostram com quem estão: "Submitted, with the area head", "Submitted, with sustainability" ou "Approved".
+  - O botão de ação do passo do responsável de área passou de "Review →" para **Approve →**.
+- **Barra de ação:** confirmado que quem tem o passo vê os botões Return e **Approve and send to sustainability** (ou "Approve and lock" no passo da sustentabilidade).
+- **Workflow da task:** os números ("2 of 10 submitted", "2 to approve", "1 approved") têm uma tooltip com a lista dos indicadores, um por linha. Também funcionam pelo teclado. As tooltips com mudanças de linha usam a classe `.linhas` (`white-space: pre-line`).
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.

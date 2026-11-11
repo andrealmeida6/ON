@@ -78,8 +78,8 @@
       '<button type="button" class="ps-btn peq" data-a="tarOffline"' + (offline.length ? '' : ' disabled title="Nothing in collection with you in this list"') + '>Excel (offline)</button>' + X.botaoTl('Timeline') + '</div>';
     var cols = [{ t: 'KPI' }, { t: 'Period' }, { t: 'Perimeter' }, { t: 'Assigned to' }, { t: 'Deadline' }, { t: 'Status' }];
     var corpo = '<div class="ps-card-body">' + (E.linhas.length ? filtrosHtml(E.linhas, 'tf') : '') + (mostrar.length ? tabela(cols, mostrar.map(function (x) {
-      var st = x.rev ? { txt: P.etapaInd(x.m, x.id) === 'area' ? 'Submitted, to approve' : 'Area approved, to review', cls: 'rev' } : X.estadoTarefa(x.m, x.id), cta = x.rev ? 'Review' : P.podeAgir(x.m, usr) ? X.ctaPasso(x.m) : '', sub = '<small class="ps-mut">' + e((x.c.esrs_requisito ? x.c.esrs_requisito + ', ' : '') + x.m.nome) + '</small>';
-      return { attrs: 'class="ps-tr-tar"', celulas: ['<div class="ps-tar-k"><a href="' + rota('Milestone/' + x.m.id + '?ind=' + encodeURIComponent(x.c.id)) + '">' + e(x.c.nome) + '</a>' + sub + (cta ? '<a class="ps-tar-cta" href="' + rota('Milestone/' + x.m.id + '?ind=' + encodeURIComponent(x.c.id)) + '">' + e(cta) + ' →</a>' : '') + '</div>', X.tagPer(x.m) || e(P.rotPeriodo(x.m)), X.empHtml(x.m.empresa), X.atribHtml(x.m), '<span class="ps-nowrap">' + e(X.prazoTxt(x.m)) + '</span>', chip(st.txt, st.cls)] };
+      var st = x.rev ? { txt: P.etapaInd(x.m, x.id) === 'area' ? 'To approve' : 'To approve (area approved)', cls: 'rev', atraso: P.diasAte(x.m.prazo) < 0 } : X.estadoTarefa(x.m, x.id), cta = x.rev ? 'Approve' : P.podeAgir(x.m, usr) ? X.ctaPasso(x.m) : '', sub = '<small class="ps-mut">' + e((x.c.esrs_requisito ? x.c.esrs_requisito + ', ' : '') + x.m.nome) + '</small>';
+      return { attrs: 'class="ps-tr-tar"', celulas: ['<div class="ps-tar-k"><a href="' + rota('Milestone/' + x.m.id + '?ind=' + encodeURIComponent(x.c.id)) + '">' + e(x.c.nome) + '</a>' + sub + (cta ? '<a class="ps-tar-cta" href="' + rota('Milestone/' + x.m.id + '?ind=' + encodeURIComponent(x.c.id)) + '">' + e(cta) + ' →</a>' : '') + '</div>', X.tagPer(x.m) || e(P.rotPeriodo(x.m)), X.empHtml(x.m.empresa), X.atribHtml(x.m), '<span class="ps-nowrap">' + e(X.prazoTxt(x.m)) + '</span>', P.chipEstadoTarefa(x.m, st)] };
     })) : vazio(!E.linhas.length ? (E.esc === 'minhas' ? 'Nothing waiting on you.' + (E.gere ? ' Switch to Everyone to follow the open tasks.' : '') : 'No open tasks.') : 'No task matches these filters.')) +
       (l.length > 12 ? '<div class="ps-sp ps-mt"><button type="button" class="ps-btn liga" data-a="tarTodas">' + (U.tarTodas ? 'Show fewer' : 'Show all ' + l.length + ' tasks') + '</button><a class="ps-btn liga" href="' + rota('Milestones' + (E.esc === 'minhas' ? '?minhas=1' : '')) + '">Open by task</a></div>' : '') + '</div>';
     return '<div class="ps-dock">' + cabCartao('Tasks', 'tarefa', dir) + corpo + '</div>';
@@ -114,7 +114,7 @@
           'var': { t: v.variacao === null ? '' : (v.variacao > 0 ? '+' : '') + P.fmtNum(v.variacao, 1), so: true },
           qual: { t: P.QUALIDADE_TXT[it.qualidade] || '', so: so },
           just: { t: it.justificacao || '', so: so, cls: pode && v.alertas.length && !String(it.justificacao || '').trim() ? 'falta' : '', tip: v.alertas.length && !String(it.justificacao || '').trim() ? 'A justification is required because of the alert.' : '' },
-          est: { t: st.txt, html: chip(st.txt, st.cls), so: true },
+          est: { t: st.txt + (st.atraso ? ', overdue' : ''), html: P.chipEstadoTarefa(m, st), so: true },
           por: { t: q ? q.por : '', so: true, tip: historico(id, it), cls: q && usr && q.por !== usr.nome ? 'tf-outro' : '' },
           em: { t: q ? P.fmtDataHora(q.em) : '', so: true }, prazo: { t: P.fmtData(m.prazo), so: true, cls: P.diasAte(m.prazo) < 0 && !P.concluida(m) ? 'err' : '' }
         } };

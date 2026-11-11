@@ -54,7 +54,16 @@
       '<span class="ps-so-mob ps-ms-meta">' + e(P.rotPeriodo(m)) + ', ' + empHtml(m.empresa) + (a ? ', ' + e(a.nome) : '') + ', due ' + e(prazoTxt(m)) + '</span></div>', tagPer(m) || '<span class="ps-mut">-</span>', empHtml(m.empresa), atribHtml(m), '<span class="ps-nowrap">' + e(prazoTxt(m)) + '</span>', estChip(m)] };
   };
   var chip = function (txt, cls) { return '<span class="ps-chip ' + (cls || '') + '">' + e(txt) + '</span>'; };
-  var estChip = function (m) { var s = P.estadoMs(m); return chip(s.txt, s.cls); };
+  /* O estado diz o que a pessoa tem de fazer quando a task esta com ela (To approve, To fill in...);
+     o atraso aparece ao lado, sem tapar o que ha para fazer */
+  var acaoDe = function (m) { var p = P.passoAtual(m); return !p ? '' : p.tipo === 'recolha' ? (m.devolvida ? 'Returned, to fix' : 'To fill in') : p.tipo === 'parecer' ? 'To give opinion' : p.tipo === 'revisao' ? 'To review' : 'To approve'; };
+  var chipAtraso = function (m) { var d = P.diasAte(m.prazo); return !P.concluida(m) && d < 0 ? ' <span class="ps-tip-alvo" tabindex="0" data-tip="' + e('Due ' + P.fmtDataAno(m.prazo) + ', ' + Math.abs(d) + ' day' + (Math.abs(d) === 1 ? '' : 's') + ' ago') + '">' + chip('Overdue', 'err') + '</span>' : ''; };
+  var estChip = function (m) {
+    var s = P.estadoMs(m), usr = u(), p = P.passoAtual(m);
+    if (p && !P.concluida(m) && usr && P.esperaPor(m, usr)) return chip(acaoDe(m), p.tipo === 'recolha' ? (m.devolvida ? 'err' : 'info') : 'rev') + chipAtraso(m);
+    if (s.cod === 'atraso') return chip('In collection', 'info') + chipAtraso(m);
+    return chip(s.txt, s.cls) + chipAtraso(m);
+  };
   /* Iniciais do primeiro e do ultimo nome (Maria Joao Silva Costa da MC) */
   var iniciais = function (n) { var p = String(n).replace(/^Resp\.\s*/, '').split(/\s+/).filter(function (x) { return x.length > 2 || (x && x === x.toUpperCase()); }); return p.length ? (p[0][0] + (p.length > 1 ? p[p.length - 1][0] : '')).toUpperCase() : '?'; };
   var ICO_EQUIPA = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c.6-3.2 2.9-5 5.5-5s4.9 1.8 5.5 5"/><circle cx="17" cy="9" r="2.6"/><path d="M15.5 14.3c2.4-.4 4.4 1.1 5 4.2"/></svg>';
@@ -321,19 +330,22 @@
   AI.iniEstado = function (d) { U.est = U.est || {}; U.est.norma = ''; U.est.empresa = ''; U.est.dono = ''; U.est.estado = d.v; P.irPara('Estado'); };
 
   /* My tasks: uma linha por KPI e periodo do que espera por mim. A gestao pode ver tambem o que esta em aberto com toda a gente. */
+  /* Estado de um KPI numa task: o que ha para fazer com ele; o atraso vem a parte (atraso: true) */
   var estadoTarefa = function (m, id) {
-    var p = P.passoAtual(m);
+    var p = P.passoAtual(m), usr = u(), atraso = !P.concluida(m) && P.diasAte(m.prazo) < 0;
     if (!p) return { txt: 'Completed', cls: 'ok' };
     if (p.tipo === 'recolha') {
-      if (m.devolvida) return { txt: 'Returned', cls: 'err' };
+      if (m.devolvida) return { txt: 'Returned, to fix', cls: 'err', atraso: atraso };
       var it = P.item(id, P.chave(m)), vazio2 = !it || (it.valor === null && !it.rascunho);
-      if (P.diasAte(m.prazo) < 0) return { txt: vazio2 ? 'Overdue' : 'Overdue, to submit', cls: 'err' };
-      return vazio2 ? { txt: 'To fill in', cls: '' } : { txt: 'Filled in, to submit', cls: 'info' };
+      if (it && it.submetido) return { txt: P.etapaInd(m, id) === 'area' ? 'Submitted, with the area head' : it.revisto ? 'Approved' : 'Submitted, with sustainability', cls: it.revisto ? 'ok' : 'rev', atraso: false };
+      return vazio2 ? { txt: 'To fill in', cls: '', atraso: atraso } : { txt: 'Filled in, to submit', cls: 'info', atraso: atraso };
     }
+    if (usr && P.esperaPor(m, usr)) return { txt: acaoDe(m), cls: 'rev', atraso: atraso };
     var s = P.estadoMs(m);
-    return { txt: s.txt, cls: s.cls };
+    return { txt: s.txt, cls: s.cls, atraso: atraso };
   };
-  var ctaPasso = function (m) { var p = P.passoAtual(m); return !p ? '' : p.tipo === 'recolha' ? 'Fill in' : p.tipo === 'parecer' ? 'Give opinion' : p.tipo === 'aprovacao' ? 'Approve' : 'Review'; };
+  P.chipEstadoTarefa = function (m, st) { return chip(st.txt, st.cls) + (st.atraso ? chipAtraso(m) : ''); };
+  var ctaPasso = function (m) { var p = P.passoAtual(m); return !p ? '' : p.tipo === 'recolha' ? 'Fill in' : p.tipo === 'parecer' ? 'Give opinion' : p.tipo === 'aprovacao' || p.tipo === 'area' ? 'Approve' : 'Review'; };
   var abertas = function () { return P.msCiclo().filter(function (m) { return !P.concluida(m) && m.periodicidade !== 'Novos dados ESRS'; }); };
   /* O cartao Tasks (filtros e folha de reporte) esta em portal-tarefas.js */
   AI.tarEsc = function (d) { U.tarEsc = d.v; U.tarTodas = false; R(); };
@@ -581,12 +593,15 @@
         var c = i < m.passo_atual ? 'ok' : i === m.passo_atual ? (m.devolvida ? 'at dev' : 'at') : '';
         /* Indicadores submetidos antes da task: cada um aparece no passo onde esta (responsavel de area ou sustentabilidade) */
         var primEsg = m.passos.filter(function (q) { return q.responsavel === 'esg'; })[0], cnt = function (et) { return m.indicadores.filter(function (id) { return P.etapaInd(m, id) === et; }).length; };
-        var nRevisto = m.indicadores.filter(function (id) { var it = P.item(id, P.chave(m)); return it && it.submetido && it.revisto; }).length;
-        var parcial = es && es.submetidos && i === m.passo_atual, aqui = !es || !es.submetidos || i <= m.passo_atual ? '' : p.tipo === 'area' ? (cnt('area') ? cnt('area') + ' to approve' : '') : p === primEsg ? [cnt('esg') ? cnt('esg') + ' to review' : '', nRevisto ? nRevisto + ' approved' : ''].filter(Boolean).join(', ') : '', chegam = !!aqui;
+        /* Cada numero tem uma tooltip com os indicadores */
+        var lst = function (f) { return m.indicadores.filter(f); }, nomes = function (ids) { return ids.map(function (id) { return id + ' ' + P.cat(id).nome; }).join('\n'); };
+        var etiq = function (ids, txt) { return ids.length ? '<span class="ps-wf-n-i" tabindex="0" data-tip="' + e(nomes(ids)) + '">' + ids.length + ' ' + txt + '</span>' : ''; };
+        var lArea = lst(function (id) { return P.etapaInd(m, id) === 'area'; }), lEsg = lst(function (id) { return P.etapaInd(m, id) === 'esg'; }), lRev = lst(function (id) { var it = P.item(id, P.chave(m)); return it && it.submetido && it.revisto; }), lSub = lst(function (id) { return P.indSubmetido(m, id); });
+        var parcial = es && es.submetidos && i === m.passo_atual, aqui = !es || !es.submetidos || i <= m.passo_atual ? '' : p.tipo === 'area' ? etiq(lArea, 'to approve') : p === primEsg ? [etiq(lEsg, 'to review'), etiq(lRev, 'approved')].filter(Boolean).join(', ') : '', chegam = !!aqui;
         if (parcial) c += ' parcial';
         var anel = parcial ? ' style="--parte:' + Math.round(parte * 100) + '%" title="' + e(es.submetidos + ' of ' + es.total + ' indicators submitted') + '"' : '';
         return '<div class="ps-wf-p ' + c + '"' + (i === m.passo_atual ? ' aria-current="step"' : '') + anel + '><div class="ps-wf-n">' + e(p.nome) + '</div><div class="ps-wf-c">' + (i < m.passo_atual ? svg(I.tick, 18) : m.devolvida && i === m.passo_atual ? svg(I.voltar, 18) : i + 1) + '</div>' +
-          (parcial ? '<div class="ps-wf-sub">' + es.submetidos + ' of ' + es.total + ' submitted</div>' : chegam ? '<div class="ps-wf-chega" title="' + e('Indicators submitted ahead of the task that are at this step') + '">' + e(aqui) + '</div>' : '') + '<div class="ps-wf-r">' + (p.concluido_em ? '<b>' + e(P.fmtData(p.concluido_em)) + '</b><span class="ps-wf-q">' + quemHtml(p.concluido_por) + '</span>' : i === m.passo_atual ? '<b>Current</b><span class="ps-wf-q">' + quemAtual(m) + (podeReatribuir(m, u()) ? '<button type="button" class="ps-wf-edit" data-a="msAtrAbrir" aria-label="Change who it is assigned to" title="Change who it is assigned to">' + svg(ICO_LAPIS, 14) + '</button>' : '') + '</span>' : '<span class="ps-wf-q">' + quemHtml(P.nomeResp(m, p.responsavel)) + '</span>') + '</div></div>';
+          (parcial ? '<div class="ps-wf-sub"><span class="ps-wf-n-i" tabindex="0" data-tip="' + e('Submitted:\n' + nomes(lSub) + (es.faltam ? '\n\nStill to submit: ' + es.faltam : '')) + '">' + es.submetidos + ' of ' + es.total + ' submitted</span></div>' : chegam ? '<div class="ps-wf-chega">' + aqui + '</div>' : '') + '<div class="ps-wf-r">' + (p.concluido_em ? '<b>' + e(P.fmtData(p.concluido_em)) + '</b><span class="ps-wf-q">' + quemHtml(p.concluido_por) + '</span>' : i === m.passo_atual ? '<b>Current</b><span class="ps-wf-q">' + quemAtual(m) + (podeReatribuir(m, u()) ? '<button type="button" class="ps-wf-edit" data-a="msAtrAbrir" aria-label="Change who it is assigned to" title="Change who it is assigned to">' + svg(ICO_LAPIS, 14) + '</button>' : '') + '</span>' : '<span class="ps-wf-q">' + quemHtml(P.nomeResp(m, p.responsavel)) + '</span>') + '</div></div>';
       }).join('') + '</div>' + (abertoH ? historicoHtml(m) : '') + '</div>';
   };
   /* Linha do tempo do workflow: para tras (com devolucoes), o passo atual e o que falta, com o tempo entre etapas */
@@ -2589,7 +2604,8 @@
       tip.appendChild(h); tip.appendChild(f);
     } else tip.textContent = t.getAttribute('data-tip');
     tip.classList.toggle('form', !!tit);
-    tip.classList.toggle('longo', !!tit || tip.textContent.length > 60);
+    tip.classList.toggle('longo', !!tit || tip.textContent.length > 60 || tip.textContent.indexOf('\n') > -1);
+    tip.classList.toggle('linhas', tip.textContent.indexOf('\n') > -1);
     tip.hidden = false;
     var r = t.getBoundingClientRect();
     var meia = tip.classList.contains('longo') ? 160 : 70;

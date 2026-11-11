@@ -2280,4 +2280,7 @@ button.ps-est-i:hover{border-color:rgba(255,255,255,.4);background:rgba(255,255,
 .rev-dev{margin-left:6px}
 tr.rev-pend>td:first-child{box-shadow:inset 3px 0 0 var(--rev)}
 .rev-fila .ps-card-head .ps-mut{max-width:420px}
-
+.ps-wf-n-i{cursor:help;border-bottom:1px dotted currentColor}
+.ps-wf-n-i:focus-visible{outline:2px solid var(--primary);outline-offset:2px;border-radius:3px}
+/* Tooltips com uma linha por item (ex.: indicadores num passo do workflow) */
+.ps-tip.linhas{white-space:pre-line}
