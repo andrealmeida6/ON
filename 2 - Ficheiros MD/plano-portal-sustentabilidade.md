@@ -711,6 +711,15 @@ Pedido do André a 11 de novembro de 2026: um ecrã de monitorização como o da
 - **Mantém-se igual:** os quatro cartões de indicadores (valor consolidado do ano), a atividade recente e o resto da página.
 - **CSS:** secção 49 de `global.css`.
 
+### Calculations no Backoffice
+
+Pedido do André a 11 de novembro de 2026: as fórmulas e a biblioteca de fatores de emissão são configuração e só devem ser mexidas por quem tem acesso ao Backoffice.
+
+- **Saiu** do menu Reporting: o link Calculations, a web page `Calculos` e o snippet `Calculos/Introducao`. Também saiu da lista de páginas de quem não gere o Backoffice (auditor e outros perfis).
+- **Entrou** como separador **Calculations** do Backoffice, no grupo Reporting set-up (`B.calculos`, que usa o mesmo bloco `calculos` de `portal-gestao.js`): Configured formulas, Scope 1 emissions e Emission factor library, sem outras alterações.
+- **Links antigos:** `#/Calculos` e `/calculos/` abrem `Backoffice?tab=calculos`. Quem não tem Backoffice vai para a Home.
+- **CSS:** secção 50 de `global.css`.
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.

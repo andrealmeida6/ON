@@ -169,7 +169,7 @@
     if (usr.perfil === 'ext') return ['Pedidos'];
     /* Quem contribui so precisa das suas milestones (com a folha) e do chat. O resto e para quem acompanha o reporte. */
     if (usr.perfil === 'resp') return ['Inicio', 'Milestones', 'Milestone'];
-    var base = ['Inicio', 'Milestones', 'Milestone', 'Timeline', 'Consolidado', 'Documentos', 'Evidencias', 'Calculos', 'Relatorio', 'Saidas', 'Kpis', 'Historico', 'Auditoria'];
+    var base = ['Inicio', 'Milestones', 'Milestone', 'Timeline', 'Consolidado', 'Documentos', 'Evidencias', 'Relatorio', 'Saidas', 'Kpis', 'Historico', 'Auditoria'];
     if (usr.perfil !== 'auditor') base.push('Dados');
     if (P.gereTudo(usr) || usr.perfil === 'auditor') base.push('Aprovacoes', 'Estado', 'Trilho');
     if (P.gereTudo(usr)) base.push('Backoffice');
@@ -1241,7 +1241,7 @@
   var BO_GRUPOS = [
     ['Indicators', [['indicadores', 'Indicators'], ['milestones', 'Tasks sent']]],
     ['Organisation', [['perimetro', 'Companies and perimeter'], ['departamentos', 'Departments'], ['utilizadores', 'Users and profiles'], ['externas', 'External entities']]],
-    ['Reporting set-up', [['periodos', 'Reporting periods'], ['momentos', 'Reporting moments'], ['wfbase', 'Base workflow'], ['calendario', 'Calendar'], ['materialidade', 'Materiality and frameworks']]],
+    ['Reporting set-up', [['periodos', 'Reporting periods'], ['momentos', 'Reporting moments'], ['calculos', 'Calculations'], ['wfbase', 'Base workflow'], ['calendario', 'Calendar'], ['materialidade', 'Materiality and frameworks']]],
     ['Platform', [['areas', 'Data consumer areas'], ['dados', 'Data and storage']]]
   ];
   var BO = []; BO_GRUPOS.forEach(function (g) { g[1].forEach(function (t) { BO.push(t); }); });
@@ -1298,6 +1298,8 @@
   };
   /* A pagina dos indicadores esta em portal-indicadores.js; aqui fica a lista das tasks (milestones) ja enviadas */
   B.indicadores = function () { return vazio('The indicators page did not load.'); };
+  /* Calculations (formulas e fatores de emissao) e configuracao: vive no Backoffice, so para quem o gere */
+  B.calculos = function () { return '<div class="ps-card"><div class="ps-card-body"><h2 class="ki-h2">Calculations</h2><p class="ps-mut ps-small">Configured formulas and a versioned emission factor library. The values of the indicators that use them are calculated from here.</p></div></div>' + (Blocos['calculos'] ? Blocos['calculos']() : ''); };
   B.perimetro = function () { return (Blocos['perimetro'] ? Blocos['perimetro']() : '') + B.entidades(); };
   B.milestones = function () {
     return '<div class="ps-card">' + cabCartao('Milestones (' + P.msCiclo().length + ')', 'tarefa') + '<div class="ps-card-body">' + tabela([{ t: 'Milestone' }, { t: 'Company' }, { t: 'Assigned to' }, { t: 'Indicators', dir: 1 }, { t: 'Due' }, { t: 'Status' }], P.msCiclo().map(function (m) {
@@ -1841,6 +1843,7 @@
     /* KPI assignment e Companies and perimeter passaram a separadores do Backoffice: os links antigos continuam a funcionar */
     if (pag === 'Atribuicao') { pag = 'Backoffice'; q.tab = 'indicadores'; }
     if (pag === 'Perimetro') { pag = 'Backoffice'; q.tab = 'perimetro'; }
+    if (pag === 'Calculos') { pag = 'Backoffice'; q.tab = 'calculos'; }
     var usr = u(), per = paginasPermitidas(usr);
     if (per.indexOf(pag) < 0 || (pag === 'Milestone' && !P.ms(arg))) pag = usr ? (usr.perfil === 'ext' ? 'Pedidos' : pag === 'Milestone' ? 'Milestones' : 'Inicio') : 'Entrada';
     return { pag: pag, arg: arg, q: q };
