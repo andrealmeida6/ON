@@ -72,8 +72,9 @@
   var casasDe = function (r) { if (r.c !== undefined) return r.c; var c = r.k && P.cat(r.k); return c ? c.casas_decimais : 0; };
   var valores = function (r) {
     var ano = S.ciclo.ano, so = U.rq.modo === 'aprovados';
-    if (!r.k) { var d = S.rq[r.id] || {}; return { ant: d.ant === undefined ? null : d.ant, val: d.val === undefined ? null : d.val, pend: false }; }
-    var f = r.f || 1, it = P.item(r.k, ano), m = P.msDoIndicador(r.k, ano), v = it && it.valor !== null && it.valor !== undefined ? it.valor : null, an = P.valorAnterior(r.k, ano);
+    /* Linhas sem KPI sao valores do grupo escritos a mao: so entram na vista consolidada */
+    if (!r.k) { if (U.rep.emp) return { ant: null, val: null, pend: false }; var d = S.rq[r.id] || {}; return { ant: d.ant === undefined ? null : d.ant, val: d.val === undefined ? null : d.val, pend: false }; }
+    var emp = U.rep.emp, f = r.f || 1, it = P.item(r.k, ano), m = P.msDoIndicador(r.k, ano), v = it && it.valor !== null && it.valor !== undefined ? P.valorVista(r.k, ano, emp).valor : null, an = P.anteriorVista(r.k, ano, emp);
     var pend = v !== null && !(m && P.concluida(m));
     if (pend && so) { v = null; pend = false; }
     return { ant: an === null || an === undefined ? null : an * f, val: v === null ? null : v * f, pend: pend };
@@ -92,6 +93,20 @@
 
   /* --- Ecra ----------------------------------------------------------------- */
   U.rq = { sep: 'quadros', modo: 'todos', editar: false };
+  /* Vista do reporte: consolidado (soma das empresas pelo metodo de consolidacao) ou uma empresa so */
+  U.rep = { emp: '' };
+  var nomeVista = function () { return U.rep.emp || 'Consolidated'; };
+  P.nomeVistaReporte = nomeVista;
+  var seletorVista = function () {
+    var inc = S.ent.filter(function (x) { return P.pesoConsolidacao(x) > 0; });
+    var metodo = function (x) { var w = P.pesoConsolidacao(x); return (P.METODOS[x.metodo] || x.metodo) + (w ? ', ' + P.fmtNum(w * 100, 0) + '%' : ', not counted'); };
+    return '<div class="rp-vista ps-nao-imprimir"><div class="rp-vista-b" role="tablist" aria-label="Reporting view">' + [{ nome: '', t: 'Consolidated', s: inc.map(function (x) { return x.nome; }).join(' + ') || 'no company counted' }].concat(S.ent.map(function (x) { return { nome: x.nome, t: x.nome, s: metodo(x) }; })).map(function (o) {
+      var on = U.rep.emp === o.nome;
+      return '<button type="button" role="tab" aria-selected="' + on + '" class="rp-v' + (on ? ' on' : '') + '" data-a="repVista" data-v="' + e(o.nome) + '">' + (o.nome ? X.avEmpresa() : '<span class="rp-sig" aria-hidden="true">Σ</span>') + '<span><b>' + e(o.t) + '</b><small>' + e(o.s) + '</small></span></button>';
+    }).join('') + '</div><p class="ps-small ps-mut">' + (U.rep.emp ? 'Only what ' + e(U.rep.emp) + ' reports, at 100%.' : 'Sum of the companies by consolidation method: full and parent at 100%, proportional by ownership, equity method left out. Percentages and ratios are a weighted average, not a sum. <a href="' + X.rota('Backoffice?tab=perimetro') + '">Set the perimeter</a>') + '</p></div>';
+  };
+  P.seletorVistaReporte = seletorVista;
+  A.repVista = function (d) { U.rep.emp = d.v; R(); };
   var legendaHtml = function () {
     return '<div class="rq-leg"><b>LEGEND</b><div>' + LEGENDA.map(function (l) { return '<span' + (l.l ? ' class="rq-leg-l"' : '') + '>' + (l.d ? '<i class="rq-pt" aria-hidden="true"></i>' : '') + e(l.t) + '</span>'; }).join('') + '</div></div>';
   };
@@ -123,7 +138,7 @@
       campo('rq-modo', 'Values', '<select id="rq-modo" class="ps-sel" data-c="rqModo">' + opt('todos', 'All values', d.modo) + opt('aprovados', 'Approved only', d.modo) + '</select>') +
       (adm ? '<label class="ps-chk"><input id="rq-ed" type="checkbox" data-c="rqEd"' + (d.editar ? ' checked' : '') + '> Edit values not linked to a KPI</label>' : '') + '</div>' +
       (pend ? '<p class="ps-small ps-mut ps-nao-imprimir">Values in italics are not approved yet.</p>' : '') +
-      '<div class="ps-so-imprimir ps-sp-b ps-rel-topo"><span data-marca-c="logo-claro"></span><b>Report ' + S.ciclo.ano + '</b></div>' + paginaHtml('env') + paginaHtml('soc');
+      '<div class="ps-so-imprimir ps-sp-b ps-rel-topo"><span data-marca-c="logo-claro"></span><b>Report ' + S.ciclo.ano + ', ' + e(nomeVista()) + '</b></div>' + paginaHtml('env') + paginaHtml('soc');
   };
 
   /* --- Montagem do documento ------------------------------------------------- */
@@ -151,7 +166,7 @@
   Blocos['relatorio'] = function () {
     var s = U.rq.sep, abas = [['quadros', 'Indicator tables'], ['doc', 'Document builder'], ['lista', 'All indicators']];
     var topo = '<div class="ps-seg ps-nao-imprimir ps-sp" role="group" aria-label="Report views">' + abas.map(function (a) { return '<button type="button" class="' + (s === a[0] ? 'on' : '') + '" data-a="rqSep" data-v="' + a[0] + '">' + a[1] + '</button>'; }).join('') + '</div>';
-    return topo + (s === 'quadros' ? abaQuadros() : s === 'doc' ? abaDoc() : antigo());
+    return seletorVista() + topo + (s === 'quadros' ? abaQuadros() : s === 'doc' ? abaDoc() : antigo());
   };
 
   A.rqSep = function (d) { U.rq.sep = d.v; R(); };
@@ -328,8 +343,9 @@
   P.folhasCompletas = todasFolhas;
   var docCompleto = function () { return { titulo: 'Sustainability report', blocos: [{ t: 'cap', txt: PAGS.env }, { t: 'leg' }, { t: 'q', id: 'natural' }, { t: 'q', id: 'clima' }, { t: 'cap', txt: PAGS.soc }, { t: 'leg' }, { t: 'q', id: 'social' }, { t: 'q', id: 'societal' }] }; };
   P.docCompleto = docCompleto;
-  A.rqExcel = function () { descarregar('report-tables-' + S.ciclo.ano + '.xlsx', P.quadrosXlsx(todasFolhas()), TIPO_X); toast('Excel file ready.', 'ok'); };
-  A.rqWord = function () { descarregar('report-tables-' + S.ciclo.ano + '.docx', P.documentoDocx(docCompleto()), TIPO_W); toast('Word file ready.', 'ok'); };
+  var sufixo = function () { return '-' + nomeVista().toLowerCase().replace(/[^a-z0-9]+/g, '-'); };
+  A.rqExcel = function () { descarregar('report-tables-' + S.ciclo.ano + sufixo() + '.xlsx', P.quadrosXlsx(todasFolhas()), TIPO_X); toast('Excel file ready.', 'ok'); };
+  A.rqWord = function () { descarregar('report-tables-' + S.ciclo.ano + sufixo() + '.docx', P.documentoDocx(docCompleto()), TIPO_W); toast('Word file ready.', 'ok'); };
   A.docWord = function () { descarregar('report-' + S.ciclo.ano + '.docx', P.documentoDocx(S.doc), TIPO_W); toast('Word file ready.', 'ok'); };
   A.docExcel = function () {
     var qs = S.doc.blocos.filter(function (b) { return b.t === 'q'; }).map(function (b) { return quadro(b.id); });

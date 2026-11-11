@@ -1112,9 +1112,15 @@
     return '<div class="ps-sp ps-nao-imprimir ps-filtros"><button type="button" class="ps-btn pri" data-a="relExcel">Export to Excel</button><button type="button" class="ps-btn" data-a="imprimir">Print or save as PDF</button></div>' +
       '<div class="ps-so-imprimir ps-sp-b ps-rel-topo"><span data-marca-c="logo-claro"></span><b>Report ' + ano + '</b></div>' +
       P.QUADROS.map(function (q) {
-        return '<div class="ps-card ps-mt">' + cabCartao(nomes[q], 'doc') + '<div class="ps-card-body">' + tabela([{ t: 'Indicator' }, { t: 'Unit' }, { t: String(ano), dir: 1 }, { t: String(ano - 1), dir: 1 }, { t: 'Status' }], S.cat.filter(function (c) { return c.quadro === q; }).map(function (c) {
-          var m = P.msDoIndicador(c.id, ano), apr = m && P.concluida(m), it = P.item(c.id, ano), est = m ? P.estadoIndicador(m, c.id) : { txt: 'To collect', cls: '' }, ant = P.valorAnterior(c.id, ano);
-          return [e(c.nome) + (it && it.reexpresso ? ' ' + chip('Restated', 'warn') : ''), e(c.unidade_medida), apr && it.valor !== null ? e(fmtV(c.id, it.valor)) : '-', ant === null || ant === undefined ? '-' : e(fmtV(c.id, ant)), chip(est.txt, est.cls)];
+        /* Consolidado: uma coluna por empresa e o total; uma empresa: so o que ela reporta */
+        var emp = (U.rep || {}).emp || '', cons = !emp, ents = S.ent;
+        var cols = [{ t: 'Indicator' }, { t: 'Unit' }].concat(cons ? ents.map(function (x) { return { t: x.nome, dir: 1 }; }).concat([{ t: 'Consolidated ' + ano, dir: 1, info: 'Volumes are added by consolidation method (full and parent at 100%, proportional by ownership, equity method left out). Percentages and ratios are a weighted average.' }]) : [{ t: emp + ' ' + ano, dir: 1 }]).concat([{ t: String(ano - 1), dir: 1 }, { t: 'Status' }]);
+        return '<div class="ps-card ps-mt">' + cabCartao(nomes[q], 'doc') + '<div class="ps-card-body">' + tabela(cols, S.cat.filter(function (c) { return c.quadro === q; }).map(function (c) {
+          var m = P.msDoIndicador(c.id, ano), apr = m && P.concluida(m), it = P.item(c.id, ano), est = m ? P.estadoIndicador(m, c.id) : { txt: 'To collect', cls: '' }, ant = P.anteriorVista(c.id, ano, emp), r = P.valorVista(c.id, ano, emp);
+          var fmt = function (v) { return v === null || v === undefined ? '-' : e(fmtV(c.id, v)); }, pend = it && it.valor !== null && !apr;
+          var val = function (v) { return apr ? fmt(v) : '-'; };
+          var celsV = cons ? ents.map(function (x) { return val(r.partes[x.nome]); }).concat(['<b data-tip="' + e(r.metodo === 'media' ? 'Weighted average of the companies' : r.metodo === 'soma' ? 'Sum of the companies by consolidation method' : '') + '">' + val(r.valor) + '</b>']) : [val(r.valor)];
+          return [e(c.nome) + (it && it.reexpresso ? ' ' + chip('Restated', 'warn') : ''), e(c.unidade_medida)].concat(celsV).concat([fmt(ant), chip(est.txt, est.cls)]);
         })) + '</div></div>';
       }).join('');
   };

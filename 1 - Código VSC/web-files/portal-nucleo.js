@@ -1583,15 +1583,18 @@
     P.QUADROS.forEach(function (q) {
       folhas[q] = S.cat.filter(function (c) { return c.quadro === q; }).map(function (c) {
         var m = P.msDoIndicador(c.id, ano), it = P.item(c.id, ano), apr = m && P.concluida(m);
-        var o = { indicador: c.nome, unidade: c.unidade_medida, perimetro: c.perimetro };
-        o[String(ano)] = apr ? it.valor : ''; o[String(ano - 1)] = P.valorAnterior(c.id, ano);
+        /* Segue a vista do Report: consolidado, com uma coluna por empresa, ou uma empresa so */
+        var emp = P.ext && P.ext.U && P.ext.U.rep ? P.ext.U.rep.emp : '', r = P.valorVista ? P.valorVista(c.id, ano, emp) : { valor: it && it.valor, partes: {} };
+        var o = { indicador: c.nome, unidade: c.unidade_medida, perimetro: emp || 'Consolidated' };
+        if (!emp) S.ent.forEach(function (x) { o[x.nome] = apr && r.partes[x.nome] !== undefined ? r.partes[x.nome] : ''; });
+        o[String(ano)] = apr && r.valor !== null ? r.valor : ''; o[String(ano - 1)] = P.anteriorVista ? P.anteriorVista(c.id, ano, emp) : P.valorAnterior(c.id, ano);
         o.estado = m ? P.estadoIndicador(m, c.id).txt : 'To collect'; o.qualidade = apr ? QUALIDADE_TXT[it.qualidade] : ''; o.esrs = c.esrs_requisito; o.esrs_id = P.esrsDe ? P.esrsDe(c.id).dps.join(', ') : ''; o.gri = c.gri;
         return o;
       });
     });
     return folhas;
   };
-  P.exportarRelatorio = function () { return escreverLivro('relatorio-' + S.ciclo.ano + '.xlsx', P.quadrosRelatorio()); };
+  P.exportarRelatorio = function () { var v = P.nomeVistaReporte ? P.nomeVistaReporte() : 'Consolidated'; return escreverLivro('report-' + S.ciclo.ano + '-' + String(v).toLowerCase().replace(/[^a-z0-9]+/g, '-') + '.xlsx', P.quadrosRelatorio()); };
   P.valoresAprovados = function () {
     var o = [];
     Object.keys(S.items).forEach(function (k) {

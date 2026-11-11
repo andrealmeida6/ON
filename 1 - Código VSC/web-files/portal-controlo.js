@@ -112,12 +112,51 @@
   };
   /* Rácios e percentagens nao se ponderam: so o que se pode somar entra pela percentagem detida */
   var ADITIVAS = ['n.º', 'Mm³', 'MWh', 'kgCO2e', 'tCO2e', 't', 'kg', '€', 'milhares'];
+  /* --- Consolidacao por empresa -------------------------------------------------------
+     O valor de cada empresa: as entradas por empresa (One row per company), se existirem; senao, o valor todo
+     e da empresa da milestone que o reporta. O consolidado junta as empresas pelo metodo de consolidacao
+     (integral e mae a 100%, proporcional pela percentagem detida, equivalencia patrimonial fora):
+     os volumes somam-se; os racios e percentagens fazem media ponderada pelo peso de cada empresa. */
+  P.aditivo = function (c) { return !!c && (ADITIVAS.indexOf(c.unidade_medida) > -1 || P.inteiro(c)); };
+  P.valoresEmpresas = function (id, chave) {
+    var it = P.item(id, chave), o = {};
+    if (!it || it.valor === null || it.valor === undefined) return o;
+    var m = P.ms(it.milestone_id) || P.msDoIndicador(id), nomes = S.ent.map(function (x) { return x.nome; });
+    var ent = (it.entradas || []).filter(function (l) { return nomes.indexOf(String(l.local || '').trim()) > -1 && P.lerNumero(l.valor) !== null; });
+    if (ent.length) {
+      var por = {}, ag = P.agregacao(id);
+      ent.forEach(function (l) { var k = String(l.local).trim(); (por[k] = por[k] || []).push({ valor: l.valor, peso: l.peso || '1' }); });
+      Object.keys(por).forEach(function (k) { o[k] = P.agregar(por[k], ag === 'media' ? 'media' : ag); });
+      return o;
+    }
+    if (m && m.empresa) o[m.empresa] = it.valor;
+    return o;
+  };
+  P.valorVista = function (id, chave, empresa) {
+    var c = P.cat(id), o = P.valoresEmpresas(id, chave), nomes = Object.keys(o), casas = c ? c.casas_decimais : 2;
+    if (empresa) return { valor: o[empresa] === undefined ? null : o[empresa], partes: o, so: nomes.length === 1 && nomes[0] === empresa };
+    if (!nomes.length) return { valor: null, partes: o, metodo: '' };
+    var ad = P.aditivo(c), soma = 0, sw = 0, l = [];
+    nomes.forEach(function (n) { var w = P.pesoConsolidacao(P.entidadePorNome(n)); l.push({ empresa: n, valor: o[n], peso: w }); if (!w) return; soma += o[n] * w; sw += w; });
+    var v = !sw ? null : ad ? soma : soma / sw;
+    return { valor: v === null ? null : Number(v.toFixed(casas)), partes: o, lista: l, metodo: ad ? 'soma' : 'media' };
+  };
+  /* Ano anterior na mesma vista: o valor gravado do ano anterior, se existir; senao, o valor de base (do grupo),
+     que numa empresa so conta quando e ela que reporta o indicador */
+  P.anteriorVista = function (id, ano, empresa) {
+    if (S.items[(ano - 1) + ':' + id]) { var r = P.valorVista(id, ano - 1, empresa); if (r.valor !== null) return r.valor; }
+    var b = P.valorAnterior(id, ano);
+    if (!empresa || b === null || b === undefined) return b === undefined ? null : b;
+    var c = P.cat(id), rep = P.reportaInd ? P.reportaInd(c) : null;
+    return rep && rep.nome === empresa ? b : null;
+  };
   P.valorConsolidado = function (id, empresa) {
     var c = P.cat(id), it = P.item(id), m = P.msDoIndicador(id);
     if (!c || !it || !m || it.valor === null) return { valor: null, peso: null, m: m };
-    if (empresa) return { valor: m.empresa === empresa ? it.valor : null, peso: 1, m: m, fora: m.empresa !== empresa };
-    var peso = P.pesoConsolidacao(P.entidadePorNome(m.empresa));
-    return ADITIVAS.indexOf(c.unidade_medida) > -1 ? { valor: it.valor * peso, peso: peso, m: m } : { valor: peso ? it.valor : null, peso: peso, m: m, racio: true };
+    var r = P.valorVista(id, S.ciclo.ano, empresa || '');
+    if (empresa) return { valor: r.valor, peso: 1, m: m, fora: r.valor === null };
+    var l = r.lista || [], peso = l.length === 1 ? l[0].peso : 1;
+    return { valor: r.valor, peso: peso, m: m, racio: r.metodo === 'media' };
   };
   P.alterarEntidade = function (x, campo, valor, u) {
     if (!P.gereTudo(u)) return { erro: 'No permission.' };

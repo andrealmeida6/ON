@@ -580,6 +580,35 @@ Pedido do André a 11 de novembro de 2026: filtrar as tasks por indicador e por 
 
 **CSS:** secção 42 de `global.css`.
 
+### Report: vista consolidada e por empresa
+
+Pedido do André a 11 de novembro de 2026: ter no Reporting a vista consolidada (soma da Entidade A com a Entidade B) e poder ver só uma das empresas.
+
+**Como se consolida** (`portal-controlo.js`)
+
+- **Valor de cada empresa** (`P.valoresEmpresas`):
+  - Se o indicador tiver valores por empresa (One row per company, no Data entry ou no Excel offline), usam-se esses valores.
+  - Senão, o valor todo pertence à empresa da milestone que o reporta.
+- **Consolidado** (`P.valorVista` sem empresa): segue o método de consolidação de cada empresa em Companies and perimeter, como nas demonstrações financeiras (o ESRS usa o mesmo perímetro):
+  - Empresa-mãe e integral contam a 100%.
+  - Proporcional conta pela percentagem detida.
+  - Equivalência patrimonial fica de fora.
+  - Volumes e contagens somam-se (`P.aditivo`).
+  - Percentagens e rácios fazem média ponderada pelo peso de cada empresa, porque não se podem somar. O ideal seria recalculá-los a partir do numerador e do denominador, quando esses dados existirem.
+- **Ano anterior na vista** (`P.anteriorVista`): usa o valor gravado do ano anterior, se existir. Senão usa o valor de base do grupo, que numa empresa só aparece quando é ela que reporta o indicador.
+- `P.valorConsolidado`, usado na Overview, passou a usar esta regra.
+
+**Report**
+
+- No topo há um seletor: **Consolidated** (Σ, com as empresas que contam), **Entidade A** e **Entidade B**, cada uma com o método e a percentagem. Uma frase explica a regra e tem link para o perímetro.
+- **Indicator tables e Document builder:** os valores seguem a vista. As linhas sem KPI (valores do grupo escritos à mão) só entram no consolidado.
+- **All indicators:** no consolidado tem uma coluna por empresa e a coluna Consolidated, com a tooltip do método. Numa empresa mostra só o valor dela.
+- **Exports** (Excel, tabelas e Word): seguem a vista, e o nome do ficheiro diz qual é (`report-2026-entidade-b.xlsx`, `report-tables-2026-consolidated.xlsx`).
+
+**Verificado no mockup:** com 100 na Entidade A e 50 na Entidade B, o consolidado dá 150. Com a Entidade B proporcional a 50%, dá 125. Nas percentagens, 80% e 60% dão 70% (média ponderada).
+
+**CSS:** secção 43 de `global.css`.
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.
