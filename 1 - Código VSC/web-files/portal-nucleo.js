@@ -1679,9 +1679,15 @@
   };
   var usosDepartamento = function (nome) { var d = P.usosDepartamentoDet(nome); return d.pessoas + d.indicadores + d.milestones; };
   P.usosDepartamento = usosDepartamento;
-  P.criarDepartamento = function (nome) {
+  /* Departamentos de cada empresa: d.empresas tem os ids; vazio quer dizer todas as empresas */
+  P.empresasDoDep = function (d) { return d && d.empresas && d.empresas.length ? S.ent.filter(function (x) { return d.empresas.indexOf(x.id) > -1; }) : S.ent.slice(); };
+  P.depsDaEmpresa = function (empresa) {
+    var x = !empresa ? null : typeof empresa === 'string' ? S.ent.filter(function (y) { return y.nome === empresa || y.id === empresa; })[0] : empresa;
+    return S.deps.filter(function (d) { return !x || !d.empresas || !d.empresas.length || d.empresas.indexOf(x.id) > -1; }).map(function (d) { return d.nome; });
+  };
+  P.criarDepartamento = function (nome, empresas) {
     var e = erroNome(nome, S.deps); if (e) return { erro: e };
-    S.deps.push({ id: 'dep' + Date.now(), nome: nome });
+    S.deps.push({ id: 'dep' + Date.now(), nome: nome, empresas: (empresas || []).slice() });
     guardar(); return { ok: true };
   };
   P.renomearDepartamento = function (x, nome) {

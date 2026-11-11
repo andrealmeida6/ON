@@ -743,6 +743,25 @@ Pedido do André a 11 de novembro de 2026: manter os acessos como estão (sem lo
 - **Verificado** com um Supabase simulado e dois browsers: a task enviada pelo administrador num browser apareceu no outro, o valor e o ficheiro carregados pelo data owner chegaram ao primeiro, e o ficheiro foi descarregado no outro browser. Sem as tabelas, a plataforma continua a funcionar e a etiqueta diz "not shared".
 - **CSS:** secção 51 de `global.css`.
 
+### Backoffice: títulos dos grupos, empresas numa tabela e departamentos por empresa
+
+Pedido do André a 11 de novembro de 2026.
+
+- **Títulos dos grupos** (Indicators, Organisation, Reporting set-up, Platform): a negrito, na cor da marca, com uma barra à esquerda e uma linha a separar os grupos. Os separadores ficam recuados por baixo de cada título.
+- **Companies and perimeter:** uma só tabela (`Blocos['perimetro']`), com:
+  - as colunas Company (com o NIF e o NACE por baixo), Country, Consolidation (método e percentagem detida), ESRS perimeter, Counts at, Departments, Milestones e Actions;
+  - **+ New company** e **Edit** em cada linha (e no nome), que abrem o mesmo painel (`Pn.empEd`) com as secções Company, Consolidation, Departments e "KPIs and data entry rules";
+  - **Remove**, só para empresas sem milestones;
+  - validação do nome único, da percentagem detida (0 a 100) e das instalações. As alterações ficam no registo.
+  - Saíram o detalhe por baixo da tabela e a segunda lista de empresas (`B.entidades`).
+- **Departamentos por empresa:**
+  - Cada departamento tem `empresas` (ids). Vazio quer dizer todas as empresas (`P.empresasDoDep`, `P.depsDaEmpresa`).
+  - No separador Departments há um filtro **Company** (com quantos departamentos cada empresa tem), uma coluna **Companies** com tags (+ Add, ×) e, em New department, a escolha entre todas as empresas ou só uma (por omissão, a do filtro).
+  - No painel do indicador, Responsible department mostra os departamentos da empresa que reporta.
+  - O painel da empresa mostra os seus departamentos.
+- **Supabase:** `016_esg_departamentos_empresas.sql` acrescenta `empresas text[]` a `esg_departamentos`. A sincronização já envia e lê esta coluna.
+- **CSS:** secção 52 de `global.css`.
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.

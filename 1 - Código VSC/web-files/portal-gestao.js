@@ -484,25 +484,71 @@
 
   /* --- Empresas e perimetro ------------------------------------------------------------------ */
   U.per = { sel: '' };
+  /* Companies and perimeter: uma so tabela. New company e Edit abrem o mesmo painel, com tudo o que a empresa tem. */
+  var pesoTxt = function (y) { var p = P.pesoConsolidacao(y); return p === 0 ? 'Not counted' : P.fmtNum(p * 100, 0) + '%'; };
   Blocos['perimetro'] = function () {
-    var f = U.per, x = S.ent.filter(function (y) { return y.id === f.sel; })[0] || S.ent[0];
-    if (!x) return vazio('No companies yet.');
-    var kpis = []; cicloMs().filter(function (m) { return m.empresa === x.nome; }).forEach(function (m) { m.indicadores.forEach(function (id) { kpis.push({ c: P.cat(id), m: m }); }); });
-    var pesoTxt = function (y) { var p = P.pesoConsolidacao(y); return p === 0 ? 'Not counted' : P.fmtNum(p * 100, 0) + '%'; };
-    return '<div class="ps-card">' + cabCartao('Group companies', 'doc', '<span class="ps-sp"><label class="ps-sr" for="per-novo">New company name</label><input id="per-novo" class="ps-in" placeholder="Company name"><button type="button" class="ps-btn pri peq" data-a="perNova">New company</button></span>') + '<div class="ps-card-body">' +
-      tabela([{ t: 'Company' }, { t: 'Country' }, { t: 'Ownership', dir: 1 }, { t: 'Consolidation method' }, { t: 'ESRS perimeter' }, { t: 'Counts at', dir: 1 }, { t: 'Sites', dir: 1 }, { t: 'Currency' }], S.ent.map(function (y) {
-        return { attrs: y.id === x.id ? 'class="ps-sel-l" aria-selected="true"' : '', celulas: ['<button type="button" class="ps-btn liga" data-a="perVer" data-v="' + e(y.id) + '">' + emp(y.nome) + '</button>', e(y.pais || '-'), y.metodo === 'mae' ? '-' : e(P.fmtNum(y.detencao, 0)) + '%', e(P.METODOS[y.metodo] || '-'), y.perimetro_grupo ? chip('Included', 'ok') : chip('Excluded'), e(pesoTxt(y)), e(y.instalacoes === undefined ? '-' : y.instalacoes), e(y.moeda || '-')] };
-      })) + '<p class="ps-small ps-mut ps-mt">The consolidated view adds the included companies, weighted by their method. Percentages and ratios are not weighted.</p></div></div>' +
-      '<div class="ps-grid-per ps-mt"><div class="ps-card">' + cabCartao(x.nome, 'tarefa') + '<div class="ps-card-body ps-col">' +
-      campo('pf-nipc', 'Tax number', '<input id="pf-nipc" class="ps-in" data-c="perCampo" data-f="nipc" value="' + e(x.nipc) + '">') + campo('pf-nace', 'Sector (NACE code)', '<input id="pf-nace" class="ps-in" data-c="perCampo" data-f="nace" value="' + e(x.nace) + '">') + campo('pf-pais', 'Country', '<input id="pf-pais" class="ps-in" data-c="perCampo" data-f="pais" value="' + e(x.pais) + '">') +
-      campo('pf-det', 'Ownership (%)', '<input id="pf-det" class="ps-in ps-num" inputmode="decimal" data-c="perCampo" data-f="detencao" value="' + e(x.detencao) + '">') +
-      campo('pf-met', 'Consolidation method', '<select id="pf-met" class="ps-sel" data-c="perCampo" data-f="metodo">' + Object.keys(P.METODOS).map(function (k) { return opt(k, P.METODOS[k], x.metodo); }).join('') + '</select>') +
-      '<label class="ps-chk"><input id="pf-inc" type="checkbox" data-c="perInc"' + (x.perimetro_grupo ? ' checked' : '') + '> Include in the consolidated report</label>' + (x.perimetro_grupo ? '' : '<div class="ps-aviso warn">Excluded from the consolidated view. The data stays available in the by company view.</div>') + '</div></div>' +
-      '<div class="ps-card">' + cabCartao('KPIs and data entry rules', 'ativ') + '<div class="ps-card-body"><p class="ps-small ps-mut">When on, the company can enter several values for the same KPI in the same period. The platform combines them with the chosen rule.</p><div class="ps-mt">' + tabela([{ t: 'KPI' }, { t: 'Frequency' }, { t: 'Several entries' }, { t: 'Split by' }, { t: 'Aggregation' }], kpis.map(function (l) {
-        var r = P.regraEnt(x.nome, l.c.id), id = e(l.c.id);
-        return [e(l.c.nome) + '<br><small class="ps-mut">' + e(l.c.esrs_requisito || l.c.id) + '</small>', e(l.m.periodicidade), '<label class="ps-chk"><input id="pr-m-' + id + '" type="checkbox" data-c="perRegra" data-id="' + id + '" data-f="multi"' + (r.multi ? ' checked' : '') + '> ' + (r.multi ? 'Yes' : 'No') + '</label>', r.multi ? '<input id="pr-p-' + id + '" class="ps-in" aria-label="Split ' + e(l.c.nome) + ' by" data-c="perRegra" data-id="' + id + '" data-f="por" value="' + e(r.por) + '">' : '-', r.multi ? '<select id="pr-a-' + id + '" class="ps-sel" aria-label="Aggregation of ' + e(l.c.nome) + '" data-c="perRegra" data-id="' + id + '" data-f="agreg">' + Object.keys(P.AGREGACOES).map(function (k) { return opt(k, P.AGREGACOES[k], r.agreg); }).join('') + '</select>' : '-'];
-      }), 'This company has no KPIs in the current cycle.') + '</div></div></div></div>';
+    var adm = P.gereTudo(u()), inc = S.ent.filter(function (x) { return P.pesoConsolidacao(x) > 0; }).length;
+    return '<div class="ps-card">' + cabCartao('Group companies (' + S.ent.length + ')', 'doc', adm ? '<button type="button" class="ps-btn pri peq" data-a="empNova">+ New company</button>' : '') + '<div class="ps-card-body">' +
+      '<p class="ps-small ps-mut">' + inc + ' of ' + S.ent.length + ' companies count in the consolidated view: full and parent at 100%, proportional by ownership, equity method left out. Percentages and ratios are a weighted average.</p><div class="ps-mt">' +
+      tabela([{ t: 'Company' }, { t: 'Country' }, { t: 'Consolidation' }, { t: 'ESRS perimeter' }, { t: 'Counts at', dir: 1 }, { t: 'Departments', dir: 1 }, { t: 'Milestones', dir: 1 }, { t: 'Actions' }], S.ent.map(function (y) {
+        var nDep = P.depsDaEmpresa(y).length, nMs = cicloMs().filter(function (m) { return m.empresa === y.nome; }).length;
+        return [(adm ? '<button type="button" class="ps-btn liga" data-a="empEditar" data-v="' + e(y.id) + '">' + emp(y.nome) + '</button>' : emp(y.nome)) + '<small class="ps-mut ps-blk">' + e([y.nipc ? 'Tax ' + y.nipc : '', y.nace ? 'NACE ' + y.nace : ''].filter(Boolean).join(', ') || ' ') + '</small>', e(y.pais || '-'), e(P.METODOS[y.metodo] || '-') + (y.metodo === 'mae' ? '' : '<small class="ps-mut ps-blk">' + e(P.fmtNum(y.detencao, 0)) + '% owned</small>'), y.perimetro_grupo ? chip('Included', 'ok') : chip('Excluded'), e(pesoTxt(y)), String(nDep), String(nMs),
+          adm ? '<span class="ps-sp"><button type="button" class="ps-btn peq" data-a="empEditar" data-v="' + e(y.id) + '">Edit</button>' + (nMs ? '' : '<button type="button" class="ps-btn peq err" data-a="empApagar" data-v="' + e(y.id) + '">Remove</button>') + '</span>' : '-'];
+      }), 'No companies yet.') + '</div></div></div>';
   };
+  U.empEd = null;
+  X.Pn.empEd = function () {
+    var E = U.empEd, d = E.d, x = E.novo ? null : S.ent.filter(function (y) { return y.id === E.id; })[0];
+    var cmp = function (k, rot, html, ajuda) { return '<div class="ps-campo"><label class="ps-lab" for="ee-' + k + '">' + e(rot) + '</label>' + html + (ajuda ? '<small class="ps-mut">' + e(ajuda) + '</small>' : '') + '</div>'; };
+    var inp = function (k, extra) { return '<input id="ee-' + k + '" class="ps-in" data-c="empCampo" data-f="' + k + '" value="' + e(d[k] === undefined || d[k] === null ? '' : d[k]) + '"' + (extra || '') + '>'; };
+    var regras = '';
+    if (x) {
+      var kpis = []; cicloMs().filter(function (m) { return m.empresa === x.nome; }).forEach(function (m) { m.indicadores.forEach(function (id) { if (!kpis.some(function (k) { return k.c.id === id; })) kpis.push({ c: P.cat(id), m: m }); }); });
+      regras = '<details class="ki-sec ee-reg"' + (E.regras ? ' open' : '') + '><summary><h3>KPIs and data entry rules<small>' + kpis.length + ' KPI(s) in the current cycle</small></h3></summary><p class="ps-small ps-mut">When on, the company can enter several values for the same KPI in the same period. The platform combines them with the chosen rule. These save straight away.</p><div class="ps-mt">' + tabela([{ t: 'KPI' }, { t: 'Several entries' }, { t: 'Split by' }, { t: 'Aggregation' }], kpis.map(function (l) {
+        var r = P.regraEnt(x.nome, l.c.id), id = e(l.c.id);
+        return [e(l.c.nome) + '<br><small class="ps-mut">' + e(l.c.esrs_requisito || l.c.id) + '</small>', '<label class="ps-chk"><input id="pr-m-' + id + '" type="checkbox" data-c="perRegra" data-id="' + id + '" data-f="multi"' + (r.multi ? ' checked' : '') + '> ' + (r.multi ? 'Yes' : 'No') + '</label>', r.multi ? '<input id="pr-p-' + id + '" class="ps-in" aria-label="Split ' + e(l.c.nome) + ' by" data-c="perRegra" data-id="' + id + '" data-f="por" value="' + e(r.por) + '">' : '-', r.multi ? '<select id="pr-a-' + id + '" class="ps-sel" aria-label="Aggregation of ' + e(l.c.nome) + '" data-c="perRegra" data-id="' + id + '" data-f="agreg">' + Object.keys(P.AGREGACOES).map(function (k) { return opt(k, P.AGREGACOES[k], r.agreg); }).join('') + '</select>' : '-'];
+      }), 'This company has no KPIs in the current cycle.') + '</div></details>';
+    }
+    var deps = x ? P.depsDaEmpresa(x) : [];
+    return { t: E.novo ? 'New company' : 'Edit ' + d.nome, s: E.novo ? 'Add a company to the group' : 'Changes are saved when you click Save', largo: true, cls: 'alto ki-pan',
+      b: (E.erros && E.erros.length ? '<div class="ps-aviso err" role="alert"><ul class="ki-err">' + E.erros.map(function (t) { return '<li>' + e(t) + '</li>'; }).join('') + '</ul></div>' : '') +
+        '<section class="ki-sec" style="--gc:#00338D"><h3>Company</h3><div class="ki-g"><div class="ki-full">' + cmp('nome', 'Company name *', inp('nome')) + '</div>' +
+          cmp('pais', 'Country', inp('pais')) + cmp('moeda', 'Currency', inp('moeda', ' maxlength="3"')) + cmp('nipc', 'Tax number', inp('nipc')) + cmp('nace', 'Sector (NACE code)', inp('nace')) +
+          cmp('instalacoes', 'Sites', inp('instalacoes', ' inputmode="numeric"')) + '</div></section>' +
+        '<section class="ki-sec" style="--gc:#0091DA"><h3>Consolidation<small>How the company counts in the consolidated view</small></h3><div class="ki-g">' +
+          cmp('metodo', 'Consolidation method', '<select id="ee-metodo" class="ps-sel" data-c="empCampo" data-f="metodo">' + Object.keys(P.METODOS).map(function (k) { return opt(k, P.METODOS[k], d.metodo); }).join('') + '</select>', 'Full and parent: 100%. Proportional: by ownership. Equity method: not counted.') +
+          cmp('detencao', 'Ownership (%)', inp('detencao', ' inputmode="decimal"')) +
+          '<div class="ki-full"><label class="ps-chk"><input id="ee-inc" type="checkbox" data-c="empInc"' + (d.perimetro_grupo ? ' checked' : '') + '> Include in the consolidated report (ESRS perimeter)</label></div></div></section>' +
+        (x ? '<section class="ki-sec" style="--gc:#483698"><h3>Departments<small>' + deps.length + ' department(s) in this company</small></h3><p class="ps-small">' + (deps.length ? deps.map(function (n) { return '<span class="us-tag">' + X.avEquipa() + e(n) + '</span>'; }).join(' ') : '<span class="ps-mut">None yet.</span>') + '</p><p class="ps-small ps-mut">Choose the companies of each department in Backoffice, Departments.</p></section>' : '') + regras,
+      p: '<span class="ps-sp-flex"></span><button type="button" class="ps-btn" data-a="fecharPainel">Cancel</button><button type="button" class="ps-btn pri" data-a="empGuardar">' + (E.novo ? 'Add company' : 'Save') + '</button>' };
+  };
+  var CAMPOS_EMP = ['nome', 'pais', 'moeda', 'nipc', 'nace', 'instalacoes', 'metodo', 'detencao', 'perimetro_grupo'];
+  A.empNova = function () { U.empEd = { novo: true, d: { nome: '', pais: 'Portugal', moeda: 'EUR', nipc: '', nace: '', instalacoes: 0, metodo: 'integral', detencao: 100, perimetro_grupo: true }, erros: [] }; X.abrePainel('empEd'); };
+  A.empEditar = function (d) { var x = S.ent.filter(function (y) { return y.id === d.v; })[0]; if (!x) return; var c = {}; CAMPOS_EMP.forEach(function (k) { c[k] = x[k]; }); U.per.sel = x.id; U.empEd = { novo: false, id: x.id, d: c, erros: [] }; X.abrePainel('empEd'); };
+  C.empCampo = function (el) { U.empEd.d[el.dataset.f] = el.value; };
+  C.empInc = function (el) { U.empEd.d.perimetro_grupo = el.checked; };
+  A.empGuardar = function () {
+    var E = U.empEd, d = E.d, usr = u(), erros = [], nome = String(d.nome || '').trim(), det = P.lerNumero(d.detencao), inst = String(d.instalacoes === undefined ? '' : d.instalacoes).trim() === '' ? 0 : P.lerNumero(d.instalacoes);
+    if (!nome) erros.push('Enter the company name.');
+    if (S.ent.some(function (y) { return y.nome === nome && (E.novo || y.id !== E.id); })) erros.push('There is already a company called ' + nome + '.');
+    if (det === null || det < 0 || det > 100) erros.push('Ownership must be between 0 and 100.');
+    if (inst === null || inst < 0 || Math.round(inst) !== inst) erros.push('Sites must be a whole number.');
+    if (erros.length) { E.erros = erros; return R(); }
+    var x;
+    if (E.novo) { var r = P.criarEmpresa(nome); if (r.erro) { E.erros = [r.erro]; return R(); } x = S.ent[S.ent.length - 1]; P.eventoGlobal('Company added: ' + nome + '.', usr.nome, 'Creation'); }
+    else { x = S.ent.filter(function (y) { return y.id === E.id; })[0]; if (x.nome !== nome) { var r2 = P.renomearEmpresa(x, nome); if (r2.erro) { E.erros = [r2.erro]; return R(); } } }
+    var mud = [];
+    [['pais', String(d.pais || '').trim()], ['moeda', String(d.moeda || '').trim().toUpperCase()], ['nipc', String(d.nipc || '').trim()], ['nace', String(d.nace || '').trim()], ['instalacoes', inst], ['metodo', d.metodo], ['detencao', det], ['perimetro_grupo', !!d.perimetro_grupo]].forEach(function (c) {
+      if (x[c[0]] === c[1]) return;
+      if (['metodo', 'detencao', 'perimetro_grupo'].indexOf(c[0]) > -1) { var r3 = P.alterarEntidade(x, c[0], c[1], usr); if (r3.erro) erros.push(r3.erro); else mud.push(c[0]); }
+      else { x[c[0]] = c[1]; mud.push(c[0]); }
+    });
+    if (erros.length) { E.erros = erros; return R(); }
+    if (!E.novo && mud.length) P.eventoGlobal('Company ' + x.nome + ' edited: ' + mud.join(', ') + '.', usr.nome, 'Change');
+    P.guardar(); U.empEd = null; U.painel = null;
+    toast(E.novo ? nome + ' added.' : x.nome + ' saved.', 'ok'); R();
+  };
+  A.empApagar = function (d) { var x = S.ent.filter(function (y) { return y.id === d.v; })[0]; if (!x || !window.confirm('Remove ' + x.nome + '?')) return; var r = P.apagarEmpresa(x); if (r.erro) return toast(r.erro, 'err'); P.eventoGlobal('Company removed: ' + x.nome + '.', u().nome); toast(x.nome + ' removed.', 'ok'); R(); };
   var entPer = function () { return S.ent.filter(function (y) { return y.id === U.per.sel; })[0] || S.ent[0]; };
   A.perVer = function (d) { U.per.sel = d.v; R(); };
   A.perNova = function () {

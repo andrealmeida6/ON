@@ -103,7 +103,7 @@
     });
     S.wfbase.forEach(function (p, i) { por('esg_workflow_base', i + 1, { ordem: i + 1, nome: p.nome, tipo: p.tipo, responsavel: p.responsavel }); });
     S.ent.forEach(function (x) { por('esg_entidades', x.id, { id: x.id, nome: x.nome, perimetro_grupo: !!x.perimetro_grupo, perimetro_maioritario: !!x.perimetro_maioritario, pais: nulo(x.pais), detencao: x.detencao === undefined ? null : x.detencao, metodo: nulo(x.metodo), instalacoes: x.instalacoes === undefined ? null : x.instalacoes, nace: nulo(x.nace), nipc: nulo(x.nipc), moeda: nulo(x.moeda) }); });
-    S.deps.forEach(function (x) { por('esg_departamentos', x.id, { id: x.id, nome: x.nome }); });
+    S.deps.forEach(function (x) { por('esg_departamentos', x.id, { id: x.id, nome: x.nome, empresas: x.empresas || [] }); });
     S.janelas.forEach(function (j, i) { por('esg_janelas', i + 1, { id: i + 1, nome: j.nome, tema: j.tema, meses: j.meses, dia_inicio: j.dia_inicio, dia_fim: j.dia_fim }); });
     S.mat.forEach(function (x) { por('esg_materialidade', x.norma, { norma: x.norma, tema: x.tema, avaliacao: x.avaliacao, justificacao: nulo(x.justificacao) }); });
     S.areas.forEach(function (a) { por('esg_areas', a.codigo, { codigo: a.codigo, nome: a.nome, uso: nulo(a.uso) }); });
@@ -163,7 +163,7 @@
     });
     S.wfbase = d.esg_workflow_base.map(function (p) { return { nome: p.nome, tipo: p.tipo, responsavel: p.responsavel }; });
     S.ent = d.esg_entidades.map(function (x) { return { id: x.id, nome: x.nome, perimetro_grupo: x.perimetro_grupo, perimetro_maioritario: x.perimetro_maioritario, pais: x.pais || '', detencao: x.detencao === null ? 100 : Number(x.detencao), metodo: x.metodo || 'integral', instalacoes: x.instalacoes || 0, nace: x.nace || '', nipc: x.nipc || '', moeda: x.moeda || 'EUR' }; });
-    S.deps = d.esg_departamentos.map(function (x) { return { id: x.id, nome: x.nome }; });
+    S.deps = d.esg_departamentos.map(function (x) { return { id: x.id, nome: x.nome, empresas: x.empresas || [] }; });
     S.janelas = d.esg_janelas.map(function (j) { return { nome: j.nome, tema: j.tema, meses: j.meses, dia_inicio: j.dia_inicio, dia_fim: j.dia_fim }; });
     S.mat = d.esg_materialidade.map(function (x) { return { norma: x.norma, tema: x.tema, avaliacao: x.avaliacao, justificacao: x.justificacao || '' }; });
     S.areas = d.esg_areas.map(function (a) { return { codigo: a.codigo, nome: a.nome, uso: a.uso || '' }; });

@@ -2148,3 +2148,15 @@ button.ps-est-i:hover{border-color:rgba(255,255,255,.4);background:rgba(255,255,
 
 /* 51. AMBIENTE DE TESTES PARTILHADO */
 [data-teste-tag].erro{background:var(--err-50);color:var(--err)}
+
+/* 52. BACKOFFICE: TITULOS DOS GRUPOS, EMPRESAS E DEPARTAMENTOS POR EMPRESA */
+.ps-bo-gt{padding:10px 11px 6px;font-size:12.5px;font-weight:800;letter-spacing:.5px;color:var(--primary);display:flex;align-items:center;gap:8px}
+.ps-bo-gt::before{content:"";width:4px;height:14px;border-radius:2px;background:var(--primary)}
+.ps-bo-grp + .ps-bo-grp{margin-top:10px;padding-top:6px;border-top:1px solid var(--line)}
+.ps-bo-tab{padding-left:23px}
+.dp-todas{display:inline-flex;align-items:center;padding:3px 10px;border-radius:999px;background:var(--neutro-50);color:var(--muted);font-size:12px;font-weight:600}
+.dp-novo-emp{width:auto;min-width:200px}
+.dp-nota{align-self:center;max-width:620px}
+.ee-reg summary{cursor:pointer;list-style:none}
+.ee-reg summary h3{margin-bottom:0}
+.ee-reg[open] summary h3{margin-bottom:12px}

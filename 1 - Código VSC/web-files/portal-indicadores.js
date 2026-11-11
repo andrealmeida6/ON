@@ -353,7 +353,7 @@
       secao('id', (E.novo ? cmp('id', 'KPI ID *', inp('id', d, ' maxlength="24" autocapitalize="characters"'), 'Short unique code, for example W05. It cannot be changed later.') : cmp('id', 'KPI ID', '<input id="ke-id" class="ps-in" readonly value="' + e(d.id) + '">')) +
         cmp('ativo', 'Status', sel('ativo', d, ['Active', 'Inactive']), 'Inactive indicators are not sent in tasks.') +
         '<div class="ki-full">' + cmp('nome', 'KPI Name *', inp('nome', d)) + '</div><div class="ki-full">' + cmp('desc', 'KPI Description', area('desc', d), 'What is measured, with the key definitions.') + '</div>') +
-      secao('resp', cmp('dep', 'Responsible department *', sel('dep', d, P.UNIDADES, P.UNIDADES.indexOf(d.dep) < 0 ? 'Choose' : undefined), 'The group that reports the KPI.') +
+      secao('resp', cmp('dep', 'Responsible department *', sel('dep', d, (function () { var l = P.depsDaEmpresa ? P.depsDaEmpresa(d.reporta) : P.UNIDADES; if (d.dep && l.indexOf(d.dep) < 0) l = l.concat([d.dep]); return l; })(), P.UNIDADES.indexOf(d.dep) < 0 ? 'Choose' : undefined), 'Departments of ' + (d.reporta || 'the reporting company') + '.') +
         cmp('resp', 'Responsible: person or group *', respOps, 'A person, or the whole department as a group.') +
         cmp('reve', 'Reviewer', sel('reve', d, pessoas('reve').map(function (x) { return x.nome; }), 'Not set'), 'Reviews the value. Cannot be who reports.') +
         cmp('valida', 'Validator', sel('valida', d, pessoas('valida').map(function (x) { return x.nome; }), 'Not set'), 'Validates at the end.'), 'Who reports, reviews and validates') +
