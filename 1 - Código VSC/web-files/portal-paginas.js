@@ -1119,6 +1119,35 @@
       return '<i style="flex:' + n[s[0]] + ' 1 0;--c:' + CORES_V[s[0]] + '" data-tip="' + e(s[1] + ': ' + n[s[0]]) + '"></i>';
     }).join('') + '</div></div>';
   };
+  /* Completude por ponto de dados (indicador num periodo), no visual das barras de completude da Overview */
+  var contaPontosQ = function (teste, incl) {
+    var v = U.visao || {}, emp = v.modo === 'empresa' ? v.empresa || (S.ent[0] && S.ent[0].nome) : '';
+    var l = P.pontosCiclo(function (m) { return (incl || m.periodicidade !== 'Novos dados ESRS') && (!v.per || m.periodo === v.per) && (!emp || m.empresa === emp); }).filter(function (x) { return teste(x.c); });
+    var ap = l.filter(function (x) { return x.s.cod === 'aprovado'; }).length, rep2 = l.filter(function (x) { if (x.s.cod === 'aprovado') return false; var it = P.item(x.id, P.chave(x.m)); return it && it.valor !== null; }).length;
+    return { tot: l.length, ap: ap, rep: rep2, falta: l.length - ap - rep2 };
+  };
+  var barraCp = function (titulo, n) {
+    if (!n.tot) return '<div class="ps-cp"><span class="ps-cp-t">' + e(titulo) + '</span><span class="ps-cp-b"></span><span class="ps-cp-v ps-mut">No data points</span></div>';
+    var pct = function (k) { return (k / n.tot) * 100; };
+    return '<div class="ps-cp" tabindex="0" data-tip="' + e(titulo + ': ' + n.ap + ' approved, ' + n.rep + ' reported, ' + n.falta + ' missing, of ' + n.tot + ' data points') + '"><span class="ps-cp-t">' + e(titulo) + '</span><span class="ps-cp-b"><i class="a" style="width:' + pct(n.ap) + '%"></i><i class="r" style="width:' + pct(n.rep) + '%"></i></span><span class="ps-cp-v">' + Math.round(pct(n.ap + n.rep)) + '%</span></div>';
+  };
+  /* By area: por departamento, os pontos de dados das suas tasks. Vive na pagina Reporting status. */
+  P.porAreaHtml = function (filtro) {
+    var pts = P.pontosCiclo(function (m) { return !filtro || filtro(m); });
+    var html = P.UNIDADES.map(function (un) {
+      var l = pts.filter(function (x) { return x.m.unidade === un; });
+      if (!l.length) return '';
+      var mss = []; l.forEach(function (x) { if (mss.indexOf(x.m) < 0) mss.push(x.m); });
+      var ap = l.filter(function (x) { return x.s.cod === 'aprovado'; }).length, atr = l.some(function (x) { return x.s.cod === 'atraso'; }), rep2 = l.filter(function (x) { return x.s.cod === 'aprovacao' || x.s.cod === 'curso'; }).length;
+      var est = ap === l.length ? chip('All approved', 'ok') : atr ? chip('Overdue', 'err') : ap + rep2 === l.length ? chip('All reported', 'rev') : chip('In progress', 'info');
+      return '<details class="ps-card ps-mt" id="area-' + e(un.replace(/\W/g, '')) + '"><summary class="ps-card-head ps-sp-b ps-sumario"><b>' + depHtml(un) + '</b><span class="ps-sp">' + est + '<span class="ps-mut ps-small">' + ap + ' of ' + l.length + ' data points approved, ' + mss.length + ' tasks</span></span></summary><div class="ps-card-body">' +
+        tabela([{ t: 'Indicator' }, { t: 'Period' }, { t: 'Perimeter' }, { t: 'Value', dir: 1 }, { t: 'Status' }], l.map(function (x) {
+          var it = P.item(x.id, P.chave(x.m));
+          return [linkFicha(x.id), tagPer(x.m) || e(P.rotPeriodo(x.m)), empHtml(x.m.empresa), it && it.valor !== null ? e(fmtV(x.id, it.valor) + ' ' + x.c.unidade_medida) : '-', chip(x.s.txt, x.s.cls)];
+        })) + '</div></details>';
+    }).join('');
+    return html ? '<h2 class="ps-grupo-t ps-mt-l">By area</h2><p class="ps-small ps-mut">Each department, with the data points (indicator per period) of its tasks. Open one to see them.</p>' + html : '';
+  };
   var QUADRO_TXT = { Desempenho: 'Performance', Ambientais: 'Environmental', Sociais: 'Social', Governance: 'Governance', ESRS: 'ESRS' };
   var catVisivel = function (incl) { return S.cat.filter(function (c) { return incl || !c.novo_esrs; }); };
   Blocos['consolidado'] = function () {
@@ -1132,23 +1161,11 @@
       else pct = v === null || base === null || !base ? 0 : Math.max(0, Math.min(100, (1 - v / base) * 100));
       return '<div class="ps-meta"><div class="ps-meta-t">' + e(x.nome) + '<span>Target: ' + e(P.fmtNum(x.valor_meta, 0)) + ' ' + e(x.unidade) + ' in ' + x.ano_meta + ', Current: ' + (v === null ? 'pending approval' : e(fmtV(x.indicador_id, v))) + '</span></div><div class="ps-meta-b"><i style="width:' + pct + '%"></i></div></div>';
     }).join('');
-    var areas = P.UNIDADES.map(function (un) {
-      var cs = cat.filter(function (c) { return c.unidade_negocio === un; }), mss = ms.filter(function (m) { return m.unidade === un; });
-      if (!cs.length) return '';
-      var s = situacao(cs), atraso = mss.some(function (m) { return P.estadoMs(m).cod === 'atraso'; });
-      var est = s.a === s.t ? chip('All approved', 'ok') : atraso ? chip('Overdue', 'err') : s.a + s.r === s.t ? chip('All reported', 'rev') : chip('In progress', 'info');
-      return '<details class="ps-card ps-mt" id="area-' + e(un.replace(/\W/g, '')) + '"><summary class="ps-card-head ps-sp-b ps-sumario"><b>' + e(un) + '</b><span class="ps-sp">' + est + '<span class="ps-mut ps-small">' + s.a + ' of ' + s.t + ' approved, ' + mss.length + ' tasks</span></span></summary><div class="ps-card-body">' +
-        tabela([{ t: 'Indicator' }, { t: 'Value', dir: 1 }, { t: 'Status' }], cs.map(function (c) {
-          var m = P.msDoIndicador(c.id), est2 = m ? P.estadoIndicador(m, c.id) : { txt: 'To collect', cls: '' }, it = P.item(c.id);
-          return [linkFicha(c.id), it && it.valor !== null ? e(fmtV(c.id, it.valor) + ' ' + c.unidade_medida) : '-', chip(est2.txt, est2.cls)];
-        })) + '</div></details>';
-    }).join('');
     var quadros = P.QUADROS.filter(function (q) { return incl || q !== 'ESRS'; });
     return '<div class="ps-filtros"><label class="ps-chk"><input id="cons-esrs" type="checkbox" data-c="consEsrs"' + (incl ? ' checked' : '') + '> Include ESRS track</label></div>' +
       '<div class="ps-kpis"><div class="ps-kpi"><span>Indicators reported by areas</span><b>' + (tot.a + tot.r) + '</b><small>of ' + tot.t + '</small></div><div class="ps-kpi"><span>Approved and consolidated</span><b>' + tot.a + '</b><small>' + Math.round((tot.a / Math.max(tot.t, 1)) * 100) + '% of the report</small></div><div class="ps-kpi"><span>Completed tasks</span><b>' + conc + '</b><small>of ' + ms.length + '</small></div></div>' +
       '<div class="ps-grid2 ps-mt"><div class="ps-card">' + cabCartao('Targets and trajectory', 'ativ') + '<div class="ps-card-body">' + metas + '</div></div><div class="ps-card">' + cabCartao('Data quality', 'tarefa') + '<div class="ps-card-body"><div class="ps-kpis"><div class="ps-kpi"><span>Measured</span><b>' + qual.medido + '</b></div><div class="ps-kpi"><span>Calculated</span><b>' + qual.calculado + '</b></div><div class="ps-kpi"><span>Estimated</span><b>' + qual.estimado + '</b></div></div><p class="ps-mut ps-small ps-mt">' + totQ + ' indicators with a value.</p></div></div></div>' +
-      '<div class="ps-grid2 ps-mt"><div class="ps-card">' + cabCartao('By report table', 'doc') + '<div class="ps-card-body">' + LEG_V + quadros.map(function (q) { return barra(QUADRO_TXT[q] || q, situacao(cat.filter(function (c) { return c.quadro === q; }))); }).join('') + '</div></div><div class="ps-card">' + cabCartao('By topic', 'doc') + '<div class="ps-card-body">' + LEG_V + Object.keys(P.TEMAS).map(function (t) { return barra(t, situacao(cat.filter(function (c) { return c.tema === t; }))); }).join('') + '</div></div></div>' +
-      '<h2 class="ps-grupo-t ps-mt-l">By area</h2>' + areas;
+      '<div class="ps-card ps-mt">' + cabCartao('Completeness by report table' + (U.visao && U.visao.per && P.periodo(U.visao.per) ? ', ' + P.periodo(U.visao.per).nome : ''), 'doc', '<div class="ps-leg"><span><i class="a"></i>Approved</span><span><i class="r"></i>Reported</span><span><i></i>Missing</span></div>') + '<div class="ps-card-body">' + quadros.map(function (q) { return barraCp(QUADRO_TXT[q] || q, contaPontosQ(function (c) { return c.quadro === q; }, incl)); }).join('') + '</div></div>';
   };
 
   /* --- Documentos -------------------------------------------------------- */

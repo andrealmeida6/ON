@@ -797,6 +797,18 @@ Pedido do André a 11 de novembro de 2026.
 - **Menu:** a Reporting timeline saiu de Monitoring e passou para o menu **Reporting**, como primeira entrada.
 - **CSS:** secção 55 de `global.css`.
 
+### By area no Reporting status e Overview com uma só leitura de completude
+
+Pedido do André a 11 de novembro de 2026.
+
+- **By area:** saiu da Overview e passou para o fim da página **Reporting status** (`P.porAreaHtml`).
+  - Um bloco por departamento, com o estado, os pontos de dados aprovados do total e o número de tasks.
+  - Abre-se para ver cada indicador por período, com perímetro, valor e estado.
+  - Segue o filtro de empresa da página e conta por ponto de dados, como o resto da plataforma.
+- **Overview, Reporting progress:**
+  - Saiu o cartão "By topic", que repetia a "Completeness by company topic" de cima.
+  - O "By report table" passou a **Completeness by report table**, com o visual das barras de completude (aprovado, reportado, em falta e a percentagem). Conta por ponto de dados e segue o período e a empresa escolhidos em cima.
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.
