@@ -30,7 +30,12 @@
     var esc = gere ? U.tarEsc : 'minhas', lista = (esc === 'todas' ? X.abertas() : minhas).slice().sort(function (a, b) { return a.prazo < b.prazo ? -1 : a.prazo > b.prazo ? 1 : 0; });
     var linhas = [];
     lista.forEach(function (m) { m.indicadores.forEach(function (id) { var c = P.cat(id); if (c) linhas.push({ m: m, id: id, c: c }); }); });
-    return { esc: esc, gere: gere, minhas: minhas, todas: gere ? X.abertas() : [], lista: lista, linhas: linhas };
+    /* Equipa de sustentabilidade: os indicadores submetidos antes da task, a espera da sua revisao, ficam tambem em "Mine" */
+    if (esc === 'minhas' && P.revParaMim) P.revParaMim(usr).forEach(function (x) {
+      var ja = linhas.filter(function (l) { return l.m.id === x.m.id && l.id === x.id; })[0];
+      if (ja) ja.rev = true; else linhas.unshift({ m: x.m, id: x.id, c: P.cat(x.id), rev: true });
+    });
+    return { esc: esc, gere: gere, nRev: P.revParaMim ? P.revParaMim(usr).length : 0, minhas: minhas, todas: gere ? X.abertas() : [], lista: lista, linhas: linhas };
   };
   /* Grupos: as normas ESRS e os temas da empresa que existem nas linhas */
   var grupos = function (linhas) {
@@ -68,12 +73,12 @@
     var usr = u(), E = escopo(), nK = function (l) { return l.reduce(function (a, m) { return a + m.indicadores.length; }, 0); };
     var l = filtrar(E.linhas), mostrar = U.tarTodas ? l : l.slice(0, 12);
     var offline = E.lista.filter(function (m) { return P.podePreencher(m, usr); });
-    var dir = '<div class="ps-sp">' + (E.gere ? '<div class="ps-seg" role="group" aria-label="Whose tasks"><button type="button" class="' + (E.esc === 'minhas' ? 'on' : '') + '" data-a="tarEsc" data-v="minhas">Mine <span class="n">' + nK(E.minhas) + '</span></button><button type="button" class="' + (E.esc === 'todas' ? 'on' : '') + '" data-a="tarEsc" data-v="todas">Everyone <span class="n">' + nK(E.todas) + '</span></button></div>' : '') +
+    var dir = '<div class="ps-sp">' + (E.gere ? '<div class="ps-seg" role="group" aria-label="Whose tasks"><button type="button" class="' + (E.esc === 'minhas' ? 'on' : '') + '" data-a="tarEsc" data-v="minhas">Mine <span class="n">' + (nK(E.minhas) + E.nRev) + '</span></button><button type="button" class="' + (E.esc === 'todas' ? 'on' : '') + '" data-a="tarEsc" data-v="todas">Everyone <span class="n">' + nK(E.todas) + '</span></button></div>' : '') +
       '<button type="button" class="ps-btn pri peq tf-abrir" data-a="tarFolha"' + (l.length ? '' : ' disabled') + '><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>Open grid view</button>' +
       '<button type="button" class="ps-btn peq" data-a="tarOffline"' + (offline.length ? '' : ' disabled title="Nothing in collection with you in this list"') + '>Excel (offline)</button>' + X.botaoTl('Timeline') + '</div>';
     var cols = [{ t: 'KPI' }, { t: 'Period' }, { t: 'Perimeter' }, { t: 'Assigned to' }, { t: 'Deadline' }, { t: 'Status' }];
     var corpo = '<div class="ps-card-body">' + (E.linhas.length ? filtrosHtml(E.linhas, 'tf') : '') + (mostrar.length ? tabela(cols, mostrar.map(function (x) {
-      var st = X.estadoTarefa(x.m, x.id), cta = P.podeAgir(x.m, usr) ? X.ctaPasso(x.m) : '', sub = '<small class="ps-mut">' + e((x.c.esrs_requisito ? x.c.esrs_requisito + ', ' : '') + x.m.nome) + '</small>';
+      var st = x.rev ? { txt: P.etapaInd(x.m, x.id) === 'area' ? 'Submitted, to approve' : 'Area approved, to review', cls: 'rev' } : X.estadoTarefa(x.m, x.id), cta = x.rev ? 'Review' : P.podeAgir(x.m, usr) ? X.ctaPasso(x.m) : '', sub = '<small class="ps-mut">' + e((x.c.esrs_requisito ? x.c.esrs_requisito + ', ' : '') + x.m.nome) + '</small>';
       return { attrs: 'class="ps-tr-tar"', celulas: ['<div class="ps-tar-k"><a href="' + rota('Milestone/' + x.m.id + '?ind=' + encodeURIComponent(x.c.id)) + '">' + e(x.c.nome) + '</a>' + sub + (cta ? '<a class="ps-tar-cta" href="' + rota('Milestone/' + x.m.id + '?ind=' + encodeURIComponent(x.c.id)) + '">' + e(cta) + ' →</a>' : '') + '</div>', X.tagPer(x.m) || e(P.rotPeriodo(x.m)), X.empHtml(x.m.empresa), X.atribHtml(x.m), '<span class="ps-nowrap">' + e(X.prazoTxt(x.m)) + '</span>', chip(st.txt, st.cls)] };
     })) : vazio(!E.linhas.length ? (E.esc === 'minhas' ? 'Nothing waiting on you.' + (E.gere ? ' Switch to Everyone to follow the open tasks.' : '') : 'No open tasks.') : 'No task matches these filters.')) +
       (l.length > 12 ? '<div class="ps-sp ps-mt"><button type="button" class="ps-btn liga" data-a="tarTodas">' + (U.tarTodas ? 'Show fewer' : 'Show all ' + l.length + ' tasks') + '</button><a class="ps-btn liga" href="' + rota('Milestones' + (E.esc === 'minhas' ? '?minhas=1' : '')) + '">Open by task</a></div>' : '') + '</div>';

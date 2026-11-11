@@ -112,7 +112,7 @@
   /* --- Dados iniciais ---------------------------------------------------- */
   P.TEMAS = { 'Água e saneamento': '#0091DA', 'Energia e clima': '#EAAA00', 'Pessoas': '#C6007E', 'Governance': '#483698', 'Comunidade e cliente': '#00A3A1' };
   P.QUADROS = ['Desempenho', 'Ambientais', 'Sociais', 'Governance', 'ESRS'];
-  P.TIPOS_PASSO = { recolha: 'Collection and submission', validacao: 'Automatic validation', revisao: 'Review', parecer: 'Opinion from another area', aprovacao: 'Approval', publicacao: 'Report publication' };
+  P.TIPOS_PASSO = { recolha: 'Collection and submission', area: 'Area head approval', validacao: 'Automatic validation', revisao: 'Review', parecer: 'Opinion from another area', aprovacao: 'Approval', publicacao: 'Report publication' };
   P.PERFIS = { admin: 'Administrator', esg: 'Sustainability team', resp: 'Data owner', auditor: 'Auditor', ext: 'External entity' };
   var DEPARTAMENTOS = ['Operações', 'Qualidade e Laboratório', 'Comercial e Relação com o Cliente', 'Ambiente, Saúde e Segurança', 'Recursos Humanos', 'Financeira', 'Jurídico e Compliance', 'Compras', 'Frota', 'Sistemas de Informação', 'I&D, CSR e ESG'];
   /* Os departamentos geridos no backoffice sao as unidades de negocio */
@@ -128,10 +128,22 @@
 
   var WF_BASE = function () {
     return [
+      /* Workflow de base: quem esta atribuido submete; o responsavel da area aprova (passa sozinho se foi ele a
+         submeter); a equipa de sustentabilidade aprova ou devolve; aprovado, publica-se. A validacao automatica
+         so entra se alguem a acrescentar ao workflow; as regras de validacao correm na mesma ao preencher. */
+      { nome: 'Recolha e submissão dos dados', tipo: 'recolha', responsavel: 'unidade' },
+      { nome: 'Aprovação do responsável de área', tipo: 'area', responsavel: 'chefe' },
+      { nome: 'Aprovação pela equipa de sustentabilidade', tipo: 'aprovacao', responsavel: 'esg' },
+      { nome: 'Publicação nos quadros do relatório', tipo: 'publicacao', responsavel: 'sistema' }
+    ];
+  };
+  /* So para posicionar as tasks de demonstracao no passo certo (o estado de cada uma esta escrito para 5 passos) */
+  var WF_DEMO = function () {
+    return [
       { nome: 'Recolha e submissão dos dados', tipo: 'recolha', responsavel: 'unidade' },
       { nome: 'Validação automática', tipo: 'validacao', responsavel: 'sistema' },
-      { nome: 'Revisão pela equipa de sustentabilidade', tipo: 'revisao', responsavel: 'esg' },
-      { nome: 'Aprovação final', tipo: 'aprovacao', responsavel: 'esg' },
+      { nome: 'Aprovação do responsável de área', tipo: 'area', responsavel: 'chefe' },
+      { nome: 'Aprovação pela equipa de sustentabilidade', tipo: 'aprovacao', responsavel: 'esg' },
       { nome: 'Publicação nos quadros do relatório', tipo: 'publicacao', responsavel: 'sistema' }
     ];
   };
@@ -323,12 +335,23 @@
     var s = com.reduce(function (a, x) { return a + x.valor; }, 0), v = ag === 'ultimo' ? com[com.length - 1].valor : ag === 'media' ? s / com.length : s;
     return { valor: Number(v.toFixed(c.casas_decimais)), n: com.length, total: l.length, aprovados: l.filter(function (x) { return x.aprovado; }).length, agreg: ag, trimestres: com.map(function (x) { return 'T' + x.p.t; }), l: l };
   };
+  /* Tira o passo de validacao automatica de uma task (workflow de base); o passo atual acompanha */
+  var semValidacao = function (m) {
+    var antes = m.passos.length, atual = m.passos[m.passo_atual];
+    m.passos = m.passos.filter(function (p) { return p.tipo !== 'validacao'; });
+    if (m.passos.length === antes) return false;
+    var ix = atual ? m.passos.indexOf(atual) : -1;
+    m.passo_atual = ix > -1 ? ix : Math.min(m.passos.filter(function (p) { return p.concluido_em; }).length, m.passos.length);
+    m.eventos = m.eventos.filter(function (x) { return !/^Automatic validation completed/.test(x.texto); });
+    return true;
+  };
   var passosDe = function (lista) {
     return lista.map(function (p, i) { return { id: 'p' + i + '_' + Math.random().toString(36).slice(2, 7), nome: p.nome, tipo: p.tipo, responsavel: p.responsavel, concluido_em: null, concluido_por: null }; });
   };
   var passoDeNome = function (n, unidade) {
     if (/^Recolha/.test(n)) return { nome: n, tipo: 'recolha', responsavel: 'unidade' };
     if (/^Validação automática/.test(n)) return { nome: n, tipo: 'validacao', responsavel: 'sistema' };
+    if (/^Aprovação do responsável/.test(n)) return { nome: n, tipo: 'area', responsavel: 'chefe' };
     if (/^Revisão/.test(n)) return { nome: n, tipo: 'revisao', responsavel: 'esg' };
     if (/^Aprovação/.test(n)) return { nome: n, tipo: 'aprovacao', responsavel: 'esg' };
     if (/^Publicação/.test(n)) return { nome: n, tipo: 'publicacao', responsavel: 'sistema' };
@@ -367,6 +390,7 @@
     S.mat = MATERIALIDADE.map(function (m) { return { norma: m[0], tema: m[1], avaliacao: m[2], justificacao: m[3] }; });
     S.ent = ENTIDADES.map(function (e) { return { id: e[0], nome: e[0], perimetro_grupo: !!e[1], perimetro_maioritario: !!e[2] }; });
     S.deps = DEPARTAMENTOS.map(function (n) { return { id: n, nome: n }; });
+    S.deps.forEach(function (d) { var x = S.users.filter(function (u) { return u.perfil === 'resp' && P.temUnidade(u, d.nome); })[0]; if (x) d.chefe = x.login; });
     S.periodos = periodosAno(2026); S.relatorios = relatoriosAno(2026); S.tipos = tiposBase();
     S.janelas = JANELAS.map(function (j) { return { nome: j[0], tema: j[1], meses: j[2], dia_inicio: j[3], dia_fim: j[4] }; });
     S.areas = AREAS.map(function (a) { return { codigo: a[0], nome: a[1], uso: a[2] }; });
@@ -413,7 +437,7 @@
     var feito = function (lista) { return lista.length; };
     inst.forEach(function (x) {
       var pl = x.pl, ixPlano = x.ix, per = P.periodo(x.periodo);
-      var lista = pl.workflow.length ? pl.workflow.map(function (n) { return passoDeNome(n, pl.unidade); }) : WF_BASE();
+      var lista = pl.workflow.length ? pl.workflow.map(function (n) { return passoDeNome(n, pl.unidade); }) : WF_DEMO();
       /* Q1 e Q2 aprovados, Q3 no estado de demonstracao, Q4 a recolher. A consolidacao espera pelo Q4. */
       var cfg = x.t === 1 || x.t === 2 ? { i: feito(lista), d: P.diasAte(per.fecho) } : x.t === 4 || x.consolida ? { i: 0, d: P.diasAte(per.fecho) } : estados[pl.id];
       var m = {
@@ -454,10 +478,11 @@
       /* O que ja passou da recolha entregou os ficheiros pedidos */
       if (cfg.i > 0) (FICHEIROS_BASE[pl.unidade] || []).forEach(function (f, ixF) { m.documentos_gerais.push({ ficheiro: f[3] + '-' + x.id.toLowerCase() + '-2026.' + f[2][0], por: nomeDe(pl.unidade), em: quando(-8), pedido: 'tipo:' + f[3] }); });
       if (cfg.dev) {
-        m.comentarios.push({ autor: NOME_ESG, texto: 'A percentagem de veículos verdes parece baixa. Confirmem com a gestora da frota, por favor.', em: new Date(Date.now() - 86400000).toISOString(), passo: m.passos[2].nome, indicador: 'E09' });
+        m.comentarios.push({ autor: NOME_ESG, texto: 'A percentagem de veículos verdes parece baixa. Confirmem com a gestora da frota, por favor.', em: new Date(Date.now() - 86400000).toISOString(), passo: m.passos[3].nome, indicador: 'E09' });
         m.eventos.splice(1, 0, { texto: 'Task submitted.', em: new Date(Date.now() - 86400000 * 6).toISOString(), por: nomeDe(m.unidade), wf: 'avanco', passo: m.passos[0].nome }, { texto: 'Automatic validation completed: 1 indicator(s) with alerts.', em: new Date(Date.now() - 86400000 * 6 + 60000).toISOString(), por: 'System', wf: 'auto', passo: m.passos[1].nome });
-        m.eventos.push({ texto: 'Returned to the unit.', em: new Date(Date.now() - 86400000).toISOString(), por: 'Sustainability team', wf: 'devolucao', passo: m.passos[2].nome });
+        m.eventos.push({ texto: 'Returned to the unit.', em: new Date(Date.now() - 86400000).toISOString(), por: 'Sustainability team', wf: 'devolucao', passo: m.passos[3].nome });
       }
+      if (!m.workflow_ajustado) semValidacao(m);
     });
     /* Conversas de demonstracao: cada comentario com o passo em que foi escrito e, quando e o caso, o indicador */
     var com = function (id, autor, texto, horas, passo, ind) {
@@ -501,6 +526,17 @@
     if (P.online()) { estadoVazio(); return; }
     if (!ler(CHAVES.ms) || ler('esg_versao') !== VERSAO_DADOS) { P.cat = catBoot; semearAmbiente(); escrever('esg_versao', VERSAO_DADOS); return; }
     Object.keys(CHAVES).forEach(function (n) { S[n] = ler(CHAVES[n]); });
+    /* A validacao automatica saiu do workflow de base: sai do base gravado e das tasks que seguem o base */
+    /* Workflow de base novo (area head e equipa de sustentabilidade). O base gravado que era o antigo passa ao novo,
+       e as tasks no base perdem a validacao automatica; as que ainda estao na recolha passam ao workflow novo. */
+    var NOMES_ANTIGOS = 'Recolha e submissão dos dados|Validação automática|Revisão pela equipa de sustentabilidade|Aprovação final|Publicação nos quadros do relatório';
+    if (Array.isArray(S.wfbase) && (S.wfbase.map(function (p) { return p.nome; }).join('|') === NOMES_ANTIGOS || S.wfbase.map(function (p) { return p.nome; }).join('|') === NOMES_ANTIGOS.replace('Validação automática|', ''))) S.wfbase = WF_BASE();
+    (S.ms || []).forEach(function (m) {
+      if (m.workflow_ajustado || !m.passos) return;
+      semValidacao(m);
+      if (m.passo_atual === 0 && !m.passos.some(function (p) { return p.tipo === 'area'; })) m.passos = passosDe(WF_BASE());
+    });
+    (S.deps || []).forEach(function (d) { if (d.chefe === undefined) { var x = (S.users || []).filter(function (u) { return u.perfil === 'resp' && P.temUnidade(u, d.nome); })[0]; d.chefe = x ? x.login : ''; } });
     /* Os pedidos de dados aceitam so Excel, tambem nos dados ja gravados neste navegador */
     (S.tipos || []).forEach(function (t) { t.formatos = ['xlsx']; });
     /* Ligacoes gravadas antes de terem estado: passam a ter o estado de base */
@@ -732,7 +768,9 @@
       if (P.indSubmetido(m, id) || P.eOutput(P.cat(id))) return;
       var f = P.faltasIndicador(m, id);
       if (f.length) { recusados.push(f[0].msg); return; }
-      P.item(id, P.chave(m)).submetido = { em: agora(), por: u.nome };
+      var itS = P.item(id, P.chave(m)); itS.submetido = { em: agora(), por: u.nome }; delete itS.devolvidoInd;
+      /* Quem submete e o responsavel da area (ou a area nao tem responsavel): a aprovacao da area passa sozinha */
+      if (P.eChefe(u, m.unidade) || !P.chefeDe(m.unidade)) itS.aprovadoArea = { em: agora(), por: u.nome, auto: true };
       feitos.push(id);
     });
     if (feitos.length) {
@@ -747,8 +785,45 @@
     if (!P.podePreencher(m, u)) return { erro: 'This task is not with you right now.' };
     var it = P.item(id, P.chave(m));
     if (!it || !it.submetido) return { erro: 'This indicator is not submitted.' };
-    delete it.submetido;
+    delete it.submetido; delete it.revisto; delete it.aprovadoArea;
     ev(m, 'Indicator ' + id + ' reopened for changes.', u.nome);
+    guardar();
+    return { ok: true };
+  };
+  /* --- Revisao por indicador -----------------------------------------------------------------
+     Um indicador submetido antes da task segue logo para a equipa de sustentabilidade, que o pode aprovar
+     ou devolver sem esperar pelo resto. Quem o submeteu nao o pode rever (segregacao de funcoes). */
+  /* Etapa de um indicador submetido antes da task: 'area' (responsavel de area), 'esg' (equipa de sustentabilidade) ou '' */
+  P.etapaInd = function (m, id) { var it = P.item(id, P.chave(m)); if (!it || !it.submetido || it.revisto) return ''; return it.aprovadoArea ? 'esg' : 'area'; };
+  P.podeReverInd = function (m, id, u) {
+    var it = P.item(id, P.chave(m)), et = P.etapaInd(m, id);
+    if (!u || !et || P.concluida(m) || it.submetido.por === u.nome) return false;
+    if (et === 'area') return P.eChefe(u, m.unidade) || u.perfil === 'admin';
+    return P.gereTudo(u);
+  };
+  P.indParaRever = function (m) { if (P.concluida(m)) return []; var pa = P.passoAtual(m); if (!pa || pa.tipo !== 'recolha') return []; return m.indicadores.filter(function (id) { var it = P.item(id, P.chave(m)); return it && it.submetido && !it.revisto; }); };
+  P.revParaMim = function (u) {
+    var l = [];
+    if (!u) return l;
+    P.msCiclo().forEach(function (m) { P.indParaRever(m).forEach(function (id) { if (P.podeReverInd(m, id, u)) l.push({ m: m, id: id }); }); });
+    return l;
+  };
+  P.aprovarIndicador = function (m, id, u) {
+    if (!P.podeReverInd(m, id, u)) return { erro: P.item(id, P.chave(m)).submetido && P.item(id, P.chave(m)).submetido.por === u.nome ? 'Segregation of duties: you submitted this indicator, so someone else has to review it.' : 'This indicator is not waiting for your review.' };
+    var itA = P.item(id, P.chave(m));
+    if (P.etapaInd(m, id) === 'area') { itA.aprovadoArea = { em: agora(), por: u.nome }; ev(m, 'Indicator ' + id + ' approved by the area head. It goes to the sustainability team.', u.nome); }
+    else { itA.revisto = { em: agora(), por: u.nome }; ev(m, 'Indicator ' + id + ' approved by the sustainability team ahead of the task.', u.nome); }
+    guardar();
+    return { ok: true };
+  };
+  P.devolverIndicador = function (m, id, u, comentario) {
+    if (!P.podeReverInd(m, id, u)) return { erro: 'This indicator is not waiting for your review.' };
+    if (!comentario || !String(comentario).trim()) return { erro: 'Write what needs to change.' };
+    var it = P.item(id, P.chave(m));
+    it.devolvidoInd = { em: agora(), por: u.nome, comentario: String(comentario).trim() };
+    delete it.submetido; delete it.aprovadoArea;
+    m.comentarios.push({ autor: u.nome, texto: P.cat(id).nome + ' (' + id + ') returned: ' + String(comentario).trim(), em: agora(), passo: P.passoAtual(m).nome, ind: id });
+    ev(m, 'Indicator ' + id + ' returned for changes: ' + String(comentario).trim(), u.nome, 'devolucao');
     guardar();
     return { ok: true };
   };
@@ -1083,6 +1158,7 @@
       if (P.diasAte(m.prazo) < 0) return { cod: 'atraso', txt: 'Overdue', cls: 'err' };
       return { cod: 'recolha', txt: 'In collection', cls: 'info' };
     }
+    if (p.tipo === 'area') return { cod: 'revisao', txt: 'With the area head', cls: 'rev' };
     if (p.tipo === 'parecer') return { cod: 'parecer', txt: 'Awaiting opinion', cls: 'warn' };
     if (p.tipo === 'aprovacao') return { cod: 'aprovacao', txt: 'In approval', cls: 'rev' };
     return { cod: 'revisao', txt: 'In review', cls: 'rev' };
@@ -1099,6 +1175,7 @@
   P.nomeResp = function (m, resp) {
     if (resp === 'unidade') return m ? m.unidade : 'Task unit';
     if (resp === 'esg') return 'Sustainability team';
+    if (resp === 'chefe') { var ch = m ? P.chefeDe(m.unidade) : null; return ch ? ch.nome + ' (area head)' : 'Area head'; }
     if (resp === 'admin') return 'Administrator';
     if (resp === 'sistema') return 'Automatic';
     return resp.indexOf('area:') === 0 ? resp.slice(5) : resp;
@@ -1108,6 +1185,7 @@
     if (!p || !u || p.responsavel === 'sistema') return false;
     if (u.perfil === 'admin') return true;
     if (p.responsavel === 'esg') return u.perfil === 'esg';
+    if (p.responsavel === 'chefe') { var ch = P.chefeDe(m.unidade); return ch ? ch.login === u.login : u.perfil === 'resp' && P.temUnidade(u, m.unidade); }
     if (p.responsavel === 'unidade') return (u.perfil === 'resp' && P.temUnidade(u, m.unidade)) || (!!m.atribuido_a && m.atribuido_a === u.login);
     if (p.responsavel.indexOf('area:') === 0) return u.perfil === 'resp' && P.temUnidade(u, p.responsavel.slice(5));
     return false;
@@ -1117,6 +1195,22 @@
     if (!P.podeAgir(m, u)) return false;
     if (u.perfil !== 'admin') return true;
     return P.passoAtual(m).responsavel === 'admin' || (!!m.atribuido_a && m.atribuido_a === u.login);
+  };
+  /* Responsavel de area: definido em Backoffice, Departments */
+  P.chefeDe = function (dep) { var d = (S.deps || []).filter(function (x) { return x.nome === dep; })[0]; return d && d.chefe ? P.user(d.chefe) : null; };
+  P.eChefe = function (u, dep) { var ch = P.chefeDe(dep); return !!u && !!ch && ch.login === u.login; };
+  /* Passo do responsavel de area: passa sozinho quando foi o proprio a submeter, ou quando todos os indicadores
+     ja foram aprovados por ele um a um */
+  var bypassArea = function (m, u) {
+    var p = P.passoAtual(m);
+    if (!p || p.tipo !== 'area' || P.concluida(m)) return false;
+    var ch = P.chefeDe(m.unidade), todos = m.indicadores.filter(function (id) { return !P.eOutput(P.cat(id)); }).every(function (id) { var it = P.item(id, P.chave(m)); return it && it.aprovadoArea; });
+    var motivo = ch && u && ch.login === u.login ? 'submitted by the area head' : !ch ? 'no area head set for ' + m.unidade : todos ? 'every indicator was already approved by the area head' : '';
+    if (!motivo) return false;
+    p.concluido_em = agora(); p.concluido_por = (ch ? ch.nome : 'System') + ' (automatic: ' + motivo + ')';
+    ev(m, 'Area head approval passed automatically: ' + motivo + '.', ch ? ch.nome : 'System', 'auto', p.nome);
+    m.passo_atual++;
+    return true;
   };
   P.podePreencher = function (m, u) { var p = P.passoAtual(m); return !!p && p.tipo === 'recolha' && P.podeAgir(m, u); };
   P.gereTudo = function (u) { return !!u && (u.perfil === 'admin' || u.perfil === 'esg'); };
@@ -1153,6 +1247,7 @@
     m.indicadores.forEach(function (id) { var it = P.item(id, P.chave(m)); if (it && !it.submetido && !P.eOutput(P.cat(id))) it.submetido = { em: agora(), por: u.nome }; });
     m.passo_atual++;
     correrAutomaticos(m);
+    if (bypassArea(m, u)) correrAutomaticos(m);
     var nc = P.calcularOutputs(P.chave(m), u);
     if (nc) ev(m, nc + ' output indicator(s) calculated from the submitted inputs.', 'System');
     guardar();
@@ -1164,7 +1259,7 @@
     if (p.tipo === 'recolha') return P.submeter(m, u);
     if (P.violaSegregacao && P.violaSegregacao(m, u)) return { erro: 'Segregation of duties: you submitted this task, so someone else has to decide on it.' };
     p.concluido_em = agora(); p.concluido_por = u.nome;
-    var verbo = p.tipo === 'parecer' ? 'Favourable opinion given' : p.tipo === 'aprovacao' ? 'Values approved and locked' : 'Review completed';
+    var verbo = p.tipo === 'parecer' ? 'Favourable opinion given' : p.tipo === 'aprovacao' ? 'Values approved and locked' : p.tipo === 'area' ? 'Approved by the area head' : 'Review completed';
     ev(m, verbo + ': ' + p.nome + '.', u.nome, 'avanco', p.nome);
     if (comentario && comentario.trim()) m.comentarios.push({ autor: u.nome, texto: comentario.trim(), em: agora(), passo: p.nome });
     m.passo_atual++;
@@ -1178,7 +1273,7 @@
     var deOnde = P.passoAtual(m).nome;
     m.passos.forEach(function (p) { p.concluido_em = null; p.concluido_por = null; });
     m.passo_atual = 0;
-    m.indicadores.forEach(function (id) { var it = P.item(id, P.chave(m)); if (it) delete it.submetido; });
+    m.indicadores.forEach(function (id) { var it = P.item(id, P.chave(m)); if (it) { delete it.submetido; delete it.revisto; delete it.aprovadoArea; } });
     m.devolvida = true;
     if (P.diasAte(m.prazo) < 3) m.prazo = diasDe(3);
     m.comentarios.push({ autor: u.nome, texto: comentario.trim(), em: agora(), passo: deOnde });
@@ -1189,7 +1284,7 @@
   /* Regras do editor (6.4). Devolve a mensagem do que falha, ou null. */
   P.validarWorkflow = function (m, passos) {
     if (!passos.length || passos[0].tipo !== 'recolha') return 'The first step is always collection.';
-    if (!passos.some(function (p) { return ['revisao', 'parecer', 'aprovacao'].indexOf(p.tipo) > -1; })) return 'The workflow needs at least one review, opinion or approval step.';
+    if (!passos.some(function (p) { return ['area', 'revisao', 'parecer', 'aprovacao'].indexOf(p.tipo) > -1; })) return 'The workflow needs at least one review, opinion or approval step.';
     for (var i = 0; i < passos.length; i++) {
       if (!String(passos[i].nome || '').trim()) return 'All steps need a name.';
       if (passos[i].tipo === 'publicacao' && i < passos.length - 1) return 'Publication must be the last step.';
@@ -1218,7 +1313,7 @@
   P.repostoDoBase = function (m) {
     var fixos = m.passos.slice(0, m.passo_atual + 1);
     var tipoAtual = fixos.length ? fixos[fixos.length - 1].tipo : null;
-    var ordem = ['recolha', 'validacao', 'revisao', 'parecer', 'aprovacao', 'publicacao'];
+    var ordem = ['recolha', 'validacao', 'area', 'revisao', 'parecer', 'aprovacao', 'publicacao'];
     var resto = S.wfbase.filter(function (p) { return ordem.indexOf(p.tipo) > ordem.indexOf(tipoAtual); });
     return fixos.concat(passosDe(resto));
   };

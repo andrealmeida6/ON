@@ -1015,6 +1015,31 @@ Pedido do André a 11 de novembro de 2026.
   - o cursor fica no campo do valor.
 - O CSS do realce está na secção 62 do `global.css`. Quem tem a opção de reduzir movimentos no sistema vê o realce fixo, sem animação.
 
+### Workflow novo: responsável de área e equipa de sustentabilidade, com revisão por indicador
+
+Pedido do André a 11 de novembro de 2026.
+
+- **Workflow de base** (`WF_BASE`):
+  1. Recolha e submissão: quem está atribuído preenche e submete.
+  2. **Aprovação do responsável de área** (tipo `area`, responsável `chefe`). Passa automaticamente se foi o responsável de área a submeter, se a área não tem responsável, ou se todos os indicadores já foram aprovados por ele um a um.
+  3. **Aprovação pela equipa de sustentabilidade**, que aprova ou devolve.
+  4. Publicação automática.
+  - A validação automática saiu do base. Só entra se alguém a acrescentar ao workflow. As regras de validação continuam a correr ao preencher.
+  - As tasks com workflow alterado ficam como estão.
+- **Responsável de área:** é um campo novo em Backoffice → Departments (coluna "Area head", com pesquisa).
+  - No arranque, cada departamento fica com o primeiro data owner desse departamento.
+  - `P.chefeDe` e `P.eChefe` dão o responsável de cada área.
+  - O editor do workflow tem o tipo "Area head approval" e o responsável "Area head of the task unit".
+- **Revisão por indicador** (`P.etapaInd`, `P.podeReverInd`, `P.aprovarIndicador`, `P.devolverIndicador`, `P.revParaMim`):
+  - Um indicador submetido antes da task vai primeiro ao responsável de área e depois à equipa de sustentabilidade.
+  - Se quem submete é o responsável de área, a aprovação dele passa automaticamente.
+  - Ninguém aprova o que submeteu (segregação de funções). Devolver obriga a um comentário, que fica na conversa da task.
+  - **Home → Tasks (Mine):** cada pessoa vê os indicadores à espera dela, com o estado "Submitted, to approve" ou "Area approved, to review" e o botão Review.
+  - **Approvals:** no topo há o cartão "Indicators waiting for your approval", com o botão Review → que abre a task já no indicador.
+  - **Dentro da task:** um aviso diz quantos indicadores estão à espera e tem o botão "Review next →". Ao entrar na task, a página vai direta ao primeiro indicador por aprovar. Cada linha tem Approve e Return. Depois de aprovar, a página salta para o seguinte.
+  - **Workflow da task:** cada passo mostra quantos indicadores estão nele ("1 to approve" no passo da área, "1 approved" no passo da sustentabilidade).
+- **Dados gravados:** o base antigo passa ao novo; as tasks no base perdem a validação automática; as que ainda estão na recolha passam aos 4 passos novos; os departamentos ganham o responsável de área.
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.

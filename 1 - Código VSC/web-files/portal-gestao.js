@@ -343,6 +343,16 @@
   /* --- Aprovacoes ------------------------------------------------------------------- */
   U.apr = { filtro: 'todas', sel: '' };
   var alertasMs = function (m) { return m.indicadores.filter(function (id) { return P.validarItem(P.item(id, P.chave(m))).alertas.length; }); };
+  /* Indicadores submetidos antes da task, a espera de revisao: aparecem aqui logo, um a um */
+  var filaRevisao = function (usr) {
+    var l = P.revParaMim ? P.revParaMim(usr) : [];
+    if (!l.length) return '';
+    return '<div class="ps-card rev-fila">' + cabCartao('Indicators waiting for your approval (' + l.length + ')', 'tarefa', '<span class="ps-mut ps-small">Submitted ahead of their task. Approve them so they move on.</span>') + '<div class="ps-card-body">' +
+      tabela([{ t: 'Indicator' }, { t: 'Task' }, { t: 'Company' }, { t: 'Value', dir: 1 }, { t: 'Change', dir: 1 }, { t: 'Submitted' }, { t: '' }], l.map(function (x) {
+        var it = P.item(x.id, P.chave(x.m)), c = P.cat(x.id), v = P.validarItem(it);
+        return ['<b>' + e(c.nome) + '</b> <span class="ps-mut ps-small">' + e(x.id) + '</span>', e(x.m.nome), emp(x.m.empresa), it.valor === null ? '-' : e(fmtV(x.id, it.valor) + ' ' + c.unidade_medida), v.variacao === null ? '-' : '<span class="' + (v.alertas.length ? 'ps-txt-err' : '') + '">' + (v.variacao > 0 ? '+' : '') + P.fmtNum(v.variacao, 1) + '%</span>', e(it.submetido.por + ', ' + P.fmtDataHora(it.submetido.em)), '<a class="ps-btn peq pri" href="' + X.rota('Milestone/' + x.m.id + '?ind=' + encodeURIComponent(x.id)) + '">Review →</a>'];
+      })) + '</div></div>';
+  };
   Blocos['approvals'] = function () {
     var usr = u(), todas = aprovaveis(), f = U.apr, minhas = todas.filter(function (m) { return P.esperaPor(m, usr); }), alerta = todas.filter(function (m) { return alertasMs(m).length; });
     if (U.rota.q.ms && !f.sel) f.sel = U.rota.q.ms;
@@ -362,7 +372,7 @@
         (podeA ? (viola ? '<div class="ps-aviso warn ps-mt">You submitted this task, so someone else has to decide on it.</div>' : campo('apr-com', 'Comment (required to return)', '<textarea id="apr-com" class="ps-ta"></textarea>') + '<div class="ps-sp ps-mt ps-apr-acts"><button type="button" class="ps-btn" data-a="aprDevolver" data-v="' + e(m.id) + '">Return</button><button type="button" class="ps-btn pri" data-a="aprAprovar" data-v="' + e(m.id) + '">' + e(verbo) + '</button></div>') : '<p class="ps-small ps-mut ps-mt">This step is with ' + e(P.nomeResp(m, p.responsavel)) + '.</p>') +
         '<p class="ps-small ps-mt"><a href="' + rota('Milestone/' + m.id) + '">Open the task</a></p></div></div>';
     }
-    return '<div class="ps-card ps-apr-passos">' + passos.map(function (p, i) { return '<div class="ps-apr-p"><i>' + (i + 1) + '</i><span><b>' + e(p.nome) + '</b><small>' + e(P.nomeResp(null, p.responsavel)) + '</small></span></div>'; }).join('') + '</div>' +
+    return filaRevisao(usr) + '<div class="ps-card ps-apr-passos' + (P.revParaMim && P.revParaMim(usr).length ? ' ps-mt' : '') + '">' + passos.map(function (p, i) { return '<div class="ps-apr-p"><i>' + (i + 1) + '</i><span><b>' + e(p.nome) + '</b><small>' + e(P.nomeResp(null, p.responsavel)) + '</small></span></div>'; }).join('') + '</div>' +
       '<div class="ps-grid-apr ps-mt"><div class="ps-card"><div class="ps-card-body">' + pills('aprFiltro', [['todas', 'All', todas.length], ['minhas', 'Waiting on me', minhas.length], ['alertas', 'With alerts', alerta.length]], f.filtro) + '<div class="ps-mt">' +
       tabela([{ t: 'Task' }, { t: 'Perimeter' }, { t: 'Assigned to' }, { t: 'Alerts', dir: 1 }, { t: 'Deadline' }], lista.map(function (x) {
         return { attrs: (m && x.id === m.id ? 'class="ps-sel-l" aria-selected="true"' : ''), celulas: ['<button type="button" class="ps-btn liga" data-a="aprVer" data-v="' + e(x.id) + '">' + e(x.nome) + '</button>', emp(x.empresa), atribHtml(x), alertasMs(x).length, '<span class="ps-nowrap">' + e(X.prazoTxt(x)) + '</span>'] };

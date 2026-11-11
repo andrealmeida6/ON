@@ -579,11 +579,14 @@
     return '<div class="ps-card ps-mt">' + cabCartao('Task workflow', 'ativ', '<div class="ps-sp"><div class="ps-leg"><span><i class="ok"></i>Completed</span><span><i class="at"></i>Current</span><span><i></i>To do</span></div>' + '<button type="button" class="ps-wfh-btn' + (abertoH ? ' on' : '') + '" data-a="wfHist" aria-expanded="' + abertoH + '" aria-controls="wf-hist" title="' + (abertoH ? 'Hide the timeline' : 'Show the timeline of this workflow') + '"><span class="ps-wfh-ico">' + svg(I.relogio, 18) + '</span><span class="ps-wfh-txt">' + (abertoH ? 'Hide timeline' : 'Timeline') + '</span></button>' + (P.podeAlterarWorkflow(m, u()) ? '<button type="button" class="ps-btn peq" data-a="abrirWf">Change workflow</button>' : '') + '</div>') +
       '<div class="ps-wf-barra ps-mt" role="img" aria-label="' + pct + '% of steps completed"><i style="width:' + pct + '%"></i></div><div class="ps-wf">' + m.passos.map(function (p, i) {
         var c = i < m.passo_atual ? 'ok' : i === m.passo_atual ? (m.devolvida ? 'at dev' : 'at') : '';
-        var parcial = es && es.submetidos && i === m.passo_atual, chegam = es && es.submetidos && i === m.passo_atual + 1;
+        /* Indicadores submetidos antes da task: cada um aparece no passo onde esta (responsavel de area ou sustentabilidade) */
+        var primEsg = m.passos.filter(function (q) { return q.responsavel === 'esg'; })[0], cnt = function (et) { return m.indicadores.filter(function (id) { return P.etapaInd(m, id) === et; }).length; };
+        var nRevisto = m.indicadores.filter(function (id) { var it = P.item(id, P.chave(m)); return it && it.submetido && it.revisto; }).length;
+        var parcial = es && es.submetidos && i === m.passo_atual, aqui = !es || !es.submetidos || i <= m.passo_atual ? '' : p.tipo === 'area' ? (cnt('area') ? cnt('area') + ' to approve' : '') : p === primEsg ? [cnt('esg') ? cnt('esg') + ' to review' : '', nRevisto ? nRevisto + ' approved' : ''].filter(Boolean).join(', ') : '', chegam = !!aqui;
         if (parcial) c += ' parcial';
         var anel = parcial ? ' style="--parte:' + Math.round(parte * 100) + '%" title="' + e(es.submetidos + ' of ' + es.total + ' indicators submitted') + '"' : '';
         return '<div class="ps-wf-p ' + c + '"' + (i === m.passo_atual ? ' aria-current="step"' : '') + anel + '><div class="ps-wf-n">' + e(p.nome) + '</div><div class="ps-wf-c">' + (i < m.passo_atual ? svg(I.tick, 18) : m.devolvida && i === m.passo_atual ? svg(I.voltar, 18) : i + 1) + '</div>' +
-          (parcial ? '<div class="ps-wf-sub">' + es.submetidos + ' of ' + es.total + ' submitted</div>' : chegam ? '<div class="ps-wf-chega" title="' + e('Submitted indicators wait here until the task is submitted: ' + m.indicadores.filter(function (id) { return P.indSubmetido(m, id); }).join(', ')) + '">' + es.submetidos + ' indicator' + (es.submetidos === 1 ? '' : 's') + ' ready here</div>' : '') + '<div class="ps-wf-r">' + (p.concluido_em ? '<b>' + e(P.fmtData(p.concluido_em)) + '</b><span class="ps-wf-q">' + quemHtml(p.concluido_por) + '</span>' : i === m.passo_atual ? '<b>Current</b><span class="ps-wf-q">' + quemAtual(m) + (podeReatribuir(m, u()) ? '<button type="button" class="ps-wf-edit" data-a="msAtrAbrir" aria-label="Change who it is assigned to" title="Change who it is assigned to">' + svg(ICO_LAPIS, 14) + '</button>' : '') + '</span>' : '<span class="ps-wf-q">' + quemHtml(P.nomeResp(m, p.responsavel)) + '</span>') + '</div></div>';
+          (parcial ? '<div class="ps-wf-sub">' + es.submetidos + ' of ' + es.total + ' submitted</div>' : chegam ? '<div class="ps-wf-chega" title="' + e('Indicators submitted ahead of the task that are at this step') + '">' + e(aqui) + '</div>' : '') + '<div class="ps-wf-r">' + (p.concluido_em ? '<b>' + e(P.fmtData(p.concluido_em)) + '</b><span class="ps-wf-q">' + quemHtml(p.concluido_por) + '</span>' : i === m.passo_atual ? '<b>Current</b><span class="ps-wf-q">' + quemAtual(m) + (podeReatribuir(m, u()) ? '<button type="button" class="ps-wf-edit" data-a="msAtrAbrir" aria-label="Change who it is assigned to" title="Change who it is assigned to">' + svg(ICO_LAPIS, 14) + '</button>' : '') + '</span>' : '<span class="ps-wf-q">' + quemHtml(P.nomeResp(m, p.responsavel)) + '</span>') + '</div></div>';
       }).join('') + '</div>' + (abertoH ? historicoHtml(m) : '') + '</div>';
   };
   /* Linha do tempo do workflow: para tras (com devolucoes), o passo atual e o que falta, com o tempo entre etapas */
@@ -631,7 +634,7 @@
   /* Barra de acao: fica sempre a vista no fundo do ecra enquanto se trabalha na milestone */
   var barraAcao = function (m, usr, decide) {
     if (decide) {
-      var p = P.passoAtual(m), rot = p.tipo === 'parecer' ? 'Give favourable opinion' : p.tipo === 'aprovacao' ? 'Approve and lock' : 'Complete review';
+      var p = P.passoAtual(m), rot = p.tipo === 'parecer' ? 'Give favourable opinion' : p.tipo === 'aprovacao' ? 'Approve and lock' : p.tipo === 'area' ? 'Approve and send to sustainability' : 'Complete review';
       return '<div class="ps-ms-acao" role="region" aria-label="Actions"><span class="ps-small">' + e(p.nome) + '</span><span class="ps-sp"><button type="button" class="ps-btn err" data-a="devolver">Return to the unit</button><button type="button" class="ps-btn pri" data-a="concluirPasso">' + e(rot) + '</button></span></div>';
     }
     if (!P.podePreencher(m, usr)) return '';
@@ -682,7 +685,9 @@
       var res = v.erros.length ? chip('Error', 'err') : v.alertas.length ? alertaHtml(m, id, v, it) : it.valor !== null ? chip('Valid', 'ok') : chip('To fill in');
       var prontoInd = !sub && !saida && !P.faltasIndicador(m, id).length;
       if (saida) res = it.valor !== null ? chip('Calculated', 'info') : '<span class="ps-tip-alvo" tabindex="0" data-tip="Calculated by the platform from ' + e(P.codigosCalc(c.calc_codigos).join(', ')) + ' once they are submitted.">' + chip('Waiting for inputs') + '</span>';
-      else if (sub) res = '<span class="rq2-sub">' + chip('Submitted', 'ok') + '<small>' + e(sub.por + ', ' + P.fmtDataHora(sub.em)) + '</small><button type="button" class="ps-btn liga" data-a="indReabrir" data-v="' + e(id) + '">Reopen</button></span>';
+      else if (sub && (it.revisto || P.podeReverInd(m, id, usr))) res = estadoRevHtml(m, id);
+      else if (sub) res = '<span class="rq2-sub">' + chip(P.etapaInd(m, id) === 'area' ? 'With the area head' : 'With sustainability', 'rev') + '<small>' + e(sub.por + ', ' + P.fmtDataHora(sub.em)) + '</small><button type="button" class="ps-btn liga" data-a="indReabrir" data-v="' + e(id) + '">Reopen</button></span>';
+      else if (it.devolvidoInd) res = res + '<span class="rev-dev" data-tip="' + e('Returned by ' + it.devolvidoInd.por + ', ' + P.fmtDataHora(it.devolvidoInd.em) + ': ' + it.devolvidoInd.comentario) + '" tabindex="0">' + chip('Returned', 'err') + '</span>';
       else if (prontoInd) res = res + '<button type="button" class="ps-btn peq pri rq2-subm" data-a="indSubmeter" data-v="' + e(id) + '">Submit</button>';
       var pedidos = S.ext.filter(function (x) { return x.indicador_id === id && x.milestone_id === m.id; });
       var recebido = pedidos.filter(function (x) { return x.estado === 'recebido'; })[0], pendente = pedidos.filter(function (x) { return x.estado === 'pendente'; })[0];
@@ -719,7 +724,7 @@
     var acomp = '<div class="rq2-acomp" role="group" aria-label="Submission"><div class="rq2-prog"><b>' + est.submetidos + ' of ' + est.total + ' submitted</b><span class="rq2-barra" aria-hidden="true"><i style="width:' + (est.total ? Math.round(est.submetidos / est.total * 100) : 0) + '%"></i></span><small>' + (est.faltam ? est.faltam + ' still to submit' + (est.prontos.length ? ', ' + est.prontos.length + ' ready now' : '') : 'All indicators submitted. Submit the task to send it for review.') + '</small></div>' +
       '<div class="ps-seg" role="group" aria-label="Show">' + [['todos', 'All ' + m.indicadores.length], ['falta', 'To submit ' + est.faltam], ['sub', 'Submitted ' + est.submetidos]].map(function (x) { return '<button type="button" class="' + (fil === x[0] ? 'on' : '') + '" data-a="rqSubFil" data-v="' + x[0] + '">' + e(x[1]) + '</button>'; }).join('') + '</div>' +
       (est.prontos.length ? '<button type="button" class="ps-btn peq pri" data-a="indSubmeterProntos">Submit the ' + est.prontos.length + ' ready</button>' : '') + '</div>';
-    var vistaLista = acomp + '<div class="rq2"><div class="rq2-cab"><button type="button" class="ps-btn liga rq2-todos" data-a="rqTodos">' + (todosAbertos ? 'Collapse all' : 'Expand all') + '</button><span>Indicator</span><span class="rq2-dir">' + e(P.rotAnterior(P.chave(m))) + '</span><span class="rq2-dir">Value ' + e(P.rotPeriodo(m)) + '</span><span class="rq2-dir">Change</span><span>Status</span></div>' + (linhas || '<p class="ps-mut ps-small rq2-vazio">' + (fil === 'sub' ? 'Nothing submitted yet.' : 'Nothing left to submit.') + '</p>') + '</div>';
+    var vistaLista = bannerRev(m) + acomp + '<div class="rq2"><div class="rq2-cab"><button type="button" class="ps-btn liga rq2-todos" data-a="rqTodos">' + (todosAbertos ? 'Collapse all' : 'Expand all') + '</button><span>Indicator</span><span class="rq2-dir">' + e(P.rotAnterior(P.chave(m))) + '</span><span class="rq2-dir">Value ' + e(P.rotPeriodo(m)) + '</span><span class="rq2-dir">Change</span><span>Status</span></div>' + (linhas || '<p class="ps-mut ps-small rq2-vazio">' + (fil === 'sub' ? 'Nothing submitted yet.' : 'Nothing left to submit.') + '</p>') + '</div>';
     /* Um so cartao: os valores entram no separador do ecra, os ficheiros no separador de upload */
     var tab = abaRecolha(m), aberta = !P.concluida(m);
     var porPreencher = m.indicadores.filter(function (id) { return P.item(id, P.chave(m)).valor === null; }).length;
@@ -1055,17 +1060,34 @@
       '<div class="ps-card">' + cabCartao('Your report (' + cfg.linhas.length + ')', 'ativ', '<button type="button" class="ps-btn peq pri" data-a="expExcel"' + (cfg.linhas.length ? '' : ' disabled') + '>Export to Excel</button>') + '<div class="ps-card-body">' + window.PortalGrelha.html(cfg) + '</div></div>';
   };
   var sepRevisao = function (m) {
-    var p = P.passoAtual(m), rot = p.tipo === 'parecer' ? 'Give favourable opinion' : p.tipo === 'aprovacao' ? 'Approve and lock' : 'Complete review';
+    var p = P.passoAtual(m), rot = p.tipo === 'parecer' ? 'Give favourable opinion' : p.tipo === 'aprovacao' ? 'Approve and lock' : p.tipo === 'area' ? 'Approve and send to sustainability' : 'Complete review';
     return '<div class="ps-card">' + cabCartao(p.nome, 'tarefa', ferrDados(m)) + '<div class="ps-card-body">' + (P.fontesHtml ? P.fontesHtml(m) : '') + (U.dadosVista === 'grid' ? corpoGrelha(m) : tabela([{ t: 'Indicator' }, { t: 'Value', dir: 1 }, { t: String(m.ano - 1), dir: 1 }, { t: 'Change', dir: 1 }, { t: 'Alerts and justification' }, { t: 'Quality' }], m.indicadores.map(function (id) {
       var it = P.item(id, P.chave(m)), v = P.validarItem(it), ant = P.valorAnterior(id, P.chave(m));
       return [linkFicha(id) + infoFormula(id, true) + (P.botaoComentarInd ? ' ' + P.botaoComentarInd(m, id) : ''), celValor(m, id) + ' ' + e(P.cat(id).unidade_medida), ant === null || ant === undefined ? '-' : fmtV(id, ant), v.variacao === null ? '-' : (v.variacao > 0 ? '+' : '') + P.fmtNum(v.variacao, 1) + '%', v.alertas.length ? '<span class="ps-small">' + e(v.alertas.join(' ')) + '<br><b>Justification:</b> ' + e(it.justificacao || '-') + '</span>' : chip('No alerts', 'ok'), e(P.QUALIDADE_TXT[it.qualidade])];
     }))) + '<div class="ps-mt">' + campo('rev-com', 'Comment (required to return)', '<textarea id="rev-com" class="ps-ta"></textarea>') + '</div></div></div>';
   };
+  /* --- Revisao por indicador (equipa de sustentabilidade) ------------------------------------ */
+  var paraMimRever = function (m) { var usr = u(); return P.indParaRever(m).filter(function (id) { return P.podeReverInd(m, id, usr); }); };
+  var bannerRev = function (m) {
+    var l = paraMimRever(m);
+    if (!l.length) return '';
+    return '<div class="ps-aviso info rev-banner" role="status"><div><b>' + l.length + ' indicator' + (l.length === 1 ? '' : 's') + ' submitted and waiting for your ' + (P.etapaInd(m, l[0]) === 'area' ? 'approval as area head' : 'review') + '</b><small>' + e(l.map(function (id) { return P.cat(id).nome; }).slice(0, 4).join(', ') + (l.length > 4 ? '…' : '')) + '. Approve them now so they move on, without waiting for the rest of the task.</small></div><button type="button" class="ps-btn pri peq" data-a="revProximo">Review next →</button></div>';
+  };
+  /* Estado de revisao de um indicador: a aprovar (com os botoes), aprovado, ou devolvido */
+  var estadoRevHtml = function (m, id) {
+    var it = P.item(id, P.chave(m)), usr = u();
+    if (!it) return '';
+    if (it.revisto) return '<span class="rq2-sub">' + chip('Approved', 'ok') + '<small>' + e('Sustainability: ' + it.revisto.por + ', ' + P.fmtDataHora(it.revisto.em)) + '</small></span>';
+    var et = P.etapaInd(m, id);
+    if (P.podeReverInd(m, id, usr)) return '<span class="rev-acoes">' + chip(et === 'area' ? 'Submitted, to approve' : 'Area approved, to review', 'rev') + '<small>' + e(it.submetido.por + ', ' + P.fmtDataHora(it.submetido.em)) + '</small><span class="ps-sp"><button type="button" class="ps-btn peq pri" data-a="revAprovar" data-v="' + e(id) + '">Approve</button><button type="button" class="ps-btn peq" data-a="revDevolver" data-v="' + e(id) + '">Return</button></span></span>';
+    if (it.submetido && !P.concluida(m) && P.passoAtual(m).tipo === 'recolha') return '<span class="rq2-sub">' + chip(et === 'area' ? 'With the area head' : 'With sustainability', 'rev') + '<small>' + e(it.submetido.por + ', ' + P.fmtDataHora(it.submetido.em)) + '</small></span>';
+    return '';
+  };
   var sepLeitura = function (m) {
     var msg = P.concluida(m) ? 'Task completed. Approved values only change by restatement.' : 'The current step is with ' + P.nomeResp(m, P.passoAtual(m).responsavel) + '. You can view the values.';
-    return '<div class="ps-card">' + cabCartao('Requested data', 'doc', ferrDados(m)) + '<div class="ps-card-body"><div class="ps-aviso">' + e(msg) + '</div>' + (P.fontesHtml ? P.fontesHtml(m) : '') + (U.dadosVista === 'grid' ? corpoGrelha(m) : tabela([{ t: 'Indicator' }, { t: 'Value', dir: 1 }, { t: String(m.ano - 1), dir: 1 }, { t: 'Status' }, { t: 'Quality' }], m.indicadores.map(function (id) {
-      var est = P.estadoIndicador(m, id), it = P.item(id, P.chave(m)), ant = P.valorAnterior(id, P.chave(m));
-      return [linkFicha(id) + infoFormula(id, true) + (P.botaoComentarInd ? ' ' + P.botaoComentarInd(m, id) : '') + marcaAmostra(id) + (it.reexpresso ? ' ' + chip('Restated', 'warn') : ''), celValor(m, id) + ' ' + e(P.cat(id).unidade_medida), ant === null || ant === undefined ? '-' : fmtV(id, ant), chip(est.txt, est.cls), e(P.QUALIDADE_TXT[it.qualidade])];
+    return '<div class="ps-card">' + cabCartao('Requested data', 'doc', ferrDados(m)) + '<div class="ps-card-body">' + bannerRev(m) + '<div class="ps-aviso">' + e(msg) + '</div>' + (P.fontesHtml ? P.fontesHtml(m) : '') + (U.dadosVista === 'grid' ? corpoGrelha(m) : tabela([{ t: 'Indicator' }, { t: 'Value', dir: 1 }, { t: String(m.ano - 1), dir: 1 }, { t: 'Status' }, { t: 'Quality' }], m.indicadores.map(function (id) {
+      var est = P.estadoIndicador(m, id), it = P.item(id, P.chave(m)), ant = P.valorAnterior(id, P.chave(m)), rv = estadoRevHtml(m, id);
+      return { attrs: 'id="ind-' + e(id) + '" class="rq2-it' + (P.podeReverInd(m, id, u()) ? ' rev-pend' : '') + '"', celulas: [linkFicha(id) + infoFormula(id, true) + (P.botaoComentarInd ? ' ' + P.botaoComentarInd(m, id) : '') + marcaAmostra(id) + (it.reexpresso ? ' ' + chip('Restated', 'warn') : ''), celValor(m, id) + ' ' + e(P.cat(id).unidade_medida), ant === null || ant === undefined ? '-' : fmtV(id, ant), rv || chip(est.txt, est.cls), e(P.QUALIDADE_TXT[it.qualidade])] };
     }))) + '</div></div>';
   };
   var sepEvidencias = function (m) {
@@ -1640,9 +1662,11 @@
     var filtro = '<div class="ps-filtros ps-mt"><div class="ps-campo"><label class="ps-lab" for="dep-f-emp">Company</label><select id="dep-f-emp" class="ps-sel" data-c="depFEmp">' + opt('', 'All companies', f.emp) + S.ent.map(function (y) { return opt(y.id, y.nome + ' (' + P.depsDaEmpresa(y).length + ')', f.emp); }).join('') + '</select></div>' +
       '<p class="ps-small ps-mut dp-nota">' + (x ? lista.length + ' department(s) in ' + e(x.nome) + ', including those shared by all companies.' : 'A department can exist in every company or only in some. People, indicators and tasks then use the departments of their company.') + '</p></div>';
     return '<div class="ps-card">' + cabCartao('Departments', 'doc') + '<div class="ps-card-body">' + novo + filtro +
-      '<div class="ps-mt">' + tabela([{ t: 'Department' }, { t: 'Companies', info: 'The companies where the department exists. "All companies" means it exists in every company of the group.' }, { t: 'In use', dir: 1, info: dica }, { t: 'Actions' }], lista.map(function (o) {
+      '<div class="ps-mt">' + tabela([{ t: 'Department' }, { t: 'Companies', info: 'The companies where the department exists. "All companies" means it exists in every company of the group.' }, { t: 'Area head', info: 'Approves what the department submits, before the sustainability team. When the area head submits, this step passes automatically.' }, { t: 'In use', dir: 1, info: dica }, { t: 'Actions' }], lista.map(function (o) {
         var d = o.d, i = o.i, u2 = P.usosDepartamentoDet(d.nome), tot = u2.pessoas + u2.indicadores + u2.milestones, txt = u2.pessoas + ' people, ' + u2.indicadores + ' indicators, ' + u2.milestones + ' tasks';
-        return ['<input id="dp-' + i + '" class="ps-in" aria-label="Department name" value="' + e(d.nome) + '" data-c="depNome" data-id="' + i + '">', tagsEmpresasDep(d, i), tot ? '<span class="dp-uso" tabindex="0" data-tip="' + e(txt) + '">' + tot + '</span>' : '<span class="ps-mut">0</span>',
+        var gente = S.users.filter(function (x2) { return x2.perfil !== 'ext' && x2.perfil !== 'auditor' && (P.temUnidade(x2, d.nome) || x2.login === d.chefe); });
+        var chefeSel = '<select id="dp-ch-' + i + '" class="ps-sel" data-pesq aria-label="Area head of ' + e(d.nome) + '" data-c="depChefe" data-id="' + i + '">' + opt('', 'No area head (step passes automatically)', d.chefe || '') + gente.map(function (x2) { return opt(x2.login, x2.nome, d.chefe || ''); }).join('') + '</select>';
+        return ['<input id="dp-' + i + '" class="ps-in" aria-label="Department name" value="' + e(d.nome) + '" data-c="depNome" data-id="' + i + '">', tagsEmpresasDep(d, i), chefeSel, tot ? '<span class="dp-uso" tabindex="0" data-tip="' + e(txt) + '">' + tot + '</span>' : '<span class="ps-mut">0</span>',
           tot ? '<button type="button" class="ps-btn peq" disabled title="In use: ' + e(txt) + '">Remove</button>' : '<button type="button" class="ps-btn peq err" data-a="depApagar" data-v="' + i + '">Remove</button>'];
       }), 'No department in this company yet.') + '</div><p class="ps-mut ps-small ps-mt">Departments are the tags on tasks and people, and the groups that report indicators. Renaming one updates them all.</p></div></div>';
   };
@@ -1656,6 +1680,12 @@
   var abrePainel = function (tipo, args) { U.painel = { tipo: tipo, args: args || {} }; U.painelFoco = true; R(); };
   var fechaPainel = function () { if (U.painel && U.painel.tipo === 'marca' && U.marca) { U.marca = null; U.logoEstado = ''; P.aplicarMarca(); } U.painel = null; R(); };
   var Pn = {};
+  Pn.devInd = function (a) {
+    var c = P.cat(a.id), m = msAtual(), it = P.item(a.id, P.chave(m));
+    return { t: 'Return ' + c.nome, s: 'It goes back to ' + (P.atribuido(m) ? P.atribuido(m).nome : 'the unit') + ' to change, the rest of the task is not affected',
+      b: '<p class="ps-small">Value submitted: <b>' + (it.valor === null ? '-' : e(fmtV(a.id, it.valor) + ' ' + c.unidade_medida)) + '</b>, by ' + e(it.submetido ? it.submetido.por : '-') + '.</p>' + campo('dev-ind-com', 'What needs to change (required)', '<textarea id="dev-ind-com" class="ps-ta" rows="4"></textarea>'),
+      p: '<span class="ps-sp-flex"></span><button type="button" class="ps-btn" data-a="fecharPainel">Cancel</button><button type="button" class="ps-btn err" data-a="revDevConfirmar" data-v="' + e(a.id) + '">Return the indicator</button>' };
+  };
   Pn.entrega = function (a) { return pnEntrega(a); };
   Pn.matInd = function (a) { return pnMatInd(a); };
   Pn.tipo = pnTipo; Pn.lancar = pnLancar;
@@ -1939,14 +1969,14 @@
     return { t: 'New information request', b: campo('na-ind', 'Indicator', '<select id="na-ind" class="ps-sel">' + apr.map(function (c) { return opt(c.id, c.nome); }).join('') + '</select>') + campo('na-txt', 'What you need to know', '<textarea id="na-txt" class="ps-ta"></textarea>'), p: '<button type="button" class="ps-btn pri" data-a="naCriar">Send request</button>' };
   };
   var respOpts = function (sel) {
-    return [opt('unidade', 'Task unit', sel), opt('esg', 'Sustainability team', sel), opt('admin', 'Administrator', sel)].concat(P.UNIDADES.map(function (x) { return opt('area:' + x, x, sel); })).join('');
+    return [opt('unidade', 'Task unit', sel), opt('chefe', 'Area head of the task unit', sel), opt('esg', 'Sustainability team', sel), opt('admin', 'Administrator', sel)].concat(P.UNIDADES.map(function (x) { return opt('area:' + x, x, sel); })).join('');
   };
   Pn.wf = function (a) {
     var base = a.base, m = base ? null : msAtual(), d = U.wfDraft, atual = m ? m.passo_atual : -1;
     var linhas = d.map(function (p, i) {
       var feito = i < atual, ehAtual = i === atual, auto = p.responsavel === 'sistema', fixo = i === 0 || feito || ehAtual;
       var nome = feito ? '<b>' + e(p.nome) + '</b>' : '<input id="wfn-' + i + '" class="ps-in" aria-label="Name of step ' + (i + 1) + '" value="' + e(p.nome) + '" data-c="wfNome" data-id="' + i + '">';
-      var tipo = fixo || auto ? '<span class="ps-small ps-mut">' + e(P.TIPOS_PASSO[p.tipo]) + '</span>' : '<select id="wft-' + i + '" class="ps-sel" aria-label="Type of step ' + (i + 1) + '" data-c="wfTipo" data-id="' + i + '">' + ['revisao', 'parecer', 'aprovacao'].map(function (t) { return opt(t, P.TIPOS_PASSO[t], p.tipo); }).join('') + '</select>';
+      var tipo = fixo || auto ? '<span class="ps-small ps-mut">' + e(P.TIPOS_PASSO[p.tipo]) + '</span>' : '<select id="wft-' + i + '" class="ps-sel" aria-label="Type of step ' + (i + 1) + '" data-c="wfTipo" data-id="' + i + '">' + ['area', 'revisao', 'parecer', 'aprovacao'].map(function (t) { return opt(t, P.TIPOS_PASSO[t], p.tipo); }).join('') + '</select>';
       var resp = feito ? '<span class="ps-small ps-mut">' + e(P.nomeResp(m, p.responsavel)) + '</span>' : auto ? '<span class="ps-small ps-mut">Automatic</span>' : '<select id="wfr-' + i + '" class="ps-sel" aria-label="Owner of step ' + (i + 1) + '" data-c="wfResp" data-id="' + i + '">' + respOpts(p.responsavel) + '</select>';
       var mov = !fixo && p.tipo !== 'publicacao';
       var ultimaMov = i + 1 < d.length && d[i + 1].tipo !== 'publicacao';
@@ -2083,6 +2113,10 @@
     if (ant !== novo) window.scrollTo(0, 0);
     if (U.rota.q.sep) { var alvoSec = document.getElementById('sec-' + U.rota.q.sep); if (alvoSec) alvoSec.scrollIntoView({ block: 'start' }); }
     if (indAlvo) irParaIndicador(indAlvo);
+    else if (U.rota.pag === 'Milestone' && ant !== novo && !U.rota.q.sep) {
+      var mRev = P.ms(U.rota.arg), lRev = mRev ? paraMimRever(mRev) : [];
+      if (lRev.length) { U.rqAberto[mRev.id + ':' + lRev[0]] = true; R(); irParaIndicador(lRev[0]); }
+    }
     var alvo = U.rota.pag;
     if (MODO === 'hash' && !location.hash && alvo !== 'Entrada') location.replace('#/' + alvo);
   };
@@ -2248,6 +2282,21 @@
     tplCsv: function () { P.templateCSV(msAtual()); },
     anexar: function (d) { var m = msAtual(), it = P.item(d.v, P.chave(m)); escolherFicheiro('', function (f) { P.anexar(it, f.name, u(), P.guardarFicheiro(f)); P.evento(m, 'Evidence attached to ' + P.cat(d.v).nome + ': ' + f.name + '.', u().nome); P.guardar(); toast('Evidence attached.', 'ok'); R(); }); },
     anexarGeral: function () { var m = msAtual(), usr = u(); escolherFicheiro('', function (f) { m.documentos_gerais.push({ ficheiro: f.name, por: usr.nome, em: new Date().toISOString(), fid: P.guardarFicheiro(f) }); P.evento(m, 'General document attached: ' + f.name + '.', usr.nome); P.guardar(); toast('Document attached.', 'ok'); R(); }); },
+    revAprovar: function (d) {
+      var m = msAtual(), r = P.aprovarIndicador(m, d.v, u());
+      if (r.erro) return toast(r.erro, 'err');
+      var resto = paraMimRever(m);
+      toast(P.cat(d.v).nome + ' approved.' + (resto.length ? ' ' + resto.length + ' more to review.' : ' Nothing else to review here.'), 'ok'); R();
+      if (resto.length) irParaIndicador(resto[0]);
+    },
+    revDevolver: function (d) { abrePainel('devInd', { id: d.v }); },
+    revDevConfirmar: function (d) {
+      var m = msAtual(), el = document.getElementById('dev-ind-com'), r = P.devolverIndicador(m, d.v, u(), el ? el.value : '');
+      if (r.erro) { toast(r.erro, 'err'); if (el) el.focus(); return; }
+      U.painel = null; toast(P.cat(d.v).nome + ' returned to ' + (P.atribuido(m) ? P.atribuido(m).nome : 'the unit') + '.', 'ok'); R();
+      var resto = paraMimRever(m); if (resto.length) irParaIndicador(resto[0]);
+    },
+    revProximo: function () { var l = paraMimRever(msAtual()); if (l.length) { U.rqAberto[msAtual().id + ':' + l[0]] = true; R(); irParaIndicador(l[0]); } },
     indSubmeter: function (d) { var m = msAtual(), r = P.submeterIndicadores(m, [d.v], u()); if (r.erro) return toast(r.erro, 'err'); if (r.recusados.length) return toast(r.recusados[0], 'err'); toast(d.v + ' submitted. ' + P.estadoSubmissao(m).faltam + ' still to submit.', 'ok'); R(); },
     indSubmeterProntos: function () { var m = msAtual(), es = P.estadoSubmissao(m), r = P.submeterIndicadores(m, es.prontos, u()); if (r.erro) return toast(r.erro, 'err'); toast(r.feitos.length + ' indicator(s) submitted. ' + P.estadoSubmissao(m).faltam + ' still to submit.', 'ok'); R(); },
     indReabrir: function (d) { var r = P.reabrirIndicador(msAtual(), d.v, u()); if (r.erro) return toast(r.erro, 'err'); toast(d.v + ' reopened. Submit it again when it is ready.', 'ok'); R(); },
@@ -2450,6 +2499,12 @@
     userUnJuntar: function (el) { if (!el.value) return; if (el.dataset.id === '__novo') { U.userNovo.unidades.push(el.value); return; } var x = P.user(el.dataset.id); P.definirUnidades(x, P.unidadesDe(x).concat([el.value])); P.eventoGlobal(x.nome + ' added to ' + el.value + '.', u().nome); P.guardar(); },
     userNovoC: function (el) { U.userNovo[el.dataset.f] = el.value; },
     userBusca: function (el) { U.userBusca = el.value; },
+    depChefe: function (el) {
+      var d = S.deps[+el.dataset.id]; if (!d || !P.gereTudo(u())) return;
+      var antes = d.chefe ? (P.user(d.chefe) || {}).nome : 'nobody'; d.chefe = el.value;
+      P.eventoGlobal('Department ' + d.nome + ': area head changed from ' + antes + ' to ' + (d.chefe ? P.user(d.chefe).nome : 'nobody') + '.', u().nome, 'Change');
+      P.guardar(); toast(d.nome + ': area head ' + (d.chefe ? P.user(d.chefe).nome : 'removed') + '.', 'ok'); R();
+    },
     userEmpF: function (el) { U.userEmpF = el.value; R(); },
     userEmp: function (el) {
       var p = el.dataset.id.split('|'), x = p[0] === '__novo' ? U.userNovo : P.user(p[0]);
@@ -2479,7 +2534,7 @@
     entMaior: function (el) { S.ent[+el.dataset.id].perimetro_maioritario = el.checked; P.guardar(); },
     wfNome: function (el) { U.wfDraft[+el.dataset.id].nome = el.value; },
     wfResp: function (el) { U.wfDraft[+el.dataset.id].responsavel = el.value; },
-    wfTipo: function (el) { var p = U.wfDraft[+el.dataset.id]; p.tipo = el.value; if (el.value !== 'parecer' && p.responsavel.indexOf('area:') === 0) p.responsavel = 'esg'; },
+    wfTipo: function (el) { var p = U.wfDraft[+el.dataset.id]; p.tipo = el.value; if (el.value === 'area') p.responsavel = 'chefe'; else if (el.value !== 'parecer' && p.responsavel.indexOf('area:') === 0) p.responsavel = 'esg'; },
     mcLogo: function (el) {
       var v = el.value.trim();
       if (!P.urlLogoValida(v)) { U.logoEstado = 'The link must start with http:// or https://.'; return; }
