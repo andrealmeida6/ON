@@ -90,6 +90,35 @@
     return ws.protect('', { selectLockedCells: true, selectUnlockedCells: true, formatColumns: true, formatRows: true, autoFilter: true, sort: false, insertRows: false, deleteRows: false, insertColumns: false, deleteColumns: false });
   };
 
+  /* Livro a partir de listas de objetos (data room, audit trail, pacote do auditor): todas as folhas so de leitura,
+     com uma folha de indice no inicio. opc: { titulo, traduz(chave), descricoes: { folha: texto } } */
+  var humano = function (k) {
+    var t = String(k).replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
+    t = t.replace(/\b(id|kpi|esrs|gri|api|url|pdf|csv|ig3)\b/gi, function (w) { return w.toUpperCase(); });
+    t = t.replace(/\bmilestones\b/gi, 'tasks').replace(/\bmilestone\b/gi, 'task');
+    return t.charAt(0).toUpperCase() + t.slice(1);
+  };
+  P.livroObjetos = function (ficheiro, folhas, opc) {
+    opc = opc || {};
+    var traduz = opc.traduz || function (k) { return k; }, desc = opc.descricoes || {}, quem = P.user && P.S && P.S.sessao ? '' : '';
+    var lista = Object.keys(folhas).map(function (n) {
+      var linhas = Array.isArray(folhas[n]) ? folhas[n] : [], ks = [];
+      linhas.forEach(function (l) { Object.keys(l).forEach(function (k) { if (ks.indexOf(k) < 0) ks.push(k); }); });
+      if (!ks.length) ks = ['info'];
+      var cols = ks.map(function (k) {
+        var vals = linhas.map(function (l) { return l[k]; }).filter(function (v) { return v !== '' && v !== null && v !== undefined; });
+        var num = vals.length > 0 && vals.every(function (v) { return typeof v === 'number'; });
+        var larg = Math.max(String(humano(traduz(k))).length, vals.slice(0, 200).reduce(function (m, v) { return Math.max(m, String(v).length); }, 0));
+        return { k: k, t: humano(traduz(k)), larg: Math.max(80, Math.min(420, larg * 7.5)), dir: num };
+      });
+      return { nome: humano(traduz(n)).slice(0, 31), titulo: (opc.titulo ? opc.titulo + '  |  ' : '') + humano(traduz(n)), sub: (desc[n] || '') + (linhas.length ? '' : ' No rows.'), cols: cols, linhas: linhas.length ? linhas.map(function (l) { return cols.map(function (c) { var v = l[c.k]; return v === undefined || v === null ? '' : v; }); }) : [['No data']] , n: linhas.length, chave: n };
+    });
+    var usr = P.ext && P.ext.u ? P.ext.u() : null;
+    var indice = { nome: 'Contents', titulo: (opc.titulo || 'Export') + '  |  Contents', sub: 'Generated on ' + P.fmtDataHora(new Date().toISOString()) + (usr ? ' by ' + usr.nome : '') + '. Each sheet is read only.',
+      cols: [{ t: 'Sheet', larg: 200 }, { t: 'What it contains', larg: 520 }, { t: 'Rows', larg: 80, dir: true }],
+      linhas: lista.map(function (f) { return [f.nome, desc[f.chave] || '', f.n]; }) };
+    return P.livroExcel(ficheiro, [indice].concat(lista.map(function (f) { return { nome: f.nome, titulo: f.titulo, sub: f.sub.trim(), cols: f.cols, linhas: f.linhas }; })));
+  };
   P.livroExcel = function (ficheiro, folhas) {
     var XL = window.ExcelJS;
     if (!XL) return simples(ficheiro, folhas);

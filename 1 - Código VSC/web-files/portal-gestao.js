@@ -427,7 +427,7 @@
   A.evdAnexar = function (d) { var m = P.msDoIndicador(d.v), usr = u(); X.escolherFicheiro('', function (f) { P.anexar(P.item(d.v), f.name, usr, P.guardarFicheiro(f)); P.evento(m, 'Evidence attached to ' + P.cat(d.v).nome + ': ' + f.name + '.', usr.nome); P.guardar(); toast('Evidence attached.', 'ok'); R(); }); };
   A.pacExcel = function () {
     var pk = pacote();
-    P.escreverFolhas('auditor-package-' + S.ciclo.ano + '.xlsx', {
+    (P.livroObjetos ? function (n, f) { return P.livroObjetos(n, f, { titulo: 'Auditor package ' + S.ciclo.ano, descricoes: { package: 'Who the package is for, when and by whom it was generated, and the integrity seals.', evidence_index: 'Each indicator in the package with its value and evidence files.' } }); } : P.escreverFolhas)('auditor-package-' + S.ciclo.ano + '.xlsx', {
       package: [{ recipient: U.evd.dest, generated_at: new Date().toISOString(), generated_by: u().nome, files: pk.length, chain_seals: S.selos.length, last_seal: S.selos.length ? S.selos[S.selos.length - 1].h : '' }],
       evidence_index: pk.map(function (x) { var it = P.item(x.c.id), m = P.msDoIndicador(x.c.id); return { kpi_id: x.c.id, esrs_id: P.esrsDe(x.c.id).dps.join(', '), kpi: x.c.nome, esrs: x.c.esrs_requisito, company: m.empresa, value: it.valor === null ? '' : it.valor, unit: x.c.unidade_medida, status: P.estadoKpi(x.c.id).txt, file: x.x.ficheiro, uploaded_by: x.x.por, uploaded_at: x.x.em }; })
     });
@@ -468,7 +468,7 @@
   A.trMais = function () { U.tr.n += 100; R(); };
   A.trVerificar = function () { var v = P.verificarSelos(); v.em = new Date().toISOString(); U.tr.ver = v; toast(v.ok ? v.total + ' events verified, no breaks.' : 'Integrity broken.', v.ok ? 'ok' : 'err'); R(); };
   A.trExcel = function () {
-    P.escreverFolhas('audit-trail-' + S.ciclo.ano + '.xlsx', { audit_trail: filtrarTrilho().map(function (x) { var c = x.ind ? P.cat(x.ind) : null; return { at: x.em, user: x.por, event: x.tipo, data_point: c ? c.nome : '', esrs: c ? c.esrs_requisito : '', milestone: x.m ? x.m.nome : '', company: x.m ? x.m.empresa : '', previous: x.antes === undefined || x.antes === null ? '' : x.antes, new: x.depois === undefined || x.depois === null ? '' : x.depois, detail: x.texto, source: x.origem, reason: x.motivo, hash: P.seloDe(x.k) }; }) });
+    (P.livroObjetos ? function (n, f) { return P.livroObjetos(n, f, { titulo: 'Audit trail ' + S.ciclo.ano, descricoes: { audit_trail: 'Every event with the filters applied on screen: when, who, what changed and the hash that seals it.' } }); } : P.escreverFolhas)('audit-trail-' + S.ciclo.ano + '.xlsx', { audit_trail: filtrarTrilho().map(function (x) { var c = x.ind ? P.cat(x.ind) : null; return { at: x.em, user: x.por, event: x.tipo, data_point: c ? c.nome : '', esrs: c ? c.esrs_requisito : '', milestone: x.m ? x.m.nome : '', company: x.m ? x.m.empresa : '', previous: x.antes === undefined || x.antes === null ? '' : x.antes, new: x.depois === undefined || x.depois === null ? '' : x.depois, detail: x.texto, source: x.origem, reason: x.motivo, hash: P.seloDe(x.k) }; }) });
     toast('Audit trail exported.', 'ok');
   };
 

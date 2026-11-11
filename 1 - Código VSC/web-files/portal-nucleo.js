@@ -1765,7 +1765,16 @@
       workflow: wf, materialidade: S.mat.map(function (x) { return { norma: x.norma, tema: x.tema, avaliacao: x.avaliacao, justificacao: x.justificacao }; })
     };
   };
-  P.exportarDataRoom = function () { return escreverLivro('data-room-' + S.ciclo.ano + '.xlsx', P.folhasDataRoom()); };
+  /* Data room com o layout da plataforma: indice, uma folha por tema, tudo so de leitura */
+  P.exportarDataRoom = function () {
+    if (!P.livroObjetos) return escreverLivro('data-room-' + S.ciclo.ano + '.xlsx', P.folhasDataRoom());
+    return P.livroObjetos('data-room-' + S.ciclo.ano + '.xlsx', P.folhasDataRoom(), { titulo: 'Data room ' + S.ciclo.ano, traduz: function (k) { return COLUNAS_EN[k] || k; }, descricoes: {
+      rastreabilidade: 'Each indicator with its ESRS and GRI references, value, who submitted and approved it, and the evidence.',
+      historico_valores: 'Every version of every value: when, who, where it came from and why it changed.',
+      pedidos_auditor: 'Information requests from the auditors and the answers.',
+      workflow: 'The workflow steps of each task, who owns them and when they were completed.',
+      materialidade: 'Double materiality assessment by ESRS standard.' } });
+  };
   P.quadrosRelatorio = function () {
     var ano = S.ciclo.ano, folhas = {};
     P.QUADROS.forEach(function (q) {

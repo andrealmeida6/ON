@@ -966,6 +966,17 @@ Pedido do André a 11 de novembro de 2026.
 - Só aparece a quem tem acesso ao Backoffice.
 - O atalho só fica marcado no separador Indicators. Nos outros separadores do Backoffice não fica.
 
+### Excel do data room e do audit trail com o layout da plataforma
+
+Pedido do André a 11 de novembro de 2026.
+
+- `P.livroObjetos` (`portal-excel.js`) transforma listas de dados num Excel com o layout da plataforma:
+  - uma folha **Contents** no início, com cada folha, o que contém, o número de linhas, quem gerou o ficheiro e quando;
+  - uma folha por tema, com a faixa da plataforma e uma descrição;
+  - cabeçalhos legíveis ("Indicator ID", "Value history", "Task" em vez de "milestone"), larguras ajustadas ao conteúdo e números alinhados à direita;
+  - todas as folhas protegidas, só de leitura.
+- Passaram a usar este formato o **Export data room** (Audit), o **audit trail** e o **auditor package**.
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.
