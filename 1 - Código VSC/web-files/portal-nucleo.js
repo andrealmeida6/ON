@@ -1206,6 +1206,9 @@
   /* "Waiting on you": o administrador pode agir em tudo, mas so lhe espera o que e mesmo dele */
   P.esperaPor = function (m, u) {
     if (!P.podeAgir(m, u)) return false;
+    /* Quem submeteu nao decide sobre o que submeteu: a task nao fica "a espera" dessa pessoa */
+    var pa = P.passoAtual(m);
+    if (pa && pa.tipo !== 'recolha' && P.violaSegregacao && P.violaSegregacao(m, u)) return false;
     if (u.perfil !== 'admin') return true;
     return P.passoAtual(m).responsavel === 'admin' || (!!m.atribuido_a && m.atribuido_a === u.login);
   };
@@ -1224,6 +1227,11 @@
     ev(m, 'Area head approval passed automatically: ' + motivo + '.', ch ? ch.nome : 'System', 'auto', p.nome);
     m.passo_atual++;
     return true;
+  };
+  /* Quem pode decidir o passo atual sem ser quem submeteu (para dizer a quem a task esta entregue) */
+  P.quemDecide = function (m) {
+    var r = m.passos.filter(function (p) { return p.tipo === 'recolha'; })[0], sub = r && r.concluido_por;
+    return S.users.filter(function (x) { return x.perfil !== 'ext' && P.podeAgir(m, x) && x.nome !== sub; });
   };
   P.podePreencher = function (m, u) { var p = P.passoAtual(m); return !!p && p.tipo === 'recolha' && P.podeAgir(m, u); };
   P.gereTudo = function (u) { return !!u && (u.perfil === 'admin' || u.perfil === 'esg'); };

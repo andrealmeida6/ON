@@ -1106,6 +1106,17 @@ Pedido do André a 11 de novembro de 2026.
 - Um KPI aprovado já não aparece atribuído a ninguém: a coluna "Assigned to" mostra "-" (`atribKpi`, `P.atribKpiHtml`). Conta como aprovado quando a task está concluída ou quando a sustentabilidade aprovou o KPI sozinho, com a task ainda aberta.
 - Aplica-se à Home (Tasks) e à vista By KPI da página Tasks. As tasks concluídas já mostravam "-".
 
+### Segregação de funções visível: quem submeteu não vê a task como "To approve"
+
+Reportado pelo André a 11 de novembro de 2026: a Rita Sousa submeteu uma task do seu departamento e depois aparecia-lhe "To approve", mas ao aprovar recebia o erro da segregação.
+
+- A regra mantém-se: quem submete não decide sobre o que submeteu.
+- O ecrã passou a respeitá-la. Para quem submeteu:
+  - a task não fica "à espera" dela (`P.esperaPor`): nem "To approve", nem na contagem de My tasks;
+  - não aparecem os botões de aprovar ou devolver nem a caixa do comentário;
+  - a linha da lista explica com quem está a decisão (`P.quemDecide`). Se não houver mais ninguém na equipa, diz que tem de ser o administrador, ou que é preciso acrescentar outra pessoa à equipa.
+- O administrador (Service account) continua a poder aprovar.
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.
