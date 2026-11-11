@@ -733,8 +733,7 @@ Pedido do André a 11 de novembro de 2026: manter os acessos como estão (sem lo
   - **Clear test environment:** limpa para toda a gente e avisa disso.
 - **O ambiente principal continua só no browser.** As tabelas `esg_` reais e o login não mudam.
 - **Base de dados:** `015_esg_ambiente_teste.sql` cria `esg_teste_estado` e `esg_teste_ficheiros`, com RLS aberto a anon (é um ambiente de testes sem login) e a hora sempre do servidor.
-  - **Ainda não foi corrido:** a sessão não tinha autorização para alterar o Supabase.
-  - **Até ser corrido:** a plataforma funciona como antes e a etiqueta mostra "not shared".
+  - **Corrido a 11 de novembro de 2026.**
 - **Configuração:** `gerar-mockup.js` põe `window.PORTAL_PARTILHA` (URL e chave pública do Supabase) no mockup e no site publicado.
 - **Limites:**
   - Se duas pessoas gravarem a mesma parte ao mesmo tempo, fica a última. As partes são grandes (todas as milestones, todos os valores), por isso a última gravação ganha.
@@ -742,6 +741,23 @@ Pedido do André a 11 de novembro de 2026: manter os acessos como estão (sem lo
 - **Aviso do Supabase:** o projeto tem 38 tabelas de outra aplicação (formação, deslocações, inventário, medicina no trabalho) com RLS desligado, expostas a quem tiver a chave pública. Não foram mexidas: é preciso decidir as políticas.
 - **Verificado** com um Supabase simulado e dois browsers: a task enviada pelo administrador num browser apareceu no outro, o valor e o ficheiro carregados pelo data owner chegaram ao primeiro, e o ficheiro foi descarregado no outro browser. Sem as tabelas, a plataforma continua a funcionar e a etiqueta diz "not shared".
 - **CSS:** secção 51 de `global.css`.
+
+### Entrada só com nome de utilizador
+
+Pedido do André a 11 de novembro de 2026: no site publicado, só entram as pessoas que ele quiser, só com o nome de utilizador, sem palavra-passe. Depois de entrar, qualquer pessoa continua a poder trocar de perfil pelo avatar ("impersonate").
+
+- **Como funciona** (`portal-acesso.js`, carregado em último lugar):
+  - Antes de arrancar (e antes do ambiente partilhado), cobre a página com um ecrã que pede o utilizador.
+  - O nome é confirmado no Supabase pela função `esg_acesso_entrar`. Se existir e estiver ativo, entra com o nome, o perfil, os departamentos e as empresas dessa pessoa, que passa a existir na lista de pessoas da plataforma.
+  - O acesso fica guardado no browser e volta a ser confirmado em cada visita. Se for retirado, o ecrã volta a pedir o nome. Sem rede, entra com o que estava guardado.
+  - **Avatar:** "Switch profile" continua a mostrar a lista de perfis. "Leave the platform" esquece o utilizador e volta ao ecrã de entrada.
+- **Só no site publicado:** `gerar-mockup.js` põe `window.PORTAL_ACESSO = true` no `index.html` em vez da entrada direta como administrador. O mockup e o Power Pages não o usam (em Power Pages o login é o do próprio site).
+- **Base de dados:** `018_esg_acessos.sql` cria `esg_acessos` (utilizador, nome, perfil, departamentos, empresas, ativo). A tabela não se lê com a chave pública: só a função confirma um nome de cada vez. Corrido a 11 de novembro de 2026.
+  - **Primeiro utilizador:** `andreborges`, André Borges, equipa de sustentabilidade (I&D, CSR e ESG), Entidade A e Entidade B.
+  - **Acrescentar pessoas:** um `insert` em `esg_acessos`, como o do ficheiro. **Retirar:** `ativo = false`.
+- **Limites:** não é segurança forte. Quem souber um nome entra, e os dados do ambiente partilhado continuam acessíveis a quem tiver a chave pública. Serve só para dados de teste.
+- **Verificado** em Chrome sem interface, com o Supabase simulado: nome errado recusado, `AndreBorges` entra como André Borges, troca para o auditor, recarregar não volta a pedir o nome, "Leave the platform" volta ao ecrã. Também em ecrã de telemóvel.
+- **CSS:** junto de `.ps-login` em `global.css`.
 
 ### Backoffice: títulos dos grupos, empresas numa tabela e departamentos por empresa
 

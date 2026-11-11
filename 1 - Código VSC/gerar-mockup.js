@@ -39,7 +39,9 @@ fs.writeFileSync(path.join(raiz, fs.readdirSync(raiz).find((n) => n.startsWith('
    Por agora esta desligado, por decisao do Andre a 05/11/2026: entra-se logo como administrador e os dados ficam no navegador.
    Sem os comentarios de origem dos blocos, que so servem o mapeamento para Power Pages. */
 const LOGIN_ONLINE = false;
-const ENTRADA_DIRETA = 'window.PORTAL_ENTRADA_DIRETA = "admin";';
+/* Entrada so com nome de utilizador (portal-acesso.js, 018_esg_acessos.sql), pedido do Andre a 11/11/2026: so entra quem estiver na lista
+   esg_acessos, e entra como essa pessoa. Sem palavra-passe. Depois pode trocar de perfil pelo avatar. */
+const ENTRADA_DIRETA = 'window.PORTAL_ACESSO = true;';
 const configOnline = LOGIN_ONLINE ? MODO_MOCKUP + ' window.PORTAL_BACKEND = ' + JSON.stringify(BACKEND) + ';' : MODO_MOCKUP + ' ' + ENTRADA_DIRETA;
 fs.writeFileSync(path.join(raiz, 'index.html'), montar(encodeURI(path.basename(cod) + '/web-files/'), configOnline).replace(/<!--[\s\S]*?-->\s*/g, ''), 'utf8');
 console.log('mockup-final.html e index.html: ' + ORDEM.length + ' web pages, ' + (mockup.match(/<!-- snippet:/g) || []).length + ' snippets, ' + (mockup.match(/<!-- template:/g) || []).length + ' templates, ' + mockup.length + ' caracteres');

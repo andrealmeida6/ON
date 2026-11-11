@@ -83,6 +83,9 @@ button,input,select,textarea{font:inherit;color:inherit}
 .ps-btn.peq{min-height:30px;padding:4px 10px;font-size:12px;border-radius:8px}
 
 .ps-lab{display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:4px}
+.ps-acesso{position:fixed;inset:0;z-index:5000;overflow:auto;background:var(--surface)}
+.ps-acesso-on{overflow:hidden}
+.ps-acesso-marca{display:block;font-size:18px;letter-spacing:-.2px}
 .ps-login{display:grid;gap:14px;justify-items:start;max-width:420px;margin-top:20px}
 .ps-login>*{width:100%}
 .ps-login>.ps-btn{width:auto;min-height:44px;padding-inline:22px}
