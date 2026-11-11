@@ -1446,7 +1446,9 @@ body:has([data-painel]:not([hidden])) .ps-chat-fab,body:has([data-painel]:not([h
 .ps-toast.warn{background:var(--warn)}
 .sd-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;margin-top:16px}
 .sd-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--sh-sm);padding:16px 18px;display:flex;flex-direction:column;gap:10px}
-.sd-card.late{border-color:var(--err)}
+/* Todos os cartoes com a mesma borda; o atraso ve-se no prazo, a vermelho */
+.sd-card.late{border-color:var(--line)}
+.sd-card.late .sd-det dd:first-of-type{color:var(--err);font-weight:600}
 .sd-card header{display:flex;justify-content:space-between;align-items:center;gap:8px}
 .sd-card header>div{display:flex;align-items:center;gap:8px}
 .sd-sig{font-weight:800;font-size:15px;color:var(--primary)}

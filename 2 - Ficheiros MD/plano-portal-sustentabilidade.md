@@ -977,6 +977,13 @@ Pedido do André a 11 de novembro de 2026.
   - todas as folhas protegidas, só de leitura.
 - Passaram a usar este formato o **Export data room** (Audit), o **audit trail** e o **auditor package**.
 
+### Outputs & Reporting Timeline sem "External deliveries" e cartões iguais
+
+Pedido do André a 11 de novembro de 2026.
+
+- Saiu a lista "External deliveries" de baixo da timeline. O detalhe de cada entrega está nos cartões dos Outputs, no "Check the values".
+- Os cartões dos Outputs têm todos a mesma borda. Uma entrega com o prazo passado e sem ficheiro deixa de ter a borda vermelha e passa a mostrar só a data do prazo a vermelho.
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.

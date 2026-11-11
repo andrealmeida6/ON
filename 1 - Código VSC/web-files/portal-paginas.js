@@ -426,12 +426,8 @@
       '<div class="tlr-l rel"><span class="tlr-lt">External</span>' + marcos + '</div>' +
       '<span class="tlr-hoje" style="--x:' + x(hoje).toFixed(2) + '"><small>Today</small></span></div></div>' +
       '<ol class="tlv">' + vert + '</ol>' +
-      (lista.length ? '<h3 class="ps-grupo-t tlr-prox-t">External deliveries</h3><p class="ps-small ps-mut">Click a delivery to see the indicators it needs and how each one is going.</p><ul class="tlr-prox">' + lista.map(function (r) {
-        var d = P.diasAte(r.data), n = resumoEntrega(r), pct = n.tot ? Math.round(n.ap / n.tot * 100) : 0, pctV = n.tot ? Math.round(n.valor / n.tot * 100) : 0;
-        return '<li class="' + (d < 0 ? 'feito' : '') + '"><button type="button" class="tlr-ent" data-a="entVer" data-v="' + e(r.id) + '"><b>' + e(r.sigla) + '</b><span>' + e(r.nome) + '<small>' + e(r.entidade + ', ' + r.base) + '</small>' +
-          (n.tot ? '<span class="tlr-ent-p" aria-label="' + n.ap + ' of ' + n.tot + ' indicators approved"><span class="tlr-ent-b"><i class="a" style="width:' + pct + '%"></i><i class="v" style="width:' + Math.max(0, pctV - pct) + '%"></i></span><small>' + n.ap + ' of ' + n.tot + ' approved, ' + n.valor + ' with a value' + (n.nao ? ', ' + n.nao + ' not sent' : '') + '</small></span>' : '<small class="ps-mut">No indicators mapped</small>') +
-          '</span><em>' + e(P.fmtDataAno(r.data)) + '<small>' + (d < 0 ? 'done' : 'in ' + d + ' days') + '</small></em></button></li>';
-      }).join('') + '</ul>' : '') + '</div></div>';
+      /* External deliveries saiu: o detalhe de cada entrega esta nos Outputs, logo abaixo */
+      '</div></div>';
   };
   /* Indicadores de uma entrega externa: os que tem este tipo de entrega nos Reporting moments, no periodo da entrega */
   var tipoEntrega = function (r) { return String(r.id).split('-')[0]; };
