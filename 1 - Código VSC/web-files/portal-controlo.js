@@ -335,6 +335,22 @@
   P.seloDe = function (k) { var s = (S.selos || []).filter(function (x) { return x.k === k; })[0]; return s ? s.h : ''; };
   P.aoGuardar = function () { P.selar(); };
 
+  /* --- Estado de um ponto de dados: um indicador num periodo (a linha de uma milestone) ----------
+     Conta os valores das entregas trimestrais e anuais, que ficam guardados por periodo. */
+  P.estadoLinha = function (m, id) {
+    if (P.concluida(m)) return { cod: 'aprovado', txt: 'Approved', cls: 'ok' };
+    var p = P.passoAtual(m), it = P.item(id, P.chave(m)), tem = !!it && (it.valor !== null || !!it.rascunho);
+    if (p.tipo !== 'recolha') return { cod: 'aprovacao', txt: 'In approval', cls: 'rev' };
+    if (m.devolvida) return { cod: 'atraso', txt: 'Returned', cls: 'err' };
+    if (P.diasAte(m.prazo) < 0) return { cod: 'atraso', txt: tem ? 'Overdue, to submit' : 'Overdue', cls: 'err' };
+    return tem ? { cod: 'curso', txt: 'In progress', cls: 'info' } : { cod: 'falta', txt: 'Missing', cls: 'warn' };
+  };
+  /* Pontos de dados do ciclo, filtrados por milestone (por exemplo, so as de uma pessoa) */
+  P.pontosCiclo = function (filtro) {
+    var l = [];
+    P.msCiclo().forEach(function (m) { if (filtro && !filtro(m)) return; m.indicadores.forEach(function (id) { var c = P.cat(id); if (c) l.push({ m: m, id: id, c: c, s: P.estadoLinha(m, id) }); }); });
+    return l;
+  };
   /* --- Estado de reporte por KPI ------------------------------------------------------ */
   P.estadoKpi = function (id) {
     var m = P.msDoIndicador(id), it = P.item(id);

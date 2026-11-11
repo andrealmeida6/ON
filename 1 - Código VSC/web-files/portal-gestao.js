@@ -77,8 +77,9 @@
 
   /* --- Estado de reporte -------------------------------------------------------- */
   U.est = { norma: '', empresa: '', dono: '', estado: 'todos' };
+  /* Uma linha por ponto de dados (indicador num periodo): conta tambem o que foi preenchido nas entregas trimestrais */
   var linhasEstado = function () {
-    return catCiclo().map(function (c) { return { c: c, s: P.estadoKpi(c.id), m: P.msDoIndicador(c.id), d: P.dono(c.id) }; });
+    return P.pontosCiclo().map(function (x) { return { c: x.c, s: x.s, m: x.m, d: P.dono(x.id) }; });
   };
   var filtroEstado = function (l, semEstado) {
     var f = U.est;

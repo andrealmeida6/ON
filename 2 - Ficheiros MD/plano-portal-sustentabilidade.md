@@ -670,6 +670,20 @@ Pedido do André a 11 de novembro de 2026.
 - **Registo** (`P.removerFicheiro`): a remoção fica no histórico da milestone, com quem removeu e quando, e quem tinha carregado o ficheiro e em que data. O conteúdo é apagado do armazenamento do browser.
 - **CSS:** secção 47 de `global.css`.
 
+### Reporting status por ponto de dados e Home do data owner
+
+Pedido do André a 11 de novembro de 2026: o data owner deve ver no topo da Home só as suas tasks. A gestão mantém a visão do reporte. E os valores não pareciam estar a ser contados.
+
+- **O erro:** o Reporting status contava por indicador (`P.estadoKpi`) e olhava só para a milestone anual e para o valor do ano. Os valores preenchidos nas entregas trimestrais (T1 a T4), guardados por trimestre, não contavam.
+- **Exemplo:** no demo havia 117 valores preenchidos e 82 aprovados em 214 pontos de dados, mas o estado mostrava 6 aprovados e 52 em falta.
+- **Agora:** conta-se por **ponto de dados**, um indicador num período (`P.estadoLinha`, `P.pontosCiclo` em `portal-controlo.js`). Os estados são Approved, In approval, In progress, Missing e Overdue (inclui Returned).
+- **Página Reporting status:** passa a ter uma linha por ponto de dados, com o período na sua coluna. Os cartões, os filtros e o export usam a mesma conta.
+- **Home, gestão** (administrador, equipa de sustentabilidade, auditor): "Reporting status" com a percentagem aprovada, a barra e os cinco estados. Indica quantos pontos de dados há e quantos já têm valor.
+- **Home, data owner:** "Your tasks" com o que ainda falta reportar e os cartões To fill in, Overdue or returned, Filled in to submit, In review e Approved, só das milestones dos seus departamentos ou atribuídas a ele.
+  - Os três primeiros cartões e o botão "Go to my tasks" filtram o cartão Tasks pelo estado (`iniMinhas`).
+  - Os números batem certo com a lista (por exemplo, 30 por preencher e 30 linhas).
+- `P.estadoKpi` continua a ser usado na visão anual por indicador (Overview, completude por norma).
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.

@@ -274,33 +274,47 @@
   var AI = {};
   /* Progresso do reporte por KPI, o mesmo do Reporting status. Quem contribui ve so os seus KPIs. */
   var EST_KPI = [['aprovado', 'Approved', 'a'], ['aprovacao', 'In approval', 'v'], ['curso', 'In progress', 'c'], ['falta', 'Missing', 'f'], ['atraso', 'Overdue', 'x']];
-  var kpisEstado = function (usr) {
-    return S.cat.filter(function (c) {
-      var m = P.msDoIndicador(c.id);
-      if (!m || !P.item(c.id)) return false;
-      if (P.gereTudo(usr) || usr.perfil === 'auditor') return true;
-      var d = P.dono(c.id);
-      return (d && d.login === usr.login) || P.temUnidade(usr, m.unidade);
-    });
-  };
+
   var pintarHero = function () {
     var usr = u(), set = function (k, v) { var el = document.querySelector('[data-campo="' + k + '"]'); if (el) el.textContent = v; };
     var h = new Date().getHours();
     set('hero-ola', (h < 13 ? 'Good morning' : h < 20 ? 'Good afternoon' : 'Good evening') + ', ' + usr.nome);
   };
   Blocos['inicio-estado'] = function () {
-    var usr = u(), l = kpisEstado(usr), n = {}, tot = l.length, vePag = paginasPermitidas(usr).indexOf('Estado') > -1;
+    var usr = u(), gestao = P.gereTudo(usr) || usr.perfil === 'auditor';
+    if (!gestao) return estadoMinhas(usr);
+    var l = P.pontosCiclo(), n = {}, tot = l.length, vePag = paginasPermitidas(usr).indexOf('Estado') > -1;
     EST_KPI.forEach(function (x) { n[x[0]] = 0; });
-    l.forEach(function (c) { n[P.estadoKpi(c.id).cod]++; });
-    var pct = function (v) { return tot ? (v / tot) * 100 : 0; }, feito = Math.round(pct(n.aprovado));
+    l.forEach(function (x) { n[x.s.cod]++; });
+    var pct = function (v) { return tot ? (v / tot) * 100 : 0; }, feito = Math.round(pct(n.aprovado)), comValor = l.filter(function (x) { var it = P.item(x.id, P.chave(x.m)); return it && it.valor !== null; }).length;
     var item = function (x) {
       var dentro = '<i class="' + x[2] + '"></i><span>' + e(x[1]) + '</span><b>' + n[x[0]] + '</b>';
       return vePag ? '<button type="button" class="ps-est-i" data-a="iniEstado" data-v="' + x[0] + '">' + dentro + '</button>' : '<span class="ps-est-i">' + dentro + '</span>';
     };
-    return '<div class="ps-est-c"><div class="ps-est-t"><div><span class="ps-est-l">Reporting status ' + e(S.ciclo.ano) + (P.gereTudo(usr) || usr.perfil === 'auditor' ? '' : ', your KPIs') + '</span><b class="ps-est-v">' + feito + '%<small>approved</small></b></div>' +
+    return '<div class="ps-est-c"><div class="ps-est-t"><div><span class="ps-est-l">Reporting status ' + e(S.ciclo.ano) + '</span><b class="ps-est-v">' + feito + '%<small>approved</small></b></div>' +
       (vePag ? '<button type="button" class="ps-gk-cta" data-a="iniEstado" data-v="todos">Open status →</button>' : '') + '</div>' +
       '<div class="ps-est-bar" role="img" aria-label="' + e(EST_KPI.map(function (x) { return x[1] + ' ' + n[x[0]]; }).join(', ') + ', of ' + tot + ' data points') + '">' + EST_KPI.map(function (x) { return n[x[0]] ? '<i class="' + x[2] + '" style="width:' + pct(n[x[0]]) + '%"></i>' : ''; }).join('') + '</div>' +
-      '<div class="ps-est-n">' + EST_KPI.map(item).join('') + '</div><small class="ps-est-s">' + tot + ' data points in the ' + e(S.ciclo.ano) + ' cycle</small></div>';
+      '<div class="ps-est-n">' + EST_KPI.map(item).join('') + '</div><small class="ps-est-s">' + tot + ' data points (indicator per period) in the ' + e(S.ciclo.ano) + ' cycle, ' + comValor + ' with a value</small></div>';
+  };
+  /* Data owner: so as suas tasks, por estado. Os tres primeiros filtram o cartao Tasks. */
+  var EST_MEU = [['falta', 'To fill in', 'f', 'falta'], ['atraso', 'Overdue or returned', 'x', 'atraso'], ['curso', 'Filled in, to submit', 'c', 'preenchido'], ['aprovacao', 'In review', 'v', ''], ['aprovado', 'Approved', 'a', '']];
+  var estadoMinhas = function (usr) {
+    var l = P.pontosCiclo(function (m) { return doUtilizador(m, usr); }), n = {}, tot = l.length;
+    EST_MEU.forEach(function (x) { n[x[0]] = 0; });
+    l.forEach(function (x) { n[x.s.cod]++; });
+    var abertas = n.falta + n.atraso + n.curso;
+    var item = function (x) {
+      var dentro = '<i class="' + x[2] + '"></i><span>' + e(x[1]) + '</span><b>' + n[x[0]] + '</b>';
+      return x[3] && n[x[0]] ? '<button type="button" class="ps-est-i" data-a="iniMinhas" data-v="' + x[3] + '">' + dentro + '</button>' : '<span class="ps-est-i">' + dentro + '</span>';
+    };
+    return '<div class="ps-est-c"><div class="ps-est-t"><div><span class="ps-est-l">Your tasks, ' + e(S.ciclo.ano) + '</span><b class="ps-est-v">' + abertas + '<small>' + (abertas === 1 ? 'value to report' : 'values to report') + '</small></b></div>' +
+      (abertas ? '<button type="button" class="ps-gk-cta" data-a="iniMinhas" data-v="todos">Go to my tasks →</button>' : '') + '</div>' +
+      '<div class="ps-est-bar" role="img" aria-label="' + e(EST_MEU.map(function (x) { return x[1] + ' ' + n[x[0]]; }).join(', ')) + '">' + EST_MEU.map(function (x) { return n[x[0]] ? '<i class="' + x[2] + '" style="width:' + (tot ? n[x[0]] / tot * 100 : 0) + '%"></i>' : ''; }).join('') + '</div>' +
+      '<div class="ps-est-n">' + EST_MEU.map(item).join('') + '</div><small class="ps-est-s">' + tot + ' data points of your departments and tasks</small></div>';
+  };
+  AI.iniMinhas = function (d) {
+    U.tarEsc = 'minhas'; U.tarF = { q: '', grupo: '', est: d.v === 'todos' ? 'todos' : d.v }; U.tarTodas = false; R();
+    var c = document.querySelector('[data-bloco=inicio-tarefas]'); if (c) c.scrollIntoView({ block: 'start', behavior: 'smooth' });
   };
   AI.iniEstado = function (d) { U.est = U.est || {}; U.est.norma = ''; U.est.empresa = ''; U.est.dono = ''; U.est.estado = d.v; P.irPara('Estado'); };
 
