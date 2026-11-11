@@ -783,6 +783,20 @@ Pedidos do André a 11 de novembro de 2026.
 - **Supabase:** `resp_emp` vai no `config` do indicador.
 - **CSS:** secções 53 e 54 de `global.css`.
 
+### Timeline: entregas externas com os indicadores e o progresso; Reporting timeline no menu Reporting
+
+Pedido do André a 11 de novembro de 2026.
+
+- **External deliveries** (Reporting timeline e vista Timeline de Backoffice > Indicators):
+  - Cada cartão mostra a barra e o texto do progresso dos indicadores que a entrega pede ("2 of 12 approved, 2 with a value, 1 not sent").
+  - Clicar abre o painel da entrega (`Pn.entrega`), que mostra:
+    - a base legal e o prazo;
+    - os totais: indicadores precisos, aprovados, em aprovação, preenchidos por submeter, em falta ou em atraso, e sem task enviada;
+    - uma tabela com o indicador, a empresa, o responsável, a task (com link e prazo), o valor e o estado. Os que precisam de atenção aparecem primeiro.
+- **Que indicadores entram:** os que têm esse tipo de entrega nos Reporting moments do indicador (`P.momentosDe(id).ent`), no período da entrega (`tarefaInd(id, r.periodo)`, `P.estadoLinha`).
+- **Menu:** a Reporting timeline saiu de Monitoring e passou para o menu **Reporting**, como primeira entrada.
+- **CSS:** secção 55 de `global.css`.
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.

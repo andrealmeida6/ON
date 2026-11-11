@@ -424,7 +424,44 @@
       '<div class="tlr-l rel"><span class="tlr-lt">External</span>' + marcos + '</div>' +
       '<span class="tlr-hoje" style="--x:' + x(hoje).toFixed(2) + '"><small>Today</small></span></div></div>' +
       '<ol class="tlv">' + vert + '</ol>' +
-      (lista.length ? '<h3 class="ps-grupo-t tlr-prox-t">External deliveries</h3><ul class="tlr-prox">' + lista.map(function (r) { var d = P.diasAte(r.data); return '<li class="' + (d < 0 ? 'feito' : '') + '"><b>' + e(r.sigla) + '</b><span>' + e(r.nome) + '<small>' + e(r.entidade + ', ' + r.base) + '</small></span><em>' + e(P.fmtDataAno(r.data)) + '<small>' + (d < 0 ? 'done' : 'in ' + d + ' days') + '</small></em></li>'; }).join('') + '</ul>' : '') + '</div></div>';
+      (lista.length ? '<h3 class="ps-grupo-t tlr-prox-t">External deliveries</h3><p class="ps-small ps-mut">Click a delivery to see the indicators it needs and how each one is going.</p><ul class="tlr-prox">' + lista.map(function (r) {
+        var d = P.diasAte(r.data), n = resumoEntrega(r), pct = n.tot ? Math.round(n.ap / n.tot * 100) : 0, pctV = n.tot ? Math.round(n.valor / n.tot * 100) : 0;
+        return '<li class="' + (d < 0 ? 'feito' : '') + '"><button type="button" class="tlr-ent" data-a="entVer" data-v="' + e(r.id) + '"><b>' + e(r.sigla) + '</b><span>' + e(r.nome) + '<small>' + e(r.entidade + ', ' + r.base) + '</small>' +
+          (n.tot ? '<span class="tlr-ent-p" aria-label="' + n.ap + ' of ' + n.tot + ' indicators approved"><span class="tlr-ent-b"><i class="a" style="width:' + pct + '%"></i><i class="v" style="width:' + Math.max(0, pctV - pct) + '%"></i></span><small>' + n.ap + ' of ' + n.tot + ' approved, ' + n.valor + ' with a value' + (n.nao ? ', ' + n.nao + ' not sent' : '') + '</small></span>' : '<small class="ps-mut">No indicators mapped</small>') +
+          '</span><em>' + e(P.fmtDataAno(r.data)) + '<small>' + (d < 0 ? 'done' : 'in ' + d + ' days') + '</small></em></button></li>';
+      }).join('') + '</ul>' : '') + '</div></div>';
+  };
+  /* Indicadores de uma entrega externa: os que tem este tipo de entrega nos Reporting moments, no periodo da entrega */
+  var tipoEntrega = function (r) { return String(r.id).split('-')[0]; };
+  var indsEntrega = function (r) {
+    var k = tipoEntrega(r);
+    return S.cat.filter(function (c) { return P.indAtivo ? P.indAtivo(c) : true; }).filter(function (c) { return P.momentosDe(c.id).ent.indexOf(k) > -1; }).map(function (c) {
+      var m = P.tarefaInd ? P.tarefaInd(c.id, r.periodo) : null, it = m ? P.item(c.id, P.chave(m)) : null;
+      return { c: c, m: m, it: it, s: m ? P.estadoLinha(m, c.id) : { cod: 'nao', txt: 'Not sent', cls: '' } };
+    });
+  };
+  var resumoEntrega = function (r) {
+    var l = indsEntrega(r), n = { tot: l.length, ap: 0, valor: 0, nao: 0, l: l };
+    l.forEach(function (x) { if (x.s.cod === 'aprovado') n.ap++; if (x.it && x.it.valor !== null) n.valor++; if (x.s.cod === 'nao') n.nao++; });
+    return n;
+  };
+  var pnEntrega = function (a) {
+    var r = (S.relatorios || []).filter(function (y) { return y.id === a.id; })[0];
+    if (!r) return { t: 'External delivery', b: vazio('Delivery not found.'), p: '<span class="ps-sp-flex"></span><button type="button" class="ps-btn" data-a="fecharPainel">Close</button>' };
+    var n = resumoEntrega(r), d = P.diasAte(r.data), per = P.periodo(r.periodo), cnt = function (cod) { return n.l.filter(function (x) { return x.s.cod === cod; }).length; };
+    var k = function (v, t, cls) { return '<div class="ki-impk ' + (cls || '') + '"><b>' + v + '</b><span>' + e(t) + '</span></div>'; };
+    var linhas = n.l.sort(function (x, y) { var o = ['atraso', 'nao', 'falta', 'curso', 'aprovacao', 'aprovado']; return o.indexOf(x.s.cod) - o.indexOf(y.s.cod); }).map(function (x) {
+      var rp = P.responsavelInd ? P.responsavelInd(x.c.id, x.m ? (S.ent.filter(function (y) { return y.nome === x.m.empresa; })[0] || {}).id : '') : null;
+      return [linkFicha(x.c.id, x.c.id + ' ' + x.c.nome) + '<small class="ps-mut ps-blk">' + e(x.c.esrs_requisito || '') + '</small>', x.m ? empHtml(x.m.empresa) : P.empresasInd(x.c).map(function (y) { return empHtml(y.nome); }).join(' '),
+        rp ? (rp.tipo === 'pessoa' ? pessHtml(rp.nome) : depHtml(rp.dep)) : '-', x.m ? '<a href="' + rota('Milestone/' + x.m.id) + '" data-a="fecharPainel">' + e(x.m.nome) + '</a><small class="ps-mut ps-blk">due ' + e(P.fmtData(x.m.prazo)) + '</small>' : '<span class="ps-mut">Not sent</span>',
+        x.it && x.it.valor !== null ? '<b class="ps-num">' + e(fmtV(x.c.id, x.it.valor)) + '</b> <small class="ps-mut">' + e(x.c.unidade_medida) + '</small>' : '<span class="ps-mut">-</span>', chip(x.s.txt, x.s.cls)];
+    });
+    return { t: r.sigla + ', ' + r.nome, s: r.entidade + ', due ' + P.fmtDataAno(r.data) + (d < 0 ? ' (done)' : ' (in ' + d + ' days)') + (per ? ', data from ' + per.nome : ''), largo: true, cls: 'alto ki-pan',
+      b: '<div class="ps-aviso">' + e(r.base) + '</div>' +
+        '<div class="ki-impks ent-ks">' + k(n.tot, 'indicators needed') + k(n.ap, 'approved', 'ok') + k(cnt('aprovacao'), 'in approval', 'info') + k(cnt('curso'), 'filled in, to submit') + k(cnt('falta') + cnt('atraso'), 'missing or overdue', cnt('falta') + cnt('atraso') ? 'err' : '') + k(n.nao, 'task not sent', n.nao ? 'err' : '') + '</div>' +
+        tabela([{ t: 'Indicator' }, { t: 'Company' }, { t: 'Responsible' }, { t: 'Task' }, { t: 'Value', dir: 1 }, { t: 'Status' }], linhas, 'No indicator is mapped to this delivery. Map them in Backoffice, Reporting moments.') +
+        '<p class="ps-small ps-mut">The indicators come from the deliveries each indicator feeds. ' + (n.nao ? 'Indicators without a task can be sent in Backoffice, Indicators.' : '') + '</p>',
+      p: (P.gereTudo(u()) ? '<a class="ps-btn" href="' + rota('Backoffice?tab=indicadores') + '" data-a="fecharPainel">Open Indicators</a>' : '') + '<span class="ps-sp-flex"></span><button type="button" class="ps-btn pri" data-a="fecharPainel">Close</button>' };
   };
   var MESES_C = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   /* Por baixo da timeline: as milestones em curso e o que cada uma ainda tem por reportar */
@@ -1553,6 +1590,7 @@
   var abrePainel = function (tipo, args) { U.painel = { tipo: tipo, args: args || {} }; U.painelFoco = true; R(); };
   var fechaPainel = function () { if (U.painel && U.painel.tipo === 'marca' && U.marca) { U.marca = null; U.logoEstado = ''; P.aplicarMarca(); } U.painel = null; R(); };
   var Pn = {};
+  Pn.entrega = function (a) { return pnEntrega(a); };
   Pn.matInd = function (a) { return pnMatInd(a); };
   Pn.tipo = pnTipo; Pn.lancar = pnLancar;
   /* Mudar a quem esta atribuida: fica no historico da milestone */
@@ -1980,6 +2018,7 @@
     msAtrAbrir: function () { U.atrSel = undefined; U.atrBusca = ''; abrePainel('atribuir', {}); },
     msAtrGuardar: function () { var m = msAtual(), v = U.atrSel === undefined ? (m.atribuido_a || '') : U.atrSel; U.painel = null; U.atrSel = undefined; res(P.atribuir(m, v, u()), 'Assignment saved. It is in the history of the task.'); },
     matVer: function (d) { abrePainel('matInd', { norma: d.v }); },
+    entVer: function (d) { abrePainel('entrega', { id: d.v }); },
     momEmpTirar: function (d) { var p2 = d.v.split('|'), c = P.cat(p2[0]), ids = P.empresasInd(c).map(function (x) { return x.id; }).filter(function (k) { return k !== p2[1]; }); if (!ids.length) return toast('An indicator needs at least one company.', 'err'); mudarEmpresasInd(c, ids); R(); },
     momRepor: function (d) { res(P.reporMomentos(d.v, u()), 'Back to the default for ' + d.v + '.'); },
     marcaAbrir: function () { U.menu = null; U.marca = null; U.logoEstado = ''; abrePainel('marca'); },

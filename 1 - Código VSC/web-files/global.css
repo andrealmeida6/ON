@@ -2173,3 +2173,19 @@ button.ps-est-i:hover{border-color:rgba(255,255,255,.4);background:rgba(255,255,
 .ke-er-rep{font-size:12px;font-weight:600;color:var(--muted)}
 .ke-er.rep .ke-er-rep{color:var(--primary)}
 @media (max-width:820px){.ke-er{grid-template-columns:1fr}}
+
+/* 55. TIMELINE: ENTREGAS EXTERNAS COM OS INDICADORES E O PROGRESSO */
+.tlr-ent{display:contents;font:inherit;color:inherit;text-align:left;cursor:pointer}
+.tlr-prox li{cursor:pointer;transition:border-color .16s,box-shadow .16s}
+.tlr-prox li:hover{border-color:var(--secondary);box-shadow:var(--sh-sm)}
+.tlr-ent-p{display:flex;flex-direction:column;gap:3px;margin-top:6px}
+.tlr-ent-b{display:flex;height:6px;width:100%;max-width:220px;border-radius:999px;background:var(--neutro-50);overflow:hidden}
+.tlr-ent-b i{display:block;height:100%}
+.tlr-ent-b .a{background:var(--ok)}
+.tlr-ent-b .v{background:color-mix(in srgb,var(--ok) 35%,#fff)}
+.ent-ks{grid-template-columns:repeat(6,minmax(0,1fr))}
+@media (max-width:820px){.ent-ks{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.tlr-prox .tlr-ent>b{flex:none;min-width:44px;padding:2px 6px;border-radius:6px;background:var(--primary);color:#fff;font-size:11px;text-align:center}
+.tlr-prox .tlr-ent>span{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.tlr-prox .tlr-ent>em{font-style:normal;font-weight:700;text-align:right;display:flex;flex-direction:column;white-space:nowrap}
+.tlr-prox li.feito .tlr-ent>b{background:var(--muted)}
