@@ -1205,7 +1205,7 @@
           var m = P.msDoIndicador(c.id, ano), apr = m && P.concluida(m), it = P.item(c.id, ano), est = m ? P.estadoIndicador(m, c.id) : { txt: 'To collect', cls: '' }, ant = P.anteriorVista(c.id, ano, emp), r = P.valorVista(c.id, ano, emp);
           var fmt = function (v) { return v === null || v === undefined ? '-' : e(fmtV(c.id, v)); }, pend = it && it.valor !== null && !apr;
           var val = function (v) { return apr ? fmt(v) : '-'; };
-          var celsV = cons ? ents.map(function (x) { return val(r.partes[x.nome]); }).concat(['<b data-tip="' + e(r.metodo === 'media' ? 'Weighted average of the companies' : r.metodo === 'soma' ? 'Sum of the companies by consolidation method' : '') + '">' + val(r.valor) + '</b>']) : [val(r.valor)];
+          var celsV = cons ? ents.map(function (x) { return val(r.partes[x.nome]); }).concat(['<b data-tip="' + e(r.metodo === 'calculo' ? (r.semInputs ? 'Not all inputs are consolidated yet, so the calculation cannot be redone: ' + r.formula : 'Recalculated with the consolidated inputs: ' + r.formula) : r.metodo === 'media' ? 'Weighted average of the companies' : r.metodo === 'soma' ? 'Sum of the companies by consolidation method' : '') + '">' + val(r.valor) + '</b>']) : [val(r.valor)];
           return [e(c.nome) + (it && it.reexpresso ? ' ' + chip('Restated', 'warn') : ''), e(c.unidade_medida)].concat(celsV).concat([fmt(ant), chip(est.txt, est.cls)]);
         })) + '</div></div>';
       }).join('');
@@ -1245,9 +1245,36 @@
     }).join('');
     return '<svg class="ps-lin" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Annual series in ' + e(unid) + '">' + grelha + (firme.length > 1 ? '<polyline class="l" points="' + d + '"></polyline>' : '') + marcas + '</svg>';
   };
+  /* Por topic: todos os indicadores do topic numa tabela, um ano por coluna, com a tendencia */
+  var histTopic = function (tema) {
+    var temas = tema ? [tema] : Object.keys(P.TEMAS).filter(function (t) { return S.cat.some(function (c) { return c.tema === t; }); });
+    var anos = [];
+    S.cat.forEach(function (c) { if (temas.indexOf(c.tema) < 0) return; serieDe(c.id).forEach(function (p) { if (anos.indexOf(p.ano) < 0) anos.push(p.ano); }); });
+    anos = anos.sort().slice(-6);
+    return temas.map(function (t) {
+      var inds = S.cat.filter(function (c) { return c.tema === t; });
+      if (!inds.length) return '';
+      return '<div class="ps-card ps-mt">' + cabCartao(t + ' (' + inds.length + ')', 'ativ') + '<div class="ps-card-body">' + tabela([{ t: 'Indicator' }, { t: 'Unit' }].concat(anos.map(function (a) { return { t: String(a), dir: 1 }; })).concat([{ t: 'Trend' }]), inds.map(function (c) {
+        var pts = serieDe(c.id);
+        return ['<button type="button" class="ps-btn liga" data-a="histVer" data-v="' + e(c.id) + '">' + e(c.nome) + '</button> <span class="ps-mut ps-small">' + e(c.id) + '</span>', e(c.unidade_medida)].concat(anos.map(function (a) {
+          var x = pts.filter(function (p) { return p.ano === a; }).slice(-1)[0];
+          return x ? '<span' + (x.nota === 'pending approval' ? ' class="ps-mut" data-tip="Pending approval"' : '') + '>' + e(P.fmtNum(x.v, c.casas_decimais)) + '</span>' : '<span class="ps-mut">-</span>';
+        })).concat([faisca(pts)]);
+      }), 'No indicators in this topic.') + '</div></div>';
+    }).join('');
+  };
   Blocos['historico'] = function () {
+    var tema = U.histTema || '', vista = U.histVista || 'ind', lista = S.cat.filter(function (x) { return !tema || x.tema === tema; });
+    if (!lista.some(function (x) { return x.id === U.histInd; }) && lista.length) U.histInd = lista[0].id;
     var id = U.histInd, c = P.cat(id), pts = serieDe(id);
-    return '<div class="ps-filtros">' + campo('h-ind', 'Indicator', '<select id="h-ind" class="ps-sel" data-c="histInd">' + S.cat.map(function (x) { return opt(x.id, x.nome + ' (' + x.unidade_medida + ')', id); }).join('') + '</select>') + '<button type="button" class="ps-btn" data-a="histJson">Export approved values as JSON</button></div>' +
+    var temas = Object.keys(P.TEMAS).filter(function (t) { return S.cat.some(function (x) { return x.tema === t; }); });
+    var topo = '<div class="ps-filtros">' + campo('h-tema', 'Topic', '<select id="h-tema" class="ps-sel" data-c="histTema">' + opt('', 'All topics', tema) + temas.map(function (t) { return opt(t, t, tema); }).join('') + '</select>') +
+      '<div class="ps-seg" role="group" aria-label="Show"><button type="button" class="' + (vista === 'ind' ? 'on' : '') + '" data-a="histVista" data-v="ind">One indicator</button><button type="button" class="' + (vista === 'tema' ? 'on' : '') + '" data-a="histVista" data-v="tema">Whole topic</button></div>' +
+      (vista === 'ind' ? campo('h-ind', 'Indicator', '<select id="h-ind" class="ps-sel" data-pesq data-c="histInd">' + lista.map(function (x) { return opt(x.id, x.nome + ' (' + x.unidade_medida + ')', id); }).join('') + '</select>') : '') +
+      '<button type="button" class="ps-btn" data-a="histJson">Export approved values as JSON</button></div>';
+    if (vista === 'tema') return topo + histTopic(tema);
+    if (!c) return topo + vazio('No indicators in this topic.');
+    return topo +
       '<div class="ps-card">' + cabCartao(c.nome, 'ativ', '<span class="ps-mut ps-small">' + e(c.unidade_medida) + '</span>') + '<div class="ps-card-body">' + (pts.length ? graficoLinha(pts, c.unidade_medida, c.casas_decimais) : vazio('No values for this indicator yet.')) +
       '<div class="ps-mt-l">' + tabela([{ t: 'Year' }, { t: 'Value', dir: 1 }, { t: 'Source' }], pts.slice().reverse().map(function (p) { return [String(p.ano), e(P.fmtNum(p.v, c.casas_decimais)), e(p.nota)]; })) + '</div></div></div>';
   };
@@ -2196,6 +2223,8 @@
     indReabrir: function (d) { var r = P.reabrirIndicador(msAtual(), d.v, u()); if (r.erro) return toast(r.erro, 'err'); toast(d.v + ' reopened. Submit it again when it is ready.', 'ok'); R(); },
     rqSubFil: function (d) { U.rqSub = U.rqSub || {}; U.rqSub[msAtual().id] = d.v; R(); },
     guardarTrab: function () { var ae = document.activeElement; if (ae && ae.blur) ae.blur(); P.guardarTrabalho(msAtual(), u()); toast('Work saved. Nothing was submitted.', 'ok'); R(); },
+    histVista: function (d) { U.histVista = d.v; R(); },
+    histVer: function (d) { U.histInd = d.v; U.histVista = 'ind'; R(); window.scrollTo(0, 0); },
     submeter: function () {
       var m = msAtual(), r = P.submeter(m, u());
       if (r.erro) return toast(r.erro, 'err');
@@ -2356,7 +2385,8 @@
     msEstado: function (el) { U.msFiltro.estado = el.value; },
     msEsrs: function (el) { U.msFiltro.esrs = el.checked; },
     consEsrs: function (el) { U.consEsrs = el.checked; },
-    histInd: function (el) { U.histInd = el.value; },
+    histInd: function (el) { U.histInd = el.value; R(); },
+    histTema: function (el) { U.histTema = el.value; R(); },
     indBusca: function (el) { U.indBusca = el.value; },
     regraBusca: function (el) { U.regraBusca = el.value; },
     momBusca: function (el) { U.momBusca = el.value; },

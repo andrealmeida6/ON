@@ -924,6 +924,22 @@ Pedido do André a 11 de novembro de 2026.
   - O import e a colagem não alteram indicadores já submetidos.
 - **Save:** está sempre na barra de ações da task. Guarda o trabalho sem submeter e mostra quando foi guardado.
 
+### Consolidado dos outputs recalculado, History no menu Data e por topic
+
+Pedido do André a 11 de novembro de 2026.
+
+- **Consolidação dos outputs** (`P.valorVista`, `P.avaliarCalc`):
+  - Um indicador de output (com Calculation (KPI codes)) já não soma nem faz média do resultado das empresas. A conta é refeita com os inputs já consolidados.
+  - Exemplo do A03 com Entidade A (20%) e Entidade B (50%): dá (ΣA01 − ΣA02) / ΣA01 = 42,5%. A média dava 35%.
+  - Em cada empresa, a conta é feita com os inputs dessa empresa. Um output pode usar outro output (E08 = A03 × 2 dá 85).
+  - Se faltar algum input consolidado, o output de várias empresas fica vazio, em vez de mostrar um valor errado.
+  - O tooltip e a nota do consolidado dizem "Recalculated with the consolidated inputs" e mostram a fórmula.
+  - Os períodos já funcionavam assim: o valor do ano é calculado com os inputs do ano.
+- **History:** passou do menu Reporting para o menu **Data**.
+- **History por topic:** tem um filtro Topic e duas vistas.
+  - **One indicator:** o gráfico de um indicador, escolhido numa lista filtrada pelo topic, com pesquisa.
+  - **Whole topic:** uma tabela com todos os indicadores do topic, os últimos 6 anos e a tendência. Clicar num indicador abre-o na vista One indicator.
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.

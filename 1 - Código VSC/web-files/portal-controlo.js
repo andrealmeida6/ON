@@ -132,10 +132,32 @@
     if (m && m.empresa) o[m.empresa] = it.valor;
     return o;
   };
+  /* Outputs (calculo por codigos): o consolidado nao soma nem faz media do output das empresas.
+     Volta a fazer a conta com os inputs ja consolidados: (ΣA01 - ΣA02) / ΣA01 * 100.
+     Numa empresa, faz a conta com os inputs dessa empresa. */
+  var fundo = 0;
+  var vistaOutput = function (c, chave, empresa) {
+    if (fundo > 6) return null;
+    fundo++;
+    try {
+      var casas = c.casas_decimais === undefined ? 2 : c.casas_decimais;
+      var conta = function (emp) { var v = P.avaliarCalc(c.calc_codigos, function (k) { return P.valorVista(k, chave, emp).valor; }); return v === null ? null : Number(v.toFixed(casas)); };
+      if (empresa) { var ve = conta(empresa); return ve === null ? null : { valor: ve, partes: {}, so: false, recalculado: true }; }
+      var tot = conta('');
+      if (tot === null) return null;
+      var partes = {}, lista = [];
+      S.ent.forEach(function (x) { var v = conta(x.nome); if (v !== null) { partes[x.nome] = v; lista.push({ empresa: x.nome, valor: v, peso: P.pesoConsolidacao(x) }); } });
+      return { valor: tot, partes: partes, lista: lista, metodo: 'calculo', recalculado: true, formula: c.calc_codigos };
+    } finally { fundo--; }
+  };
   P.valorVista = function (id, chave, empresa) {
-    var c = P.cat(id), o = P.valoresEmpresas(id, chave), nomes = Object.keys(o), casas = c ? c.casas_decimais : 2;
+    var c = P.cat(id);
+    if (P.eOutput && P.eOutput(c)) { var vo = vistaOutput(c, chave, empresa); if (vo) return vo; }
+    var o = P.valoresEmpresas(id, chave), nomes = Object.keys(o), casas = c ? c.casas_decimais : 2;
     if (empresa) return { valor: o[empresa] === undefined ? null : o[empresa], partes: o, so: nomes.length === 1 && nomes[0] === empresa };
     if (!nomes.length) return { valor: null, partes: o, metodo: '' };
+    /* Um output de varias empresas sem os inputs todos nao se consolida (somar ou fazer media do resultado estaria errado) */
+    if (P.eOutput && P.eOutput(c) && nomes.length > 1) return { valor: null, partes: o, lista: [], metodo: 'calculo', semInputs: true, formula: c.calc_codigos };
     var ad = P.aditivo(c), soma = 0, sw = 0, l = [];
     nomes.forEach(function (n) { var w = P.pesoConsolidacao(P.entidadePorNome(n)); l.push({ empresa: n, valor: o[n], peso: w }); if (!w) return; soma += o[n] * w; sw += w; });
     var v = !sw ? null : ad ? soma : soma / sw;
@@ -156,7 +178,7 @@
     var r = P.valorVista(id, S.ciclo.ano, empresa || '');
     if (empresa) return { valor: r.valor, peso: 1, m: m, fora: r.valor === null };
     var l = r.lista || [], peso = l.length === 1 ? l[0].peso : 1;
-    return { valor: r.valor, peso: peso, m: m, racio: r.metodo === 'media' };
+    return { valor: r.valor, peso: peso, m: m, racio: r.metodo === 'media', recalculado: !!r.recalculado, formula: r.formula || '' };
   };
   P.alterarEntidade = function (x, campo, valor, u) {
     if (!P.gereTudo(u)) return { erro: 'No permission.' };

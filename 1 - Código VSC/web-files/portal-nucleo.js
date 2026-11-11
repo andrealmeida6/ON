@@ -645,6 +645,19 @@
     try { var r = Function('"use strict";return (' + teste + ');')(); if (typeof r !== 'number') throw 0; } catch (x) { return 'The calculation is not a valid expression: ' + s + '.'; }
     return null;
   };
+  /* Avalia um calculo com uma funcao que da o valor de cada codigo (por empresa, consolidado, por periodo).
+     Devolve null se faltar algum valor ou houver inputs em falta. */
+  P.avaliarCalc = function (txt, ler) {
+    var toks = P.tokensCalc(txt), falta = false;
+    if (!toks.length || toks.some(function (k) { return k.t === 'falta' || k.t === 'mau'; })) return null;
+    var expr = toks.map(function (k) {
+      if (k.t === 'kpi') { var v = ler(k.v); if (v === null || v === undefined || isNaN(v)) { falta = true; return '0'; } return '(' + v + ')'; }
+      if (k.t === 'fator') { var f = fatorDe(k.v); if (f === null) { falta = true; return '0'; } return '(' + f + ')'; }
+      return k.v;
+    }).join(' ');
+    if (falta) return null;
+    try { var r = Function('"use strict";return (' + expr + ');')(); return typeof r === 'number' && isFinite(r) ? r : null; } catch (x) { return null; }
+  };
   P.eOutput = function (c) { return !!c && c.tipo === 'derivado' && !!String(c.calc_codigos || '').trim(); };
   /* O input conta quando tem valor e a sua task ja saiu da recolha (submetida) */
   var inputSubmetido = function (id, ch) {

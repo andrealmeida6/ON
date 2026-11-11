@@ -26,7 +26,7 @@
     var c = P.cat(id), r = P.valorConsolidado(id, empresa), m = r.m, it = P.item(id), ant = P.valorAnterior(id, S.ciclo.ano), est = P.estadoKpi(id);
     var val2 = r.valor === null ? '-' : P.fmtNum(r.valor, r.racio || empresa ? c.casas_decimais : 0);
     var dif = it && it.valor !== null && ant ? ((it.valor - ant) / Math.abs(ant)) * 100 : null;
-    var nota = r.fora ? 'Reported by ' + (m ? m.empresa : 'another company') : !it || it.valor === null ? 'Not reported yet' : !empresa && r.peso === 0 ? m.empresa + ' is outside the consolidation' : !empresa && !r.racio && r.peso !== 1 ? 'Counted at ' + P.fmtNum(r.peso * 100, 0) + '%, ' + m.empresa : (m ? m.empresa : '');
+    var nota = !empresa && r.recalculado ? 'Recalculated with the consolidated inputs: ' + r.formula : r.fora ? 'Reported by ' + (m ? m.empresa : 'another company') : !it || it.valor === null ? 'Not reported yet' : !empresa && r.peso === 0 ? m.empresa + ' is outside the consolidation' : !empresa && !r.racio && r.peso !== 1 ? 'Counted at ' + P.fmtNum(r.peso * 100, 0) + '%, ' + m.empresa : (m ? m.empresa : '');
     return '<div class="ps-tile"><div class="ps-tile-t"><span>' + e(c.nome) + '</span>' + cod(c) + '</div><div class="ps-tile-v"><b>' + e(val2) + '</b> <small>' + e(c.unidade_medida) + '</small></div><div class="ps-tile-s">' + (dif === null || r.fora ? '' : '<span>' + (dif < 0 ? '▼ ' : dif > 0 ? '▲ ' : '') + e(P.fmtNum(Math.abs(dif), 1)) + '% vs ' + (S.ciclo.ano - 1) + '</span>') + '<span>' + e(nota) + '</span></div><div class="ps-tile-e">' + chip(est.txt, est.cls) + '</div></div>';
   };
   /* Pontos de dados da vista: periodo de reporte e empresa. Sao os mesmos do Reporting status (P.pontosCiclo). */
