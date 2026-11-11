@@ -880,6 +880,21 @@ Pedido do André a 11 de novembro de 2026.
   - Um output pode usar outros outputs.
   - Um output que esteja numa task não é pedido a quem preenche.
 
+### Calculation (KPI codes) preenchida automaticamente
+
+Pedido do André a 11 de novembro de 2026.
+
+- `P.sugerirCalc(id, texto)` (`portal-fontes.js`) gera a Calculation (KPI codes) de um output de duas maneiras:
+  1. **Pelo cálculo configurado na plataforma:** cada dado de origem que já é um indicador passa ao seu código. Por exemplo, o A03 fica `(A01 - A02) / A01 * 100`.
+  2. **Pela Calculation methodology:** os nomes e os códigos de indicadores que aparecem no texto passam a códigos. Também se convertem `×`, `÷`, `x`, plus/mais, minus/menos, times/vezes e divided by/dividido por. Nos indicadores em % junta-se `* 100`.
+  - Só se preenche quando o resultado tem apenas códigos, números e operadores e a expressão é válida. Quando não se consegue, o campo fica vazio para ser preenchido à mão.
+- **Onde corre:**
+  - o botão **Fill calculations** na página Indicators;
+  - "Fill from the methodology" no painel do indicador;
+  - o export, que já leva a sugestão na coluna;
+  - o import, quando um output chega sem cálculo.
+- **Limite atual:** dos 24 outputs, só o A03 se consegue converter. Os outros usam 39 dados de origem que ainda não existem como indicadores de input (por exemplo CQO afluente, colaboradores_total, receitas_eur) ou fatores de emissão. Falta decidir se esses dados passam a ser indicadores de input.
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.

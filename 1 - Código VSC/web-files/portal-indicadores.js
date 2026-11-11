@@ -80,7 +80,7 @@
     { k: 'natureza', g: 'car', t: 'Input / Output', w: 13, d: 'Input: data someone has to enter. Output: calculated by the platform from the inputs, with the codes in "Calculation (KPI codes)".', vals: ['Input', 'Output'], al: ['base or derived', 'input output', 'input/output'],
       get: function (c) { return c.tipo === 'derivado' ? 'Output' : 'Input'; }, res: lista([['input', 'Input'], ['output', 'Output'], ['base', 'Input'], ['derived', 'Output'], ['derivado', 'Output']], 'Input / Output'), set: function (c, v) { c.tipo = v === 'Output' ? 'derivado' : 'base'; } },
     { k: 'calc', g: 'car', t: 'Calculation (KPI codes)', w: 26, d: 'For outputs: the calculation with the KPI codes, for example A01 + A02 or (E01 - E02) / A01 * 100. It runs by itself once all the inputs of the period are submitted.', al: ['calculation kpi codes', 'calculation codes', 'kpi formula'],
-      get: function (c) { return c.calc_codigos || ''; }, res: function (v, c) { var s = String(v || '').trim(); var er = P.validarCalc(s, c && c.id, idsImport); return er ? { erro: er } : { val: s.toUpperCase().replace(/\s+/g, ' ') }; }, set: function (c, v) { c.calc_codigos = v || ''; if (v) c.tipo = 'derivado'; } },
+      get: function (c) { if (c.calc_codigos) return c.calc_codigos; var sg = c.tipo === 'derivado' && P.sugerirCalc ? P.sugerirCalc(c.id) : null; return sg ? sg.calc : ''; }, res: function (v, c) { var s = String(v || '').trim(); var er = P.validarCalc(s, c && c.id, idsImport); return er ? { erro: er } : { val: s.toUpperCase().replace(/\s+/g, ' ') }; }, set: function (c, v) { c.calc_codigos = v || ''; if (v) c.tipo = 'derivado'; } },
     { k: 'formula', g: 'car', t: 'Calculation methodology', w: 44, longo: true, d: 'Calculation methodology, formula in words or key assumptions.', al: ['formula', 'calculation method', 'calculation'],
       get: function (c) { return c.formula || ''; }, res: okv, set: function (c, v) { c.formula = v || null; } },
     { k: 'freq', g: 'car', t: 'Reporting Frequency', w: 14, d: 'How often the indicator is reported.', vals: FREQ.map(function (f) { return f[1]; }), al: ['frequency', 'periodicidade'],
@@ -252,7 +252,7 @@
     var perSel = '<select id="ki-per" class="ps-sel" aria-label="Reporting period of the tasks" data-c="indF" data-id="per">' + periodos().map(function (p) { return opt(p.id, p.nome, f.per); }).join('') + '</select>';
     var temas = []; S.cat.forEach(function (c) { if (c.tema && temas.indexOf(c.tema) < 0) temas.push(c.tema); });
     var topo = '<div class="ki-topo"><div><h2>Indicators</h2><p class="ps-mut ps-small">One place for every KPI: what it is, who reports it, which companies it covers, and the tasks sent for each period.</p></div>' +
-      '<div class="ps-sp"><button type="button" class="ps-btn" data-a="indImportar">' + svg(I.upload, 15) + 'Import Excel</button><button type="button" class="ps-btn" data-a="indExportar">' + svg(ICO.descarregar, 15) + 'Export Excel</button><button type="button" class="ps-btn pri" data-a="indNovo">' + svg(ICO.mais, 15) + 'New indicator</button></div></div>';
+      '<div class="ps-sp"><button type="button" class="ps-btn" data-a="indCalcAuto" data-tip="Fill in the Calculation (KPI codes) of the output indicators that have none, from their calculation methodology.">Fill calculations</button><button type="button" class="ps-btn" data-a="indImportar">' + svg(I.upload, 15) + 'Import Excel</button><button type="button" class="ps-btn" data-a="indExportar">' + svg(ICO.descarregar, 15) + 'Export Excel</button><button type="button" class="ps-btn pri" data-a="indNovo">' + svg(ICO.mais, 15) + 'New indicator</button></div></div>';
     var tiles = '<div class="ps-kpis ki-tiles">' + tile('Active indicators', todos.length, empSel ? 'reported by ' + empSel.nome : S.cat.length - todos.length ? (S.cat.length - todos.length) + ' inactive' : 'in the catalogue') +
       tile('Owned by a department', semPessoa, 'no person named', semPessoa ? 'k-warn' : '', ['resp', '__grupo']) +
       tile('Not sent, ' + (per ? per.nome : ''), est('nao'), 'no task for this period', est('nao') ? 'k-warn' : '', ['est', 'nao']) +
@@ -398,7 +398,7 @@
         cmp('valida', 'Validator', sel('valida', d, pessoas('valida').map(function (x) { return x.nome; }), 'Not set'), 'Validates at the end.'), 'Who reviews and validates') +
       secao('car', cmp('unidade', 'Unit *', inp('unidade', d), 'For example m³, MWh, %, n.º') + cmp('casas', 'Decimals', inp('casas', d, ' inputmode="numeric"')) +
         cmp('freq', 'Reporting frequency *', sel('freq', d, freqs)) + cmp('recolha', 'Data collection frequency', sel('recolha', d, campoK.recolha.vals, 'Same as reporting')) +
-        cmp('agreg', 'Aggregation', sel('agreg', d, AGREG.map(function (f) { return f[1]; })), 'How companies and periods are combined.') + cmp('natureza', 'Input / Output', sel('natureza', d, ['Input', 'Output']), 'Output: calculated from other indicators.') + cmp('calc', 'Calculation (KPI codes)', inp('calc', d, ' placeholder="For example A01 + A02" autocomplete="off"'), 'Runs by itself once the inputs are submitted.') +
+        cmp('agreg', 'Aggregation', sel('agreg', d, AGREG.map(function (f) { return f[1]; })), 'How companies and periods are combined.') + cmp('natureza', 'Input / Output', sel('natureza', d, ['Input', 'Output']), 'Output: calculated from other indicators.') + cmp('calc', 'Calculation (KPI codes)', inp('calc', d, ' placeholder="For example A01 + A02" autocomplete="off"') + '<button type="button" class="ps-btn liga ke-eu" data-a="indCalcSug">Fill from the methodology</button>', 'Runs by itself once the inputs are submitted.') +
         cmp('div_tipo', 'Disclosure type', sel('div_tipo', d, ['Quantitative', 'Qualitative'])) + cmp('tipo_dado', 'Data type', sel('tipo_dado', d, campoK.tipo_dado.vals.indexOf(d.tipo_dado) < 0 && d.tipo_dado ? campoK.tipo_dado.vals.concat([d.tipo_dado]) : campoK.tipo_dado.vals)) +
         '<div class="ki-full">' + cmp('formula', 'Calculation methodology', area('formula', d), 'Methodology in words or key assumptions.') + '</div>') +
       secao('esrs', cmp('esrs', 'ESRS standard', sel('esrs', d, (S.mat || []).map(function (x) { return x.norma; }), 'Entity-specific'), d.esrs_tema || '') + cmp('dr', 'ESRS DR', inp('dr', d), 'Disclosure Requirement, for example E3-4.') +
@@ -766,6 +766,31 @@
         (!total && !x.erros.length ? '<div class="ps-aviso ok">The file matches the platform. There is nothing to import.</div>' : ''),
       p: '<button type="button" class="ps-btn" data-a="indImpEscolher">Upload another file</button><span class="ps-sp-flex"></span><button type="button" class="ps-btn" data-a="fecharPainel">Cancel</button><button type="button" class="ps-btn pri" data-a="indImpAplicar"' + (total ? '' : ' disabled') + '>Import ' + total + ' indicator(s)</button>' };
   };
+  /* Preenche a Calculation (KPI codes) dos outputs sem calculo, a partir da methodology */
+  P.preencherCalcs = function (usr, ids) {
+    var feitos = [], falhou = [];
+    S.cat.forEach(function (c) {
+      if (ids && ids.indexOf(c.id) < 0) return;
+      if (c.tipo !== 'derivado' || String(c.calc_codigos || '').trim()) return;
+      var sg = P.sugerirCalc ? P.sugerirCalc(c.id) : null;
+      if (!sg) { if (String(c.formula || '').trim() || P.expressaoDe(c.id)) falhou.push(c.id); return; }
+      c.calc_codigos = sg.calc; feitos.push(c.id);
+      P.eventoGlobal('Indicator ' + c.id + ' ' + c.nome + ': Calculation (KPI codes) set to ' + sg.calc + ', from ' + sg.fonte + '.', usr.nome, 'Change');
+    });
+    if (feitos.length) { Object.keys(S.items).map(function (k) { return k.slice(0, k.lastIndexOf(':')); }).filter(function (k, i, l) { return l.indexOf(k) === i; }).forEach(function (ch) { P.calcularOutputs(ch, usr); }); P.guardar(); }
+    return { feitos: feitos, falhou: falhou };
+  };
+  A.indCalcAuto = function () {
+    if (!P.gereTudo(u())) return toast('No permission.', 'err');
+    var r = P.preencherCalcs(u());
+    toast(r.feitos.length ? r.feitos.length + ' calculation(s) filled in: ' + r.feitos.slice(0, 6).join(', ') + (r.feitos.length > 6 ? '…' : '') + '.' + (r.falhou.length ? ' ' + r.falhou.length + ' could not be read from the methodology (' + r.falhou.slice(0, 5).join(', ') + '): fill them in by hand.' : '') : r.falhou.length ? 'No calculation could be read from the methodology of ' + r.falhou.join(', ') + '. Fill them in by hand.' : 'Every output already has its calculation.', r.feitos.length ? 'ok' : 'err');
+    R();
+  };
+  A.indCalcSug = function () {
+    var d = U.ind.ed.d, sg = P.sugerirCalc ? P.sugerirCalc(U.ind.ed.id || d.id, d.formula) : null;
+    if (!sg) return toast('The methodology does not name the indicators clearly enough. Write the calculation with the KPI codes.', 'err');
+    d.calc = sg.calc; d.natureza = 'Output'; toast('Calculation filled in from ' + sg.fonte + ': ' + sg.calc, 'ok'); R();
+  };
   A.indImportar = function () { U.ind.imp = { rel: null, criar: true }; X.abrePainel('indImp'); };
   C.indImpCriar = function (el) { U.ind.imp.criar = el.checked; };
   A.indImpEscolher = function () {
@@ -789,6 +814,10 @@
       aplicar(c, val); nn++;
     });
     if (nn) P.eventoGlobal(nn + ' indicator(s) created from the import of ' + x.nome + '.', usr.nome, 'Creation');
+    /* Outputs que vieram sem Calculation (KPI codes): preenche-se pela methodology */
+    var tocados = x.alterados.map(function (a) { return a.id; }).concat(M.criar ? x.novos.map(function (a) { return a.id; }) : []);
+    var auto = P.preencherCalcs(usr, tocados);
+    if (auto.feitos.length) toast(auto.feitos.length + ' calculation(s) filled in from the methodology.', 'ok');
     /* Calculations novas ou alteradas: calcula ja os outputs cujos inputs estao submetidos */
     var nc = 0; Object.keys(S.items).map(function (k) { return k.slice(0, k.lastIndexOf(':')); }).filter(function (k, i, l) { return l.indexOf(k) === i; }).forEach(function (ch) { nc += P.calcularOutputs(ch, usr); });
     if (nc) toast(nc + ' output value(s) calculated from submitted inputs.', 'ok');

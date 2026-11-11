@@ -138,6 +138,42 @@
   };
   var fator = function (k) { var id = k.split('.')[1], f = S.fatores.filter(function (x) { return x.id === id; })[0]; return f ? f.fator : null; };
   P.expressaoDe = function (id) { return DERIV[id] ? DERIV[id].x : BASE[id] ? BASE[id][0] : null; };
+  /* --- Sugestao da Calculation (KPI codes) -------------------------------------------------
+     1. Pela definicao do calculo na plataforma: cada dado de origem que e um indicador passa ao seu codigo.
+     2. Pela Calculation methodology: os nomes (e codigos) de indicadores no texto passam a codigos;
+        x, ×, ÷ e as palavras plus/minus/times/divided by passam a operadores.
+     So devolve quando sobra apenas codigos, numeros e operadores, e a expressao e valida. */
+  var semAc = function (t) { return String(t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); };
+  P.sugerirCalc = function (id, texto) {
+    var campoInd = {}; Object.keys(BASE).forEach(function (k) { campoInd[BASE[k][0]] = k; });
+    var ok = function (x) { return x && !(P.validarCalc && P.validarCalc(x, id)); };
+    var d = DERIV[id];
+    if (d && typeof d.x === 'string') {
+      var falta = false, x = d.x.replace(/[A-Za-z_][A-Za-z0-9_]*/g, function (t) { if (campoInd[t] && campoInd[t] !== id) return campoInd[t]; falta = true; return t; });
+      if (!falta && ok(x)) return { calc: x.replace(/\s+/g, ' ').trim(), fonte: 'the calculation set up in the platform' };
+    }
+    var t = String(texto === undefined ? ((P.cat(id) || {}).formula || '') : texto);
+    if (!t.trim()) return null;
+    /* Nomes conhecidos: nome do indicador e nome do dado de origem, do mais comprido para o mais curto */
+    var nomes = [];
+    S.cat.forEach(function (c) { if (c.id !== id) { nomes.push([semAc(c.nome), c.id]); if (BASE[c.id]) nomes.push([semAc(BASE[c.id][3]), c.id]); } });
+    nomes = nomes.filter(function (n) { return n[0].length > 2; }).sort(function (a, b) { return b[0].length - a[0].length; });
+    var y = ' ' + semAc(t).replace(/[×]/g, ' * ').replace(/[÷:]/g, ' / ').replace(/[−–]/g, ' - ') + ' ';
+    y = y.replace(/\bdivided by\b|\bdividido por\b/g, ' / ').replace(/\btimes\b|\bvezes\b|\bmultiplied by\b/g, ' * ').replace(/\bplus\b|\bmais\b/g, ' + ').replace(/\bminus\b|\bmenos\b/g, ' - ');
+    var marc = [];
+    nomes.forEach(function (n) {
+      var re = new RegExp('(^|[^a-z0-9])' + n[0].replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?![a-z0-9])', 'g');
+      y = y.replace(re, function (m0, pre) { marc.push(n[1]); return pre + ' @' + (marc.length - 1) + '@ '; });
+    });
+    /* Codigos escritos diretamente no texto */
+    y = y.replace(/\b([a-z]{1,4}\d{1,3}[a-z]?)\b/g, function (m0) { var k = m0.toUpperCase(); if (P.cat(k) && k !== id) { marc.push(k); return ' @' + (marc.length - 1) + '@ '; } return m0; });
+    y = y.replace(/(\d)\s*%/g, '$1').replace(/\sx\s/g, ' * ').replace(/\s+/g, ' ');
+    if (!marc.length || /[a-z]/.test(y.replace(/@\d+@/g, ''))) return null;
+    var expr = y.replace(/@(\d+)@/g, function (m0, i) { return marc[+i]; }).replace(/\s+/g, ' ').trim();
+    var c0 = P.cat(id);
+    if (c0 && c0.unidade_medida === '%' && /\//.test(expr) && !/\b100\b/.test(expr)) expr = '(' + expr + ') * 100';
+    return ok(expr) ? { calc: expr, fonte: 'the calculation methodology' } : null;
+  };
   P.formulaTxt = function (id) {
     var c = P.cat(id);
     if (DERIV[id]) return c.formula || DERIV[id].t || DERIV[id].x;
