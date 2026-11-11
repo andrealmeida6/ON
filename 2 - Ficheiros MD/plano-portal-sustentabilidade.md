@@ -940,6 +940,15 @@ Pedido do André a 11 de novembro de 2026.
   - **One indicator:** o gráfico de um indicador, escolhido numa lista filtrada pelo topic, com pesquisa.
   - **Whole topic:** uma tabela com todos os indicadores do topic, os últimos 6 anos e a tendência. Clicar num indicador abre-o na vista One indicator.
 
+### Outputs & Reporting Timeline
+
+Pedido do André a 11 de novembro de 2026.
+
+- A página Outputs (`Saidas`) foi juntada à Reporting timeline. No menu Reporting chama-se agora **Outputs & Reporting Timeline**.
+  - No topo tem o filtro por destino: **All, ERSAR, APA, Acionistas, Público** (`P.filtroSaidas`). O filtro aplica-se à timeline (marcos e entregas externas) e aos outputs.
+  - Por baixo da timeline está a secção **Outputs**, com os números e os cartões de cada entrega, para gerar os ficheiros (`P.saidasHtml`). A seguir vêm as Tasks in progress.
+- Foram removidos a web page `Saidas`, o snippet `Saidas/Introducao` e o link do menu. A rota antiga `Saidas` passa a abrir a `Timeline`.
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.

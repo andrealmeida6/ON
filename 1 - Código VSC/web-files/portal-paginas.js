@@ -169,7 +169,7 @@
     if (usr.perfil === 'ext') return ['Pedidos'];
     /* Quem contribui so precisa das suas milestones (com a folha) e do chat. O resto e para quem acompanha o reporte. */
     if (usr.perfil === 'resp') return ['Inicio', 'Milestones', 'Milestone'];
-    var base = ['Inicio', 'Milestones', 'Milestone', 'Timeline', 'Consolidado', 'Documentos', 'Evidencias', 'Relatorio', 'Saidas', 'Historico', 'Auditoria'];
+    var base = ['Inicio', 'Milestones', 'Milestone', 'Timeline', 'Consolidado', 'Documentos', 'Evidencias', 'Relatorio', 'Historico', 'Auditoria'];
     if (usr.perfil !== 'auditor') base.push('Dados');
     if (P.gereTudo(usr) || usr.perfil === 'auditor') base.push('Aprovacoes', 'Estado', 'Trilho');
     if (P.gereTudo(usr)) base.push('Backoffice');
@@ -371,7 +371,7 @@
   var timeline = function () {
     var ano = S.ciclo.ano, ini = new Date(ano + '-01-01T12:00:00'), fim = new Date((ano + 1) + '-08-01T12:00:00'), tot = fim - ini;
     var x = function (iso) { return Math.max(0, Math.min(100, ((new Date(iso + 'T12:00:00') - ini) / tot) * 100)); };
-    var pers = (S.periodos || []).filter(function (p) { return p.ano === ano; }), rels = (S.relatorios || []).filter(function (r) { return r.periodo.indexOf(String(ano)) === 0; });
+    var pers = (S.periodos || []).filter(function (p) { return p.ano === ano; }), rels = (S.relatorios || []).filter(function (r) { return r.periodo.indexOf(String(ano)) === 0 && (!U.sd || !U.sd.ent || r.entidade === U.sd.ent); });
     var hoje = P.hojeISO(), f = U.msFiltro || {};
     var estado = function (p) {
       var l = P.msPeriodo(p.id), conc = l.filter(P.concluida).length, atr = l.filter(function (m) { return P.estadoMs(m).cod === 'atraso'; }).length;
@@ -484,7 +484,11 @@
     return '<div class="ps-card ps-mt">' + cabCartao('Tasks in progress', 'tarefa', '<span class="ps-small ps-mut">' + l.length + ' task(s), ' + nFalta + ' value(s) still to report</span>') + '<div class="ps-card-body">' + filtros +
       tabela([{ t: 'Task' }, { t: 'Period' }, { t: 'Perimeter' }, { t: 'Assigned to' }, { t: 'Deadline' }, { t: 'Status' }, { t: 'Still to report' }], linhas, f.falta ? 'Every task in progress already has all its values.' : 'No task in progress.') + '</div></div>';
   };
-  Blocos['timeline'] = function () { return timeline() + emCurso(); };
+  /* Outputs & Reporting Timeline: o filtro por destino (All, ERSAR, APA, ...) serve a timeline e os outputs */
+  Blocos['timeline'] = function () {
+    return (P.filtroSaidas ? '<div class="ps-sp-b ps-filtros">' + P.filtroSaidas() + '</div>' : '') + timeline() +
+      (P.saidasHtml ? '<h2 class="ps-grupo-t ps-mt-l">Outputs</h2><p class="ps-small ps-mut">Each external delivery: how many values are approved and the files generated.</p>' + P.saidasHtml() : '') + emCurso();
+  };
 
   /* --- Milestones -------------------------------------------------------- */
   var msFiltradas = function () {
@@ -1986,6 +1990,7 @@
     }
     if (!P.online() && q.perfil && P.user(q.perfil)) P.entrar(q.perfil);
     /* KPI assignment e Companies and perimeter passaram a separadores do Backoffice: os links antigos continuam a funcionar */
+    if (pag === 'Saidas') pag = 'Timeline';
     if (pag === 'Atribuicao') { pag = 'Backoffice'; q.tab = 'indicadores'; }
     if (pag === 'Perimetro') { pag = 'Backoffice'; q.tab = 'perimetro'; }
     if (pag === 'Calculos') { pag = 'Backoffice'; q.tab = 'calculos'; }

@@ -111,14 +111,21 @@
       '<p class="ps-small ps-mut sd-ult">' + (g ? 'Last file: <span class="ps-chip-tip" tabindex="0" data-tip="' + e('Version ' + g.versao + ': this delivery has been generated ' + g.versao + ' time' + (g.versao === 1 ? '' : 's') + '. Each new file gets the next number, so earlier files are never overwritten.') + '">v' + g.versao + '</span>' + (g.final ? '' : ' draft') + ', ' + e(P.fmtDataHora(g.em)) + ' by ' + e(g.por) : 'No file generated yet') + '</p>' +
       '<footer><button type="button" class="ps-btn" data-a="sdVer" data-v="' + e(rel.id) + '">Check the values</button>' + (pode ? f.f.map(function (x, i) { return '<button type="button" class="ps-btn' + (i ? '' : ' pri') + '" data-a="sdGerar" data-v="' + e(rel.id) + '" data-f="' + x + '">' + svg(I.doc, 14) + (pr.final ? '' : 'Draft ') + FMT_TXT[x] + '</button>'; }).join('') : '') + '</footer></article>';
   };
-  Blocos['saidas'] = function () {
+  /* Os outputs vivem na pagina "Outputs & Reporting Timeline": o filtro por destino serve a timeline e os cartoes */
+  P.filtroSaidas = function () {
+    var ano = S.ciclo.ano, ents = [];
+    (S.relatorios || []).forEach(function (r) { var p = P.periodo(r.periodo); if (p && p.ano === ano && ents.indexOf(r.entidade) < 0) ents.push(r.entidade); });
+    return '<div class="ps-seg" role="group" aria-label="Filter by destination"><button type="button" class="' + (U.sd.ent ? '' : 'on') + '" data-a="sdEnt" data-v="">All</button>' + ents.map(function (x) { return '<button type="button" class="' + (U.sd.ent === x ? 'on' : '') + '" data-a="sdEnt" data-v="' + e(x) + '">' + e(x) + '</button>'; }).join('') + '</div>';
+  };
+  P.saidasHtml = function () { return Blocos['saidas'](true); };
+  Blocos['saidas'] = function (semFiltro) {
     var ano = S.ciclo.ano, rels = (S.relatorios || []).filter(function (r) { var p = P.periodo(r.periodo); return p && p.ano === ano; }).sort(function (a, b) { return a.data < b.data ? -1 : 1; });
     var ents = []; rels.forEach(function (r) { if (ents.indexOf(r.entidade) < 0) ents.push(r.entidade); });
     var vis = rels.filter(function (r) { return !U.sd.ent || r.entidade === U.sd.ent; });
     var prs = rels.map(P.prontidaoSaida), prontas = prs.filter(function (x) { return x.final; }).length, prox = rels.filter(function (r) { return P.diasAte(r.data) >= 0; })[0];
     var kpis = '<div class="ps-kpis"><div class="ps-kpi"><span>Deliveries ' + ano + '</span><b>' + rels.length + '</b></div><div class="ps-kpi"><span>Ready to submit</span><b>' + prontas + '</b></div><div class="ps-kpi"><span>Files generated</span><b>' + (S.saidas || []).length + '</b></div><div class="ps-kpi"><span>Next due</span><b>' + (prox ? e(prox.sigla) + ', ' + e(P.fmtData(prox.data)) : '-') + '</b></div></div>';
     var filtro = '<div class="ps-seg" role="group" aria-label="Filter by destination"><button type="button" class="' + (U.sd.ent ? '' : 'on') + '" data-a="sdEnt" data-v="">All</button>' + ents.map(function (x) { return '<button type="button" class="' + (U.sd.ent === x ? 'on' : '') + '" data-a="sdEnt" data-v="' + e(x) + '">' + e(x) + '</button>'; }).join('') + '</div>';
-    return kpis + '<div class="ps-sp-b ps-mt">' + filtro + '</div><div class="sd-grid">' + vis.map(cartao).join('') + '</div>';
+    return kpis + (semFiltro ? '' : '<div class="ps-sp-b ps-mt">' + filtro + '</div>') + '<div class="sd-grid">' + vis.map(cartao).join('') + '</div>';
   };
 
   X.Pn.saida = function (a) {
