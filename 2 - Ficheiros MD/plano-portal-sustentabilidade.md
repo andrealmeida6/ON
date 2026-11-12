@@ -1214,6 +1214,13 @@ Pedido do André a 11 de novembro de 2026.
   - **QR da AT em qualquer página** (antes só na primeira), com uma segunda tentativa em resolução maior.
   - **OCR:** lê até 4 páginas de um PDF digitalizado (antes só a primeira). Antes do OCR, a imagem passa a tons de cinzento com contraste esticado e resolução mínima, e o Tesseract mantém os espaços entre colunas. O CPE aceita erros como "PTO0020001 15011816 WC".
   - **Testado** com a fatura real (não está no repositório, que é público), uma versão digitalizada dela simulada (rodada e desfocada, sem texto), a fatura de teste em PDF e em PNG, e só a primeira página digitalizada. Em todas, o consumo e os campos lidos ficaram certos; a fatura de teste ficou igual a antes.
+  - **Fatura da EDP Comercial** (12 de novembro, segundo teste do André):
+    - **Período com a primeira data sem ano:** "7 de outubro a 30 de outubro 2026" e "7 out a 24 out 2026". A primeira data fica com o ano da segunda.
+    - **Tipo de leitura:** o aviso "parte do consumo será estimado" já não marca a leitura como estimada.
+    - **Período horário pelo rótulo logo antes do número:** numa frase longa como "… cheias. … faturado do seguinte modo: simples 470 kWh", conta "simples" e não "cheias".
+    - **Renovável:** "100% energia renovável" passa à frente das parcelas do mix ("Outras Renováveis 6,11%").
+    - **CO₂:** também "O meu consumo gerou: 0,00 kg CO2".
+    - **Resultado:** 470 kWh, 7 a 30 de outubro, 100% renovável, 0 kg CO₂, totais pelo QR. Em versão digitalizada simulada, o consumo e o período também ficaram certos.
 
 ### Users and profiles pelos níveis do Reporting Perimeter, e os perfis novos
 

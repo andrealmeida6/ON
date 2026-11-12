@@ -209,12 +209,21 @@
       var bruto = cpeTxt[1].replace(/\s/g, '').toUpperCase(), corpo = bruto.slice(2, -2).replace(/[OQD]/g, '0').replace(/[IL|]/g, '1');
       if (/^\d{16}$/.test(corpo)) { d.fornecimento.cpe = 'PT' + corpo + bruto.slice(-2); conf['fornecimento.cpe'] = corpo === bruto.slice(2, -2) ? base + 0.05 : base - 0.15; }
     }
-    var per = new RegExp('(?:periodo(?:\\s*de\\s*faturacao|\\s*de\\s*consumo|\\s*faturado)?|consumos?\\s*de)[:\\s]*(?:de\\s*)?' + DATA + '\\s*(?:a|ate|-|–)\\s*' + DATA, 'i').exec(tl);
-    if (per) { d.fornecimento.periodo_inicio = data(per[1]); d.fornecimento.periodo_fim = data(per[2]); conf['fornecimento.periodo_inicio'] = conf['fornecimento.periodo_fim'] = base; }
+    /* A primeira data pode vir sem ano ("7 de outubro a 30 de outubro 2026"): fica com o ano da segunda (ou o anterior, se o mes for maior) */
+    var DATA_SA = '(\\d{1,2}[\\/\\-.]\\d{1,2}(?:[\\/\\-.]\\d{4})?|\\d{4}-\\d{2}-\\d{2}|\\d{1,2}\\s*(?:de\\s*)?(?:jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)[a-z]*\\.?(?:\\s*(?:de\\s*)?\\d{4})?)';
+    var intervalo = function (a, b) {
+      var fim = data(b); if (!fim) return null;
+      var ini = data(a);
+      if (!ini) { var sa = String(a).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase(), mm = /(\d{1,2})[\/\-.](\d{1,2})$/.exec(sa.trim()) || /(\d{1,2})\s*(?:de\s*)?(jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)/.exec(sa);
+        if (!mm) return null; var mes = MESES[mm[2]] || +mm[2], ano = +fim.slice(0, 4) - (mes > +fim.slice(5, 7) ? 1 : 0); ini = ano + '-' + dois(mes) + '-' + dois(mm[1]); }
+      return ini <= fim ? [ini, fim] : null;
+    };
+    var per = new RegExp('(?:periodo(?:\\s*de\\s*faturacao|\\s*de\\s*consumo|\\s*faturado)?|consumos?\\s*de)[:\\s]*(?:de\\s*)?' + DATA_SA + '\\s*(?:a|ate|-|–)\\s*' + DATA, 'i').exec(tl), perOk = per ? intervalo(per[1], per[2]) : null;
+    if (perOk) { d.fornecimento.periodo_inicio = perOk[0]; d.fornecimento.periodo_fim = perOk[1]; conf['fornecimento.periodo_inicio'] = conf['fornecimento.periodo_fim'] = base; }
     else {
       /* Sem rotulo legivel (comum no OCR): o intervalo "22 set 2026 a 06 out 2026" que mais se repete nas linhas da fatura */
-      var reInt = new RegExp(DATA + '\\s*(?:a|ate|-|–)\\s*' + DATA, 'gi'), mi, cont = {};
-      while ((mi = reInt.exec(tl))) { var a1 = data(mi[1]), a2 = data(mi[2]); if (a1 && a2 && a1 < a2) cont[a1 + '|' + a2] = (cont[a1 + '|' + a2] || 0) + 1; }
+      var reInt = new RegExp(DATA_SA + '\\s*(?:a|ate|-|–)\\s*' + DATA, 'gi'), mi, cont = {};
+      while ((mi = reInt.exec(tl))) { var iv = intervalo(mi[1], mi[2]); if (iv && iv[0] < iv[1]) cont[iv.join('|')] = (cont[iv.join('|')] || 0) + 1; }
       var melhor = Object.keys(cont).sort(function (a, b) { return cont[b] - cont[a]; })[0];
       if (melhor) { d.fornecimento.periodo_inicio = melhor.split('|')[0]; d.fornecimento.periodo_fim = melhor.split('|')[1]; conf['fornecimento.periodo_inicio'] = conf['fornecimento.periodo_fim'] = cont[melhor] > 1 ? base - 0.1 : base - 0.2; }
     }
@@ -225,10 +234,15 @@
       if (pot !== null) { d.fornecimento.potencia_contratada_kva = num(pot); conf['fornecimento.potencia_contratada_kva'] = base - 0.1; }
     }
     var tens = pega(/\b(BTN|BTE|MT|AT|MAT)\b/); if (tens) { d.fornecimento.nivel_tensao = tens; conf['fornecimento.nivel_tensao'] = base - 0.1; }
-    if (/estimad/i.test(tl)) d.fornecimento.tipo_leitura = 'estimada'; else if (/leitura\s*real|telecontagem|consumos?\s*rea(?:l|is)|energia\s*\(real\)/i.test(tl)) d.fornecimento.tipo_leitura = /telecontagem/i.test(tl) ? 'telecontagem' : 'real';
+    /* "Se enviar fora destas datas, parte do consumo sera estimado" e um aviso, nao uma leitura estimada */
+    var estimada = /(?:leitura|consumo)s?\s*(?:\(\s*)?estimad|\(\s*estimad/i.test(tl.replace(/ser[aá]\s*estimad\w*/gi, ''));
+    if (estimada) d.fornecimento.tipo_leitura = 'estimada'; else if (/leitura\s*real|telecontagem|consumos?\s*rea(?:l|is)|energia\s*\(real\)/i.test(tl)) d.fornecimento.tipo_leitura = /telecontagem/i.test(tl) ? 'telecontagem' : 'real';
     /* kWh: linha a linha. Fora ficam as leituras do contador (indices acumulados, como 012110 kWh), que nao sao consumo:
        perto de "a sua leitura", "ultima leitura" ou "contador", com zeros a esquerda, ou com varios periodos horarios na mesma linha */
-    var perDe = function (ln) { return /super\s*vazio/i.test(ln) ? 'super_vazio' : /fora\s*(?:de\s*)?vazio/i.test(ln) ? 'fora_vazio' : /vazio/i.test(ln) ? 'vazio' : /ponta/i.test(ln) ? 'ponta' : /cheias?\b/i.test(ln) ? 'cheias' : /simples/i.test(ln) ? 'simples' : ''; };
+    var perDe = function (ln, pos) {
+      /* Com a posicao do numero, conta so o rotulo logo antes dele ("... seguinte modo: simples 470 kWh") */
+      if (pos !== undefined && ln.length > 60) ln = ln.slice(Math.max(0, pos - 28), pos);
+      return /super\s*vazio/i.test(ln) ? 'super_vazio' : /fora\s*(?:de\s*)?vazio/i.test(ln) ? 'fora_vazio' : /vazio/i.test(ln) ? 'vazio' : /ponta/i.test(ln) ? 'ponta' : /cheias?\b/i.test(ln) ? 'cheias' : /simples/i.test(ln) ? 'simples' : ''; };
     var porPer = [], vistos = {}, faturadas = [], soltos = [], ultLeitura = -9;
     tl.split('\n').forEach(function (ln, i) {
       if (/(?:sua|ultima|anterior|atual|nova)\s*leitura|leitura\s*(?:anterior|atual|do\s*contador|comunicada)|contador|indices?\b/i.test(ln)) ultLeitura = i;
@@ -239,10 +253,10 @@
       if (registo) return;
       var kwh = num(ks[0][1]); if (kwh === null) return;
       /* Linhas faturadas: "Termo de Energia (Real) 208 kWh 0,2017 EUR/kWh ..." */
-      if (/termo\s*de\s*energia|energia\s*ativa|consumo\s*de\s*energia|^\s*energia\b/i.test(ln) && !/total|imposto|iec|taxa/i.test(ln)) faturadas.push({ periodo: perDe(ln), kwh: kwh });
+      if (/termo\s*de\s*energia|energia\s*ativa|consumo\s*de\s*energia|^\s*energia\b/i.test(ln) && !/total|imposto|iec|taxa/i.test(ln)) faturadas.push({ periodo: perDe(ln, ks[0].index), kwh: kwh });
       if (/total|imposto|iec|taxa/i.test(ln)) return;
       soltos.push(kwh);
-      var p = perDe(ln);
+      var p = perDe(ln, ks[0].index);
       if (p && !vistos[p]) { vistos[p] = 1; porPer.push({ periodo: p, kwh: kwh }); }
     });
     var soma = function (l) { return l.length ? Math.round(l.reduce(function (a, x) { return a + x.kwh; }, 0) * 1000) / 1000 : null; };
@@ -265,10 +279,10 @@
     } else if (soltos.length) { d.consumo.energia_ativa_kwh = Math.max.apply(null, soltos); conf['consumo.energia_ativa_kwh'] = 0.4; }
     d.consumo.por_periodo_horario = porPer;
     /* Rotulagem */
-    var ren = pega(new RegExp('renovave(?:l|is)[^\\n\\d]{0,40}' + NUM + '\\s*%', 'i')); if (ren) { d.rotulagem.renovavel_pct = num(ren); conf['rotulagem.renovavel_pct'] = base - 0.05; }
+    var ren = pega(new RegExp(NUM + '\\s*%\\s*(?:de\\s*)?(?:energia|eletricidade)?\\s*(?:de\\s*origem\\s*)?renovave', 'i')) || pega(new RegExp('^(?!\\s*(?:outras|cogeracao))[^\\n]*renovave(?:l|is)[^\\n\\d]{0,40}' + NUM + '\\s*%', 'im')); if (ren) { d.rotulagem.renovavel_pct = num(ren); conf['rotulagem.renovavel_pct'] = base - 0.05; }
     var emi = pega(new RegExp(NUM + '\\s*g\\s*(?:de\\s*)?CO\\s*[2Z](?:\\s*eq)?\\s*\\/\\s*' + KWH, 'i')); if (emi) { d.rotulagem.emissoes_gco2_kwh = num(emi); conf['rotulagem.emissoes_gco2_kwh'] = base - 0.05; }
     /* Pegada de CO2 da fatura ("Pegada ecologica CO2: 32.57 kg"): sem o fator do mix, calcula-se o fator desta fatura */
-    var kgCO2 = pega(new RegExp('(?:pegada|emissoes)[^\\n\\d]{0,30}CO\\s*[2Z][^\\n\\d]{0,6}' + NUM + '\\s*kg', 'i'));
+    var kgCO2 = pega(new RegExp('(?:pegada|emissoes)[^\\n\\d]{0,30}CO\\s*[2Z][^\\n\\d]{0,6}' + NUM + '\\s*kg', 'i')) || pega(new RegExp('gerou[^\\d]{0,12}(-?' + NUM.slice(1) + '\\s*kg\\s*(?:de\\s*)?CO\\s*[2Z]', 'i'));
     if (kgCO2 !== null) {
       d.rotulagem.emissoes_kg_co2 = num(kgCO2); conf['rotulagem.emissoes_kg_co2'] = base - 0.05;
       if ((d.rotulagem.emissoes_gco2_kwh === undefined || d.rotulagem.emissoes_gco2_kwh === null) && d.consumo.energia_ativa_kwh) { d.rotulagem.emissoes_gco2_kwh = Math.round(d.rotulagem.emissoes_kg_co2 * 1000 / d.consumo.energia_ativa_kwh * 10) / 10; conf['rotulagem.emissoes_gco2_kwh'] = base - 0.15; }
