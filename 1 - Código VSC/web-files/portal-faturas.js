@@ -5,7 +5,8 @@
    - QR code da AT (todas as faturas portuguesas desde 2022): NIF do fornecedor e
      do cliente, data, numero, ATCUD, IVA e total. E a parte financeira mais certa.
    - Texto do PDF (pdf.js): a maioria das faturas de eletricidade e PDF digital.
-   - OCR (Tesseract.js, portugues) para digitalizacoes e fotografias.
+   - OCR para digitalizacoes e fotografias: PaddleOCR PP-OCRv5 (portal-ocr.js), com o
+     Tesseract.js (portugues) como recurso se o PaddleOCR nao arrancar.
    As bibliotecas so se descarregam quando se le a primeira fatura.
    Os campos seguem web-files/esquema-fatura-energia.json. Nada entra nos
    indicadores sem o utilizador confirmar; os campos lidos com pouca confianca
@@ -81,12 +82,20 @@
           var prev = capa.toDataURL('image/jpeg', 0.85);
           /* PDF digitalizado (sem texto): OCR das primeiras paginas */
           if (texto.replace(/\s/g, '').length < 40 * nums.length) {
-            var ocrNums = nums.slice(0, MAX_OCR), partes = [];
+            /* Pagina a pagina; para quando ja tem o consumo confirmado, o periodo, o CPE e o total */
+            var ocrNums = nums.slice(0, MAX_OCR), partes = [], motorUsado = '', chega = false;
             return ocrNums.reduce(function (pr, n, i) {
-              return pr.then(function () { return imagem(n, 2); }).then(function (cv) {
-                return ocr(cv, progresso ? function (pc) { progresso(Math.round((i * 100 + pc) / ocrNums.length)); } : null);
-              }).then(function (t) { partes.push(t); });
-            }, Promise.resolve()).then(function () { return { texto: partes.join('\n'), qr: qr, imagem: prev, metodo: 'ocr' }; });
+              return pr.then(function () {
+                if (chega) return;
+                return imagem(n, 2).then(function (cv) {
+                  return ocr(cv, progresso ? function (pc) { progresso(Math.round((i * 100 + pc) / ocrNums.length)); } : null);
+                }).then(function (r) {
+                  partes.push(r.texto); motorUsado = r.motor;
+                  var d = P.interpretarFatura({ texto: partes.join('\n'), qr: qr, metodo: 'ocr' }), cf = d.leitura.confianca;
+                  chega = (cf['consumo.energia_ativa_kwh'] || 0) >= 0.9 && d.fornecimento.periodo_inicio && d.fornecimento.cpe && d.valores.total_com_iva;
+                });
+              });
+            }, Promise.resolve()).then(function () { return { texto: partes.join('\n'), qr: qr, imagem: prev, metodo: 'ocr', motor: motorUsado }; });
           }
           return { texto: texto, qr: qr, imagem: prev, metodo: 'texto_pdf' };
         });
@@ -109,7 +118,14 @@
     ctx.putImageData(img, 0, 0);
     return cv;
   };
+  /* OCR: PaddleOCR (mais certo, sobretudo em tabelas e letra pequena); se nao arrancar, Tesseract */
   var ocr = function (canvas, progresso) {
+    if (!window.PortalOCR) return ocrTesseract(canvas, progresso).then(function (t) { return { texto: t, motor: 'tesseract' }; });
+    return window.PortalOCR.ler(canvas, progresso).then(function (r) { return { texto: r.texto, motor: 'paddleocr' }; }, function () {
+      return ocrTesseract(canvas, progresso).then(function (t) { return { texto: t, motor: 'tesseract' }; });
+    });
+  };
+  var ocrTesseract = function (canvas, progresso) {
     var worker;
     return script(LIBS.ocr).then(function () {
       return window.Tesseract.createWorker('por', 1, { logger: function (m) { if (progresso && m.status === 'recognizing text') progresso(Math.round((m.progress || 0) * 100)); } });
@@ -130,7 +146,7 @@
       cv.width = Math.round(img.width * esc); cv.height = Math.round(img.height * esc); cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
       return script(LIBS.qr).catch(function () {}).then(function () {
         var qr = lerQR(cv);
-        return ocr(cv, progresso).then(function (t) { return { texto: t, qr: qr, imagem: cv.toDataURL('image/jpeg', 0.85), metodo: 'ocr' }; });
+        return ocr(cv, progresso).then(function (r) { return { texto: r.texto, qr: qr, imagem: cv.toDataURL('image/jpeg', 0.85), metodo: 'ocr', motor: r.motor }; });
       });
     });
   };
@@ -168,7 +184,10 @@
     return o;
   };
   P.interpretarFatura = function (lido) {
-    var t = String(lido.texto || ''), tl = t.normalize('NFD').replace(/[\u0300-\u036f]/g, ''), d = { fornecedor: {}, cliente: {}, fatura: {}, fornecimento: {}, consumo: {}, rotulagem: {}, valores: {}, leitura: { metodo: lido.metodo, confianca: {} } };
+    var t = String(lido.texto || ''), tl = t.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    /* OCR: o "ç" sai muitas vezes como "g" (Faturagao, Descrigao, Informagoes, Prego); corrige so estas terminacoes */
+    if (lido.metodo === 'ocr') tl = tl.replace(/([aeiou])g(ao|oes)\b/gi, '$1c$2').replace(/\b([Pp])rego\b/g, '$1reco');
+    var d = { fornecedor: {}, cliente: {}, fatura: {}, fornecimento: {}, consumo: {}, rotulagem: {}, valores: {}, leitura: { metodo: lido.metodo, confianca: {} } };
     var conf = d.leitura.confianca, base = lido.metodo === 'ocr' ? 0.7 : 0.85;
     var pega = function (re, f) { var m = re.exec(tl); return m ? (f ? f(m) : m[1]) : null; };
     /* 1. QR da AT: financeiro quase certo */
@@ -243,17 +262,26 @@
       /* Com a posicao do numero, conta so o rotulo logo antes dele ("... seguinte modo: simples 470 kWh") */
       if (pos !== undefined && ln.length > 60) ln = ln.slice(Math.max(0, pos - 28), pos);
       return /super\s*vazio/i.test(ln) ? 'super_vazio' : /fora\s*(?:de\s*)?vazio/i.test(ln) ? 'fora_vazio' : /vazio/i.test(ln) ? 'vazio' : /ponta/i.test(ln) ? 'ponta' : /cheias?\b/i.test(ln) ? 'cheias' : /simples/i.test(ln) ? 'simples' : ''; };
-    var porPer = [], vistos = {}, faturadas = [], soltos = [], ultLeitura = -9;
+    var porPer = [], vistos = {}, faturadas = [], soltos = [], ultLeitura = -9, rotulo = '';
     tl.split('\n').forEach(function (ln, i) {
       if (/(?:sua|ultima|anterior|atual|nova)\s*leitura|leitura\s*(?:anterior|atual|do\s*contador|comunicada)|contador|indices?\b/i.test(ln)) ultLeitura = i;
+      /* Uma linha so com o periodo horario ("Simples", "Vazio") vale para as linhas faturadas a seguir */
+      if (/^\s*(?:super\s*vazio|fora\s*(?:de\s*)?vazio|vazio|ponta|cheias?|simples)\s*$/i.test(ln)) rotulo = perDe(ln);
+      else if (/^\s*[a-z]/i.test(ln) && !/kwh/i.test(ln)) rotulo = rotulo && /^\s*\d|\b(?:jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)\b/i.test(ln) ? rotulo : '';
       var reK = new RegExp(NUM + '\\s*' + KWH + '\\b', 'gi'), ks = [], m;
       while ((m = reK.exec(ln))) if (!/\/\s*$/.test(ln.slice(0, m.index))) ks.push(m);
       if (!ks.length) return;
       var registo = i - ultLeitura <= 3 || ks.some(function (x) { return /^0\d/.test(x[1].trim()); }) || (ln.match(/cheias?\b|ponta|vazio/gi) || []).length > 1;
       if (registo) return;
       var kwh = num(ks[0][1]); if (kwh === null) return;
-      /* Linhas faturadas: "Termo de Energia (Real) 208 kWh 0,2017 EUR/kWh ..." */
-      if (/termo\s*de\s*energia|energia\s*ativa|consumo\s*de\s*energia|^\s*energia\b/i.test(ln) && !/total|imposto|iec|taxa/i.test(ln)) faturadas.push({ periodo: perDe(ln, ks[0].index), kwh: kwh });
+      /* Linhas faturadas: quantidade em kWh seguida do preco unitario, como "Termo de Energia (Real) 208 kWh 0,2017 EUR/kWh"
+         ou "7 out a 24 out 2026  120 kWh  0,1671 EUR". Ficam de fora impostos, totais e explicacoes ("0,0607 EUR x 470 kWh") */
+      var depois = ln.slice(ks[0].index + ks[0][0].length);
+      if (/^\s*[|:]?\s*\d+[.,]\d{2,6}\s*(?:€|eur|e\b)/i.test(depois) && !/total|imposto|\biec\b|taxa/i.test(ln)) {
+        /* O rotulo de uma linha faturada vale tambem para as seguintes sem rotulo ("Simples 7 out ... 120 kWh", depois "7 out ... 226 kWh") */
+        var proprio = perDe(ln, ks[0].index); if (proprio) rotulo = proprio;
+        faturadas.push({ periodo: proprio || rotulo, kwh: kwh });
+      }
       if (/total|imposto|iec|taxa/i.test(ln)) return;
       soltos.push(kwh);
       var p = perDe(ln, ks[0].index);
@@ -262,12 +290,13 @@
     var soma = function (l) { return l.length ? Math.round(l.reduce(function (a, x) { return a + x.kwh; }, 0) * 1000) / 1000 : null; };
     var tot = pega(new RegExp('(?:total\\s*(?:de\\s*)?(?:energia|consumo)[^\\n\\d]{0,30}|consumo\\s*total[^\\n\\d]{0,20}|energia\\s*ativa\\s*total[^\\n\\d]{0,20})' + NUM + '\\s*' + KWH, 'i'), function (m) { return num(m[1]); });
     /* O Imposto Especial de Consumo e cobrado sobre todos os kWh do periodo: confirma o total */
-    var iec = pega(new RegExp('imposto\\s*especial\\s*(?:de\\s*)?consumo[^\\n\\d]{0,30}' + NUM + '\\s*' + KWH, 'i'), function (m) { return num(m[1]); });
+    var iec = pega(new RegExp('(?:imposto\\s*especial\\s*(?:de\\s*)?consumo|\\bIEC\\b)[^\\n\\d]{0,30}' + NUM + '\\s*' + KWH, 'i'), function (m) { return num(m[1]); });
     var somaFat = soma(faturadas), somaPer = soma(porPer);
-    /* As linhas faturadas podem vir partidas por taxa de IVA (o mesmo periodo duas vezes): por periodo, junta-as */
-    if (!porPer.length && faturadas.some(function (x) { return x.periodo; })) {
-      var acc = {}; faturadas.forEach(function (x) { if (x.periodo) acc[x.periodo] = (acc[x.periodo] || 0) + x.kwh; });
-      porPer = Object.keys(acc).map(function (k) { return { periodo: k, kwh: acc[k] }; }); somaPer = soma(porPer);
+    /* Para mostrar, as linhas faturadas por periodo (podem vir partidas por taxa de IVA ou por meses: junta-as).
+       somaPer continua a vir das outras linhas do texto, para ser uma confirmacao independente */
+    if (faturadas.length && faturadas.every(function (x) { return x.periodo; })) {
+      var acc = {}; faturadas.forEach(function (x) { acc[x.periodo] = Math.round(((acc[x.periodo] || 0) + x.kwh) * 1000) / 1000; });
+      porPer = Object.keys(acc).map(function (k) { return { periodo: k, kwh: acc[k] }; });
     }
     var fontes = [tot, somaFat, iec, somaPer].filter(function (x) { return x !== null; });
     var igual = function (a, b) { return a !== null && b !== null && Math.abs(a - b) < 1; };
@@ -357,7 +386,7 @@
   X.Pn.fatura = function () {
     var F = U.fat;
     if (!F) return { t: 'Read invoice', b: '' };
-    if (F.estado === 'a ler') return { t: 'Reading ' + F.nome, s: 'QR code, text and OCR run in your browser. The first time it downloads the reading libraries.', largo: true,
+    if (F.estado === 'a ler') return { t: 'Reading ' + F.nome, s: 'QR code, text and OCR run in your browser. The first time, it downloads the reading engine (about 40 MB), which then stays in the browser cache.', largo: true,
       b: '<div class="fat-aler" role="status"><span class="fat-spin" aria-hidden="true"></span><b>Reading the invoice…</b><small>OCR <span data-fat-prog>' + (F.prog || 0) + '%</span> (only for scans and photos)</small></div>', p: '<span class="ps-sp-flex"></span><button type="button" class="ps-btn" data-a="fatFechar">Cancel</button>' };
     if (F.estado === 'erro') return { t: 'Could not read ' + F.nome, b: '<div class="ps-aviso err" role="alert">' + e(F.erro) + '</div><p class="ps-small ps-mut">The file is still saved. You can type the values in the task.</p>', p: '<span class="ps-sp-flex"></span><button type="button" class="ps-btn" data-a="fatFechar">Close</button>' };
     var d = F.d, cf = d.leitura.confianca, m = F.ms ? P.ms(F.ms) : null, per = m ? P.periodo(m.periodo) : null, parte = P.parteNoPeriodo(d, per), c = F.ind ? P.cat(F.ind) : null;
@@ -378,7 +407,7 @@
         (m && m.indicadores.indexOf('E03') > -1 && d.rotulagem.renovavel_pct !== undefined && d.rotulagem.renovavel_pct !== null ? '<label class="ps-chk"><input id="fat-e03" type="checkbox" data-c="fatE03"' + (F.e03 !== false ? ' checked' : '') + '> Also fill E03 Renewable electricity with ' + e(P.fmtNum(d.rotulagem.renovavel_pct, 1)) + '%</label>' : '')
         : '<div class="ps-aviso warn">No open task with an electricity indicator is in collection with you. The invoice is saved as a document; the values are kept with it.</div>') + '</div>';
     var prev = F.lido.imagem ? '<img class="fat-img" src="' + F.lido.imagem + '" alt="First page of ' + e(F.nome) + '">' : '<div class="ps-aviso">No preview.</div>';
-    return { t: 'Check the values read from ' + F.nome, s: (F.lido.metodo === 'ocr' ? 'Read by OCR' : 'Read from the PDF text') + (d.leitura.qr ? ' and the AT QR code' : ', no AT QR code found') + '. Nothing is saved until you confirm.', largo: true, cls: 'alto',
+    return { t: 'Check the values read from ' + F.nome, s: (F.lido.metodo === 'ocr' ? 'Read by OCR' + (F.lido.motor === 'paddleocr' ? ' (PaddleOCR)' : F.lido.motor === 'tesseract' ? ' (Tesseract)' : '') : 'Read from the PDF text') + (d.leitura.qr ? ' and the AT QR code' : ', no AT QR code found') + '. Nothing is saved until you confirm.', largo: true, cls: 'alto',
       b: '<div class="fat-g"><div class="fat-prev">' + prev + '</div><div class="fat-campos"><div class="fat-leg"><span class="alta">High confidence</span><span class="media">Check</span><span class="baixa">Low</span><span class="nada">Not found</span></div><div class="fat-cg">' + campos + '</div>' + pp + destino + '</div></div>',
       p: '<span class="ps-sp-flex"></span><button type="button" class="ps-btn" data-a="fatFechar">Cancel</button><button type="button" class="ps-btn" data-a="fatGuardarSo">Save as document only</button>' + (l.length && c ? '<button type="button" class="ps-btn pri" data-a="fatAplicar">Confirm and add to ' + e(F.ind) + '</button>' : '') };
   };

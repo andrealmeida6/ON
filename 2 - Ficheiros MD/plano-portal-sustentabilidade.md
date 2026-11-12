@@ -1221,6 +1221,19 @@ Pedido do André a 11 de novembro de 2026.
     - **Renovável:** "100% energia renovável" passa à frente das parcelas do mix ("Outras Renováveis 6,11%").
     - **CO₂:** também "O meu consumo gerou: 0,00 kg CO2".
     - **Resultado:** 470 kWh, 7 a 30 de outubro, 100% renovável, 0 kg CO₂, totais pelo QR. Em versão digitalizada simulada, o consumo e o período também ficaram certos.
+- **OCR com PaddleOCR e leitura mais inteligente** (12 de novembro de 2026, pedido do André: o melhor OCR possível, mantendo tudo no browser):
+  - **Pesquisa:** em 2026, o PaddleOCR (PP-OCRv5) iguala ou supera o Tesseract em documentos com tabelas e letra pequena, e já corre no browser com ONNX Runtime Web. Os modelos de visão e linguagem (PaddleOCR-VL, Gemini, Azure Document Intelligence) leem melhor, mas precisam de GPU ou de servidor. Um modelo de linguagem no browser (WebGPU) obriga a descarregar 1 a 2 GB por pessoa e não foi possível testá-lo nesta sessão, por isso ficou de fora.
+  - **Motor** (`web-files/portal-ocr.js`, `window.PortalOCR`): deteção DBNet e reconhecimento SVTR dos modelos PP-OCRv5 mobile multilingues (com acentos e €), Apache-2.0, servidos pelo jsDelivr (`pdfmarkdown-ppocrv5-models@1.0.0`), com ONNX Runtime Web 1.22.0 (WebGPU se houver, senão WebAssembly). Cerca de 40 MB na primeira leitura, depois fica na cache do browser.
+    - Junta as caixas de texto em linhas, com as colunas separadas por espaços, para as regras continuarem a ler linha a linha.
+    - Se o PaddleOCR não arrancar, `portal-faturas.js` volta ao Tesseract.
+  - **Páginas:** o OCR lê página a página e para quando já tem o consumo confirmado, o período, o CPE e o total.
+  - **Regras mais gerais:**
+    - Uma linha faturada passa a ser qualquer quantidade em kWh seguida do preço unitário (antes só "Termo de Energia" ou "Energia ativa"). Assim apanha as linhas da EDP ("7 out a 24 out 2026 120 kWh 0,1671 €").
+    - Um rótulo de período horário sozinho numa linha ("Simples") vale para as linhas faturadas seguintes.
+    - O IEC também se reconhece só pela sigla.
+    - No texto do OCR, corrige "ç" lido como "g" (Faturagão, Prego).
+  - **Testado** em Chrome sem interface (WebAssembly, uma thread): Endesa e EDP digitalizadas (simuladas) e a fatura de teste em PNG deram o consumo certo e confirmado (308, 470 e 31 000 kWh), o período, o CPE e os totais. Antes, com o Tesseract, a EDP digitalizada ficava com o consumo por confirmar e o CPE vinha com erros. Leva 20 a 60 segundos por fatura sem placa gráfica. A fatura de teste em PDF ficou igual a antes, e o recurso ao Tesseract funciona.
+  - **Limite conhecido:** na fatura de teste em PNG, "41,40 kVA" foi lido "41 40 kVA" e a potência ficou 40, marcada como "a verificar".
 
 ### Users and profiles pelos níveis do Reporting Perimeter, e os perfis novos
 
