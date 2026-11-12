@@ -1438,7 +1438,7 @@
      KPI assignment e Companies and perimeter deixaram de ser paginas e vivem aqui. */
   var BO_GRUPOS = [
     ['Indicators', [['indicadores', 'Indicators'], ['milestones', 'Tasks sent']]],
-    ['Organisation', [['perimetro', 'Companies and perimeter'], ['utilizadores', 'Users and profiles'], ['externas', 'External entities']]],
+    ['Organisation', [['perimetro', 'Companies and perimeter'], ['utilizadores', 'Users and profiles']]] /* External entities escondido por agora (B.externas fica no codigo) */,
     ['Reporting set-up', [['periodos', 'Reporting periods'], ['momentos', 'Reporting moments'], ['calculos', 'Calculations'], ['wfbase', 'Base workflow'], ['calendario', 'Calendar'], ['materialidade', 'Materiality and frameworks']]],
     ['Platform', [['areas', 'Data consumer areas'], ['ligacoes', 'Connections'], ['dados', 'Data and storage']]]
   ];
@@ -1546,7 +1546,7 @@
           '<input id="un-' + e(x.login + '-' + y.id) + '" class="ps-in us-nome" aria-label="Name of ' + e(x.nome) + '" value="' + e(x.nome) + '" data-c="userNome" data-id="' + e(x.login) + '">' + (eu ? ' <span class="ps-chip info">You</span>' : '') + (ch.length ? '<small class="ps-mut ps-blk">Area head of ' + e(ch.join(', ')) + '</small>' : ''),
           '<select id="up-' + e(x.login + '-' + y.id) + '" class="ps-sel" aria-label="Profile of ' + e(x.nome) + '" data-c="userPerfil" data-id="' + e(x.login) + '"' + (eu ? ' disabled title="You cannot change your own profile"' : '') + '>' + PERFIS_PESSOA.map(function (k) { return opt(k, P.PERFIS[k], x.perfil); }).join('') + '</select>',
           eu ? '<span class="ps-mut ps-small">-</span>' : nEmp > 1 ? '<button type="button" class="ps-btn peq" data-a="userEmpTirar" data-v="' + e(x.login + '|' + y.id) + '" title="Remove ' + e(x.nome) + ' from ' + e(y.nome) + ' only">Remove from ' + e(y.nome) + '</button>' : '<button type="button" class="ps-btn peq err" data-a="userApagar" data-v="' + e(x.login) + '">Remove</button>'];
-      }), 'No user matches the search.') + '<p class="ps-small ps-mut ps-mt">External entities (suppliers and partners that answer data requests) are managed in External entities.</p></div></div>';
+      }), 'No user matches the search.') + '</div></div>';
   };
   B.externas = function () {
     return '<div class="ps-card">' + cabCartao('External entities: requests and status', 'doc') + '<div class="ps-card-body">' + tabela([{ t: 'Entity' }, { t: 'Indicator' }, { t: 'Period' }, { t: 'Company' }, { t: 'Due' }, { t: 'Status' }], S.ext.map(function (x) {
@@ -2279,6 +2279,8 @@
     if (U.rota.pag === 'Backoffice' && U.rota.q.tab) U.boTab = U.rota.q.tab;
     /* Departments passou para um pop-up dentro de Users and profiles */
     if (U.boTab === 'departamentos') { U.boTab = 'utilizadores'; }
+    /* External entities escondido por agora, a pedido do Andre */
+    if (U.boTab === 'externas') { U.boTab = 'utilizadores'; }
     /* Launch by department passou a ser a vista By department da pagina Indicators */
     if (U.boTab === 'lancar') { U.boTab = 'indicadores'; if (U.ind) U.ind.vista = 'dep'; }
     if (U.rota.q.sep) U.sep = U.rota.q.sep;
