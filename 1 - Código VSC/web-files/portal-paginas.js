@@ -1535,12 +1535,14 @@
     return '<div class="ps-card">' + cabCartao('Users and profiles', 'tarefa', '<span class="ps-sp"><span class="ps-small ps-mut">' + PERFIS_PESSOA.map(function (k) { return n(k) + ' ' + P.PERFIS[k].toLowerCase(); }).join(' · ') + '</span><button type="button" class="ps-btn peq" data-a="depsAbrir">Manage departments</button></span>') + '<div class="ps-card-body">' + novo +
       '<div class="ps-filtros ps-mt">' + campo('us-q', 'Search', '<input id="us-q" class="ps-in" placeholder="Name, profile or department" value="' + e(U.userBusca || '') + '" data-c="userBusca">') +
         campo('us-emp', 'Company', '<select id="us-emp" class="ps-sel" data-c="userEmpF">' + opt('', 'All companies', fe) + S.ent.map(function (y) { return opt(y.id, y.nome, fe); }).join('') + '</select>') + '</div>' +
-      tabela([{ t: 'Group' }, { t: 'Company', info: 'One row per person and company. Someone who works in two companies has two rows, each with the business units they are responsible for there.' }, { t: 'Business unit / Department', info: 'The departments of the person in this company. A data reviewer is the area head of them in this company.' }, { t: 'Name', info: 'Click to rename. The name is kept in the history and the approvals.' }, { t: 'Profile', info: 'Data provider (focal point): fills in and submits. Data reviewer (superior): approves what the department submits. Data approver (sustainability team): approves at the end and manages the Backoffice. Auditor: reads everything and changes nothing. Administrator: everything.' }, { t: 'Actions' }], l.map(function (r) {
+      tabela([{ t: 'Group' }, { t: 'Company', info: 'One company per row. To move the person, choose another company in the row. Someone who works in two companies is created with both and has two rows, each with the business units they are responsible for there.' }, { t: 'Business unit / Department', info: 'The departments of the person in this company. A data reviewer is the area head of them in this company.' }, { t: 'Name', info: 'Click to rename. The name is kept in the history and the approvals.' }, { t: 'Profile', info: 'Data provider (focal point): fills in and submits. Data reviewer (superior): approves what the department submits. Data approver (sustainability team): approves at the end and manages the Backoffice. Auditor: reads everything and changes nothing. Administrator: everything.' }, { t: 'Actions' }], l.map(function (r) {
         var x = r.x, y = r.y, eu = u() && u().login === x.login, outras = S.ent.filter(function (z) { return !P.userNaEmpresa(x, z.nome) || (x.empresas || []).length === 0 && false; }).filter(function (z) { return P.empresasUser(x).every(function (w) { return w.id !== z.id; }); });
         var ch = P.chefiasDe(x).filter(function (c) { return c.empresa === y.nome; }).map(function (c) { return c.dep; });
         var nEmp = P.empresasUser(x).length;
         return ['<span class="ps-small">' + e(grupo) + '</span>',
-          X0.empHtml(y.nome) + (outras.length ? '<label class="ps-sr" for="ua-' + e(x.login + y.id) + '">Add ' + e(x.nome) + ' to another company</label><select id="ua-' + e(x.login + y.id) + '" class="ps-sel us-add" data-c="userEmpAdd" data-id="' + e(x.login) + '"><option value="">+ Company</option>' + outras.map(function (z) { return opt(z.id, z.nome, ''); }).join('') + '</select>' : ''),
+          /* Uma so empresa por linha: para mudar, troca-se a empresa desta linha (nao se junta outra) */
+          /* Sem outra empresa para onde mudar (ja esta em todas) ou e a propria pessoa: so o nome da empresa */
+          eu || !outras.length ? X0.empHtml(y.nome) : '<select id="ua-' + e((x.login + y.id).replace(/\W/g, '')) + '" class="ps-sel us-emp" aria-label="Company of ' + e(x.nome) + ' in this row" data-c="userEmpTroca" data-id="' + e(x.login) + '" data-v="' + e(y.id) + '">' + [y].concat(outras).map(function (z) { return opt(z.id, z.nome, y.id); }).join('') + '</select>',
           tagsUnidadesEmp(x, y),
           '<input id="un-' + e(x.login + '-' + y.id) + '" class="ps-in us-nome" aria-label="Name of ' + e(x.nome) + '" value="' + e(x.nome) + '" data-c="userNome" data-id="' + e(x.login) + '">' + (eu ? ' <span class="ps-chip info">You</span>' : '') + (ch.length ? '<small class="ps-mut ps-blk">Area head of ' + e(ch.join(', ')) + '</small>' : ''),
           '<select id="up-' + e(x.login + '-' + y.id) + '" class="ps-sel" aria-label="Profile of ' + e(x.nome) + '" data-c="userPerfil" data-id="' + e(x.login) + '"' + (eu ? ' disabled title="You cannot change your own profile"' : '') + '>' + PERFIS_PESSOA.map(function (k) { return opt(k, P.PERFIS[k], x.perfil); }).join('') + '</select>',
@@ -2725,6 +2727,23 @@
       P.definirUnidadesEmp(x, y.nome, P.unidadesDe(x, y.nome).concat([el.value]));
       if (x.perfil === 'revisor') chefeDosDeps(x);
       P.eventoGlobal(x.nome + ' added to ' + el.value + ' (' + y.nome + ').', u().nome); P.guardar(); R();
+    },
+    /* Troca a empresa de uma linha: os departamentos passam para a nova empresa (os que la existem);
+       deixa de ser responsavel de area na empresa antiga */
+    userEmpTroca: function (el) {
+      var x = P.user(el.dataset.id), de = S.ent.filter(function (z) { return z.id === el.dataset.v; })[0], para = S.ent.filter(function (z) { return z.id === el.value; })[0];
+      if (!x || !de || !para || de.id === para.id) return;
+      if (P.userNaEmpresa(x, para.id)) { toast(x.nome + ' already has a row in ' + para.nome + '.', 'err'); return R(); }
+      if (!x.unidadesEmp) P.definirUnidadesEmp(x, de.nome, P.unidadesDe(x, de.nome));
+      var deps = P.unidadesDe(x, de.nome), validos = P.depsDaEmpresa(para.nome), passam = deps.filter(function (d) { return validos.indexOf(d) > -1; });
+      x.empresas = P.empresasUser(x).map(function (z) { return z.id === de.id ? para.id : z.id; });
+      delete x.unidadesEmp[de.id];
+      P.definirUnidadesEmp(x, para.nome, passam);
+      (S.deps || []).forEach(function (dp) { if (dp.chefes && dp.chefes[de.id] === x.login) dp.chefes[de.id] = ''; });
+      var fora = deps.filter(function (d) { return passam.indexOf(d) < 0; });
+      P.eventoGlobal(x.nome + ' moved from ' + de.nome + ' to ' + para.nome + '.', u().nome, 'Change'); P.guardar();
+      toast(x.nome + ' is now in ' + para.nome + '.' + (fora.length ? ' ' + fora.join(', ') + ' do' + (fora.length === 1 ? 'es' : '') + ' not exist there: add the business units.' : ''), 'ok');
+      setTimeout(R, 0);
     },
     userEmpAdd: function (el) {
       if (!el.value) return;
