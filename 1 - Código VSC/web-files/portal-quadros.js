@@ -248,8 +248,8 @@
             pos(l, c0, { t: '', s: { fill: COR.fundo } });
             pos(l, c0 + 1, { t: r.r, ponto: !!r.d, s: { fill: fl, bb: COR.linha, va: 'bottom' } });
             pos(l, c0 + 2, { t: r.u, s: { fill: fl, bb: COR.linha, va: 'bottom' } });
-            pos(l, c0 + 3, v.ant === null ? { t: '-', s: { fill: fl, bb: COR.linha, va: 'bottom' } } : { n: v.ant, s: { fill: fl, bb: COR.linha, va: 'bottom', al: 'left', casas: cs } });
-            pos(l, c0 + 4, v.val === null ? { t: '-', s: { b: 1, cor: COR.navy, fill: COR.branco, bb: COR.linha, va: 'bottom' } } : { n: v.val, s: { b: 1, i: v.pend ? 1 : 0, cor: COR.navy, fill: COR.branco, bb: COR.linha, va: 'bottom', al: 'left', casas: cs } });
+            pos(l, c0 + 3, v.ant === null ? { t: '-', s: { fill: fl, bb: COR.linha, va: 'bottom' } } : { n: v.ant, s: { fill: fl, bb: COR.linha, va: 'bottom', al: 'left', casas: P.casasNum(v.ant) } });
+            pos(l, c0 + 4, v.val === null ? { t: '-', s: { b: 1, cor: COR.navy, fill: COR.branco, bb: COR.linha, va: 'bottom' } } : { n: v.val, s: { b: 1, i: v.pend ? 1 : 0, cor: COR.navy, fill: COR.branco, bb: COR.linha, va: 'bottom', al: 'left', casas: P.casasNum(v.val) } });
             pos(l, c0 + 5, { t: SETA[ev], s: { b: 1, sz: 10, cor: COR_SETA[ev], fill: fl, bb: COR.linha, al: 'center', va: 'bottom', fonte: 'Segoe UI Symbol' } });
             alt[l] = Math.max(alt[l] || 0, 13.5 + 11.5 * Math.floor((r.r.length + (r.d ? 2 : 0)) / 67)); l += 1;
           });

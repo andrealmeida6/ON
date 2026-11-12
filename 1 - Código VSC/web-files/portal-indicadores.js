@@ -781,6 +781,7 @@
       r3.height = Math.max(20, Math.ceil(Math.max(f.d.length / 78, (vals ? vals.slice(0, 14).join(', ').length : 0) / 48)) * 13 + 6);
     });
     wb.views = [{ activeTab: 0 }];
+    P.formatarNumerosExcelJS(wb);
     return wb.xlsx.writeBuffer().then(function (buf) {
       P.descarregar('esg-data-hub-kpi-list-' + P.hojeISO() + '.xlsx', buf, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
       return cats.length;

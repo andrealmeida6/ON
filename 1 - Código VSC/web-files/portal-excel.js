@@ -31,6 +31,7 @@
       ws['!cols'] = f.cols.map(function (c) { return { wch: Math.max(10, Math.round((c.larg || 80) / 7)) }; });
       window.XLSX.utils.book_append_sheet(wb, ws, String(f.nome).slice(0, 31));
     });
+    P.formatarNumerosXLSX(wb);
     window.XLSX.writeFile(wb, ficheiro);
     return Promise.resolve();
   };
@@ -72,7 +73,7 @@
         cel.alignment = { vertical: 'middle', horizontal: c.dir ? 'right' : (c.larg || 90) <= 80 ? 'center' : 'left', wrapText: (c.larg || 90) >= 160, indent: c.dir || (c.larg || 90) <= 80 ? 0 : 1 };
         cel.fill = solido(c.edita ? (par ? 'F7F9FC' : 'FFFFFF') : CINZA);
         cel.border = borda();
-        if (c.dir && typeof v === 'number') cel.numFmt = '#,##0.##';
+        if (typeof v === 'number' && !P.colSemFmt(c.t)) cel.numFmt = P.numFmtExcel(v);
         cel.protection = { locked: !c.edita };
       });
     });
@@ -126,6 +127,6 @@
     wb.creator = marca(); wb.created = new Date();
     var reais = folhas.map(function (f) { return folha(wb, f); });
     wb.views = [{ activeTab: 0 }];
-    return Promise.all(reais).then(function () { return wb.xlsx.writeBuffer(); }).then(function (buf) { P.descarregar(ficheiro, buf, TIPO); });
+    return Promise.all(reais).then(function () { P.formatarNumerosExcelJS(wb); return wb.xlsx.writeBuffer(); }).then(function (buf) { P.descarregar(ficheiro, buf, TIPO); });
   };
 })();

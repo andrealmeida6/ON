@@ -585,6 +585,7 @@
     var wb = window.XLSX.utils.book_new(), ws = window.XLSX.utils.aoa_to_sheet(linhas);
     ws['!cols'] = [{ wch: 48 }, { wch: 12 }, { wch: 26 }, { wch: 32 }, { wch: 12 }, { wch: 18 }];
     window.XLSX.utils.book_append_sheet(wb, ws, 'Milestones');
+    P.formatarNumerosXLSX(wb);
     window.XLSX.writeFile(wb, 'tasks.xlsx');
     toast('Excel file exported.', 'ok');
   };

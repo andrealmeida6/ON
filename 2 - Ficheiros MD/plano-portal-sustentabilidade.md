@@ -1424,6 +1424,24 @@ Pedido do André a 12 de novembro de 2026.
 - **Calculations:** o simulador de Scope 1 que escrevia o resultado na task saiu (`P.aplicarCalculo` recusa). A biblioteca de fatores de emissão fica como referência, com uma nota a explicar.
 - **Evidência:** na task, estes indicadores têm uma nota a pedir que se junte o cálculo (Excel ou PDF) com Attach evidence. Fica opcional; para a tornar obrigatória, basta pôr "Evidence required = Yes" no indicador.
 
+## Formato dos números (ecrã e Excel)
+
+Pedido do André a 12 de novembro de 2026: todos os números da plataforma e dos Excel exportados têm espaço nos milhares e, quando são decimais, duas casas.
+
+- **Ecrã:** `P.fmtNum` (`portal-nucleo.js`) passou a ser a regra única.
+  - Os inteiros aparecem sem casas (`31 000`) e os decimais com duas (`1 234,50`, `0,43`).
+  - `P.casasNum(v)` decide: 0 casas se o valor arredondado a 2 casas for inteiro, 2 nos outros casos.
+  - O argumento `casas` dos chamadores (as `casas_decimais` do catálogo, 1 nas variações) já não muda o que se mostra.
+  - A soma e a média da grelha também usam `P.fmtNum`.
+  - Os campos de introdução de valores ficam como estão, sem espaços, para não atrapalhar a escrita e a leitura do valor.
+- **Excel:**
+  - Cada célula numérica leva o formato `#,##0` (inteiro) ou `#,##0.00` (decimal), dado por `P.numFmtExcel`. O valor fica numérico, sem arredondamento, por isso pode ser usado em contas.
+  - O separador dos milhares é o do Excel de quem abre o ficheiro; num Excel em pt-PT é um espaço.
+  - **ExcelJS:** `P.formatarNumerosExcelJS(wb)` corre antes de gravar em `P.livroExcel`/`P.livroObjetos` (todos os Excel com estilo) e na lista de KPIs.
+  - **SheetJS:** `P.formatarNumerosXLSX(wb)` corre em `P.escreverFolhas`, `escreverLivro`, Outputs (`portal-saidas.js`), `tasks.xlsx` e na versão sem estilo.
+  - **Quadros do Report** (`portal-quadros.js`): as colunas de valor usam `P.casasNum`.
+  - **Exceções:** os anos e os códigos ficam sem formato. A exceção vale para qualquer coluna cujo cabeçalho comece por Year, ID, Row, Order, Code, NIF, Period ou Version (`P.colSemFmt`).
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.

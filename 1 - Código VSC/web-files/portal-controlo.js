@@ -407,6 +407,7 @@
       var ws = folhas[n].length ? window.XLSX.utils.json_to_sheet(folhas[n]) : window.XLSX.utils.aoa_to_sheet([['No data']]);
       window.XLSX.utils.book_append_sheet(wb, ws, n.slice(0, 31));
     });
+    P.formatarNumerosXLSX(wb);
     window.XLSX.writeFile(wb, nome);
   };
 })();

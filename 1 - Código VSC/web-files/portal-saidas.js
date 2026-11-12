@@ -81,6 +81,7 @@
     var w2 = X2.utils.aoa_to_sheet(dados); w2['!cols'] = [{ wch: 7 }, { wch: 44 }, { wch: 12 }, { wch: 10 }, { wch: 14 }, { wch: 14 }, { wch: 10 }, { wch: 26 }, { wch: 14 }, { wch: 30 }, { wch: 60 }, { wch: 40 }];
     var w3 = X2.utils.aoa_to_sheet(notas); w3['!cols'] = [{ wch: 7 }, { wch: 44 }, { wch: 80 }];
     X2.utils.book_append_sheet(wb, w1, 'Cover'); X2.utils.book_append_sheet(wb, w2, 'Data'); X2.utils.book_append_sheet(wb, w3, 'Checks');
+    P.formatarNumerosXLSX(wb);
     return X2.write(wb, { bookType: 'xlsx', type: 'array' });
   };
   P.gerarSaida = function (relId, fmt) {

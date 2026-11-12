@@ -18,13 +18,53 @@
   P.diasAte = function (iso) { return Math.round((new Date(iso + 'T12:00:00') - new Date(hojeISO() + 'T12:00:00')) / 86400000); };
 
   /* Numeros em pt-PT: virgula decimal, espaco nos milhares */
+  /* Regra unica da plataforma: espaco nos milhares; inteiros sem casas, decimais sempre com 2 casas.
+     O argumento casas fica por compatibilidade e ja nao muda o numero de casas mostradas. */
+  P.casasNum = function (v) { var n = Number(v); return isFinite(n) && Math.round(n * 100) % 100 !== 0 ? 2 : 0; };
   P.fmtNum = function (v, casas) {
     if (v === null || v === undefined || v === '') return '-';
-    var c = casas === undefined ? (String(v).split('.')[1] || '').length : casas;
-    var neg = v < 0;
+    if (!isFinite(Number(v))) return String(v);
+    var c = P.casasNum(v);
+    var neg = Number(v) < 0 && Math.abs(Number(v)).toFixed(c) !== (0).toFixed(c);
     var partes = Math.abs(Number(v)).toFixed(c).split('.');
     var int = partes[0].replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
     return (neg ? '-' : '') + int + (partes[1] ? ',' + partes[1] : '');
+  };
+  /* Excel: o mesmo formato (milhares separados, inteiros sem casas, decimais com 2).
+     O separador dos milhares segue o Excel de quem abre (em pt-PT e um espaco). */
+  P.numFmtExcel = function (v) { return P.casasNum(v) ? '#,##0.00' : '#,##0'; };
+  /* Colunas que sao codigos e nao quantidades: anos, IDs, numeros de ordem */
+  var COL_SEM_FMT = /^(year|ano|y|id|row|linha|order|ordem|n\.?º|nº|#|code|codigo|código|nif|vat|period|periodo|período|version|versao|versão)\b/i;
+  P.colSemFmt = function (t) { return COL_SEM_FMT.test(String(t || '').trim()); };
+  /* SheetJS: formato em cada celula numerica sem formato proprio */
+  P.formatarNumerosXLSX = function (wb) {
+    var U = window.XLSX && window.XLSX.utils;
+    if (!U || !wb) return wb;
+    (wb.SheetNames || []).forEach(function (n) {
+      var ws = wb.Sheets[n]; if (!ws || !ws['!ref']) return;
+      var r = U.decode_range(ws['!ref']), rot = {};
+      for (var R = r.s.r; R <= r.e.r; R++) for (var Cc = r.s.c; Cc <= r.e.c; Cc++) {
+        var cel = ws[U.encode_cell({ r: R, c: Cc })]; if (!cel) continue;
+        if (cel.t === 's') { if (isNaN(Number(cel.v))) rot[Cc] = cel.v; continue; }
+        if (cel.t === 'n' && !cel.z && !P.colSemFmt(rot[Cc])) cel.z = P.numFmtExcel(cel.v);
+      }
+    });
+    return wb;
+  };
+  /* ExcelJS: o mesmo, folha a folha */
+  P.formatarNumerosExcelJS = function (wb) {
+    if (!wb || !wb.eachSheet) return wb;
+    wb.eachSheet(function (ws) {
+      var rot = {};
+      ws.eachRow({ includeEmpty: false }, function (row) {
+        row.eachCell({ includeEmpty: false }, function (cel, col) {
+          var v = cel.value;
+          if (typeof v === 'string') { if (isNaN(Number(v))) rot[col] = v; return; }
+          if (typeof v === 'number' && (!cel.numFmt || cel.numFmt === 'General' || cel.numFmt === '#,##0.##') && !P.colSemFmt(rot[col])) cel.numFmt = P.numFmtExcel(v);
+        });
+      });
+    });
+    return wb;
   };
   /* Datas sempre em dd/mm/aaaa */
   P.fmtData = function (iso) {
@@ -1900,6 +1940,7 @@
       var ws = linhas.length ? window.XLSX.utils.json_to_sheet(linhas) : window.XLSX.utils.aoa_to_sheet([['No data']]);
       window.XLSX.utils.book_append_sheet(wb, ws, txt(n).slice(0, 31));
     });
+    P.formatarNumerosXLSX(wb);
     window.XLSX.writeFile(wb, nome);
     return wb;
   };
