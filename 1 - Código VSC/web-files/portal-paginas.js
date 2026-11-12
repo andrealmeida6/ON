@@ -78,7 +78,8 @@
       var sg = '<circle class="dn-s ' + (x[2] || 'vazio') + '" r="' + R0 + '" cx="20" cy="20" stroke-dasharray="' + d.toFixed(2) + ' ' + (C - d).toFixed(2) + '" stroke-dashoffset="' + (-acc).toFixed(2) + '"></circle>';
       acc += len; return sg;
     }).join('');
-    var tip = (porReportar ? porReportar + ' still to report' : 'Nothing left to report') + '\n\n' + EST_IND.map(function (x) { return x[1] + ': ' + n[x[0]]; }).join('\n') + '\n' + n.tot + ' indicator' + (n.tot === 1 ? '' : 's') + ' in total';
+    var at = P.atribuido(m), quem = P.concluida(m) ? 'Completed' : at ? 'Assigned to ' + at.nome + (at.tipo === 'pessoa' ? '' : ' (whole department)') : '';
+    var tip = n.tot + ' indicator' + (n.tot === 1 ? '' : 's') + (quem ? '\n' + quem : '') + '\n\n' + (porReportar ? porReportar + ' still to report' : 'Nothing left to report') + '\n' + EST_IND.map(function (x) { return x[1] + ': ' + n[x[0]]; }).join('\n');
     return '<span class="dn" tabindex="0" data-tip="' + e(tip) + '" aria-label="' + e(EST_IND.map(function (x) { return n[x[0]] + ' ' + x[1].toLowerCase(); }).join(', ')) + '"><svg viewBox="0 0 40 40" width="40" height="40" aria-hidden="true"><g transform="rotate(-90 20 20)">' + segs + '</g><text x="20" y="21" text-anchor="middle" dominant-baseline="middle">' + (porReportar || '✓') + '</text></svg>' + (compacto ? '</span>' :
       '<span class="dn-t"><b>' + (porReportar ? porReportar + ' to report' : n.ap === n.tot ? 'All approved' : 'All reported') + '</b><small>' + n.ap + ' of ' + n.tot + ' approved</small></span></span>');
   };
@@ -1560,7 +1561,7 @@
   B.calculos = function () { return '<div class="ps-card"><div class="ps-card-body"><h2 class="ki-h2">Calculations</h2><p class="ps-mut ps-small">Configured formulas and a versioned emission factor library. The values of the indicators that use them are calculated from here.</p></div></div>' + (Blocos['calculos'] ? Blocos['calculos']() : ''); };
   B.perimetro = function () { return Blocos['perimetro'] ? Blocos['perimetro']() : ''; };
   /* Tasks sent: por task (com o donut do estado dos indicadores) ou por indicador; apagar uma task enviada */
-  U.boMs = { vista: 'task', q: '' };
+  U.boMs = { vista: 'kpi', q: '' };
   B.milestones = function () {
     var f = U.boMs, q = norm(f.q || ''), todas = P.msCiclo().filter(function (m) { return !q || norm(m.nome + ' ' + m.empresa + ' ' + m.unidade + ' ' + (P.atribuido(m) ? P.atribuido(m).nome : '') + ' ' + m.indicadores.join(' ')).indexOf(q) > -1; });
     var seg = '<div class="ps-sp"><div class="ps-seg" role="group" aria-label="View"><button type="button" class="' + (f.vista !== 'kpi' ? 'on' : '') + '" data-a="boMsVista" data-v="task">By task</button><button type="button" class="' + (f.vista === 'kpi' ? 'on' : '') + '" data-a="boMsVista" data-v="kpi">By indicator</button></div></div>';

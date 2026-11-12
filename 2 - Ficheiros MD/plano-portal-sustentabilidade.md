@@ -1370,6 +1370,18 @@ Pedido do André a 12 de novembro de 2026.
   - "Remove from <empresa>" tira-a só dessa empresa;
   - "Remove" apaga a pessoa quando só tem uma empresa.
 
+### Títulos das tasks por tópico e referência do report; pie com o responsável; Tasks sent por indicador
+
+Pedido do André a 12 de novembro de 2026.
+
+- **Título das tasks** (`P.nomeTask`): tópico · período · referências dos reports que a task alimenta, por exemplo "Energia e clima · T4 2026 · RQS, MIRR".
+  - Com dois tópicos aparecem os dois ("Água e saneamento + Energia e clima"); com mais, "X + N topics". Mais de 3 reports dá "+N".
+  - Aplica-se às tasks novas (Send task, By topic, Assign tasks) e às que já existem, quando os dados carregam. As consolidações anuais e os "Novos dados ESRS" mantêm o nome.
+  - O título volta a ser calculado quando se juntam indicadores a uma task.
+- **Uma task por tópico:** `P.planoEnvio` agrupa por empresa, responsável e **tópico**. Só junta indicadores a uma task aberta do mesmo tópico.
+- **Pie das tasks:** a tooltip começa pelo número de indicadores e por a quem a task está atribuída (pessoa ou departamento inteiro, ou "Completed"), e depois mostra o detalhe por estado.
+- **Backoffice → Tasks sent** abre por omissão na vista **By indicator**.
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.

@@ -355,6 +355,14 @@
     var t = rel.id.split('-')[0], per = P.periodo(rel.periodo), chaveP = per && per.tipo === 'trimestre' ? 'T' + per.t : null;
     return S.cat.filter(function (c) { var mo = P.momentosDe(c.id); return mo.ent.indexOf(t) > -1 && (!chaveP || mo.per.indexOf(chaveP) > -1); }).map(function (c) { return c.id; });
   };
+  /* Titulo de uma task: o topico dos indicadores, o periodo e as referencias dos reports que alimenta.
+     Ex.: "Energia e clima · T4 2026 · RQS, MIRR" */
+  P.nomeTask = function (m) {
+    var temas = []; (m.indicadores || []).forEach(function (id) { var c = P.cat(id), t = c && c.tema ? c.tema : 'Other'; if (temas.indexOf(t) < 0) temas.push(t); });
+    var per = P.periodo(m.periodo), refs = P.relatoriosDe(m).map(function (r) { return r.sigla; });
+    var t = !temas.length ? (m.unidade || 'Task') : temas.length === 1 ? temas[0] : temas.length === 2 ? temas.join(' + ') : temas[0] + ' + ' + (temas.length - 1) + ' topics';
+    return t + ' · ' + (per ? per.nome : String(m.ano)) + (refs.length ? ' · ' + refs.slice(0, 3).join(', ') + (refs.length > 3 ? ' +' + (refs.length - 3) : '') : '');
+  };
   P.relatoriosDe = function (m) {
     var per = P.periodo(m.periodo), ano = m.ano, l = [];
     var add = function (id) { var r = (S.relatorios || []).filter(function (x) { return x.id === id; })[0]; if (r && l.indexOf(r) < 0) l.push(r); };
@@ -583,6 +591,8 @@
     /* O nome da task nao leva a pessoa (muda quando se reatribui ou quando o processo avanca): tira ", Nome" do fim */
     var nomesPessoas = (S.users || []).map(function (u) { return u.nome; });
     (S.ms || []).forEach(function (m) { nomesPessoas.forEach(function (n) { var suf = ', ' + n; if (m.nome && m.nome.length > suf.length && m.nome.slice(-suf.length) === suf) m.nome = m.nome.slice(0, -suf.length); }); });
+    /* Titulo das tasks: topico, periodo e referencias dos reports (as consolidacoes anuais mantem o nome) */
+    (S.ms || []).forEach(function (m) { if (!m.consolida && m.periodicidade !== 'Novos dados ESRS' && P.nomeTask) m.nome = P.nomeTask(m); });
     /* Indicadores submetidos um a um antes de existir o passo do responsavel de area: iam direto para a
        sustentabilidade, por isso esse passo fica dado como passado */
     Object.keys(S.items || {}).forEach(function (k) {
@@ -592,7 +602,7 @@
   };
   P.carregar = function () {
     if (P.online()) { estadoVazio(); return; }
-    if (!ler(CHAVES.ms) || ler('esg_versao') !== VERSAO_DADOS) { P.cat = catBoot; semearAmbiente(); escrever('esg_versao', VERSAO_DADOS); return; }
+    if (!ler(CHAVES.ms) || ler('esg_versao') !== VERSAO_DADOS) { P.cat = catBoot; semearAmbiente(); P.migrarDados(); escrever('esg_versao', VERSAO_DADOS); return; }
     Object.keys(CHAVES).forEach(function (n) { S[n] = ler(CHAVES[n]); });
     /* A validacao automatica saiu do workflow de base: sai do base gravado e das tasks que seguem o base */
     P.migrarDados();
@@ -1016,6 +1026,7 @@
           documentos_gerais: [], comentarios: [], eventos: []
         };
         if (!m.tipos) delete m.tipos;
+        m.nome = P.nomeTask(m);
         S.ms.push(m);
         m.indicadores.forEach(function (i) { var ch = P.chave(m); if (!S.items[ch + ':' + i]) S.items[ch + ':' + i] = novoItem(i, ch, m.id, P.cat(i).tipo); });
         ev(m, 'Task assigned from the Backoffice for ' + per.nome + '.', u.nome, 'criada');
@@ -1080,14 +1091,14 @@
         if (ja) return fora.push({ id: id, t: 'already sent in ' + ja.nome + ' (' + emp.nome + ')', empresa: emp.nome });
         var r = P.responsavelInd(id, emp.id);
         if (!r.dep) return fora.push({ id: id, t: 'no responsible department in ' + emp.nome, empresa: emp.nome });
-        var k = emp.id + '|' + r.dep + '|' + r.login, g = grupos[k] || (grupos[k] = { empresa: emp, dep: r.dep, resp: r, ids: [], ms: null });
+        var tema = c.tema || 'Other', k = emp.id + '|' + r.dep + '|' + r.login + '|' + tema, g = grupos[k] || (grupos[k] = { empresa: emp, dep: r.dep, resp: r, tema: tema, ids: [], ms: null });
         g.ids.push(id);
       });
     });
     var l = Object.keys(grupos).map(function (k) { return grupos[k]; }).sort(function (a, b) { return a.empresa.nome.localeCompare(b.empresa.nome); });
     l.forEach(function (g) {
       /* Junta-se a uma task aberta do mesmo departamento, empresa e pessoa; senao cria-se uma nova */
-      g.ms = S.ms.filter(function (m) { return m.periodo === pid && !m.consolida && m.unidade === g.dep && m.empresa === g.empresa.nome && (m.atribuido_a || '') === g.resp.login && !P.concluida(m) && P.passoAtual(m).tipo === 'recolha'; })[0] || null;
+      g.ms = S.ms.filter(function (m) { return m.periodo === pid && !m.consolida && m.unidade === g.dep && m.empresa === g.empresa.nome && (m.atribuido_a || '') === g.resp.login && !P.concluida(m) && P.passoAtual(m).tipo === 'recolha' && m.indicadores.every(function (i) { return ((P.cat(i) || {}).tema || 'Other') === g.tema; }); })[0] || null;
     });
     return { per: per, grupos: l, fora: fora, n: l.reduce(function (a, g) { return a + g.ids.length; }, 0) };
   };
@@ -1102,6 +1113,7 @@
       var m = g.ms;
       if (m) {
         g.ids.forEach(function (i) { m.indicadores.push(i); });
+        m.nome = P.nomeTask(m);
         ev(m, g.ids.length + ' indicator(s) added from the Backoffice: ' + g.ids.join(', ') + '.', u.nome);
         juntas++;
       } else {
@@ -1114,6 +1126,7 @@
           periodicidade: per.tipo === 'trimestre' ? 'Trimestral' : 'Anual', prazo: prazo, indicadores: g.ids.slice(), passos: passosDe(WF_BASE()), passo_atual: 0, devolvida: false, workflow_ajustado: false,
           documentos_gerais: [], comentarios: [], eventos: []
         };
+        m.nome = P.nomeTask(m);
         S.ms.push(m);
         ev(m, 'Task sent from the Backoffice for ' + per.nome + ', due ' + prazo + '.', u.nome, 'criada');
         if (g.resp.tipo === 'pessoa') ev(m, 'Assigned to ' + g.resp.nome + '.', u.nome);
