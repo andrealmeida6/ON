@@ -1409,6 +1409,21 @@ Pedido do André a 12 de novembro de 2026.
 - Os KPIs aprovados e as tasks concluídas não se tiram nem se apagam, porque ficam no histórico; só mudam por reexpressão.
 - Fica tudo registado no audit trail e no histórico da task.
 
+### Pegada de carbono só como input (calculada fora da plataforma)
+
+Pedido do André a 12 de novembro de 2026.
+
+- As emissões de GEE são sempre um **input**: **E06** (Scope 1), **E07** (Scope 2), **E08** (intensidade carbónica), **N01** (Scope 3) e qualquer KPI em CO2e (`P.INPUT_CARBONO`, `P.eCarbono`). Quem reporta calcula fora da plataforma, com os seus fatores e método, e escreve o resultado.
+- A plataforma deixou de as calcular:
+  - saíram as fórmulas a partir dos dados de origem (`DERIV` em `portal-fontes.js`);
+  - `P.eOutput` nunca é verdadeiro para elas;
+  - não se lhes pode pôr uma Calculation (KPI codes), nem no painel nem no import;
+  - não podem ser "Output": no painel, o campo fica fixo em Input;
+  - o import recusa Output e cálculo para estes KPIs;
+  - os dados já gravados passam a input quando carregam.
+- **Calculations:** o simulador de Scope 1 que escrevia o resultado na task saiu (`P.aplicarCalculo` recusa). A biblioteca de fatores de emissão fica como referência, com uma nota a explicar.
+- **Evidência:** na task, estes indicadores têm uma nota a pedir que se junte o cálculo (Excel ou PDF) com Attach evidence. Fica opcional; para a tornar obrigatória, basta pôr "Evidence required = Yes" no indicador.
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.

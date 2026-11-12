@@ -70,7 +70,7 @@
     R05: { x: '(cqo_afluente_t - cqo_efluente_t) / cqo_afluente_t * 100' }, R06: { x: '(cbo_afluente_t - cbo_efluente_t) / cbo_afluente_t * 100' },
     R07: { x: '(azoto_afluente_t - azoto_efluente_t) / azoto_afluente_t * 100' }, R08: { x: '(fosforo_afluente_t - fosforo_efluente_t) / fosforo_afluente_t * 100' },
     W01: { x: 'combustivel_recolha_l / residuos_recolhidos_t' }, E05: { x: 'eletricidade_eta_kwh / agua_produzida_m3' },
-    E06: { x: E06 }, E07: { x: 'eletricidade_mwh * fator_rede_kgco2e_mwh * (1 - eletricidade_renovavel_pct / 100)' }, E08: { x: '(' + E06 + ') / receitas_eur' },
+    /* E06, E07 e E08 (pegada de carbono) sairam: sao inputs calculados fora da plataforma (P.INPUT_CARBONO) */
     P03: { x: 'colaboradores_permanentes / colaboradores_total * 100' }, P04: { x: 'mulheres / colaboradores_total * 100' },
     P06: { x: 'estudantes_estagiarios / colaboradores_total * 100' }, P07: { x: 'saidas / efetivo_medio * 100' }, P08: { x: 'mulheres_lideranca / cargos_lideranca * 100' },
     P09: { x: 'colaboradores_menos_26 / colaboradores_total * 100', t: 'Colaboradores com menos de 26 anos / total de colaboradores' },

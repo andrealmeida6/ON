@@ -287,6 +287,7 @@
     return { ok: true };
   };
   P.aplicarCalculo = function (u) {
+    if (P.eCarbono && P.eCarbono('E06')) return { erro: 'GHG emissions are an input: whoever reports calculates them outside the platform and enters the result in the task, with the calculation as evidence.' };
     var m = P.msDoIndicador('E06'), it = P.item('E06');
     if (!m || !P.podePreencher(m, u)) return { erro: 'The Scope 1 task is not in collection with you, so the result cannot be written to it.' };
     var kg = Number(P.calcularFatores().kg.toFixed(P.cat('E06').casas_decimais));

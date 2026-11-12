@@ -593,6 +593,8 @@
     (S.ms || []).forEach(function (m) { nomesPessoas.forEach(function (n) { var suf = ', ' + n; if (m.nome && m.nome.length > suf.length && m.nome.slice(-suf.length) === suf) m.nome = m.nome.slice(0, -suf.length); }); });
     /* Titulo das tasks: topico, periodo e referencias dos reports (as consolidacoes anuais mantem o nome) */
     (S.ms || []).forEach(function (m) { if (!m.consolida && m.periodicidade !== 'Novos dados ESRS' && P.nomeTask) m.nome = P.nomeTask(m); });
+    /* Pegada de carbono sempre como input (tambem nos dados ja gravados) */
+    (S.cat || []).forEach(function (c) { if (P.eCarbono(c)) { c.tipo = 'base'; c.calc_codigos = ''; } });
     /* Indicadores submetidos um a um antes de existir o passo do responsavel de area: iam direto para a
        sustentabilidade, por isso esse passo fica dado como passado */
     Object.keys(S.items || {}).forEach(function (k) {
@@ -744,6 +746,7 @@
     var cods = P.codigosCalc(s);
     if (!cods.length && !P.faltasCalc(s).length) return 'The calculation needs at least one KPI code, for example A01 + A02.';
     if (idProprio && cods.indexOf(String(idProprio).toUpperCase()) > -1) return 'An indicator cannot use itself in its calculation.';
+    if (idProprio && P.eCarbono(P.cat(idProprio) || idProprio)) return 'GHG emissions are always an input: calculate them outside the platform and enter the result.';
     var mal = cods.filter(function (k) { return !P.cat(k) && (!idsExtra || idsExtra.indexOf(k) < 0); });
     if (mal.length) return 'Unknown KPI code(s) in the calculation: ' + mal.join(', ') + '.';
     var fmal = toks.filter(function (k) { return k.t === 'fator' && fatorDe(k.v) === null; });
@@ -765,7 +768,11 @@
     if (falta) return null;
     try { var r = Function('"use strict";return (' + expr + ');')(); return typeof r === 'number' && isFinite(r) ? r : null; } catch (x) { return null; }
   };
-  P.eOutput = function (c) { return !!c && c.tipo === 'derivado' && !!String(c.calc_codigos || '').trim(); };
+  /* Pegada de carbono: as emissoes sao sempre um input. Quem reporta calcula fora (com os seus fatores e metodo)
+     e coloca o resultado; pode juntar o calculo como evidencia. A plataforma nunca as calcula. */
+  P.INPUT_CARBONO = ['E06', 'E07', 'E08', 'N01'];
+  P.eCarbono = function (c) { var id = c && c.id ? c.id : c; return P.INPUT_CARBONO.indexOf(id) > -1 || (!!c && /CO2e/i.test(c.unidade_medida || '')); };
+  P.eOutput = function (c) { return !!c && c.tipo === 'derivado' && !!String(c.calc_codigos || '').trim() && !P.eCarbono(c); };
   /* O input conta quando tem valor e a sua task ja saiu da recolha (submetida) */
   var inputSubmetido = function (id, ch) {
     var it = S.items[ch + ':' + id];
