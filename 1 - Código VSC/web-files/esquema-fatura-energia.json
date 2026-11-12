@@ -89,6 +89,7 @@
           "items": { "type": "object", "required": ["fonte", "pct"], "properties": { "fonte": { "type": "string" }, "pct": { "type": "number", "minimum": 0, "maximum": 100 } } }
         },
         "emissoes_gco2_kwh": { "type": "number", "minimum": 0, "description": "CO2 emissions of the supplier mix in g/kWh. Market-based emission factor." },
+        "emissoes_kg_co2": { "type": "number", "minimum": 0, "description": "CO2 footprint of this invoice in kg, when the supplier prints it (for example 'Pegada ecologica CO2: 32.57 kg'). Without the mix factor, emissoes_gco2_kwh is derived from it." },
         "residuos_radioativos_ug_kwh": { "type": "number", "minimum": 0, "description": "Radioactive waste in µg/kWh, as printed." },
         "garantias_origem": { "type": "boolean", "description": "True when the contract is 100% renewable with guarantees of origin (market-based factor 0)." },
         "ano_referencia": { "type": "integer", "description": "Year the label refers to." }

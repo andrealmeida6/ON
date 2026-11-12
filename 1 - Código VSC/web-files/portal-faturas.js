@@ -41,43 +41,85 @@
     var ctx = canvas.getContext('2d'), img = ctx.getImageData(0, 0, canvas.width, canvas.height), r = window.jsQR(img.data, img.width, img.height);
     return r && /A:\d{9}\*B:/.test(r.data) ? r.data : null;
   };
-  /* PDF: texto de todas as paginas (linha a linha pela posicao) e a primeira pagina em imagem (pre-visualizacao e QR) */
+  /* PDF: texto de todas as paginas (linha a linha pela posicao). As paginas em imagem servem para a
+     pre-visualizacao (a primeira), para o QR da AT (que pode estar em qualquer pagina) e para o OCR */
+  var MAX_PAG = 6, MAX_OCR = 4;
   var lerPdf = function (buf, progresso) {
     return script(LIBS.pdf).then(function () {
       var lib = window.pdfjsLib; lib.GlobalWorkerOptions.workerSrc = LIBS.pdfWorker;
       return lib.getDocument({ data: buf }).promise;
     }).then(function (doc) {
-      var paginas = [], textos = [];
-      for (var i = 1; i <= Math.min(doc.numPages, 6); i++) paginas.push(i);
-      return paginas.reduce(function (pr, n) {
+      var nums = [], textos = [], imagens = {};
+      for (var i = 1; i <= Math.min(doc.numPages, MAX_PAG); i++) nums.push(i);
+      var imagem = function (n, escala) {
+        var k = n + '@' + escala;
+        if (imagens[k]) return Promise.resolve(imagens[k]);
+        return doc.getPage(n).then(function (pg) {
+          var vp = pg.getViewport({ scale: escala }), cv = document.createElement('canvas'); cv.width = vp.width; cv.height = vp.height;
+          return pg.render({ canvasContext: cv.getContext('2d'), viewport: vp }).promise.then(function () { imagens[k] = cv; return cv; });
+        });
+      };
+      return nums.reduce(function (pr, n) {
         return pr.then(function () {
-          return doc.getPage(n).then(function (pg) {
-            return pg.getTextContent().then(function (tc) {
-              var linhas = {};
-              tc.items.forEach(function (it) { var y = Math.round(it.transform[5] / 3); (linhas[y] = linhas[y] || []).push(it); });
-              textos.push(Object.keys(linhas).map(Number).sort(function (a, b) { return b - a; }).map(function (y) { return linhas[y].sort(function (a, b) { return a.transform[4] - b.transform[4]; }).map(function (it) { return it.str; }).join(' '); }).join('\n'));
-            }).then(function () {
-              if (n !== 1) return;
-              var vp = pg.getViewport({ scale: 2 }), cv = document.createElement('canvas'); cv.width = vp.width; cv.height = vp.height;
-              return pg.render({ canvasContext: cv.getContext('2d'), viewport: vp }).promise.then(function () { paginas.canvas = cv; });
-            });
+          return doc.getPage(n).then(function (pg) { return pg.getTextContent(); }).then(function (tc) {
+            var linhas = {};
+            tc.items.forEach(function (it) { var y = Math.round(it.transform[5] / 3); (linhas[y] = linhas[y] || []).push(it); });
+            textos.push(Object.keys(linhas).map(Number).sort(function (a, b) { return b - a; }).map(function (y) { return linhas[y].sort(function (a, b) { return a.transform[4] - b.transform[4]; }).map(function (it) { return it.str; }).join(' '); }).join('\n'));
           });
         });
-      }, Promise.resolve()).then(function () {
-        var texto = textos.join('\n');
-        return script(LIBS.qr).catch(function () {}).then(function () {
-          var qr = paginas.canvas ? lerQR(paginas.canvas) : null;
-          /* PDF digitalizado (sem texto): OCR da primeira pagina */
-          if (texto.replace(/\s/g, '').length < 40 && paginas.canvas) return ocr(paginas.canvas, progresso).then(function (t) { return { texto: t, qr: qr, imagem: paginas.canvas.toDataURL('image/jpeg', 0.85), metodo: 'ocr' }; });
-          return { texto: texto, qr: qr, imagem: paginas.canvas ? paginas.canvas.toDataURL('image/jpeg', 0.85) : '', metodo: 'texto_pdf' };
+      }, Promise.resolve()).then(function () { return Promise.all([imagem(1, 2), script(LIBS.qr).catch(function () {})]); }).then(function (r) {
+        var capa = r[0], texto = textos.join('\n');
+        /* QR da AT: procura pagina a pagina, e com mais resolucao se for pequeno */
+        var qr = null;
+        var procurarQR = nums.reduce(function (pr, n) {
+          return pr.then(function () {
+            if (qr) return;
+            return imagem(n, 2).then(function (cv) { qr = lerQR(cv); if (!qr) return imagem(n, 3).then(function (cv3) { qr = lerQR(cv3); delete imagens[n + '@3']; }); });
+          });
+        }, Promise.resolve());
+        return procurarQR.then(function () {
+          var prev = capa.toDataURL('image/jpeg', 0.85);
+          /* PDF digitalizado (sem texto): OCR das primeiras paginas */
+          if (texto.replace(/\s/g, '').length < 40 * nums.length) {
+            var ocrNums = nums.slice(0, MAX_OCR), partes = [];
+            return ocrNums.reduce(function (pr, n, i) {
+              return pr.then(function () { return imagem(n, 2); }).then(function (cv) {
+                return ocr(cv, progresso ? function (pc) { progresso(Math.round((i * 100 + pc) / ocrNums.length)); } : null);
+              }).then(function (t) { partes.push(t); });
+            }, Promise.resolve()).then(function () { return { texto: partes.join('\n'), qr: qr, imagem: prev, metodo: 'ocr' }; });
+          }
+          return { texto: texto, qr: qr, imagem: prev, metodo: 'texto_pdf' };
         });
       });
     });
   };
+  /* Antes do OCR: tons de cinzento, contraste esticado e resolucao suficiente (letra pequena das faturas) */
+  var prepararOCR = function (canvas) {
+    var esc = canvas.width < 1800 ? Math.min(2.5, 2000 / canvas.width) : 1, cv = document.createElement('canvas');
+    cv.width = Math.round(canvas.width * esc); cv.height = Math.round(canvas.height * esc);
+    var ctx = cv.getContext('2d'); ctx.imageSmoothingQuality = 'high'; ctx.drawImage(canvas, 0, 0, cv.width, cv.height);
+    var img = ctx.getImageData(0, 0, cv.width, cv.height), px = img.data, hist = new Array(256).fill(0), i;
+    for (i = 0; i < px.length; i += 4) { var g = Math.round(0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2]); px[i] = g; hist[g]++; }
+    /* Corta 1% de cada ponta para o fundo ficar branco e a letra escura */
+    var total = px.length / 4, acum = 0, lo = 0, hi = 255;
+    for (i = 0; i < 256; i++) { acum += hist[i]; if (acum > total * 0.01) { lo = i; break; } }
+    acum = 0; for (i = 255; i >= 0; i--) { acum += hist[i]; if (acum > total * 0.01) { hi = i; break; } }
+    var amp = Math.max(1, hi - lo);
+    for (i = 0; i < px.length; i += 4) { var v = Math.max(0, Math.min(255, Math.round((px[i] - lo) * 255 / amp))); px[i] = px[i + 1] = px[i + 2] = v; }
+    ctx.putImageData(img, 0, 0);
+    return cv;
+  };
   var ocr = function (canvas, progresso) {
+    var worker;
     return script(LIBS.ocr).then(function () {
-      return window.Tesseract.recognize(canvas, 'por', { logger: function (m) { if (progresso && m.status === 'recognizing text') progresso(Math.round((m.progress || 0) * 100)); } });
-    }).then(function (r) { return r.data.text; });
+      return window.Tesseract.createWorker('por', 1, { logger: function (m) { if (progresso && m.status === 'recognizing text') progresso(Math.round((m.progress || 0) * 100)); } });
+    }).then(function (w) {
+      worker = w;
+      /* Mantem os espacos entre colunas: as regras leem a fatura linha a linha */
+      return w.setParameters({ preserve_interword_spaces: '1', user_defined_dpi: '300' });
+    }).then(function () { return worker.recognize(prepararOCR(canvas)); }).then(function (r) {
+      var t = r.data.text; worker.terminate(); return t;
+    }, function (err) { if (worker) worker.terminate(); throw err; });
   };
   var lerImagem = function (file, progresso) {
     return new Promise(function (ok, falha) {
@@ -108,7 +150,17 @@
     else if (/^\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, '');
     var n = parseFloat(s); return isNaN(n) ? null : n;
   };
-  var data = function (t) { var m = /(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})/.exec(t || ''); return m ? m[3] + '-' + ('0' + m[2]).slice(-2) + '-' + ('0' + m[1]).slice(-2) : null; };
+  /* Datas: 22/09/2026, 22-09-2026, 22 set 2026, 22 de setembro de 2026, 2026-09-22 */
+  var MESES = { jan: 1, fev: 2, mar: 3, abr: 4, mai: 5, jun: 6, jul: 7, ago: 8, set: 9, out: 10, nov: 11, dez: 12 };
+  var DATA = '(\\d{1,2}[\\/\\-.]\\d{1,2}[\\/\\-.]\\d{4}|\\d{4}-\\d{2}-\\d{2}|\\d{1,2}\\s*(?:de\\s*)?(?:jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)[a-z]*\\.?\\s*(?:de\\s*)?\\d{4})';
+  var dois = function (n) { return ('0' + n).slice(-2); };
+  var data = function (t) {
+    var s = String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase(), m = /(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})/.exec(s);
+    if (m) return m[3] + '-' + dois(m[2]) + '-' + dois(m[1]);
+    m = /(\d{4})-(\d{2})-(\d{2})/.exec(s); if (m) return m[0];
+    m = /(\d{1,2})\s*(?:de\s*)?(jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)[a-z]*\.?\s*(?:de\s*)?(\d{4})/.exec(s);
+    return m ? m[3] + '-' + dois(MESES[m[2]]) + '-' + dois(m[1]) : null;
+  };
   var NUM = '(\\d{1,3}(?:[ .\u00a0]\\d{3})*(?:,\\d+)?|\\d+(?:[.,]\\d+)?)', KWH = '(?:k\\s?w?\\s?h)';
   var FORNECEDORES = ['EDP Comercial', 'EDP', 'SU Eletricidade', 'Endesa', 'Iberdrola', 'Galp', 'Goldenergy', 'Repsol', 'Plenitude', 'Luzboa', 'Coopernico', 'Ylce', 'MEO Energia', 'Muon', 'G9', 'Audax', 'Axpo', 'Luz Exemplo Energia'];
   var qrCampos = function (q) {
@@ -132,42 +184,114 @@
     /* 2. Texto: o que o QR nao tem, e confirmacoes */
     var forn = FORNECEDORES.filter(function (f) { return t.toLowerCase().indexOf(f.toLowerCase()) > -1; })[0];
     if (forn) { d.fornecedor.nome = forn; conf['fornecedor.nome'] = base; }
-    if (!d.fornecedor.nif) { var nifs = tl.match(/NIF[:\s]*(PT)?\s*(\d{9})/gi) || []; if (nifs[0]) { d.fornecedor.nif = nifs[0].replace(/\D/g, '').slice(-9); conf['fornecedor.nif'] = base - 0.2; } if (nifs[1]) { d.cliente.nif = nifs[1].replace(/\D/g, '').slice(-9); conf['cliente.nif'] = base - 0.25; } }
+    if (!d.fornecedor.nif) {
+      /* Cada NIF com a sua linha: o do fornecedor vem com NIPC, "emitido por" ou o nome dele; o do cliente com titular, cliente ou nome */
+      var ids = [], vistosNif = {};
+      tl.split('\n').forEach(function (ln) { var re = /(NIPC|NIF|contribuinte)[^\d\n]{0,12}(?:PT)?\s*(\d{9})\b/gi, m; while ((m = re.exec(ln))) ids.push({ n: m[2], ln: ln, nipc: /nipc/i.test(m[1]) }); });
+      var eForn = function (x) { return x.nipc || /emitido\s*por|sucursal|comercializador/i.test(x.ln) || (forn && x.ln.toLowerCase().indexOf(forn.toLowerCase()) > -1); };
+      var fx = ids.filter(eForn)[0], outros = ids.filter(function (x) { return !fx || x.n !== fx.n; });
+      var cx = outros.filter(function (x) { return /titular|cliente|nome/i.test(x.ln); })[0] || (fx ? outros[0] : outros[1]);
+      if (!fx && outros.length > 1) fx = outros[0];
+      if (fx) { d.fornecedor.nif = fx.n; conf['fornecedor.nif'] = eForn(fx) ? base : base - 0.25; vistosNif[fx.n] = 1; }
+      if (cx && !vistosNif[cx.n]) { d.cliente.nif = cx.n; conf['cliente.nif'] = /titular|cliente|nome/i.test(cx.ln) ? base : base - 0.25; }
+    }
     if (!d.fatura.numero) { d.fatura.numero = pega(/fatura\s*(?:n\.?\s*[ºo°]?|numero)?\s*[:\s]\s*([A-Z]{1,4}\s?[\w\/-]*\d+)/i); if (d.fatura.numero) conf['fatura.numero'] = base - 0.15; }
     if (!d.fatura.atcud) { d.fatura.atcud = pega(/ATCUD[:\s]*([A-Z0-9]{8}-\d+)/i); if (d.fatura.atcud) conf['fatura.atcud'] = base; }
-    if (!d.fatura.data_emissao) { d.fatura.data_emissao = pega(/data\s*(?:de\s*)?emissao[:\s]*(\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{4})/i, function (m) { return data(m[1]); }); if (d.fatura.data_emissao) conf['fatura.data_emissao'] = base; }
+    if (!d.fatura.data_emissao) {
+      d.fatura.data_emissao = pega(new RegExp('data\\s*(?:de\\s*)?emissao[:\\s]*' + DATA, 'i'), function (m) { return data(m[1]); });
+      if (d.fatura.data_emissao) conf['fatura.data_emissao'] = base;
+      else { d.fatura.data_emissao = pega(new RegExp('\\bdata[:\\s]+' + DATA, 'i'), function (m) { return data(m[1]); }); if (d.fatura.data_emissao) conf['fatura.data_emissao'] = base - 0.15; }
+    }
     /* CPE: PT + 16 algarismos + 2 letras. No OCR, O/Q/D por 0 e I/l por 1 sao erros comuns nos algarismos */
-    var cpeTxt = /CPE[^A-Z0-9]{0,6}(P\s?T[\s0-9OoQDIl|]{16,24}[A-Z]{2})\b/i.exec(tl) || /\b(PT\s?0{2}0?2[\s0-9OoQDIl]{12,20}[A-Z]{2})\b/.exec(tl);
+    /* Tambem "PTO0020001 15011816 WC" (O no lugar do 0, espacos fora do sitio): os CPE portugueses comecam por PT0002 */
+    var cpeTxt = /CPE[^A-Z0-9]{0,6}(P\s?T[\s0-9OoQDIl|]{16,24}[A-Z]{2})\b/i.exec(tl) || /\b(P\s?T\s?[0OQD]{3}\s?2(?:\s?[0-9OoQDIl|]){12}\s?[A-Z]{2})\b/.exec(tl);
     if (cpeTxt) {
       var bruto = cpeTxt[1].replace(/\s/g, '').toUpperCase(), corpo = bruto.slice(2, -2).replace(/[OQD]/g, '0').replace(/[IL|]/g, '1');
       if (/^\d{16}$/.test(corpo)) { d.fornecimento.cpe = 'PT' + corpo + bruto.slice(-2); conf['fornecimento.cpe'] = corpo === bruto.slice(2, -2) ? base + 0.05 : base - 0.15; }
     }
-    var per = /(?:periodo(?:\s*de\s*faturacao|\s*de\s*consumo|\s*faturado)?|consumos?\s*de)[:\s]*(?:de\s*)?(\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{4})\s*(?:a|ate|-|–)\s*(\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{4})/i.exec(tl);
+    var per = new RegExp('(?:periodo(?:\\s*de\\s*faturacao|\\s*de\\s*consumo|\\s*faturado)?|consumos?\\s*de)[:\\s]*(?:de\\s*)?' + DATA + '\\s*(?:a|ate|-|–)\\s*' + DATA, 'i').exec(tl);
     if (per) { d.fornecimento.periodo_inicio = data(per[1]); d.fornecimento.periodo_fim = data(per[2]); conf['fornecimento.periodo_inicio'] = conf['fornecimento.periodo_fim'] = base; }
+    else {
+      /* Sem rotulo legivel (comum no OCR): o intervalo "22 set 2026 a 06 out 2026" que mais se repete nas linhas da fatura */
+      var reInt = new RegExp(DATA + '\\s*(?:a|ate|-|–)\\s*' + DATA, 'gi'), mi, cont = {};
+      while ((mi = reInt.exec(tl))) { var a1 = data(mi[1]), a2 = data(mi[2]); if (a1 && a2 && a1 < a2) cont[a1 + '|' + a2] = (cont[a1 + '|' + a2] || 0) + 1; }
+      var melhor = Object.keys(cont).sort(function (a, b) { return cont[b] - cont[a]; })[0];
+      if (melhor) { d.fornecimento.periodo_inicio = melhor.split('|')[0]; d.fornecimento.periodo_fim = melhor.split('|')[1]; conf['fornecimento.periodo_inicio'] = conf['fornecimento.periodo_fim'] = cont[melhor] > 1 ? base - 0.1 : base - 0.2; }
+    }
     d.fornecimento.potencia_contratada_kva = num(pega(new RegExp('potencia\\s*contratada[:\\s]*' + NUM + '\\s*kVA', 'i'))); if (d.fornecimento.potencia_contratada_kva !== null) conf['fornecimento.potencia_contratada_kva'] = base;
+    else {
+      /* "Termo de Potencia (3.45 kVA)", ou so o valor em kVA */
+      var pot = pega(new RegExp('potencia[^\\n\\d]{0,40}' + NUM + '\\s*kVA', 'i')) || pega(new RegExp(NUM + '\\s*kVA\\b', 'i'));
+      if (pot !== null) { d.fornecimento.potencia_contratada_kva = num(pot); conf['fornecimento.potencia_contratada_kva'] = base - 0.1; }
+    }
     var tens = pega(/\b(BTN|BTE|MT|AT|MAT)\b/); if (tens) { d.fornecimento.nivel_tensao = tens; conf['fornecimento.nivel_tensao'] = base - 0.1; }
-    if (/estimad/i.test(tl)) d.fornecimento.tipo_leitura = 'estimada'; else if (/leitura\s*real|telecontagem/i.test(tl)) d.fornecimento.tipo_leitura = /telecontagem/i.test(tl) ? 'telecontagem' : 'real';
-    /* kWh por periodo horario e total */
-    /* kWh por periodo horario: linha a linha, cada linha pelo seu rotulo ("fora de vazio" antes de "vazio") */
-    var porPer = [], vistos = {};
-    tl.split('\n').forEach(function (ln) {
-      var m = new RegExp(NUM + '\\s*' + KWH + '\\b', 'i').exec(ln);
-      if (!m || /total|imposto|iec|taxa/i.test(ln)) return;
-      var p = /super\s*vazio/i.test(ln) ? 'super_vazio' : /fora\s*(?:de\s*)?vazio/i.test(ln) ? 'fora_vazio' : /vazio/i.test(ln) ? 'vazio' : /ponta/i.test(ln) ? 'ponta' : /cheias/i.test(ln) ? 'cheias' : /simples/i.test(ln) ? 'simples' : '';
-      if (p && !vistos[p] && num(m[1]) !== null) { vistos[p] = 1; porPer.push({ periodo: p, kwh: num(m[1]) }); }
+    if (/estimad/i.test(tl)) d.fornecimento.tipo_leitura = 'estimada'; else if (/leitura\s*real|telecontagem|consumos?\s*rea(?:l|is)|energia\s*\(real\)/i.test(tl)) d.fornecimento.tipo_leitura = /telecontagem/i.test(tl) ? 'telecontagem' : 'real';
+    /* kWh: linha a linha. Fora ficam as leituras do contador (indices acumulados, como 012110 kWh), que nao sao consumo:
+       perto de "a sua leitura", "ultima leitura" ou "contador", com zeros a esquerda, ou com varios periodos horarios na mesma linha */
+    var perDe = function (ln) { return /super\s*vazio/i.test(ln) ? 'super_vazio' : /fora\s*(?:de\s*)?vazio/i.test(ln) ? 'fora_vazio' : /vazio/i.test(ln) ? 'vazio' : /ponta/i.test(ln) ? 'ponta' : /cheias?\b/i.test(ln) ? 'cheias' : /simples/i.test(ln) ? 'simples' : ''; };
+    var porPer = [], vistos = {}, faturadas = [], soltos = [], ultLeitura = -9;
+    tl.split('\n').forEach(function (ln, i) {
+      if (/(?:sua|ultima|anterior|atual|nova)\s*leitura|leitura\s*(?:anterior|atual|do\s*contador|comunicada)|contador|indices?\b/i.test(ln)) ultLeitura = i;
+      var reK = new RegExp(NUM + '\\s*' + KWH + '\\b', 'gi'), ks = [], m;
+      while ((m = reK.exec(ln))) if (!/\/\s*$/.test(ln.slice(0, m.index))) ks.push(m);
+      if (!ks.length) return;
+      var registo = i - ultLeitura <= 3 || ks.some(function (x) { return /^0\d/.test(x[1].trim()); }) || (ln.match(/cheias?\b|ponta|vazio/gi) || []).length > 1;
+      if (registo) return;
+      var kwh = num(ks[0][1]); if (kwh === null) return;
+      /* Linhas faturadas: "Termo de Energia (Real) 208 kWh 0,2017 EUR/kWh ..." */
+      if (/termo\s*de\s*energia|energia\s*ativa|consumo\s*de\s*energia|^\s*energia\b/i.test(ln) && !/total|imposto|iec|taxa/i.test(ln)) faturadas.push({ periodo: perDe(ln), kwh: kwh });
+      if (/total|imposto|iec|taxa/i.test(ln)) return;
+      soltos.push(kwh);
+      var p = perDe(ln);
+      if (p && !vistos[p]) { vistos[p] = 1; porPer.push({ periodo: p, kwh: kwh }); }
     });
+    var soma = function (l) { return l.length ? Math.round(l.reduce(function (a, x) { return a + x.kwh; }, 0) * 1000) / 1000 : null; };
     var tot = pega(new RegExp('(?:total\\s*(?:de\\s*)?(?:energia|consumo)[^\\n\\d]{0,30}|consumo\\s*total[^\\n\\d]{0,20}|energia\\s*ativa\\s*total[^\\n\\d]{0,20})' + NUM + '\\s*' + KWH, 'i'), function (m) { return num(m[1]); });
-    var soma = porPer.length ? porPer.reduce(function (a, x) { return a + x.kwh; }, 0) : null;
-    if (tot !== null) { d.consumo.energia_ativa_kwh = tot; conf['consumo.energia_ativa_kwh'] = soma !== null && Math.abs(soma - tot) < 1 ? 0.97 : base; }
-    else if (soma !== null) { d.consumo.energia_ativa_kwh = soma; conf['consumo.energia_ativa_kwh'] = base - 0.1; }
-    else { var k = (tl.match(new RegExp(NUM + '\\s*' + KWH + '\\b', 'gi')) || []).map(function (x) { return num(x); }).filter(function (x) { return x !== null; }); if (k.length) { d.consumo.energia_ativa_kwh = Math.max.apply(null, k); conf['consumo.energia_ativa_kwh'] = 0.4; } }
+    /* O Imposto Especial de Consumo e cobrado sobre todos os kWh do periodo: confirma o total */
+    var iec = pega(new RegExp('imposto\\s*especial\\s*(?:de\\s*)?consumo[^\\n\\d]{0,30}' + NUM + '\\s*' + KWH, 'i'), function (m) { return num(m[1]); });
+    var somaFat = soma(faturadas), somaPer = soma(porPer);
+    /* As linhas faturadas podem vir partidas por taxa de IVA (o mesmo periodo duas vezes): por periodo, junta-as */
+    if (!porPer.length && faturadas.some(function (x) { return x.periodo; })) {
+      var acc = {}; faturadas.forEach(function (x) { if (x.periodo) acc[x.periodo] = (acc[x.periodo] || 0) + x.kwh; });
+      porPer = Object.keys(acc).map(function (k) { return { periodo: k, kwh: acc[k] }; }); somaPer = soma(porPer);
+    }
+    var fontes = [tot, somaFat, iec, somaPer].filter(function (x) { return x !== null; });
+    var igual = function (a, b) { return a !== null && b !== null && Math.abs(a - b) < 1; };
+    var escolha = tot !== null ? tot : somaFat !== null ? somaFat : iec !== null ? iec : somaPer;
+    if (escolha !== null) {
+      d.consumo.energia_ativa_kwh = escolha;
+      var confirmado = fontes.filter(function (x) { return igual(x, escolha); }).length > 1;
+      conf['consumo.energia_ativa_kwh'] = confirmado ? 0.97 : escolha === somaPer ? base - 0.1 : base;
+    } else if (soltos.length) { d.consumo.energia_ativa_kwh = Math.max.apply(null, soltos); conf['consumo.energia_ativa_kwh'] = 0.4; }
     d.consumo.por_periodo_horario = porPer;
     /* Rotulagem */
     var ren = pega(new RegExp('renovave(?:l|is)[^\\n\\d]{0,40}' + NUM + '\\s*%', 'i')); if (ren) { d.rotulagem.renovavel_pct = num(ren); conf['rotulagem.renovavel_pct'] = base - 0.05; }
     var emi = pega(new RegExp(NUM + '\\s*g\\s*(?:de\\s*)?CO\\s*[2Z](?:\\s*eq)?\\s*\\/\\s*' + KWH, 'i')); if (emi) { d.rotulagem.emissoes_gco2_kwh = num(emi); conf['rotulagem.emissoes_gco2_kwh'] = base - 0.05; }
+    /* Pegada de CO2 da fatura ("Pegada ecologica CO2: 32.57 kg"): sem o fator do mix, calcula-se o fator desta fatura */
+    var kgCO2 = pega(new RegExp('(?:pegada|emissoes)[^\\n\\d]{0,30}CO\\s*[2Z][^\\n\\d]{0,6}' + NUM + '\\s*kg', 'i'));
+    if (kgCO2 !== null) {
+      d.rotulagem.emissoes_kg_co2 = num(kgCO2); conf['rotulagem.emissoes_kg_co2'] = base - 0.05;
+      if ((d.rotulagem.emissoes_gco2_kwh === undefined || d.rotulagem.emissoes_gco2_kwh === null) && d.consumo.energia_ativa_kwh) { d.rotulagem.emissoes_gco2_kwh = Math.round(d.rotulagem.emissoes_kg_co2 * 1000 / d.consumo.energia_ativa_kwh * 10) / 10; conf['rotulagem.emissoes_gco2_kwh'] = base - 0.15; }
+    }
     d.rotulagem.garantias_origem = /garantias?\s*de\s*origem/i.test(tl) || undefined;
     /* Totais pelo texto, se o QR nao os deu */
-    if (d.valores.total_com_iva === undefined || d.valores.total_com_iva === null) { var tp = pega(new RegExp('(?:total\\s*a\\s*pagar|valor\\s*a\\s*pagar|total\\s*(?:com\\s*)?iva)[^\\n\\d]{0,20}' + NUM, 'i')); if (tp) { d.valores.total_com_iva = num(tp); conf['valores.total_com_iva'] = base - 0.1; } }
+    if (!d.valores.iva) {
+      /* Quadro do IVA: "(c) IVA 23%  44,04 EUR  10,13 EUR" */
+      var ivas = [], taxas = {};
+      tl.split('\n').forEach(function (ln) { var m = new RegExp('IVA\\s*(\\d{1,2})\\s*%\\s*' + NUM + '\\s*€\\s*' + NUM + '\\s*€', 'i').exec(ln); if (m && !taxas[m[1]]) { taxas[m[1]] = 1; ivas.push({ taxa_pct: +m[1], base: num(m[2]), valor: num(m[3]) }); } });
+      if (ivas.length) {
+        d.valores.iva = ivas;
+        d.valores.total_iva = Math.round(ivas.reduce(function (a, x) { return a + (x.valor || 0); }, 0) * 100) / 100;
+        d.valores.total_sem_iva = Math.round(ivas.reduce(function (a, x) { return a + (x.base || 0); }, 0) * 100) / 100;
+        conf['valores.total_iva'] = conf['valores.total_sem_iva'] = base - 0.05;
+      }
+    }
+    if (d.valores.total_com_iva === undefined || d.valores.total_com_iva === null) {
+      var tp = pega(new RegExp('(?:total\\s*a\\s*(?:pagar|debitar)|valor\\s*a\\s*pagar|total\\s*da\\s*fatura(?:\\s*de\\s*[a-z]+)?)[^\\n\\d]{0,20}' + NUM + '\\s*€', 'i')) || pega(new RegExp('total\\s*(?:com\\s*)?iva[^\\n\\d]{0,20}' + NUM, 'i'));
+      if (tp) { d.valores.total_com_iva = num(tp); conf['valores.total_com_iva'] = base - 0.1; }
+    }
+    /* Base + IVA = total: os tres confirmam-se */
+    if (d.valores.total_sem_iva && d.valores.total_iva && d.valores.total_com_iva && !lido.qr && Math.abs(d.valores.total_sem_iva + d.valores.total_iva - d.valores.total_com_iva) < 0.02) ['valores.total_sem_iva', 'valores.total_iva', 'valores.total_com_iva'].forEach(function (k) { conf[k] = Math.max(conf[k] || 0, 0.95); });
     if (d.valores.total_sem_iva === undefined || d.valores.total_sem_iva === null) { var ts = pega(new RegExp('(?:total\\s*sem\\s*iva|subtotal|base\\s*tributavel)[^\\n\\d]{0,20}' + NUM, 'i')); if (ts) { d.valores.total_sem_iva = num(ts); conf['valores.total_sem_iva'] = base - 0.1; } }
     if (d.valores.total_sem_iva && d.consumo.energia_ativa_kwh) d.valores.custo_medio_eur_kwh = Math.round(d.valores.total_sem_iva / d.consumo.energia_ativa_kwh * 10000) / 10000;
     d.leitura.qr = !!lido.qr;
@@ -211,7 +335,7 @@
   var CAMPOS_FAT = [
     ['Supplier', 'fornecedor.nome'], ['Supplier VAT', 'fornecedor.nif'], ['Customer VAT', 'cliente.nif'], ['Invoice number', 'fatura.numero'], ['ATCUD', 'fatura.atcud'], ['Issue date', 'fatura.data_emissao', 'date'],
     ['CPE (delivery point)', 'fornecimento.cpe'], ['Billing from', 'fornecimento.periodo_inicio', 'date'], ['Billing to', 'fornecimento.periodo_fim', 'date'], ['Contracted power (kVA)', 'fornecimento.potencia_contratada_kva', 'num'],
-    ['Active energy (kWh)', 'consumo.energia_ativa_kwh', 'num'], ['Renewable share (%)', 'rotulagem.renovavel_pct', 'num'], ['Emissions (gCO2/kWh)', 'rotulagem.emissoes_gco2_kwh', 'num'],
+    ['Active energy (kWh)', 'consumo.energia_ativa_kwh', 'num'], ['Renewable share (%)', 'rotulagem.renovavel_pct', 'num'], ['Emissions (gCO2/kWh)', 'rotulagem.emissoes_gco2_kwh', 'num'], ['CO2 of this invoice (kg)', 'rotulagem.emissoes_kg_co2', 'num'],
     ['Total without VAT (€)', 'valores.total_sem_iva', 'num'], ['VAT (€)', 'valores.total_iva', 'num'], ['Total with VAT (€)', 'valores.total_com_iva', 'num']
   ];
   var ler = function (d, k) { return k.split('.').reduce(function (o, p) { return o ? o[p] : undefined; }, d); };

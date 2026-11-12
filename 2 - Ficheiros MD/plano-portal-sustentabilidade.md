@@ -1204,6 +1204,16 @@ Pedido do André a 11 de novembro de 2026.
   - Na task, os indicadores de energia (MWh ou kWh) têm o botão **Read invoice** no detalhe.
 - **Fatura de teste** (fictícia): `3 - Mockups/exemplos/fatura-eletricidade-teste.pdf` e a mesma em `.png`, para testar o OCR. Tem QR code da AT, dois períodos horários, rotulagem, e cobre 15/09 a 14/10/2026 (apanha o T3 e o T4).
 - **Testado:** o PDF e a imagem leem todos os campos certos. Na task M05-T4 (Financeira), 14 dos 30 dias dão 14,467 MWh no E01, com a fatura como evidência, e a fatura encontra-se em Documents pelo CPE.
+- **Melhorias de 12 de novembro de 2026** (pedido do André, depois de uma fatura real da Endesa ser mal lida: dava 12 110 kWh, que era a leitura do contador, em vez de 308 kWh):
+  - **Leituras do contador ignoradas:** números com zeros à esquerda (012110 kWh), linhas com vários períodos horários, e as linhas logo a seguir a "A sua leitura", "Última leitura" ou "contador".
+  - **Consumo pelas linhas faturadas:** soma as linhas "Termo de Energia" ou "Energia ativa" (que podem vir partidas por taxa de IVA) e confirma com os kWh do Imposto Especial de Consumo. Quando duas fontes batem, a confiança fica alta.
+  - **Datas por extenso:** "22 set 2026", "22 de setembro de 2026" e "2026-09-22", na data de emissão e no período. Se o rótulo do período não se ler (comum no OCR), usa o intervalo que mais se repete nas linhas da fatura.
+  - **NIF:** o do fornecedor pelo NIPC ou "Emitido por", o do cliente pela linha do titular.
+  - **Potência** também em "Termo de Potência (3.45 kVA)". **Totais** também em "Total a debitar" e "Total da fatura". **IVA** pelo quadro "IVA 23% base valor", com base + IVA = total a confirmar os três.
+  - **CO₂ da fatura:** "Pegada ecológica CO2: 32.57 kg" vai para `rotulagem.emissoes_kg_co2` (campo novo no esquema e no ecrã), e sem fator do mix calcula os gCO₂/kWh desta fatura, a verificar.
+  - **QR da AT em qualquer página** (antes só na primeira), com uma segunda tentativa em resolução maior.
+  - **OCR:** lê até 4 páginas de um PDF digitalizado (antes só a primeira). Antes do OCR, a imagem passa a tons de cinzento com contraste esticado e resolução mínima, e o Tesseract mantém os espaços entre colunas. O CPE aceita erros como "PTO0020001 15011816 WC".
+  - **Testado** com a fatura real (não está no repositório, que é público), uma versão digitalizada dela simulada (rodada e desfocada, sem texto), a fatura de teste em PDF e em PNG, e só a primeira página digitalizada. Em todas, o consumo e os campos lidos ficaram certos; a fatura de teste ficou igual a antes.
 
 ### Users and profiles pelos níveis do Reporting Perimeter, e os perfis novos
 
