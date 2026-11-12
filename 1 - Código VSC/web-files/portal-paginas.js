@@ -11,7 +11,7 @@
   var e = function (v) {
     return String(v === null || v === undefined ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; });
   };
-  var U = { rota: { pag: '', arg: '', q: {} }, sep: 'dados', msTab: {}, tipoEd: null, lanc: null, msFiltro: { empresa: '', dep: '', estado: 'todas', esrs: true, minhas: false }, msEmpTodas: false, dadosVista: 'form', rqAberto: {}, dzFila: {}, colRel: {}, wfHist: {}, exp: {}, msVista: 'lista', imp: {}, cal: null, consEsrs: false, histInd: 'A03', audFiltro: 'todas', boTab: 'indicadores', painel: null, menu: null, docNova: false, indBusca: '', marca: null, regraBusca: '', logoEstado: '' };
+  var U = { rota: { pag: '', arg: '', q: {} }, sep: 'dados', msTab: {}, tipoEd: null, lanc: null, msFiltro: { empresa: '', dep: '', estado: 'curso', esrs: true, minhas: false }, msEmpTodas: false, dadosVista: 'form', rqAberto: {}, dzFila: {}, colRel: {}, wfHist: {}, exp: {}, msVista: 'lista', imp: {}, cal: null, consEsrs: false, histInd: 'A03', audFiltro: 'todas', boTab: 'indicadores', painel: null, menu: null, docNova: false, indBusca: '', marca: null, regraBusca: '', logoEstado: '' };
 
   /* --- Icones ------------------------------------------------------------ */
   var svg = function (d, t) { return '<svg width="' + (t || 16) + '" height="' + (t || 16) + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + d + '</svg>'; };
@@ -592,7 +592,7 @@
     var f = U.msFiltro, lista = msFiltradas(), usrT = u(), todas = veTodas(usrT);
     var abas = todas ? '<div class="ps-mtabs ms-abas" role="tablist" aria-label="Which tasks"><button type="button" role="tab" aria-selected="' + !!f.minhas + '" class="' + (f.minhas ? 'on' : '') + '" data-a="msAba" data-v="minhas">My Tasks</button><button type="button" role="tab" aria-selected="' + !f.minhas + '" class="' + (!f.minhas ? 'on' : '') + '" data-a="msAba" data-v="todas">All Tasks</button></div>' : '';
     var filtros = abas + '<div class="ps-filtros">' + campo('f-per', 'Reporting period', '<select id="f-per" class="ps-sel" data-c="msPerF">' + opt('', 'All', f.periodo) + (S.periodos || []).filter(function (p) { return p.ano === S.ciclo.ano; }).map(function (p) { return opt(p.id, p.nome, f.periodo); }).join('') + '</select>') + campo('f-dep', 'Department', '<select id="f-dep" class="ps-sel" data-c="msDepF">' + opt('', 'All', f.dep) + P.UNIDADES.map(function (x) { return opt(x, x, f.dep); }).join('') + '</select>') +
-      campo('f-es', 'Status', '<select id="f-es" class="ps-sel" data-c="msEstado">' + opt('todas', 'All', f.estado) + opt('curso', 'In progress', f.estado) + opt('atraso', 'Overdue', f.estado) + opt('concluidas', 'Completed', f.estado) + '</select>') +
+      campo('f-es', 'Status', '<select id="f-es" class="ps-sel" data-c="msEstado">' + opt('curso', 'Ongoing', f.estado) + opt('atraso', 'Overdue', f.estado) + opt('concluidas', 'Completed', f.estado) + opt('todas', 'All', f.estado) + '</select>') +
  +
       '<label class="ps-chk"><input id="f-esrs" type="checkbox" data-c="msEsrs"' + (f.esrs ? ' checked' : '') + '> Include ESRS track</label></div>';
     var dir = '<div class="ps-sp"><div class="ps-seg" role="group" aria-label="View"><button type="button" class="' + (U.msVista === 'lista' ? 'on' : '') + '" data-a="msVista" data-v="lista">Table</button><button type="button" class="' + (U.msVista === 'board' ? 'on' : '') + '" data-a="msVista" data-v="board">Board</button><button type="button" class="' + (U.msVista === 'kpi' ? 'on' : '') + '" data-a="msVista" data-v="kpi">By KPI</button></div>' + botaoTl('Timeline') + '<button type="button" class="ps-btn peq" data-a="msExcel"' + (lista.length ? '' : ' disabled') + '>Export to Excel</button></div>';
@@ -610,7 +610,9 @@
     if (U.msVista === 'kpi') {
       /* Por KPI: as mesmas tasks desagregadas, uma linha por indicador, com o estado de cada um */
       var linhasK = [];
-      lista.forEach(function (m) { m.indicadores.forEach(function (id) { if (P.cat(id)) linhasK.push({ m: m, id: id }); }); });
+      /* Ongoing tira os KPIs ja aprovados; Completed mostra so os aprovados (tambem os aprovados sozinhos em tasks abertas) */
+      var listaK = f.estado === 'concluidas' ? P.msCiclo().filter(function (m) { return (!f.empresa || m.empresa === f.empresa) && (!f.periodo || m.periodo === f.periodo); }) : lista;
+      listaK.forEach(function (m) { m.indicadores.forEach(function (id) { if (!P.cat(id)) return; var ap = P.indAprovado(m, id); if (f.estado === 'concluidas' ? ap : f.estado === 'todas' || !ap) linhasK.push({ m: m, id: id }); }); });
       return filtros + '<div class="ps-card">' + cabCartao((f.empresa || 'All companies') + ', ' + linhasK.length + ' KPIs in ' + lista.length + ' tasks', 'tarefa', dir) + '<div class="ps-card-body">' +
         tabela([{ t: 'KPI' }, { t: 'Task' }, { t: 'Period' }, { t: 'Perimeter' }, { t: 'Value', dir: 1 }, { t: 'Assigned to' }, { t: 'Deadline' }, { t: 'Status' }], linhasK.map(function (x) {
           var c = P.cat(x.id), it = P.item(x.id, P.chave(x.m)), st = estadoTarefa(x.m, x.id);

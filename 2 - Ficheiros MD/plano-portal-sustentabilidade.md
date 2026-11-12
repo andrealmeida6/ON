@@ -1388,6 +1388,17 @@ Pedido do André a 12 de novembro de 2026.
 
 - Backoffice → Tasks sent mostra só a vista **By indicator**. A vista By task e o seletor ficam escondidos, mas o código mantém-se.
 
+### Pendente em destaque, concluído à parte (Home e Tasks)
+
+Pedido do André a 12 de novembro de 2026.
+
+- **Home → Tasks:** tem os separadores **Ongoing** (por omissão) e **Completed**, cada um com o número.
+  - Ongoing tira os KPIs já aprovados, incluindo os aprovados sozinhos em tasks ainda abertas.
+  - Completed mostra os KPIs aprovados do ciclo, no mesmo âmbito (Mine ou Everyone), com o estado "Approved".
+- **Página Tasks:** o filtro Status abre em **Ongoing** (antes era All), e as opções ficaram por esta ordem: Ongoing, Overdue, Completed, All.
+  - Na vista por task, as tasks concluídas só aparecem em Completed ou All.
+  - Na vista By KPI, Ongoing tira os KPIs aprovados e Completed mostra só os aprovados, também os de tasks ainda abertas.
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.
