@@ -166,8 +166,40 @@
   var NOME_ESG = 'Rita Sousa';
   P.NOME_ESG = NOME_ESG;
   /* Departamentos de uma pessoa: pode ter varios (tags). u.unidade fica sempre igual ao primeiro, para o que so mostra um. */
-  P.unidadesDe = function (u) { return !u ? [] : u.unidades && u.unidades.length ? u.unidades : u.unidade ? [u.unidade] : []; };
-  P.temUnidade = function (u, un) { return !!un && P.unidadesDe(u).indexOf(un) > -1; };
+  /* Departamentos de uma pessoa; com a empresa, os dessa empresa (u.unidadesEmp[idDaEmpresa]). Sem a separacao por
+     empresa, os mesmos departamentos valem em todas as empresas onde a pessoa trabalha. */
+  var entPorNome = function (n) { return (S.ent || []).filter(function (y) { return y.nome === n || y.id === n; })[0] || null; };
+  P.unidadesDe = function (u, empresa) {
+    if (!u) return [];
+    if (empresa && u.unidadesEmp) { var x = entPorNome(empresa); if (x && u.unidadesEmp[x.id]) return u.unidadesEmp[x.id]; }
+    return u.unidades && u.unidades.length ? u.unidades : u.unidade ? [u.unidade] : [];
+  };
+  P.temUnidade = function (u, un, empresa) { return !!un && P.unidadesDe(u, empresa).indexOf(un) > -1; };
+  /* Departamentos de uma pessoa numa empresa; o conjunto de todas as empresas fica em u.unidades */
+  P.renomearUser = function (u, novo, quem) {
+    var n = String(novo || '').trim().replace(/\s+/g, ' ');
+    if (n.split(' ').length < 2) return { erro: 'Write the first and last name.' };
+    if (S.users.some(function (x) { return x !== u && String(x.nome).toLowerCase() === n.toLowerCase(); })) return { erro: 'There is already a user called ' + n + '.' };
+    var antigo = u.nome;
+    if (antigo === n) return { ok: true };
+    u.nome = n;
+    (S.ms || []).forEach(function (m) {
+      m.passos.forEach(function (p) { if (p.concluido_por === antigo) p.concluido_por = n; });
+      m.indicadores.forEach(function (id) { var it = P.item(id, P.chave(m)); if (!it) return; ['submetido', 'revisto', 'aprovadoArea'].forEach(function (k) { if (it[k] && it[k].por === antigo) it[k].por = n; }); });
+    });
+    if (P.eventoGlobal) P.eventoGlobal('User renamed from ' + antigo + ' to ' + n + '.', quem, 'Change');
+    guardar();
+    return { ok: true, antes: antigo };
+  };
+  P.definirUnidadesEmp = function (u, empresa, l) {
+    var x = entPorNome(empresa);
+    if (!x) return;
+    if (!u.unidadesEmp) { u.unidadesEmp = {}; (P.empresasUser ? P.empresasUser(u) : S.ent).forEach(function (y) { u.unidadesEmp[y.id] = P.unidadesDe(u).slice(); }); }
+    var ok = []; (l || []).forEach(function (d) { if (d && ok.indexOf(d) < 0) ok.push(d); });
+    u.unidadesEmp[x.id] = ok;
+    var todas = []; Object.keys(u.unidadesEmp).forEach(function (k) { u.unidadesEmp[k].forEach(function (d) { if (todas.indexOf(d) < 0) todas.push(d); }); });
+    u.unidades = todas; u.unidade = todas[0] || '';
+  };
   P.definirUnidades = function (u, l) {
     var ok = []; (l || []).forEach(function (x) { if (x && ok.indexOf(x) < 0) ok.push(x); });
     u.unidades = ok; u.unidade = ok[0] || '';
@@ -1181,7 +1213,7 @@
     var x = p.tipo === 'recolha' && m.atribuido_a ? P.user(m.atribuido_a) : null;
     return x ? { tipo: 'pessoa', nome: x.nome } : { tipo: 'tag', nome: P.nomeResp(m, p.responsavel) };
   };
-  P.atribuiveis = function (m) { return S.users.filter(function (x) { return x.perfil === 'resp' && P.temUnidade(x, m.unidade); }); };
+  P.atribuiveis = function (m) { return S.users.filter(function (x) { return P.daUnidade(x) && P.temUnidade(x, m.unidade, m.empresa) && (!P.userNaEmpresa || P.userNaEmpresa(x, m.empresa)); }); };
   P.atribuir = function (m, login, u) {
     if (!P.acompanha(m, u)) return { erro: 'No permission.' };
     m.atribuido_a = login || null;
@@ -1238,9 +1270,9 @@
     if (!p || !u || p.responsavel === 'sistema') return false;
     if (u.perfil === 'admin') return true;
     if (p.responsavel === 'esg') return u.perfil === 'esg';
-    if (p.responsavel === 'chefe') { var ch = P.chefeDe(m.unidade, m.empresa); return ch ? ch.login === u.login : P.daUnidade(u) && P.temUnidade(u, m.unidade); }
+    if (p.responsavel === 'chefe') { var ch = P.chefeDe(m.unidade, m.empresa); return ch ? ch.login === u.login : P.daUnidade(u) && P.temUnidade(u, m.unidade, m.empresa); }
     /* Recolha: atribuida a uma pessoa, so ela; atribuida ao departamento, as pessoas do departamento que trabalham na empresa da task */
-    if (p.responsavel === 'unidade') return m.atribuido_a ? m.atribuido_a === u.login : P.daUnidade(u) && P.temUnidade(u, m.unidade) && (!P.userNaEmpresa || P.userNaEmpresa(u, m.empresa));
+    if (p.responsavel === 'unidade') return m.atribuido_a ? m.atribuido_a === u.login : P.daUnidade(u) && P.temUnidade(u, m.unidade, m.empresa) && (!P.userNaEmpresa || P.userNaEmpresa(u, m.empresa));
     if (p.responsavel.indexOf('area:') === 0) return P.daUnidade(u) && P.temUnidade(u, p.responsavel.slice(5));
     return false;
   };
@@ -1288,7 +1320,7 @@
   };
   P.podePreencher = function (m, u) { var p = P.passoAtual(m); return !!p && p.tipo === 'recolha' && P.podeAgir(m, u); };
   P.gereTudo = function (u) { return !!u && (u.perfil === 'admin' || u.perfil === 'esg'); };
-  P.acompanha = function (m, u) { return !!u && (P.gereTudo(u) || (P.daUnidade(u) && P.temUnidade(u, m.unidade))); };
+  P.acompanha = function (m, u) { return !!u && (P.gereTudo(u) || (P.daUnidade(u) && P.temUnidade(u, m.unidade, m.empresa) && (!P.userNaEmpresa || P.userNaEmpresa(u, m.empresa)))); };
   P.podeAlterarWorkflow = function (m, u) { return !P.concluida(m) && P.acompanha(m, u); };
   P.podeReexpressar = function (u) { return P.gereTudo(u); };
 

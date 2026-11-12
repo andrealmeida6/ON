@@ -1479,6 +1479,13 @@
     return '<div class="us-tags">' + l.map(function (d) { return '<span class="us-tag">' + avEquipa() + e(d) + '<button type="button" class="us-tag-x" data-a="userUnTirar" data-v="' + e(x.login + '|' + d) + '" aria-label="Remove ' + e(d) + ' from ' + e(x.nome) + '">×</button></span>'; }).join('') +
       (livres.length ? '<label class="ps-sr" for="' + id + '">Add a department to ' + e(x.nome) + '</label><select id="' + id + '" class="ps-sel us-add" data-c="userUnJuntar" data-id="' + e(x.login) + '">' + opt('', l.length ? '+ Add' : '+ Add department', '') + livres.map(function (d) { return opt(d, d, ''); }).join('') + '</select>' : '') + '</div>';
   };
+  /* Departamentos de uma pessoa numa empresa (so os que existem nessa empresa) */
+  var X0 = { empHtml: function (n) { return empHtml(n); } };
+  var tagsUnidadesEmp = function (x, y) {
+    var l = P.unidadesDe(x, y.nome), existem = P.depsDaEmpresa ? P.depsDaEmpresa(y.nome) : P.UNIDADES, livres = existem.filter(function (d) { return l.indexOf(d) < 0; }), id = 'uue-' + (x.login + '-' + y.id).replace(/[^a-zA-Z0-9_-]/g, '_');
+    return '<div class="us-tags">' + l.map(function (d) { return '<span class="us-tag">' + avEquipa() + e(d) + '<button type="button" class="us-tag-x" data-a="userUnTirarEmp" data-v="' + e(x.login + '|' + y.id + '|' + d) + '" aria-label="Remove ' + e(d) + ' from ' + e(x.nome) + ' in ' + e(y.nome) + '">×</button></span>'; }).join('') +
+      (livres.length ? '<label class="ps-sr" for="' + id + '">Add a department to ' + e(x.nome) + ' in ' + e(y.nome) + '</label><select id="' + id + '" class="ps-sel us-add" data-c="userUnJuntarEmp" data-id="' + e(x.login + '|' + y.id) + '">' + opt('', l.length ? '+ Add' : '+ Add department', '') + livres.map(function (d) { return opt(d, d, ''); }).join('') + '</select>' : '') + '</div>';
+  };
   /* Empresas de uma pessoa: um chip por empresa; todas marcadas quando a pessoa trabalha em todas */
   var tagsEmpresas = function (x, pref) {
     var on = P.empresasUser(x).map(function (y) { return y.id; });
@@ -1494,7 +1501,7 @@
     (S.deps || []).forEach(function (d) {
       if (!P.temUnidade(x, d.nome)) return;
       (P.empresasDoDep ? P.empresasDoDep(d) : S.ent).forEach(function (y) {
-        if (!P.userNaEmpresa(x, y.nome)) return;
+        if (!P.userNaEmpresa(x, y.nome) || !P.temUnidade(x, d.nome, y.nome)) return;
         d.chefes = d.chefes || {};
         var atual = d.chefes[y.id] || d.chefe;
         if (atual === x.login && d.chefes[y.id]) return;
@@ -1509,8 +1516,11 @@
     var q = norm(U.userBusca || ''), fe = U.userEmpF || '', pessoas2 = S.users.filter(function (x) { return x.perfil !== 'ext'; });
     /* Pelos niveis do Reporting Perimeter: grupo, empresa, departamento, pessoa */
     var primEmp = function (x) { var l2 = P.empresasUser(x); return l2.length === S.ent.length ? '' : l2.map(function (y) { return y.nome; }).sort()[0]; };
-    var l = pessoas2.filter(function (x) { return P.userNaEmpresa(x, fe); }).filter(function (x) { return !q || norm(x.nome + ' ' + P.PERFIS[x.perfil] + ' ' + P.unidadesTxt(x) + ' ' + P.empresasUser(x).map(function (y) { return y.nome; }).join(' ')).indexOf(q) > -1; })
-      .sort(function (a, b) { return primEmp(a).localeCompare(primEmp(b)) || (P.unidadesDe(a)[0] || '~').localeCompare(P.unidadesDe(b)[0] || '~') || a.nome.localeCompare(b.nome); });
+    /* Uma linha por pessoa e empresa: uma pessoa que trabalha em duas empresas aparece em duas linhas */
+    var l = [];
+    pessoas2.forEach(function (x) { P.empresasUser(x).forEach(function (y) { if (fe && y.id !== fe) return; l.push({ x: x, y: y }); }); });
+    l = l.filter(function (r) { return !q || norm(r.x.nome + ' ' + P.PERFIS[r.x.perfil] + ' ' + P.unidadesDe(r.x, r.y.nome).join(' ') + ' ' + r.y.nome).indexOf(q) > -1; })
+      .sort(function (a, b) { return a.y.nome.localeCompare(b.y.nome) || (P.unidadesDe(a.x, a.y.nome)[0] || '~').localeCompare(P.unidadesDe(b.x, b.y.nome)[0] || '~') || a.x.nome.localeCompare(b.x.nome); });
     var grupo = nomeGrupo();
     var n = function (k) { return pessoas2.filter(function (x) { return x.perfil === k; }).length; };
     var nu = U.userNovo || (U.userNovo = { nome: '', perfil: 'resp', unidades: [], empresas: [] });
@@ -1523,9 +1533,16 @@
     return '<div class="ps-card">' + cabCartao('Users and profiles', 'tarefa', '<span class="ps-sp"><span class="ps-small ps-mut">' + PERFIS_PESSOA.map(function (k) { return n(k) + ' ' + P.PERFIS[k].toLowerCase(); }).join(' · ') + '</span><button type="button" class="ps-btn peq" data-a="depsAbrir">Manage departments</button></span>') + '<div class="ps-card-body">' + novo +
       '<div class="ps-filtros ps-mt">' + campo('us-q', 'Search', '<input id="us-q" class="ps-in" placeholder="Name, profile or department" value="' + e(U.userBusca || '') + '" data-c="userBusca">') +
         campo('us-emp', 'Company', '<select id="us-emp" class="ps-sel" data-c="userEmpF">' + opt('', 'All companies', fe) + S.ent.map(function (y) { return opt(y.id, y.nome, fe); }).join('') + '</select>') + '</div>' +
-      tabela([{ t: 'Group' }, { t: 'Company', info: 'The companies the person works for. Each company has its own people: only they appear as responsible for that company. With every company marked, the person works for all.' }, { t: 'Business unit / Department', info: 'The departments of the person. A data reviewer is the area head of their departments.' }, { t: 'Name' }, { t: 'Profile', info: 'Data provider (focal point): fills in and submits. Data reviewer (superior): approves what the department submits. Data approver (sustainability team): approves at the end and manages the Backoffice. Auditor: reads everything and changes nothing. Administrator: everything.' }, { t: 'Actions' }], l.map(function (x) {
-        var eu = u() && u().login === x.login;
-        return ['<span class="ps-small">' + e(grupo) + '</span>', tagsEmpresas(x, 'ue-'), tagsUnidades(x, 'uu-'), pessHtml(x.nome) + (eu ? ' <span class="ps-chip info">You</span>' : '') + (chefeDe(x).length ? '<small class="ps-mut ps-blk">Area head of ' + e(chefeDe(x).join(', ')) + '</small>' : ''), '<select id="up-' + e(x.login) + '" class="ps-sel" aria-label="Profile of ' + e(x.nome) + '" data-c="userPerfil" data-id="' + e(x.login) + '"' + (eu ? ' disabled title="You cannot change your own profile"' : '') + '>' + PERFIS_PESSOA.map(function (k) { return opt(k, P.PERFIS[k], x.perfil); }).join('') + '</select>', eu ? '<span class="ps-mut ps-small">-</span>' : '<button type="button" class="ps-btn peq err" data-a="userApagar" data-v="' + e(x.login) + '">Remove</button>'];
+      tabela([{ t: 'Group' }, { t: 'Company', info: 'One row per person and company. Someone who works in two companies has two rows, each with the business units they are responsible for there.' }, { t: 'Business unit / Department', info: 'The departments of the person in this company. A data reviewer is the area head of them in this company.' }, { t: 'Name', info: 'Click to rename. The name is kept in the history and the approvals.' }, { t: 'Profile', info: 'Data provider (focal point): fills in and submits. Data reviewer (superior): approves what the department submits. Data approver (sustainability team): approves at the end and manages the Backoffice. Auditor: reads everything and changes nothing. Administrator: everything.' }, { t: 'Actions' }], l.map(function (r) {
+        var x = r.x, y = r.y, eu = u() && u().login === x.login, outras = S.ent.filter(function (z) { return !P.userNaEmpresa(x, z.nome) || (x.empresas || []).length === 0 && false; }).filter(function (z) { return P.empresasUser(x).every(function (w) { return w.id !== z.id; }); });
+        var ch = P.chefiasDe(x).filter(function (c) { return c.empresa === y.nome; }).map(function (c) { return c.dep; });
+        var nEmp = P.empresasUser(x).length;
+        return ['<span class="ps-small">' + e(grupo) + '</span>',
+          X0.empHtml(y.nome) + (outras.length ? '<label class="ps-sr" for="ua-' + e(x.login + y.id) + '">Add ' + e(x.nome) + ' to another company</label><select id="ua-' + e(x.login + y.id) + '" class="ps-sel us-add" data-c="userEmpAdd" data-id="' + e(x.login) + '"><option value="">+ Company</option>' + outras.map(function (z) { return opt(z.id, z.nome, ''); }).join('') + '</select>' : ''),
+          tagsUnidadesEmp(x, y),
+          '<input id="un-' + e(x.login + '-' + y.id) + '" class="ps-in us-nome" aria-label="Name of ' + e(x.nome) + '" value="' + e(x.nome) + '" data-c="userNome" data-id="' + e(x.login) + '">' + (eu ? ' <span class="ps-chip info">You</span>' : '') + (ch.length ? '<small class="ps-mut ps-blk">Area head of ' + e(ch.join(', ')) + '</small>' : ''),
+          '<select id="up-' + e(x.login + '-' + y.id) + '" class="ps-sel" aria-label="Profile of ' + e(x.nome) + '" data-c="userPerfil" data-id="' + e(x.login) + '"' + (eu ? ' disabled title="You cannot change your own profile"' : '') + '>' + PERFIS_PESSOA.map(function (k) { return opt(k, P.PERFIS[k], x.perfil); }).join('') + '</select>',
+          eu ? '<span class="ps-mut ps-small">-</span>' : nEmp > 1 ? '<button type="button" class="ps-btn peq" data-a="userEmpTirar" data-v="' + e(x.login + '|' + y.id) + '" title="Remove ' + e(x.nome) + ' from ' + e(y.nome) + ' only">Remove from ' + e(y.nome) + '</button>' : '<button type="button" class="ps-btn peq err" data-a="userApagar" data-v="' + e(x.login) + '">Remove</button>'];
       }), 'No user matches the search.') + '<p class="ps-small ps-mut ps-mt">External entities (suppliers and partners that answer data requests) are managed in External entities.</p></div></div>';
   };
   B.externas = function () {
@@ -2316,6 +2333,24 @@
     calHoje: function () { U.cal = null; R(); },
     msVista: function (d) { U.msVista = d.v; R(); },
     boMsVista: function (d) { U.boMs.vista = d.v; R(); },
+    userUnTirarEmp: function (d) {
+      var p2 = d.v.split('|'), x = P.user(p2[0]), y = S.ent.filter(function (z) { return z.id === p2[1]; })[0];
+      if (!x || !y) return;
+      var l = P.unidadesDe(x, y.nome).filter(function (k) { return k !== p2[2]; });
+      if (P.daUnidade(x) && !l.length) return toast('A ' + P.PERFIS[x.perfil] + ' needs at least one department in ' + y.nome + '. Remove them from ' + y.nome + ' instead.', 'err');
+      P.definirUnidadesEmp(x, y.nome, l);
+      P.eventoGlobal(x.nome + ' is no longer in ' + p2[2] + ' (' + y.nome + ').', u().nome); P.guardar(); R();
+    },
+    userEmpTirar: function (d) {
+      var p2 = d.v.split('|'), x = P.user(p2[0]), y = S.ent.filter(function (z) { return z.id === p2[1]; })[0];
+      if (!x || !y) return;
+      var on = P.empresasUser(x).map(function (z) { return z.id; }).filter(function (k) { return k !== y.id; });
+      if (!on.length) return toast('A person needs at least one company.', 'err');
+      x.empresas = on;
+      if (x.unidadesEmp) { delete x.unidadesEmp[y.id]; P.definirUnidadesEmp(x, S.ent.filter(function (z) { return z.id === on[0]; })[0].nome, P.unidadesDe(x, S.ent.filter(function (z) { return z.id === on[0]; })[0].nome)); }
+      (S.deps || []).forEach(function (dp) { if (dp.chefes && dp.chefes[y.id] === x.login) dp.chefes[y.id] = ''; });
+      P.eventoGlobal(x.nome + ' removed from ' + y.nome + '.', u().nome, 'Change'); P.guardar(); toast(x.nome + ' removed from ' + y.nome + '.', 'ok'); R();
+    },
     depsAbrir: function () { abrePainel('deps', {}); },
     boMsApagar: function (d) { abrePainel('msApagar', { id: d.v }); },
     boMsApagarSim: function (d) { var r = P.apagarTask(d.v, u()); if (r.erro) return toast(r.erro, 'err'); U.painel = null; toast(r.nome + ' deleted.', 'ok'); R(); },
@@ -2663,6 +2698,31 @@
       if (el.value) d.chefes[y.id] = el.value; else { d.chefes[y.id] = ''; }
       P.eventoGlobal('Department ' + d.nome + ', ' + y.nome + ': area head changed from ' + antes + ' to ' + (el.value ? P.user(el.value).nome : 'nobody') + '.', u().nome, 'Change');
       P.guardar(); toast(d.nome + ', ' + y.nome + ': area head ' + (el.value ? P.user(el.value).nome : 'removed') + '.', 'ok'); R();
+    },
+    userUnJuntarEmp: function (el) {
+      if (!el.value) return;
+      var p2 = el.dataset.id.split('|'), x = P.user(p2[0]), y = S.ent.filter(function (z) { return z.id === p2[1]; })[0];
+      if (!x || !y) return;
+      P.definirUnidadesEmp(x, y.nome, P.unidadesDe(x, y.nome).concat([el.value]));
+      if (x.perfil === 'revisor') chefeDosDeps(x);
+      P.eventoGlobal(x.nome + ' added to ' + el.value + ' (' + y.nome + ').', u().nome); P.guardar(); R();
+    },
+    userEmpAdd: function (el) {
+      if (!el.value) return;
+      var x = P.user(el.dataset.id), y = S.ent.filter(function (z) { return z.id === el.value; })[0];
+      if (!x || !y) return;
+      var on = P.empresasUser(x).map(function (z) { return z.id; }); on.push(y.id);
+      if (!x.unidadesEmp) P.definirUnidadesEmp(x, P.empresasUser(x)[0].nome, P.unidadesDe(x));
+      x.empresas = on.length >= S.ent.length ? [] : on;
+      x.unidadesEmp[y.id] = [];
+      P.eventoGlobal(x.nome + ' added to ' + y.nome + '.', u().nome, 'Change'); P.guardar(); toast(x.nome + ' added to ' + y.nome + '. Add the business units there.', 'ok'); R();
+    },
+    userNome: function (el) {
+      var x = P.user(el.dataset.id), r = x ? P.renomearUser(x, el.value, u().nome) : { erro: 'User not found.' };
+      if (r.erro) { toast(r.erro, 'err'); el.value = x ? x.nome : ''; return; }
+      if (r.antes) toast(r.antes + ' is now ' + x.nome + '.', 'ok');
+      /* O campo ainda esta a perder o foco: redesenha a seguir, para nao mexer no elemento a meio do blur */
+      setTimeout(R, 0);
     },
     userUnJuntar: function (el) { if (!el.value) return; if (el.dataset.id === '__novo') { U.userNovo.unidades.push(el.value); return; } var x = P.user(el.dataset.id); setTimeout(function () { if (x && x.perfil === 'revisor') { chefeDosDeps(x); P.guardar(); R(); } }, 0); P.definirUnidades(x, P.unidadesDe(x).concat([el.value])); P.eventoGlobal(x.nome + ' added to ' + el.value + '.', u().nome); P.guardar(); },
     userNovoC: function (el) { U.userNovo[el.dataset.f] = el.value; },

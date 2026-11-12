@@ -2411,3 +2411,7 @@ tr.rev-pend>td:first-child{box-shadow:inset 3px 0 0 var(--rev)}
 .ta-fora{margin-top:6px;font-size:12.5px}
 .ta-fora summary{cursor:pointer;color:var(--muted)}
 
+/* 72. USERS AND PROFILES: UMA LINHA POR PESSOA E EMPRESA, NOME EDITAVEL */
+.us-nome{min-width:160px;font-weight:600}
+
+select[data-c="userPerfil"]{min-width:220px}

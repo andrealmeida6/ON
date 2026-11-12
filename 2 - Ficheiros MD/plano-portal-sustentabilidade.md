@@ -1356,6 +1356,20 @@ Pedido do André a 12 de novembro de 2026.
   - As tasks que já existiam não mudam.
 - **Ainda por fazer:** o cartão "do ano a partir dos trimestres" nas tasks anuais lê os trimestres pela chave antiga, por isso ainda não junta os valores das tasks trimestrais divididas por empresa.
 
+### Users and profiles: uma linha por pessoa e empresa, nome editável
+
+Pedido do André a 12 de novembro de 2026.
+
+- **Uma linha por pessoa e empresa:** quem trabalha em duas empresas aparece em duas linhas, nunca com duas empresas na mesma linha.
+- **Business units por empresa:** cada linha tem os departamentos dessa pessoa nessa empresa. Só se podem acrescentar departamentos que existem nessa empresa.
+  - Os departamentos ficam em `u.unidadesEmp[idDaEmpresa]` (`P.definirUnidadesEmp`); `u.unidades` continua a ser o conjunto de todas as empresas.
+  - `P.unidadesDe(u, empresa)` e `P.temUnidade(u, dep, empresa)` usam a empresa da task: para preencher, para acompanhar, para a lista de pessoas a quem atribuir, e para o responsável de área do Data reviewer em cada empresa.
+- **Nome editável na linha** (`P.renomearUser`): o nome muda também nos passos concluídos e nas submissões e aprovações dos indicadores, para a segregação de funções continuar certa. Fica registado.
+- **Ações por linha:**
+  - "+ Company" acrescenta a pessoa a outra empresa;
+  - "Remove from <empresa>" tira-a só dessa empresa;
+  - "Remove" apaga a pessoa quando só tem uma empresa.
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.
