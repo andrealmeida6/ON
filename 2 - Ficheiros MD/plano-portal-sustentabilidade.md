@@ -1424,6 +1424,26 @@ Pedido do André a 12 de novembro de 2026.
 - **Calculations:** o simulador de Scope 1 que escrevia o resultado na task saiu (`P.aplicarCalculo` recusa). A biblioteca de fatores de emissão fica como referência, com uma nota a explicar.
 - **Evidência:** na task, estes indicadores têm uma nota a pedir que se junte o cálculo (Excel ou PDF) com Attach evidence. Fica opcional; para a tornar obrigatória, basta pôr "Evidence required = Yes" no indicador.
 
+## Tabelas só por indicador (KPI)
+
+Pedido do André a 12 de novembro de 2026: as tabelas por task confundiam, por isso as listas passaram a ter uma linha por indicador e deixaram de ter a coluna Task. A task continua a existir por trás e agrupa os indicadores do mesmo tópico, período e empresa.
+
+- **Página Tasks:** só a tabela por KPI. As vistas Table (por task) e Board saíram.
+  - Colunas: KPI, Topic, Period, Perimeter, Value, Assigned to, Deadline e Status.
+  - Os cartões das empresas contam indicadores: KPIs, em atraso e aprovados.
+  - O Excel exportado tem uma linha por KPI, com código, nome, tópico, período, empresa, valor, unidade, responsável, prazo e estado.
+- **Coluna Task retirada** (substituída por Period quando faz falta):
+  - Home: por baixo do KPI aparece o código e o tópico, em vez do nome da task;
+  - Tasks sent;
+  - Documents;
+  - indicadores à espera de aprovação;
+  - painel de uma entrega: passa a mostrar a data limite, ou "Not sent";
+  - quadro do Output;
+  - Materiality ("One data point, several frameworks");
+  - External entities: o indicador liga diretamente ao ecrã do KPI.
+- **Dentro de um indicador** (`Milestone/<id>?ind=<KPI>`), o utilizador continua a ver os outros indicadores que tem de reportar no mesmo tópico e período.
+- **Ficam por task:** a lista do auditor e a lista de aprovações. São vistas de trabalho do auditor e da equipa de sustentabilidade.
+
 ## Formato dos números (ecrã e Excel)
 
 Pedido do André a 12 de novembro de 2026: todos os números da plataforma e dos Excel exportados têm espaço nos milhares e, quando são decimais, duas casas.

@@ -359,9 +359,9 @@
     var l = P.revParaMim ? P.revParaMim(usr) : [];
     if (!l.length) return '';
     return '<div class="ps-card rev-fila">' + cabCartao('Indicators waiting for your approval (' + l.length + ')', 'tarefa', '<span class="ps-mut ps-small">Submitted ahead of their task. Approve them so they move on.</span>') + '<div class="ps-card-body">' +
-      tabela([{ t: 'Indicator' }, { t: 'Task' }, { t: 'Company' }, { t: 'Value', dir: 1 }, { t: 'Change', dir: 1 }, { t: 'Submitted' }, { t: '' }], l.map(function (x) {
+      tabela([{ t: 'Indicator' }, { t: 'Period' }, { t: 'Company' }, { t: 'Value', dir: 1 }, { t: 'Change', dir: 1 }, { t: 'Submitted' }, { t: '' }], l.map(function (x) {
         var it = P.item(x.id, P.chave(x.m)), c = P.cat(x.id), v = P.validarItem(it);
-        return ['<b>' + e(c.nome) + '</b> <span class="ps-mut ps-small">' + e(x.id) + '</span>', e(x.m.nome), emp(x.m.empresa), it.valor === null ? '-' : e(fmtV(x.id, it.valor) + ' ' + c.unidade_medida), v.variacao === null ? '-' : '<span class="' + (v.alertas.length ? 'ps-txt-err' : '') + '">' + (v.variacao > 0 ? '+' : '') + P.fmtNum(v.variacao, 1) + '%</span>', e(it.submetido.por + ', ' + P.fmtDataHora(it.submetido.em)), '<a class="ps-btn peq pri" href="' + X.rota('Milestone/' + x.m.id + '?ind=' + encodeURIComponent(x.id)) + '">Review →</a>'];
+        return ['<b>' + e(c.nome) + '</b> <span class="ps-mut ps-small">' + e(x.id) + '</span>', (P.tagPer(x.m) || e(P.rotPeriodo(x.m))), emp(x.m.empresa), it.valor === null ? '-' : e(fmtV(x.id, it.valor) + ' ' + c.unidade_medida), v.variacao === null ? '-' : '<span class="' + (v.alertas.length ? 'ps-txt-err' : '') + '">' + (v.variacao > 0 ? '+' : '') + P.fmtNum(v.variacao, 1) + '%</span>', e(it.submetido.por + ', ' + P.fmtDataHora(it.submetido.em)), '<a class="ps-btn peq pri" href="' + X.rota('Milestone/' + x.m.id + '?ind=' + encodeURIComponent(x.id)) + '">Review →</a>'];
       })) + '</div></div>';
   };
   Blocos['approvals'] = function () {

@@ -136,14 +136,14 @@
     var linhas = pr.l.map(function (x) {
       return ['<button type="button" class="ps-btn liga" data-a="ficha" data-v="' + e(x.id) + '">' + e(x.c.nome) + '</button><br><small class="ps-mut">' + e(x.id) + ', ' + e(x.c.unidade_medida) + (x.origem ? ', ' + e(x.origem) : '') + '</small>',
         x.v === null ? '<span class="ps-mut">-</span>' : '<b class="ps-num">' + e(fmtV(x.id, x.v)) + '</b>', x.ant === null ? '<span class="ps-mut">-</span>' : '<span class="ps-num">' + e(fmtV(x.id, x.ant)) + '</span>',
-        chip(x.est.t, x.est.c) + (x.alertas.length ? ' ' + chip(x.alertas.length + ' alert' + (x.alertas.length > 1 ? 's' : ''), 'warn') : ''), x.m ? '<a class="ps-btn liga" href="' + X.rota('Milestone/' + x.m.id) + '" data-a="fecharPainel" data-nao-impedir="1">' + e(x.m.unidade) + '</a>' : '-'];
+        chip(x.est.t, x.est.c) + (x.alertas.length ? ' ' + chip(x.alertas.length + ' alert' + (x.alertas.length > 1 ? 's' : ''), 'warn') : '')];
     });
     var hist = gs.length ? '<ul class="ps-ev ps-sem-pad">' + gs.map(function (g) { return '<li><b>' + e(g.ficheiro) + '</b> ' + (g.final ? chip('Final', 'ok') : chip('Draft', 'warn')) + '<small>' + P.quemHtml(g.por) + ', ' + e(P.fmtDataHora(g.em)) + ', ' + g.ok + ' of ' + g.total + ' approved</small></li>'; }).join('') + '</ul>' : '<p class="ps-small ps-mut">No file generated yet.</p>';
     return {
       t: rel.nome, s: rel.entidade + ', due ' + P.fmtDataAno(rel.data), largo: true,
       b: (pr.final ? '<div class="ps-aviso ok">Every value is approved. The file goes out as final.</div>' : '<div class="ps-aviso warn">' + (pr.total - pr.ok) + ' of ' + pr.total + ' values are not approved yet. You can generate a draft to check the layout; it is marked as draft in the name and on the cover.</div>') +
         '<dl class="ps-det sd-det-p"><dt>Goes to</dt><dd>' + e(f.destino) + '</dd><dt>Template</dt><dd>' + e(f.modelo) + '</dd><dt>Legal basis</dt><dd>' + e(rel.base || '-') + '</dd></dl>' +
-        tabela([{ t: 'Indicator' }, { t: 'Value', dir: 1 }, { t: 'Previous', dir: 1 }, { t: 'Status' }, { t: 'Task' }], linhas, 'No indicators feed this delivery.') +
+        tabela([{ t: 'Indicator' }, { t: 'Value', dir: 1 }, { t: 'Previous', dir: 1 }, { t: 'Status' }], linhas, 'No indicators feed this delivery.') +
         '<div><h3 class="ps-grupo-t">Files generated</h3>' + hist + '</div>',
       p: '<button type="button" class="ps-btn" data-a="fecharPainel">Close</button>' + (pode ? f.f.map(function (x, i) { return '<button type="button" class="ps-btn' + (i ? '' : ' pri') + '" data-a="sdGerar" data-v="' + e(rel.id) + '" data-f="' + x + '">' + (pr.final ? 'Generate ' : 'Generate draft ') + FMT_TXT[x] + '</button>'; }).join('') : '')
     };
