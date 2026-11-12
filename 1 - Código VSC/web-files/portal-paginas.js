@@ -1437,7 +1437,7 @@
      KPI assignment e Companies and perimeter deixaram de ser paginas e vivem aqui. */
   var BO_GRUPOS = [
     ['Indicators', [['indicadores', 'Indicators'], ['milestones', 'Tasks sent']]],
-    ['Organisation', [['perimetro', 'Companies and perimeter'], ['departamentos', 'Departments'], ['utilizadores', 'Users and profiles'], ['externas', 'External entities']]],
+    ['Organisation', [['perimetro', 'Companies and perimeter'], ['utilizadores', 'Users and profiles'], ['externas', 'External entities']]],
     ['Reporting set-up', [['periodos', 'Reporting periods'], ['momentos', 'Reporting moments'], ['calculos', 'Calculations'], ['wfbase', 'Base workflow'], ['calendario', 'Calendar'], ['materialidade', 'Materiality and frameworks']]],
     ['Platform', [['areas', 'Data consumer areas'], ['ligacoes', 'Connections'], ['dados', 'Data and storage']]]
   ];
@@ -1486,11 +1486,23 @@
   };
   /* Nome do grupo: a empresa-mae do perimetro, ou o nome da plataforma */
   var nomeGrupo = function () { var mae = (S.ent || []).filter(function (x) { return x.metodo === 'mae'; })[0]; return mae ? mae.nome + ' group' : ((S.marca && S.marca.nome) || 'Group'); };
-  var chefeDe = function (x) { return (S.deps || []).filter(function (d) { return d.chefe === x.login; }).map(function (d) { return d.nome; }); };
+  var chefeDe = function (x) { return P.chefiasDe(x).map(function (c) { return c.dep + (S.ent.length > 1 ? ' (' + c.empresa + ')' : ''); }); };
   /* Data reviewer: passa a ser area head dos seus departamentos */
   var chefeDosDeps = function (x) {
     var l = [];
-    (S.deps || []).forEach(function (d) { if (P.temUnidade(x, d.nome) && d.chefe !== x.login) { var antes = d.chefe ? (P.user(d.chefe) || {}).nome : 'nobody'; d.chefe = x.login; l.push(d.nome); P.eventoGlobal('Department ' + d.nome + ': area head changed from ' + antes + ' to ' + x.nome + ' (data reviewer).', u().nome, 'Change'); } });
+    /* Por empresa: o data reviewer fica responsavel do seu departamento em cada empresa onde trabalha e onde o departamento existe */
+    (S.deps || []).forEach(function (d) {
+      if (!P.temUnidade(x, d.nome)) return;
+      (P.empresasDoDep ? P.empresasDoDep(d) : S.ent).forEach(function (y) {
+        if (!P.userNaEmpresa(x, y.nome)) return;
+        d.chefes = d.chefes || {};
+        var atual = d.chefes[y.id] || d.chefe;
+        if (atual === x.login && d.chefes[y.id]) return;
+        var antes = atual ? (P.user(atual) || {}).nome : 'nobody';
+        d.chefes[y.id] = x.login; l.push(d.nome + ' (' + y.nome + ')');
+        if (atual !== x.login) P.eventoGlobal('Department ' + d.nome + ', ' + y.nome + ': area head changed from ' + antes + ' to ' + x.nome + ' (data reviewer).', u().nome, 'Change');
+      });
+    });
     return l;
   };
   B.utilizadores = function () {
@@ -1508,7 +1520,7 @@
       '<div class="ps-campo"><span class="ps-lab">Departments</span>' + tagsUnidades({ login: '__novo', nome: 'the new user', unidades: nu.unidades }, 'nu-un-') + '</div>' +
       '<div class="ps-campo"><span class="ps-lab">Companies</span>' + tagsEmpresas({ login: '__novo', nome: 'the new user', empresas: nu.empresas }, 'nu-em-') + '</div>' +
       '<button type="button" class="ps-btn pri" data-a="userNovo">Add user</button></div><small class="ps-mut">' + e(PERFIL_AJUDA[nu.perfil]) + '. The sign-in name is created from the full name.</small></div>';
-    return '<div class="ps-card">' + cabCartao('Users and profiles', 'tarefa', '<span class="ps-sp ps-small ps-mut">' + PERFIS_PESSOA.map(function (k) { return n(k) + ' ' + P.PERFIS[k].toLowerCase(); }).join(' · ') + '</span>') + '<div class="ps-card-body">' + novo +
+    return '<div class="ps-card">' + cabCartao('Users and profiles', 'tarefa', '<span class="ps-sp"><span class="ps-small ps-mut">' + PERFIS_PESSOA.map(function (k) { return n(k) + ' ' + P.PERFIS[k].toLowerCase(); }).join(' · ') + '</span><button type="button" class="ps-btn peq" data-a="depsAbrir">Manage departments</button></span>') + '<div class="ps-card-body">' + novo +
       '<div class="ps-filtros ps-mt">' + campo('us-q', 'Search', '<input id="us-q" class="ps-in" placeholder="Name, profile or department" value="' + e(U.userBusca || '') + '" data-c="userBusca">') +
         campo('us-emp', 'Company', '<select id="us-emp" class="ps-sel" data-c="userEmpF">' + opt('', 'All companies', fe) + S.ent.map(function (y) { return opt(y.id, y.nome, fe); }).join('') + '</select>') + '</div>' +
       tabela([{ t: 'Group' }, { t: 'Company', info: 'The companies the person works for. Each company has its own people: only they appear as responsible for that company. With every company marked, the person works for all.' }, { t: 'Business unit / Department', info: 'The departments of the person. A data reviewer is the area head of their departments.' }, { t: 'Name' }, { t: 'Profile', info: 'Data provider (focal point): fills in and submits. Data reviewer (superior): approves what the department submits. Data approver (sustainability team): approves at the end and manages the Backoffice. Auditor: reads everything and changes nothing. Administrator: everything.' }, { t: 'Actions' }], l.map(function (x) {
@@ -1778,10 +1790,14 @@
     var filtro = '<div class="ps-filtros ps-mt"><div class="ps-campo"><label class="ps-lab" for="dep-f-emp">Company</label><select id="dep-f-emp" class="ps-sel" data-c="depFEmp">' + opt('', 'All companies', f.emp) + S.ent.map(function (y) { return opt(y.id, y.nome + ' (' + P.depsDaEmpresa(y).length + ')', f.emp); }).join('') + '</select></div>' +
       '<p class="ps-small ps-mut dp-nota">' + (x ? lista.length + ' department(s) in ' + e(x.nome) + ', including those shared by all companies.' : 'A department can exist in every company or only in some. People, indicators and tasks then use the departments of their company.') + '</p></div>';
     return '<div class="ps-card">' + cabCartao('Departments', 'doc') + '<div class="ps-card-body">' + novo + filtro +
-      '<div class="ps-mt">' + tabela([{ t: 'Department' }, { t: 'Companies', info: 'The companies where the department exists. "All companies" means it exists in every company of the group.' }, { t: 'Area head', info: 'Approves what the department submits, before the sustainability team. When the area head submits, this step passes automatically.' }, { t: 'In use', dir: 1, info: dica }, { t: 'Actions' }], lista.map(function (o) {
+      '<div class="ps-mt">' + tabela([{ t: 'Department' }, { t: 'Companies', info: 'The companies where the department exists. "All companies" means it exists in every company of the group.' }, { t: 'Area head by company', info: 'In each company, the person who approves what the department submits, before the sustainability team. A data reviewer becomes it automatically. When the area head submits, this step passes automatically.' }, { t: 'In use', dir: 1, info: dica }, { t: 'Actions' }], lista.map(function (o) {
         var d = o.d, i = o.i, u2 = P.usosDepartamentoDet(d.nome), tot = u2.pessoas + u2.indicadores + u2.milestones, txt = u2.pessoas + ' people, ' + u2.indicadores + ' indicators, ' + u2.milestones + ' tasks';
         var gente = S.users.filter(function (x2) { return x2.perfil !== 'ext' && x2.perfil !== 'auditor' && (P.temUnidade(x2, d.nome) || x2.login === d.chefe); });
-        var chefeSel = '<select id="dp-ch-' + i + '" class="ps-sel" data-pesq aria-label="Area head of ' + e(d.nome) + '" data-c="depChefe" data-id="' + i + '">' + opt('', 'No area head (step passes automatically)', d.chefe || '') + gente.map(function (x2) { return opt(x2.login, x2.nome, d.chefe || ''); }).join('') + '</select>';
+        /* Um responsavel por empresa onde o departamento existe */
+        var chefeSel = '<div class="dp-chefes">' + (P.empresasDoDep ? P.empresasDoDep(d) : S.ent).map(function (y) {
+          var atual = (d.chefes && d.chefes[y.id] !== undefined ? d.chefes[y.id] : d.chefe) || '', gy = gente.filter(function (x2) { return P.userNaEmpresa(x2, y.nome) || x2.login === atual; });
+          return '<label class="dp-ch"><small>' + e(y.nome) + '</small><select id="dp-ch-' + i + '-' + e(y.id) + '" class="ps-sel" data-pesq aria-label="Area head of ' + e(d.nome) + ' in ' + e(y.nome) + '" data-c="depChefeEmp" data-id="' + i + '|' + e(y.id) + '">' + opt('', 'No area head', atual) + gy.map(function (x2) { return opt(x2.login, x2.nome, atual); }).join('') + '</select></label>';
+        }).join('') + '</div>';
         return ['<input id="dp-' + i + '" class="ps-in" aria-label="Department name" value="' + e(d.nome) + '" data-c="depNome" data-id="' + i + '">', tagsEmpresasDep(d, i), chefeSel, tot ? '<span class="dp-uso" tabindex="0" data-tip="' + e(txt) + '">' + tot + '</span>' : '<span class="ps-mut">0</span>',
           tot ? '<button type="button" class="ps-btn peq" disabled title="In use: ' + e(txt) + '">Remove</button>' : '<button type="button" class="ps-btn peq err" data-a="depApagar" data-v="' + i + '">Remove</button>'];
       }), 'No department in this company yet.') + '</div><p class="ps-mut ps-small ps-mt">Departments are the tags on tasks and people, and the groups that report indicators. Renaming one updates them all.</p></div></div>';
@@ -1796,6 +1812,7 @@
   var abrePainel = function (tipo, args) { U.painel = { tipo: tipo, args: args || {} }; U.painelFoco = true; R(); };
   var fechaPainel = function () { if (U.painel && U.painel.tipo === 'marca' && U.marca) { U.marca = null; U.logoEstado = ''; P.aplicarMarca(); } U.painel = null; R(); };
   var Pn = {};
+  Pn.deps = function () { return { t: 'Departments', s: 'The departments of each company and their area head', largo: true, cls: 'alto', b: B.departamentos(), p: '<span class="ps-sp-flex"></span><button type="button" class="ps-btn" data-a="fecharPainel">Close</button>' }; };
   Pn.msApagar = function (a) {
     var m = P.ms(a.id);
     if (!m) return { t: 'Delete task', b: '<div class="ps-aviso">This task no longer exists.</div>', p: '<span class="ps-sp-flex"></span><button type="button" class="ps-btn" data-a="fecharPainel">Close</button>' };
@@ -2224,6 +2241,8 @@
     var empRota = U.rota.pag === 'Milestones' && U.rota.q.empresa ? S.ent.filter(function (x) { return x.id === U.rota.q.empresa; })[0] : null;
     U.msFiltro.empresa = empRota ? empRota.nome : '';
     if (U.rota.pag === 'Backoffice' && U.rota.q.tab) U.boTab = U.rota.q.tab;
+    /* Departments passou para um pop-up dentro de Users and profiles */
+    if (U.boTab === 'departamentos') { U.boTab = 'utilizadores'; }
     /* Launch by department passou a ser a vista By department da pagina Indicators */
     if (U.boTab === 'lancar') { U.boTab = 'indicadores'; if (U.ind) U.ind.vista = 'dep'; }
     if (U.rota.q.sep) U.sep = U.rota.q.sep;
@@ -2297,6 +2316,7 @@
     calHoje: function () { U.cal = null; R(); },
     msVista: function (d) { U.msVista = d.v; R(); },
     boMsVista: function (d) { U.boMs.vista = d.v; R(); },
+    depsAbrir: function () { abrePainel('deps', {}); },
     boMsApagar: function (d) { abrePainel('msApagar', { id: d.v }); },
     boMsApagarSim: function (d) { var r = P.apagarTask(d.v, u()); if (r.erro) return toast(r.erro, 'err'); U.painel = null; toast(r.nome + ' deleted.', 'ok'); R(); },
     msAba: function (d) { U.msFiltro.minhas = d.v === 'minhas'; R(); },
@@ -2634,7 +2654,17 @@
       var chefias = novo === 'revisor' ? chefeDosDeps(x) : [];
       P.guardar(); toast(x.nome + ' is now ' + P.PERFIS[novo] + (chefias.length ? ' and area head of ' + chefias.join(', ') : '') + '.', 'ok'); R();
     },
-    userUnJuntar: function (el) { if (!el.value) return; if (el.dataset.id === '__novo') { U.userNovo.unidades.push(el.value); return; } var x = P.user(el.dataset.id); P.definirUnidades(x, P.unidadesDe(x).concat([el.value])); P.eventoGlobal(x.nome + ' added to ' + el.value + '.', u().nome); P.guardar(); },
+    /* Responsavel de area de um departamento numa empresa, escolhido no pop-up Manage departments */
+    depChefeEmp: function (el) {
+      var p = el.dataset.id.split('|'), d = S.deps[+p[0]], y = S.ent.filter(function (z) { return z.id === p[1]; })[0];
+      if (!d || !y || !P.gereTudo(u())) return;
+      d.chefes = d.chefes || {};
+      var antes = (d.chefes[y.id] || d.chefe) ? (P.user(d.chefes[y.id] || d.chefe) || {}).nome : 'nobody';
+      if (el.value) d.chefes[y.id] = el.value; else { d.chefes[y.id] = ''; }
+      P.eventoGlobal('Department ' + d.nome + ', ' + y.nome + ': area head changed from ' + antes + ' to ' + (el.value ? P.user(el.value).nome : 'nobody') + '.', u().nome, 'Change');
+      P.guardar(); toast(d.nome + ', ' + y.nome + ': area head ' + (el.value ? P.user(el.value).nome : 'removed') + '.', 'ok'); R();
+    },
+    userUnJuntar: function (el) { if (!el.value) return; if (el.dataset.id === '__novo') { U.userNovo.unidades.push(el.value); return; } var x = P.user(el.dataset.id); setTimeout(function () { if (x && x.perfil === 'revisor') { chefeDosDeps(x); P.guardar(); R(); } }, 0); P.definirUnidades(x, P.unidadesDe(x).concat([el.value])); P.eventoGlobal(x.nome + ' added to ' + el.value + '.', u().nome); P.guardar(); },
     userNovoC: function (el) { U.userNovo[el.dataset.f] = el.value; },
     userBusca: function (el) { U.userBusca = el.value; },
     boMsQ: function (el) { U.boMs.q = el.value; R(); },
@@ -2652,6 +2682,7 @@
       if (el.checked) on.push(p[1]);
       if (!on.length) { toast('A person needs at least one company.', 'err'); R(); return; }
       x.empresas = on.length === S.ent.length ? [] : on;
+      if (p[0] !== '__novo' && x.perfil === 'revisor') chefeDosDeps(x);
       if (p[0] !== '__novo') { P.eventoGlobal('User ' + x.nome + ': companies set to ' + P.empresasUser(x).map(function (y) { return y.nome; }).join(', ') + '.', u().nome, 'Change'); P.guardar(); }
       R();
     },

@@ -1329,6 +1329,15 @@ Pedido do André a 11 de novembro de 2026.
   - As tasks concluídas não se apagam, porque ficam no histórico.
   - Os indicadores podem voltar a ser enviados a partir de Indicators.
 
+### Responsável de área por empresa; Departments dentro de Users and profiles
+
+Pedido do André a 12 de novembro de 2026.
+
+- **Responsável por departamento e empresa:** `d.chefes[idDaEmpresa]`, com `d.chefe` como responsável por omissão.
+  - `P.chefeDe(dep, empresa)` e `P.eChefe(u, dep, empresa)` usam a empresa da task, no workflow, no bypass e na revisão por indicador. `P.chefiasDe(u)` diz onde uma pessoa é responsável.
+- **Data reviewer:** fica responsável do seu departamento em cada empresa onde trabalha e onde o departamento existe. É recalculado quando muda o perfil, os departamentos ou as empresas da pessoa. Na tabela aparece "Area head of Operações (Entidade B)".
+- **Um só ecrã:** o separador Departments saiu do menu do Backoffice. Em Users and profiles, o botão **Manage departments** abre um pop-up com a lista: criar, renomear, apagar, as empresas onde cada departamento existe e a coluna **Area head by company** (uma lista por empresa). As ligações antigas ao separador abrem Users and profiles.
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.

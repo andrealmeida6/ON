@@ -793,7 +793,7 @@
       if (f.length) { recusados.push(f[0].msg); return; }
       var itS = P.item(id, P.chave(m)); itS.submetido = { em: agora(), por: u.nome }; delete itS.devolvidoInd;
       /* Quem submete e o responsavel da area (ou a area nao tem responsavel): a aprovacao da area passa sozinha */
-      if (P.eChefe(u, m.unidade) || !P.chefeDe(m.unidade)) itS.aprovadoArea = { em: agora(), por: u.nome, auto: true };
+      if (P.eChefe(u, m.unidade, m.empresa) || !P.chefeDe(m.unidade, m.empresa)) itS.aprovadoArea = { em: agora(), por: u.nome, auto: true };
       feitos.push(id);
     });
     if (feitos.length) {
@@ -822,7 +822,7 @@
   P.podeReverInd = function (m, id, u) {
     var it = P.item(id, P.chave(m)), et = P.etapaInd(m, id);
     if (!u || !et || P.concluida(m) || it.submetido.por === u.nome) return false;
-    if (et === 'area') return P.eChefe(u, m.unidade) || u.perfil === 'admin';
+    if (et === 'area') return P.eChefe(u, m.unidade, m.empresa) || u.perfil === 'admin';
     return P.gereTudo(u);
   };
   P.indParaRever = function (m) { if (P.concluida(m)) return []; var pa = P.passoAtual(m); if (!pa || pa.tipo !== 'recolha') return []; return m.indicadores.filter(function (id) { var it = P.item(id, P.chave(m)); return it && it.submetido && !it.revisto; }); };
@@ -1213,7 +1213,7 @@
   P.nomeResp = function (m, resp) {
     if (resp === 'unidade') return m ? m.unidade : 'Task unit';
     if (resp === 'esg') return 'Sustainability team';
-    if (resp === 'chefe') { var ch = m ? P.chefeDe(m.unidade) : null; return ch ? ch.nome + ' (area head)' : 'Area head'; }
+    if (resp === 'chefe') { var ch = m ? P.chefeDe(m.unidade, m.empresa) : null; return ch ? ch.nome + ' (area head)' : 'Area head'; }
     if (resp === 'admin') return 'Administrator';
     if (resp === 'sistema') return 'Automatic';
     return resp.indexOf('area:') === 0 ? resp.slice(5) : resp;
@@ -1223,7 +1223,7 @@
     if (!p || !u || p.responsavel === 'sistema') return false;
     if (u.perfil === 'admin') return true;
     if (p.responsavel === 'esg') return u.perfil === 'esg';
-    if (p.responsavel === 'chefe') { var ch = P.chefeDe(m.unidade); return ch ? ch.login === u.login : P.daUnidade(u) && P.temUnidade(u, m.unidade); }
+    if (p.responsavel === 'chefe') { var ch = P.chefeDe(m.unidade, m.empresa); return ch ? ch.login === u.login : P.daUnidade(u) && P.temUnidade(u, m.unidade); }
     /* Recolha: atribuida a uma pessoa, so ela; atribuida ao departamento, as pessoas do departamento que trabalham na empresa da task */
     if (p.responsavel === 'unidade') return m.atribuido_a ? m.atribuido_a === u.login : P.daUnidade(u) && P.temUnidade(u, m.unidade) && (!P.userNaEmpresa || P.userNaEmpresa(u, m.empresa));
     if (p.responsavel.indexOf('area:') === 0) return P.daUnidade(u) && P.temUnidade(u, p.responsavel.slice(5));
@@ -1239,14 +1239,26 @@
     return P.passoAtual(m).responsavel === 'admin' || (!!m.atribuido_a && m.atribuido_a === u.login);
   };
   /* Responsavel de area: definido em Backoffice, Departments */
-  P.chefeDe = function (dep) { var d = (S.deps || []).filter(function (x) { return x.nome === dep; })[0]; return d && d.chefe ? P.user(d.chefe) : null; };
-  P.eChefe = function (u, dep) { var ch = P.chefeDe(dep); return !!u && !!ch && ch.login === u.login; };
+  /* Responsavel de area por departamento e empresa: d.chefes[idDaEmpresa]; d.chefe fica como o responsavel por omissao */
+  P.chefeDe = function (dep, empresa) {
+    var d = (S.deps || []).filter(function (x) { return x.nome === dep; })[0];
+    if (!d) return null;
+    var x = empresa ? (S.ent || []).filter(function (y) { return y.nome === empresa || y.id === empresa; })[0] : null, lg = (x && d.chefes && d.chefes[x.id]) || d.chefe;
+    return lg ? P.user(lg) : null;
+  };
+  P.eChefe = function (u, dep, empresa) { var ch = P.chefeDe(dep, empresa); return !!u && !!ch && ch.login === u.login; };
+  /* Onde uma pessoa e responsavel de area: [{dep, empresa}] */
+  P.chefiasDe = function (u) {
+    var l = [];
+    (S.deps || []).forEach(function (d) { (P.empresasDoDep ? P.empresasDoDep(d) : S.ent).forEach(function (x) { var lg = (d.chefes && d.chefes[x.id]) || d.chefe; if (lg === u.login) l.push({ dep: d.nome, empresa: x.nome }); }); });
+    return l;
+  };
   /* Passo do responsavel de area: passa sozinho quando foi o proprio a submeter, ou quando todos os indicadores
      ja foram aprovados por ele um a um */
   var bypassArea = function (m, u) {
     var p = P.passoAtual(m);
     if (!p || p.tipo !== 'area' || P.concluida(m)) return false;
-    var ch = P.chefeDe(m.unidade), todos = m.indicadores.filter(function (id) { return !P.eOutput(P.cat(id)); }).every(function (id) { var it = P.item(id, P.chave(m)); return it && it.aprovadoArea; });
+    var ch = P.chefeDe(m.unidade, m.empresa), todos = m.indicadores.filter(function (id) { return !P.eOutput(P.cat(id)); }).every(function (id) { var it = P.item(id, P.chave(m)); return it && it.aprovadoArea; });
     var motivo = ch && u && ch.login === u.login ? 'submitted by the area head' : !ch ? 'no area head set for ' + m.unidade : todos ? 'every indicator was already approved by the area head' : '';
     if (!motivo) return false;
     p.concluido_em = agora(); p.concluido_por = (ch ? ch.nome : 'System') + ' (automatic: ' + motivo + ')';
