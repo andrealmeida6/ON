@@ -1424,6 +1424,27 @@ Pedido do André a 12 de novembro de 2026.
 - **Calculations:** o simulador de Scope 1 que escrevia o resultado na task saiu (`P.aplicarCalculo` recusa). A biblioteca de fatores de emissão fica como referência, com uma nota a explicar.
 - **Evidência:** na task, estes indicadores têm uma nota a pedir que se junte o cálculo (Excel ou PDF) com Attach evidence. Fica opcional; para a tornar obrigatória, basta pôr "Evidence required = Yes" no indicador.
 
+## Comentários do cliente: momentos de report, task, Monitoring e ficha do indicador
+
+Pedido do André a 12 de novembro de 2026, com os comentários do cliente.
+
+- **Só momentos de report.** O cliente estranhou ver "Monthly" num indicador (Água entrada no sistema) que depois se reporta por trimestre.
+  - A frequência de reporte e a frequência de recolha saíram. Fica só **Reporting moments**: T1, T2, T3, T4 e/ou Year.
+  - Isto vale para a tabela, a ficha, o editor (caixas por momento), a edição em lote, o Excel (aceita as frequências antigas no import: Monthly ou Quarterly passam a T1 a T4, Annual passa a Year), o KPI master e a lista de materialidade.
+  - Reporting moments (Backoffice): saem a coluna Frequency e o "Custom / Reset".
+  - Os dados antigos com "Mensal" passam a trimestrais (`P.migrarDados`). O topo da task deixa de mostrar a frequência.
+- **Calculations:** a biblioteca de fatores de emissão deixa de estar visível.
+- **Source data só nos outputs.** Os indicadores calculados (tipo derivado) mostram o source data e o valor final não se escreve: atualiza-se pelo source data. Os inputs não mostram source data e escrevem-se diretamente.
+- **Unidade ao lado do valor** (%, m³, MWh…), em todas as linhas da task.
+- **Botão do fundo:** "Submit task" passou a "Submit all tasks".
+- **Submit individual depois de uma devolução.** Quando o revisor devolvia um indicador, a linha mostrava "Returned" e escondia o Submit. Passa a mostrar os dois.
+- **Reporting status** (Monitoring): os dois primeiros cartões são **Indicators** (total do catálogo, por exemplo 70) e **Requests sent** (para quantos já foram enviadas tasks neste ciclo, com quantos faltam pedir). Seguem os filtros de empresa e ESRS.
+- **Tasks:** o período começa sempre em All quando se abre a página. Só um link com `?periodo=` escolhe outro, porque um filtro anual que ficava guardado escondia as tasks.
+- **History:** filtro por entidade.
+  - Com uma entidade escolhida, só aparecem os indicadores dela e os seus valores.
+  - A série histórica e o ano anterior são do grupo, por isso ficam só em All entities.
+- **Ficha do indicador** (Backoffice > Indicators): clicar no nome abre a ficha, só de leitura, com toda a configuração por secções e o estado da task do período. O botão **Edit** abre o espaço de configuração. O Edit da linha continua a abrir a configuração diretamente.
+
 ## Tabelas só por indicador (KPI)
 
 Pedido do André a 12 de novembro de 2026: as tabelas por task confundiam, por isso as listas passaram a ter uma linha por indicador e deixaram de ter a coluna Task. A task continua a existir por trás e agrupa os indicadores do mesmo tópico, período e empresa.

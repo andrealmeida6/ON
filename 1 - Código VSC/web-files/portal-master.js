@@ -15,7 +15,8 @@
   var campoSim = function (id, lab, f, ch, v, ed) { return campo(id, lab, '<select id="' + id + '" class="ps-sel" data-c="' + ch + '" data-f="' + f + '"' + (ed ? '' : ' disabled') + '>' + opt('', 'Please select', v) + opt('sim', 'Yes', v) + opt('nao', 'No', v) + '</select>'); };
   var FREQ = ['Monthly', 'Quarterly', 'Half-yearly', 'Annually'];
   var FREQ_PT = { Mensal: 'Monthly', Trimestral: 'Quarterly', Semestral: 'Half-yearly', Anual: 'Annually' };
-  var freqDe = function (c) { return FREQ_PT[c.periodicidade] || c.periodicidade; };
+  /* So os momentos de report (T1 a T4 e Year); a frequencia saiu */
+  var freqDe = function (c) { var per = P.momentosDe(c.id).per; return P.MOMENTOS_PER.filter(function (x) { return per.indexOf(x[0]) > -1; }).map(function (x) { return x[1]; }).join('; '); };
   var controlosPlataforma = function (c) {
     var t = 'Change threshold of ±' + P.limiarDe(c) + '% against the prior year; review and approval in the workflow; audit trail';
     return t + (c.evidencia_obrigatoria ? '; evidence required.' : '.');
@@ -50,9 +51,8 @@
       det = '<div class="ps-card">' + cabCartao(c.nome, 'tarefa', chip(REL[k.rel][0], REL[k.rel][1])) + '<div class="ps-card-body"><p>' + e(k.desc) + '</p>' +
         (k.nota ? '<div class="ps-aviso warn ps-mt">' + e(k.nota) + '</div>' : '') +
         '<h3 class="ps-grupo-t">ESRS</h3>' + (dps || '<p class="ps-small ps-mut">No ESRS datapoint for this indicator. If it is disclosed, it follows ESRS 2 GDR-M (entity-specific metric).</p>') +
-        '<h3 class="ps-grupo-t">Reporting information</h3><dl class="ps-det km-det"><dt>Platform ID</dt><dd class="ps-mono">' + e(c.id) + '</dd><dt>Company topic</dt><dd>' + e(c.tema) + '</dd><dt>Company sub-topic</dt><dd>' + e(k.sub) + '</dd><dt>Disclosure type</dt><dd>Quantitative</dd><dt>Unit</dt><dd>' + e(c.unidade_medida) + '</dd><dt>Calculation</dt><dd>' + e(c.formula || 'Reported value') + '</dd><dt>Reporting frequency</dt><dd>' + e(freqDe(c)) + '</dd><dt>Aggregation</dt><dd>' + e(k.agreg) + '</dd><dt>KPI scope</dt><dd>' + e(c.perimetro) + '</dd><dt>Company</dt><dd>' + e(m ? m.empresa : '-') + '</dd><dt>Department</dt><dd>' + e(c.unidade_negocio) + '</dd><dt>Responsible person</dt><dd>' + e(d ? d.nome : '-') + '</dd><dt>Report use</dt><dd>' + e(c.utilizado_por.join(', ')) + '</dd><dt>GRI</dt><dd>' + e(c.gri) + '</dd><dt>Platform controls</dt><dd>' + e(controlosPlataforma(c)) + '</dd></dl>' +
+        '<h3 class="ps-grupo-t">Reporting information</h3><dl class="ps-det km-det"><dt>Platform ID</dt><dd class="ps-mono">' + e(c.id) + '</dd><dt>Company topic</dt><dd>' + e(c.tema) + '</dd><dt>Company sub-topic</dt><dd>' + e(k.sub) + '</dd><dt>Disclosure type</dt><dd>Quantitative</dd><dt>Unit</dt><dd>' + e(c.unidade_medida) + '</dd><dt>Calculation</dt><dd>' + e(c.formula || 'Reported value') + '</dd><dt>Reporting moments</dt><dd>' + e(freqDe(c)) + '</dd><dt>Aggregation</dt><dd>' + e(k.agreg) + '</dd><dt>KPI scope</dt><dd>' + e(c.perimetro) + '</dd><dt>Company</dt><dd>' + e(m ? m.empresa : '-') + '</dd><dt>Department</dt><dd>' + e(c.unidade_negocio) + '</dd><dt>Responsible person</dt><dd>' + e(d ? d.nome : '-') + '</dd><dt>Report use</dt><dd>' + e(c.utilizado_por.join(', ')) + '</dd><dt>GRI</dt><dd>' + e(c.gri) + '</dd><dt>Platform controls</dt><dd>' + e(controlosPlataforma(c)) + '</dd></dl>' +
         '<h3 class="ps-grupo-t">To complete</h3><div class="ps-form">' +
-        campo('km-rec', 'Data collection frequency', '<select id="km-rec" class="ps-sel" data-c="kmCampo" data-f="recolha"' + (ed ? '' : ' disabled') + '>' + opt('', 'Same as reporting', r.recolha || '') + FREQ.map(function (x) { return opt(x, x, r.recolha || ''); }).join('') + '</select>') +
         campoSim('km-dis', 'Data available', 'disponivel', 'kmCampo', r.disponivel || '', ed) +
         campo('km-fon', 'Source or system', '<input id="km-fon" class="ps-in" data-c="kmCampo" data-f="fonte" value="' + e(r.fonte || '') + '"' + (ed ? '' : ' readonly') + '>') +
         campoSim('km-con', 'Other controls in place', 'controlos', 'kmCampo', r.controlos || '', ed) +
@@ -141,7 +141,7 @@
       'Company Topic': juntar(function (c) { return c.tema; }), 'Company Sub-Topic': juntar(function (c, r, k) { return k.sub; }), 'ESRS DR': d ? d.dr : '', 'ESRS Paragraph': d ? d.par : '', 'Related ESRS AR': d ? d.ar : '',
       'KPI Name': d ? d.nome : juntar(function (c) { return c.nome; }), 'KPI Description': d ? d.texto : juntar(function (c, r, k) { return k.desc; }), 'Platform KPI Description': juntar(function (c, r, k) { return c.nome + ': ' + k.desc; }),
       'Disclosure Type [Quantitative / Qualitative]': d ? d.div : 'Quantitative', 'Data Type': d ? d.tipo : '', 'Unit': juntar(function (c) { return c.unidade_medida; }), 'Calculation': juntar(function (c) { return c.formula; }),
-      'Reporting Frequency': juntar(freqDe), 'Data collection frequency': juntar(function (c, r) { return r.recolha || freqDe(c); }), 'Data Aggregation Type': juntar(function (c, r, k) { return k.agreg; }), 'KPI Scope': juntar(function (c) { return c.perimetro; }),
+      'Reporting moments': juntar(freqDe), 'Data Aggregation Type': juntar(function (c, r, k) { return k.agreg; }), 'KPI Scope': juntar(function (c) { return c.perimetro; }),
       'KPI Responsibility - Responsible Department': juntar(function (c) { return c.unidade_negocio; }), 'KPI Responsibility - Responsible Person': juntar(function (c) { var x = P.user((S.atrib[c.id] || {}).submete); return x ? x.nome : ''; }),
       'KPI Availability - Available [yes/no]': juntar(function (c, r) { return simNao(r.disponivel); }), 'Source / System': juntar(function (c, r) { return r.fonte; }),
       'Controls - Controls already implemented [yes/no]': cs.length ? 'Yes' : '', 'Controls - Control Description': juntar(function (c, r) { return controlosPlataforma(c) + (r.controlo_txt ? ' ' + r.controlo_txt : ''); }),

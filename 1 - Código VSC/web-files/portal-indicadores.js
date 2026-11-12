@@ -10,6 +10,18 @@
   'use strict';
   var P = window.Portal, S = P.S, X = P.ext;
   var B = X.B, A = X.A, C = X.C, U = X.U, e = X.e, chip = X.chip, opt = X.opt, campo = X.campo, toast = X.toast, R = X.R, u = X.u, vazio = X.vazio, rota = X.rota, cabCartao = X.cabCartao, svg = X.svg, I = X.I;
+  /* Momentos de report: T1 a T4 e Year */
+  var MOM = P.MOMENTOS_PER, MOM_OPCOES = ['T1; T2; T3; T4', 'Year', 'T1; T2; T3; T4; Year', 'T2; T4', 'T4'];
+  var momTxt = function (per) { return MOM.filter(function (x) { return per.indexOf(x[0]) > -1; }).map(function (x) { return x[1]; }).join('; '); };
+  var momLista = function (v) {
+    var t = String(v === null || v === undefined ? '' : v).trim(), l = [];
+    if (/^(monthly|mensal|quarterly|trimestral)$/i.test(t)) return ['T1', 'T2', 'T3', 'T4'];
+    if (/^(annual|annually|anual|yearly|year|ano)$/i.test(t)) return ['A'];
+    var mal = false;
+    t.split(/[;,\s]+/).filter(Boolean).forEach(function (x) { var m = /^t?([1-4])$/i.exec(x), k = m ? 'T' + m[1] : /^(year|ano|a|annual|anual)$/i.test(x) ? 'A' : null; if (!k) mal = true; else if (l.indexOf(k) < 0) l.push(k); });
+    return mal ? [] : MOM.map(function (x) { return x[0]; }).filter(function (k) { return l.indexOf(k) > -1; });
+  };
+  var lerMom = function (v) { var l = momLista(v); return l.length ? { val: momTxt(l) } : { erro: 'Reporting moments must be T1, T2, T3, T4 and/or Year, separated by ";" (for example "T1; T2; T3; T4" or "Year").' }; };
   var norm = function (t) { return String(t === null || t === undefined ? '' : t).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim(); };
   var GRUPO_TXT = '(whole department)';
   var FREQ = [['Mensal', 'Monthly'], ['Trimestral', 'Quarterly'], ['Anual', 'Annual']];
@@ -83,12 +95,12 @@
       get: function (c) { if (c.calc_codigos) return c.calc_codigos; var sg = c.tipo === 'derivado' && P.sugerirCalc ? P.sugerirCalc(c.id) : null; return sg ? sg.calc : ''; }, res: function (v, c) { var s = String(v || '').trim(); var er = P.validarCalc(s, c && c.id, idsImport); return er ? { erro: er } : { val: P.textoCalc(P.tokensCalc(s)) }; }, set: function (c, v) { c.calc_codigos = v || ''; if (v) c.tipo = 'derivado'; } },
     { k: 'formula', g: 'car', t: 'Calculation methodology', w: 44, longo: true, d: 'Calculation methodology, formula in words or key assumptions.', al: ['formula', 'calculation method', 'calculation'],
       get: function (c) { return c.formula || ''; }, res: okv, set: function (c, v) { c.formula = v || null; } },
-    { k: 'freq', g: 'car', t: 'Reporting Frequency', w: 14, d: 'How often the indicator is reported.', vals: FREQ.map(function (f) { return f[1]; }), al: ['frequency', 'periodicidade'],
-      get: function (c) { var f = par(FREQ, c.periodicidade, 0); return f ? f[1] : (X.PERIODO_TXT[c.periodicidade] || c.periodicidade || ''); },
-      res: function (v, c) { if (c && norm(v) === norm(this.get(c))) return { val: this.get(c) }; return lista(FREQ, 'Reporting Frequency')(v); },
-      set: function (c, v) { var f = par(FREQ, v, 1); if (f && f[0] !== c.periodicidade) { c.periodicidade = f[0]; if (c.momentos) delete c.momentos; } } },
-    { k: 'recolha', g: 'car', t: 'Data collection frequency', w: 16, d: 'How often the underlying data is collected. Empty means the same as the reporting frequency.', vals: ['Monthly', 'Quarterly', 'Half-yearly', 'Annually'],
-      get: function (c) { return regL(c.id).recolha || ''; }, res: okv, set: function (c, v) { reg(c.id).recolha = v; } },
+    /* So os momentos de report (T1 a T4 e Year): a frequencia de recolha saiu, a pedido do cliente.
+       Aceita as frequencias antigas no import (Monthly/Quarterly = T1 a T4, Annual = Year). */
+    { k: 'freq', g: 'car', t: 'Reporting moments', w: 18, d: 'When the indicator is reported: T1, T2, T3, T4 and/or Year, separated by ";". The tasks of each period follow it.', vals: MOM_OPCOES, al: ['reporting frequency', 'frequency', 'periodicidade', 'reporting moments', 'moments'],
+      get: function (c) { return momTxt(P.momentosDe(c.id).per); },
+      res: function (v) { return lerMom(v); },
+      set: function (c, v) { var per = momLista(v); if (!per.length) return; var mo = P.momentosDe(c.id); c.momentos = { per: per, ent: mo.ent }; c.periodicidade = per.some(function (k) { return k !== 'A'; }) ? 'Trimestral' : 'Anual'; } },
     { k: 'agreg', g: 'car', t: 'Data Aggregation Type', w: 16, d: 'How values are combined across companies and periods: Sum, Average or Latest value.', vals: AGREG.map(function (f) { return f[1]; }), al: ['aggregation'],
       get: function (c) { return (par(AGREG, P.agregacao(c.id), 0) || AGREG[0])[1]; }, res: function (v) { var n = norm(v), x = /end of period|latest|last|ultimo/.test(n) ? 'Latest value' : /average|mean|media/.test(n) ? 'Average' : /sum|total|soma/.test(n) ? 'Sum' : ''; return x || !n ? { val: x } : { erro: 'Data Aggregation Type must be one of: Sum, Average, Latest value.' }; }, set: function (c, v) { var f = par(AGREG, v, 1); if (f) c.agregacao = f[0]; } },
     { k: 'scope', g: 'car', t: 'KPI Scope', w: 16, d: 'Organisational perimeter the KPI applies to (group, subsidiaries, sites).', al: ['scope', 'perimetro'],
@@ -279,7 +291,7 @@
       var tarefa = s.m ? '<a class="ki-tar" href="' + rota('Milestone/' + s.m.id) + '" title="' + e(s.m.nome + ', due ' + P.fmtData(s.m.prazo)) + '">' + chip(s.txt, s.cls) + '<small class="ki-sub" data-fx-ignorar>due ' + e(P.fmtData(s.m.prazo)) + '</small></a>'
         : P.indAtivo(c) ? '<button type="button" class="ps-btn peq ki-env1" data-a="indEnviar1" data-v="' + id + '">' + svg(ICO.enviar, 13) + 'Send</button>' : chip('Inactive');
       return '<tr class="' + (on ? 'ki-on' : '') + (P.indAtivo(c) ? '' : ' ki-off') + '"><td class="ki-c"><input id="ks-' + id + '" type="checkbox" aria-label="Select ' + e(c.nome) + '" data-c="indSel" data-id="' + id + '"' + (on ? ' checked' : '') + '></td>' +
-        '<td class="prim"><button type="button" class="ki-nome" data-a="indEditar" data-v="' + id + '"><b>' + e(c.nome) + '</b><small data-fx-ignorar><span class="ps-cod">' + id + '</span>' + e((c.esrs_requisito || 'No ESRS') + ' · ' + (c.unidade_medida || 'no unit') + ' · ' + campoK.freq.get(c)) + (c.tipo === 'derivado' ? ' · derived' : '') + '</small></button>' + (function () { if (!f.q) return ''; var a = achado(c, norm(f.q)); return a && a.campo ? '<span class="ki-achado" data-fx-ignorar><b>' + e(rotCurto(a.campo.k)) + ':</b> ' + excerto(a.valor, norm(f.q)) + '</span>' : ''; })() + '</td>' +
+        '<td class="prim"><button type="button" class="ki-nome" data-a="indFicha" data-v="' + id + '" title="Open the indicator card"><b>' + e(c.nome) + '</b><small data-fx-ignorar><span class="ps-cod">' + id + '</span>' + e((c.esrs_requisito || 'No ESRS') + ' · ' + (c.unidade_medida || 'no unit') + ' · ' + campoK.freq.get(c)) + (c.tipo === 'derivado' ? ' · derived' : '') + '</small></button>' + (function () { if (!f.q) return ''; var a = achado(c, norm(f.q)); return a && a.campo ? '<span class="ki-achado" data-fx-ignorar><b>' + e(rotCurto(a.campo.k)) + ':</b> ' + excerto(a.valor, norm(f.q)) + '</span>' : ''; })() + '</td>' +
         '<td data-l="Threshold" class="ki-lim">' + limiarCel(c) + '</td><td data-l="Responsible">' + respHtml(c) + '</td><td data-l="Reported by">' + empHtmlInd(c) + '</td><td data-l="Task">' + tarefa + '</td>' +
         '<td class="ki-ac"><button type="button" class="ps-btn peq" data-a="indEditar" data-v="' + id + '" aria-label="Edit ' + e(c.nome) + '">' + svg(ICO.lapis, 14) + 'Edit</button></td></tr>';
     }).join('');
@@ -508,7 +520,6 @@
   };
   X.Pn.indEd = function () {
     var E = U.ind.ed, d = E.d, c = E.novo ? null : P.cat(E.id), per = perAtual();
-    var freqs = FREQ.map(function (f) { return f[1]; }); if (d.freq && freqs.indexOf(d.freq) < 0) freqs.push(d.freq);
     var depPess = pessoas('submete').filter(function (x) { return x.perfil === 'esg' || P.temUnidade(x, d.dep); }), outras = pessoas('submete').filter(function (x) { return depPess.indexOf(x) < 0; });
     var respOps = '<select id="ke-resp" class="ps-sel" data-c="indCampo" data-f="resp">' + opt(GRUPO_TXT, 'Whole department: ' + (d.dep || 'choose a department'), d.resp) +
       (depPess.length ? '<optgroup label="People of this department">' + depPess.map(function (x) { return opt(x.nome, x.nome, d.resp); }).join('') + '</optgroup>' : '') +
@@ -526,7 +537,7 @@
       secao('resp', cmp('reve', 'Reviewer', sel('reve', d, pessoas('reve').map(function (x) { return x.nome; }), 'Not set'), 'Reviews the value. Cannot be who reports.') +
         cmp('valida', 'Validator', sel('valida', d, pessoas('valida').map(function (x) { return x.nome; }), 'Not set'), 'Validates at the end.'), 'Who reviews and validates') +
       secao('car', cmp('unidade', 'Unit *', inp('unidade', d), 'For example m³, MWh, %, n.º') + cmp('casas', 'Decimals', inp('casas', d, ' inputmode="numeric"')) +
-        cmp('freq', 'Reporting frequency *', sel('freq', d, freqs)) + cmp('recolha', 'Data collection frequency', sel('recolha', d, campoK.recolha.vals, 'Same as reporting')) +
+        '<div class="ki-full">' + cmp('freq', 'Reporting moments *', '<div class="ki-mom" role="group" aria-label="Reporting moments">' + MOM.map(function (x) { var on = momLista(d.freq).indexOf(x[0]) > -1; return '<label class="ki-empc' + (on ? ' on' : '') + '"><input id="ke-mom-' + x[0] + '" type="checkbox" data-c="indMom" data-id="' + x[0] + '"' + (on ? ' checked' : '') + '>' + e(x[1]) + '</label>'; }).join('') + '</div>', 'The periods in which this indicator is asked for. Year uses the quarters when they exist.') + '</div>' +
         cmp('agreg', 'Aggregation', sel('agreg', d, AGREG.map(function (f) { return f[1]; })), 'How companies and periods are combined.') + (P.eCarbono(P.cat(U.ind.ed.id || d.id) || { id: d.id, unidade_medida: d.unidade }) ? cmp('natureza', 'Input / Output', '<input id="ke-natureza" class="ps-in" value="Input" readonly>', 'GHG emissions are always an input.') : cmp('natureza', 'Input / Output', sel('natureza', d, ['Input', 'Output']), 'Output: calculated from other indicators.')) + (P.eCarbono(P.cat(U.ind.ed.id || d.id) || { id: d.id, unidade_medida: d.unidade }) ? '<div class="ki-full ps-aviso info ps-small">GHG emissions are always an <b>input</b>: whoever reports calculates them outside the platform and enters the result. They can attach the calculation as evidence in the task.</div>' : editorCalc(d)) +
         cmp('div_tipo', 'Disclosure type', sel('div_tipo', d, ['Quantitative', 'Qualitative'])) + cmp('tipo_dado', 'Data type', sel('tipo_dado', d, campoK.tipo_dado.vals.indexOf(d.tipo_dado) < 0 && d.tipo_dado ? campoK.tipo_dado.vals.concat([d.tipo_dado]) : campoK.tipo_dado.vals)) +
         '<div class="ki-full">' + cmp('formula', 'Calculation methodology', area('formula', d), 'Methodology in words or key assumptions.') + '</div>') +
@@ -541,10 +552,26 @@
     return { t: E.novo ? 'New indicator' : d.nome || E.id, s: E.novo ? 'Define what it is, who reports it and which companies it covers' : E.id + ', ' + (d.dr || 'no ESRS') + ', ' + d.freq, largo: true, cls: 'alto ki-pan', b: corpo,
       p: (E.novo ? '' : '<button type="button" class="ps-btn" data-a="indEnviar1" data-v="' + e(E.id) + '">' + svg(ICO.enviar, 14) + 'Send task</button>') + '<span class="ps-sp-flex"></span><button type="button" class="ps-btn" data-a="fecharPainel">Cancel</button><button type="button" class="ps-btn pri" data-a="indGuardar">' + (E.novo ? 'Create indicator' : 'Save changes') + '</button>' };
   };
+  /* Ficha do indicador: so leitura, com toda a configuracao por secoes. Edit abre o espaco de configuracao. */
+  A.indFicha = function (d) { if (P.cat(d.v)) X.abrePainel('indFicha', { id: d.v }); };
+  X.Pn.indFicha = function (a) {
+    var c = P.cat(a.id);
+    if (!c) return { t: 'Indicator', b: '<div class="ps-aviso">This indicator no longer exists.</div>', p: '<span class="ps-sp-flex"></span><button type="button" class="ps-btn" data-a="fecharPainel">Close</button>' };
+    var per = perAtual(), tar = per ? P.estadoTarefaInd(c.id, per.id) : null, gere = P.gereTudo(u());
+    var val = function (f) { var v = ''; try { v = f.get(c); } catch (er) { v = ''; } v = String(v === null || v === undefined ? '' : v).trim(); return v ? e(v) : '<span class="ps-mut">-</span>'; };
+    var corpo = (tar ? '<div class="ki-estado"><span>Task for ' + e(per.nome) + '</span>' + chip(tar.txt, tar.cls) + (tar.m ? '<a href="' + rota('Milestone/' + tar.m.id + '?ind=' + encodeURIComponent(c.id)) + '" data-a="fecharPainel">Open the indicator in the task</a>' : '') + '</div>' : '') +
+      GRUPOS.map(function (g) {
+        var fs = CAMPOS.filter(function (f) { return f.g === g[0] && f.get; });
+        if (!fs.length) return '';
+        return '<section class="ki-sec" style="--gc:#' + g[2] + '"><h3>' + e(g[1]) + '</h3><dl class="ki-fi">' + fs.map(function (f) { return '<div' + (f.longo ? ' class="ki-full"' : '') + '><dt>' + e(f.t) + '</dt><dd>' + val(f) + '</dd></div>'; }).join('') + '</dl></section>';
+      }).join('');
+    return { t: c.nome, s: c.id + ', ' + (c.esrs_requisito || 'no ESRS') + ', ' + campoK.freq.get(c), largo: true, cls: 'alto ki-pan', b: '<div class="ki-ficha">' + corpo + '</div>',
+      p: (gere ? '<button type="button" class="ps-btn pri" data-a="indEditar" data-v="' + e(c.id) + '">' + svg(ICO.lapis, 14) + 'Edit</button>' : '') + '<span class="ps-sp-flex"></span><button type="button" class="ps-btn" data-a="fecharPainel">Close</button>' };
+  };
   A.indEditar = function (d) { var c = P.cat(d.v); if (!c) return; var dd = lerInd(c); dd.respEmp = respEmpDe(c, dd); if (!c.calc_codigos && dd.calc && P.sugerirCalc) { var sg0 = P.sugerirCalc(c.id); if (sg0) { dd.calcSug = sg0.sugeridos || []; dd.calcAuto = sg0.fonte; } } U.ind.ed = { id: c.id, novo: false, d: dd, erros: [] }; X.abrePainel('indEd'); };
   A.indNovo = function () {
     var c = novoCat(''), d = lerInd(c);
-    d.dep = U.ind.dep || ''; d.resp = GRUPO_TXT; d.reve = ''; d.valida = (pessoas('valida')[0] || {}).nome || ''; d.reporta = (S.ent.filter(function (x) { return x.id === U.ind.emp; })[0] || S.ent[0] || {}).nome || ''; d.freq = 'Annual';
+    d.dep = U.ind.dep || ''; d.resp = GRUPO_TXT; d.reve = ''; d.valida = (pessoas('valida')[0] || {}).nome || ''; d.reporta = (S.ent.filter(function (x) { return x.id === U.ind.emp; })[0] || S.ent[0] || {}).nome || ''; d.freq = 'Year';
     d.empresas = d.reporta; d.respEmp = respEmpDe(null, d);
     U.ind.ed = { id: '', novo: true, d: d, erros: [] }; X.abrePainel('indEd');
   };
@@ -552,6 +579,12 @@
     var d = U.ind.ed.d, k = el.dataset.f; d[k] = el.value;
     if (k === 'id') d.id = el.value.toUpperCase().replace(/[^A-Z0-9_.-]/g, '');
     if (k === 'esrs') { var m = (S.mat || []).filter(function (x) { return x.norma === el.value; })[0]; d.esrs_tema = m ? m.tema : ''; }
+  };
+  C.indMom = function (el) {
+    var d = U.ind.ed.d, l = momLista(d.freq), k = el.dataset.id;
+    l = l.filter(function (x) { return x !== k; }); if (el.checked) l.push(k);
+    d.freq = momTxt(l);
+    if (el.parentNode) el.parentNode.classList.toggle('on', el.checked);
   };
   C.indEmp = function (el) {
     var d = U.ind.ed.d, l = String(d.empresas || '').split(';').map(function (t) { return t.trim(); }).filter(Boolean), n = el.dataset.id;
@@ -622,7 +655,7 @@
       b: (L.erros && L.erros.length ? '<div class="ps-aviso err" role="alert"><ul class="ki-err">' + L.erros.slice(0, 6).map(function (t) { return '<li>' + e(t) + '</li>'; }).join('') + '</ul></div>' : '') +
         '<div class="ki-g">' + c2('dep', 'Responsible department', s2('dep', P.UNIDADES)) + c2('resp', 'Responsible: person or group', s2('resp', [GRUPO_TXT].concat(pessoas('submete').map(function (x) { return x.nome; })))) +
         c2('reve', 'Reviewer', s2('reve', pessoas('reve').map(function (x) { return x.nome; }))) + c2('valida', 'Validator', s2('valida', pessoas('valida').map(function (x) { return x.nome; }))) +
-        c2('reporta', 'Reporting company', s2('reporta', S.ent.map(function (x) { return x.nome; }))) + c2('freq', 'Reporting frequency', s2('freq', FREQ.map(function (f) { return f[1]; }))) +
+        c2('reporta', 'Reporting company', s2('reporta', S.ent.map(function (x) { return x.nome; }))) + c2('freq', 'Reporting moments', s2('freq', MOM_OPCOES)) +
         c2('limiar', 'Change threshold (%)', '<input id="kl-limiar" class="ps-in" inputmode="decimal" placeholder="' + manter + '" data-c="indLoteC" data-f="limiar" value="' + e(d.limiar || '') + '">') + c2('evid', 'Evidence required', s2('evid', ['Yes', 'No'])) + c2('ativo', 'Status', s2('ativo', ['Active', 'Inactive'])) + '</div>' +
         '<p class="ps-small ps-mut">Applies to: ' + e(ids.slice(0, 14).join(', ')) + (ids.length > 14 ? ' and ' + (ids.length - 14) + ' more' : '') + '. Every change goes to the change history of each indicator.</p>',
       p: '<span class="ps-sp-flex"></span><button type="button" class="ps-btn" data-a="fecharPainel">Cancel</button><button type="button" class="ps-btn pri" data-a="indLoteAplicar">Apply to ' + ids.length + ' indicators</button>' };
@@ -752,7 +785,7 @@
       nl++;
       wl.getCell(1, nl).value = f.t;
       vals.forEach(function (v, j) { wl.getCell(2 + j, nl).value = v; });
-      var col = letra(i + 2), livre = f.k === 'tipo_dado' || f.k === 'recolha';
+      var col = letra(i + 2), livre = f.k === 'tipo_dado' || f.k === 'freq';
       ws.dataValidations.add(col + '6:' + col + fimDados, { type: 'list', allowBlank: true, formulae: ['Lists!$' + letra(nl) + '$2:$' + letra(nl) + '$' + (1 + vals.length)], showErrorMessage: !livre, errorStyle: 'stop', errorTitle: rotCurto(f.k), error: 'Choose a value from the list.', showInputMessage: true, promptTitle: rotCurto(f.k), prompt: f.d.slice(0, 250) });
     });
     ws.dataValidations.add(letra(campoIx('casas')) + '6:' + letra(campoIx('casas')) + fimDados, { type: 'whole', operator: 'between', allowBlank: true, formulae: [0, 6], showErrorMessage: true, errorTitle: 'Decimals', error: 'A whole number from 0 to 6.' });

@@ -634,6 +634,9 @@
     (S.ms || []).forEach(function (m) { nomesPessoas.forEach(function (n) { var suf = ', ' + n; if (m.nome && m.nome.length > suf.length && m.nome.slice(-suf.length) === suf) m.nome = m.nome.slice(0, -suf.length); }); });
     /* Titulo das tasks: topico e periodo, sem referencias dos reports (as consolidacoes anuais mantem o nome) */
     (S.ms || []).forEach(function (m) { if (!m.consolida && m.periodicidade !== 'Novos dados ESRS' && P.nomeTask) m.nome = P.nomeTask(m); });
+    /* So momentos de report: a frequencia mensal deixou de existir (T1 a T4 e Year) */
+    (S.cat || []).forEach(function (c) { if (c.periodicidade === 'Mensal') c.periodicidade = 'Trimestral'; });
+    (S.ms || []).forEach(function (m) { if (m.periodicidade === 'Mensal') m.periodicidade = 'Trimestral'; });
     /* Pegada de carbono sempre como input (tambem nos dados ja gravados) */
     (S.cat || []).forEach(function (c) { if (P.eCarbono(c)) { c.tipo = 'base'; c.calc_codigos = ''; } });
     /* Indicadores submetidos um a um antes de existir o passo do responsavel de area: iam direto para a

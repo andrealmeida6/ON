@@ -628,7 +628,7 @@
     var m = msAtual(), d = P.diasAte(m.prazo);
     var ext = S.ext.filter(function (x) { return x.milestone_id === m.id; }).length;
     return '<nav class="ps-mig" aria-label="Breadcrumb"><a href="' + rota('Inicio') + '">Home</a><span>/</span><a href="' + rota('Milestones') + '">Tasks</a><span>/</span>    <a href="' + rotaEmp(m.empresa) + '">' + empHtml(m.empresa) + '</a><span>/</span><b>' + e(m.nome) + '</b></nav>' +
-          '<div class="ps-ban"><div class="ps-ban-top"><div><div class="ps-ban-tags"><span class="ps-ban-tag">' + avEmpresa() + e(m.empresa) + '</span><span class="ps-ban-tag forte">' + e(P.rotPeriodo(m)) + '</span><span class="ps-ban-tag">' + e(m.consolida ? 'Annual consolidation' : PERIODO_TXT[m.periodicidade] || m.periodicidade) + '</span>' + (m.periodicidade === 'Novos dados ESRS' ? '<span class="ps-ban-tag">ESRS track</span>' : '') + (m.workflow_ajustado ? '<span class="ps-ban-tag">Adjusted workflow</span>' : '') + '</div>' +
+          '<div class="ps-ban"><div class="ps-ban-top"><div><div class="ps-ban-tags"><span class="ps-ban-tag">' + avEmpresa() + e(m.empresa) + '</span><span class="ps-ban-tag forte">' + e(P.rotPeriodo(m)) + '</span>' + (m.consolida ? '<span class="ps-ban-tag">Annual consolidation</span>' : '') + '' + (m.periodicidade === 'Novos dados ESRS' ? '<span class="ps-ban-tag">ESRS track</span>' : '') + (m.workflow_ajustado ? '<span class="ps-ban-tag">Adjusted workflow</span>' : '') + '</div>' +
       '<h1>' + e(m.nome) + '</h1><div class="ps-ban-sub">' + (function () { var p = P.periodo(m.periodo); return p ? 'Data from ' + e(P.fmtDataAno(p.ini)) + ' to ' + e(P.fmtDataAno(p.fim)) : 'Reporting year ' + e(m.ano); })() + ', ' + e(m.unidade) + '</div>' + '' + '</div>' +
       '<div class="ps-ban-dir"><div class="ps-ban-pill"><small>Due</small>' + e(P.fmtDataAno(m.prazo)) + '</div>' + estChip(m) + '</div></div>' +
       '<div class="ps-ban-stats"><div class="ps-ban-stat"><b>' + preenchidos(m) + '/' + m.indicadores.length + '</b><span>Indicators filled in</span></div><div class="ps-ban-stat"><b>' + m.indicadores.filter(function (id) { return P.item(id, P.chave(m)).evidencias.length; }).length + '</b><span>With evidence</span></div><div class="ps-ban-stat"><b>' + ext + '</b><span>Assistance requests</span></div><div class="ps-ban-stat"><b>' + (P.concluida(m) ? '-' : d + 'd') + '</b><span>Until due</span></div></div></div>';
@@ -710,7 +710,7 @@
     var f = P.faltasSubmissao(m).length, feitos = preenchidos(m), es = P.estadoSubmissao(m);
     var guard = m.guardado ? '<small class="ps-mut">Saved ' + e(P.fmtDataHora(m.guardado.em)) + '</small>' : '';
     return '<div class="ps-ms-acao" role="region" aria-label="Actions"><span class="ps-small" aria-live="polite"><b>' + es.submetidos + ' of ' + es.total + '</b> submitted, ' + feitos + ' with a value' + (f ? '<span class="ps-mut">, ' + f + ' item' + (f === 1 ? '' : 's') + ' still missing</span>' : '<span class="ps-txt-ok">, ready to submit</span>') + '</span>' +
-      '<span class="ps-sp">' + guard + '<button type="button" class="ps-btn" data-a="guardarTrab">Save</button>' + (es.prontos.length ? '<button type="button" class="ps-btn" data-a="indSubmeterProntos">Submit ' + es.prontos.length + ' ready</button>' : '') + '<button type="button" id="btn-submeter" class="ps-btn pri" data-a="submeter">Submit task</button></span></div>';
+      '<span class="ps-sp">' + guard + '<button type="button" class="ps-btn" data-a="guardarTrab">Save</button>' + (es.prontos.length ? '<button type="button" class="ps-btn" data-a="indSubmeterProntos">Submit ' + es.prontos.length + ' ready</button>' : '') + '<button type="button" id="btn-submeter" class="ps-btn pri" data-a="submeter">Submit all tasks</button></span></div>';
   };
   var editorAtrib = function (m, usr) {
     var p = P.passoAtual(m);
@@ -753,27 +753,29 @@
       /* O estado submetido de cada indicador so conta na recolha; depois, o indicador segue o passo da task */
       var emRec = !P.concluida(m) && P.passoAtual(m) && P.passoAtual(m).tipo === 'recolha';
       var c = P.cat(id), it = P.item(id, P.chave(m)), v = P.validarItem(it), ant = P.valorAnterior(id, P.chave(m)), aberto = rqAberto(m, id), sub = emRec && it.submetido, saida = P.eOutput(c);
-      var calc = calcs.filter(function (r) { return r.id === id; })[0], emCalc = !!(calc && calc.x && calc.valor !== null && it.daFonte);
+      /* Output (calculado): o valor final nunca se escreve, so os dados de origem (source data). Input: escreve-se o valor e nao ha source data. */
+      var deriv = saida || (c.tipo === 'derivado' && !(P.eCarbono && P.eCarbono(c)));
+      var calc = calcs.filter(function (r) { return r.id === id; })[0], emCalc = deriv && !!(calc && calc.x && calc.valor !== null && it.daFonte);
       var txtBruto = it.rascunho || (it.valor === null ? '' : String(it.valor).replace('.', ','));
       var cls = v.erros.length ? 'erro' : v.alertas.length ? 'alerta' : '';
       var res = v.erros.length ? chip('Error', 'err') : v.alertas.length ? alertaHtml(m, id, v, it) : it.valor !== null ? chip('Valid', 'ok') : chip('To fill in');
-      var ed = pode && !sub && !saida, prontoInd = pode && !sub && !saida && !P.faltasIndicador(m, id).length;
+      var ed = pode && !sub && !deriv, prontoInd = pode && !sub && !saida && !P.faltasIndicador(m, id).length;
       if (saida) res = it.valor !== null ? chip('Calculated', 'info') : '<span class="ps-tip-alvo" tabindex="0" data-tip="Calculated by the platform from ' + e(P.codigosCalc(c.calc_codigos).join(', ')) + ' once they are submitted.">' + chip('Waiting for inputs') + '</span>';
       else if (sub && (it.revisto || P.podeReverInd(m, id, usr))) res = estadoRevHtml(m, id);
       else if (sub) res = '<span class="rq2-sub">' + chip(P.etapaInd(m, id) === 'area' ? 'With the area head' : 'With sustainability', 'rev') + '<small>' + e(sub.por + ', ' + P.fmtDataHora(sub.em)) + '</small><button type="button" class="ps-btn liga" data-a="indReabrir" data-v="' + e(id) + '">Reopen</button></span>';
-      else if (it.devolvidoInd) res = res + '<span class="rev-dev" data-tip="' + e('Returned by ' + it.devolvidoInd.por + ', ' + P.fmtDataHora(it.devolvidoInd.em) + ': ' + it.devolvidoInd.comentario) + '" tabindex="0">' + chip('Returned', 'err') + '</span>';
+      else if (it.devolvidoInd) res = res + '<span class="rev-dev" data-tip="' + e('Returned by ' + it.devolvidoInd.por + ', ' + P.fmtDataHora(it.devolvidoInd.em) + ': ' + it.devolvidoInd.comentario) + '" tabindex="0">' + chip('Returned', 'err') + '</span>' + (prontoInd ? '<button type="button" class="ps-btn peq pri rq2-subm" data-a="indSubmeter" data-v="' + e(id) + '">Submit</button>' : '');
       else if (prontoInd) res = res + '<button type="button" class="ps-btn peq pri rq2-subm" data-a="indSubmeter" data-v="' + e(id) + '">Submit</button>';
       var pedidos = S.ext.filter(function (x) { return x.indicador_id === id && x.milestone_id === m.id; });
       var recebido = pedidos.filter(function (x) { return x.estado === 'recebido'; })[0], pendente = pedidos.filter(function (x) { return x.estado === 'pendente'; })[0];
       var evTxt = P.evidenciaPrecisa(m, id) ? (it.evidencias.length ? '' : '<span class="rq2-b warn">Evidence required</span>') : '';
       var marcas = (emCalc ? '<span class="rq2-b calc">Calculated</span>' : '') + (P.inteiro(c) ? '<span class="rq2-b">Whole number</span>' : '') + evTxt + (it.evidencias.length ? '<span class="rq2-b">' + it.evidencias.length + ' evidence</span>' : '') +
         (it.qualidade === 'estimado' ? '<span class="rq2-b">Estimated</span>' : '') + (recebido ? '<span class="rq2-b ok">Value received</span>' : pendente ? '<span class="rq2-b">Assistance requested</span>' : '');
-      var valor = !ed && !emCalc ? '<span class="rq2-calc ps-num rq2-fixo" title="' + (saida ? 'Calculated from ' + e(c.calc_codigos) : sub && pode ? 'Submitted: reopen it to change' : 'Read only at this step') + '">' + (it.valor === null ? '-' : e(fmtV(id, it.valor))) + '</span>' : emCalc ? '<span class="rq2-calc ps-num ' + cls + '" title="Calculated from the source data">' + e(fmtV(id, it.valor)) + '</span>'
+      var valor = !ed && !emCalc ? '<span class="rq2-calc ps-num rq2-fixo" title="' + (saida ? 'Calculated from ' + e(c.calc_codigos) : deriv ? 'Calculated from the source data: open the row to fill it in' : sub && pode ? 'Submitted: reopen it to change' : 'Read only at this step') + '">' + (it.valor === null ? '-' : e(fmtV(id, it.valor))) + '</span>' : emCalc ? '<span class="rq2-calc ps-num ' + cls + '" title="Calculated from the source data">' + e(fmtV(id, it.valor)) + '</span>'
         : '<input id="v-' + e(id) + '" class="ps-in ps-num rq2-in ' + cls + '"' + numAttr(id) + ' autocomplete="off" aria-label="Value ' + e(P.rotPeriodo(m) + ', ' + c.nome) + '" placeholder="-" value="' + e(txtBruto) + '" data-c="valor" data-id="' + e(id) + '"' + (v.erros.length ? ' aria-invalid="true" aria-describedby="err-' + e(id) + '"' : '') + '>';
       var linha = '<div class="rq2-l"><button type="button" class="rq2-seta" data-a="rqAbrir" data-v="' + e(id) + '" aria-expanded="' + aberto + '" aria-controls="rqd-' + e(id) + '" aria-label="' + (aberto ? 'Hide' : 'Show') + ' the details of ' + e(c.nome) + '">' + svg(I.baixo, 16) + '</button>' +
         '<div class="rq2-nome"><span class="rq2-nl"><button type="button" class="rq2-n" data-a="ficha" data-v="' + e(id) + '">' + e(c.nome) + '</button>' + infoFormula(id, emCalc) + '</span><small>' + e(id) + ', ' + e(c.unidade_medida) + marcas + '</small></div>' +
         '<div class="rq2-c rq2-ant"><span class="rq2-k">' + e(P.rotAnterior(P.chave(m))) + '</span><span class="ps-num">' + (ant === null || ant === undefined ? '-' : e(fmtV(id, ant))) + '</span></div>' +
-        '<div class="rq2-c rq2-val"><span class="rq2-k">Value ' + e(P.rotPeriodo(m)) + '</span>' + valor + '</div>' +
+        '<div class="rq2-c rq2-val"><span class="rq2-k">Value ' + e(P.rotPeriodo(m)) + '</span><span class="rq2-vu">' + valor + (c.unidade_medida ? '<span class="rq2-un">' + e(c.unidade_medida) + '</span>' : '') + '</span></div>' +
         '<div class="rq2-c rq2-var"><span class="rq2-k">Change</span><span class="ps-num">' + (v.variacao === null ? '-' : (v.variacao > 0 ? '+' : '') + P.fmtNum(v.variacao, 1) + '%') + '</span></div>' +
         '<div class="rq2-c rq2-res">' + res + (P.botaoComentarInd ? P.botaoComentarInd(m, id) : '') + '</div></div>' +
         (v.erros.length ? '<div id="err-' + e(id) + '" class="ps-ind-msg rq2-msg" role="alert">' + e(v.erros[0]) + '</div>' : '');
@@ -781,12 +783,12 @@
       if (it.revisto && emRec) cls += ' fechado';
       if (!aberto) return '<div class="rq2-it ' + cls + '" id="ind-' + e(id) + '">' + linha + '</div>';
       /* So as linhas abertas mostram os dados de origem: o primeiro indicador aberto que usa um dado fica com o campo */
-      var fontes = P.fontesDoIndicador ? P.fontesDoIndicador(m, id, vistos) : '';
+      var fontes = deriv && P.fontesDoIndicador ? P.fontesDoIndicador(m, id, vistos) : '';
       var esrs = P.esrsDe(id);
       var defin = '<div class="rq2-bl"><h4>Definition</h4>' + (esrs.desc ? '<p class="ps-ind-desc">' + e(esrs.desc) + '</p>' : '') +
         '<p class="ps-small ps-mut">' + (c.tipo === 'derivado' ? 'Derived' : 'Base data') + ', ' + e(c.perimetro) + (esrs.dps.length ? ', ' + e(esrs.dps[0]) : '') + '</p>' +
         (P.formulaTxt ? '<p class="ps-ind-form"><b>Formula:</b> ' + e(P.formulaTxt(id)) + '</p>' : '') +
-        (emCalc ? '<p class="rq2-calc-f"><span class="ps-mono">' + e(calc.subst) + '</span> = <b>' + e(fmtV(id, calc.valor)) + '</b><small>Calculated from the source data. Change those values to change it.</small></p>' : calc && calc.x && comFontes ? '<p class="ps-small ps-mut">Fill in the source data and this value is calculated, or type it in the line above.</p>' : '') + '</div>';
+        (emCalc ? '<p class="rq2-calc-f"><span class="ps-mono">' + e(calc.subst) + '</span> = <b>' + e(fmtV(id, calc.valor)) + '</b><small>Calculated from the source data. Change those values to change it.</small></p>' : deriv ? '<p class="ps-small ps-mut">This value is calculated. Fill in the source data below and it updates by itself.</p>' : '') + '</div>';
       var origem = fontes ? '<div class="rq2-bl"><h4>Source data</h4>' + fontes + '</div>' : '';
       var just = v.alertas.length ? '<div class="ps-ind-just"><ul>' + v.alertas.map(function (a) { return '<li>' + e(a) + '</li>'; }).join('') + '</ul>' + (ed ? '<label class="ps-lab" for="j-' + e(id) + '">Justification (required)</label><textarea id="j-' + e(id) + '" class="ps-ta" data-c="just" data-id="' + e(id) + '">' + e(it.justificacao) + '</textarea>' : '<span class="ps-lab">Justification</span><p class="ps-small">' + (String(it.justificacao || '').trim() ? e(it.justificacao) : '<span class="ps-mut">None given.</span>') + '</p>') + '</div>' : '';
       var notaCarbono = P.eCarbono && P.eCarbono(c) ? '<div class="ps-aviso info ps-small rq2-carb">Enter the emissions you calculated outside the platform. If you can, attach the calculation (Excel or PDF) with <b>Attach evidence</b>, so the reviewers and the auditor can see how it was done.</div>' : '';
@@ -1336,14 +1338,16 @@
     A03: [24.6, 23.91, 23.11, 22.65, 22.07, 21.38, 20.81, 20.12, 19.54, 19.08, 18.62, 18.16, 17.7, 17.36],
     A01: [49.44, 49.92, 50.28, 50.52, 51, 51.36, 51.6, 51.96, 52.32, 52.56, 52.8, 53.04, 53.4, 53.62]
   };
-  var serieDe = function (id) {
+  /* emp: so os valores dessa entidade (a serie historica e o ano anterior sao do grupo e ficam so em All entities) */
+  var serieDe = function (id, emp) {
     var pts = [], c = P.cat(id);
-    if (SERIES[id]) SERIES[id].forEach(function (v, i) { pts.push({ ano: 2011 + i, v: v, nota: 'historical' }); });
-    if (c.ano_anterior !== null && c.ano_anterior !== undefined) pts.push({ ano: 2025, v: c.ano_anterior, nota: 'prior year' });
+    if (!emp && SERIES[id]) SERIES[id].forEach(function (v, i) { pts.push({ ano: 2011 + i, v: v, nota: 'historical' }); });
+    if (!emp && c.ano_anterior !== null && c.ano_anterior !== undefined) pts.push({ ano: 2025, v: c.ano_anterior, nota: 'prior year' });
     Object.keys(S.items).forEach(function (k) {
       var it = S.items[k];
       if (it.id !== id || it.valor === null || typeof it.ano !== 'number') return;
       var m = P.ms(it.milestone_id);
+      if (emp && (!m || m.empresa !== emp)) return;
       pts.push({ ano: it.ano, v: it.valor, nota: m && P.concluida(m) ? 'approved' : 'pending approval', corrente: true });
     });
     return pts.sort(function (a, b) { return a.ano - b.ano; });
@@ -1364,17 +1368,19 @@
     }).join('');
     return '<svg class="ps-lin" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Annual series in ' + e(unid) + '">' + grelha + (firme.length > 1 ? '<polyline class="l" points="' + d + '"></polyline>' : '') + marcas + '</svg>';
   };
+  var daEmp = function (c, emp) { return P.empresasInd(c).some(function (y) { return y.nome === emp; }); };
   /* Por topic: todos os indicadores do topic numa tabela, um ano por coluna, com a tendencia */
   var histTopic = function (tema) {
     var temas = tema ? [tema] : Object.keys(P.TEMAS).filter(function (t) { return S.cat.some(function (c) { return c.tema === t; }); });
     var anos = [];
-    S.cat.forEach(function (c) { if (temas.indexOf(c.tema) < 0) return; serieDe(c.id).forEach(function (p) { if (anos.indexOf(p.ano) < 0) anos.push(p.ano); }); });
+    var emp = U.histEmp || '';
+    S.cat.forEach(function (c) { if (temas.indexOf(c.tema) < 0 || (emp && !daEmp(c, emp))) return; serieDe(c.id, emp).forEach(function (p) { if (anos.indexOf(p.ano) < 0) anos.push(p.ano); }); });
     anos = anos.sort().slice(-6);
     return temas.map(function (t) {
-      var inds = S.cat.filter(function (c) { return c.tema === t; });
+      var inds = S.cat.filter(function (c) { return c.tema === t && (!emp || daEmp(c, emp)); });
       if (!inds.length) return '';
       return '<div class="ps-card ps-mt">' + cabCartao(t + ' (' + inds.length + ')', 'ativ') + '<div class="ps-card-body">' + tabela([{ t: 'Indicator' }, { t: 'Unit' }].concat(anos.map(function (a) { return { t: String(a), dir: 1 }; })).concat([{ t: 'Trend' }]), inds.map(function (c) {
-        var pts = serieDe(c.id);
+        var pts = serieDe(c.id, emp);
         return ['<button type="button" class="ps-btn liga" data-a="histVer" data-v="' + e(c.id) + '">' + e(c.nome) + '</button> <span class="ps-mut ps-small">' + e(c.id) + '</span>', e(c.unidade_medida)].concat(anos.map(function (a) {
           var x = pts.filter(function (p) { return p.ano === a; }).slice(-1)[0];
           return x ? '<span' + (x.nota === 'pending approval' ? ' class="ps-mut" data-tip="Pending approval"' : '') + '>' + e(P.fmtNum(x.v, c.casas_decimais)) + '</span>' : '<span class="ps-mut">-</span>';
@@ -1383,16 +1389,17 @@
     }).join('');
   };
   Blocos['historico'] = function () {
-    var tema = U.histTema || '', vista = U.histVista || 'ind', lista = S.cat.filter(function (x) { return !tema || x.tema === tema; });
+    var tema = U.histTema || '', emp = U.histEmp || '', vista = U.histVista || 'ind', lista = S.cat.filter(function (x) { return (!tema || x.tema === tema) && (!emp || daEmp(x, emp)); });
     if (!lista.some(function (x) { return x.id === U.histInd; }) && lista.length) U.histInd = lista[0].id;
-    var id = U.histInd, c = P.cat(id), pts = serieDe(id);
+    var id = U.histInd, c = P.cat(id), pts = c ? serieDe(id, emp) : [];
     var temas = Object.keys(P.TEMAS).filter(function (t) { return S.cat.some(function (x) { return x.tema === t; }); });
     var topo = '<div class="ps-filtros">' + campo('h-tema', 'Topic', '<select id="h-tema" class="ps-sel" data-c="histTema">' + opt('', 'All topics', tema) + temas.map(function (t) { return opt(t, t, tema); }).join('') + '</select>') +
+      campo('h-emp', 'Entity', '<select id="h-emp" class="ps-sel" data-c="histEmp">' + opt('', 'All entities', emp) + S.ent.map(function (x) { return opt(x.nome, x.nome, emp); }).join('') + '</select>') +
       '<div class="ps-seg" role="group" aria-label="Show"><button type="button" class="' + (vista === 'ind' ? 'on' : '') + '" data-a="histVista" data-v="ind">One indicator</button><button type="button" class="' + (vista === 'tema' ? 'on' : '') + '" data-a="histVista" data-v="tema">Whole topic</button></div>' +
       (vista === 'ind' ? campo('h-ind', 'Indicator', '<select id="h-ind" class="ps-sel" data-pesq data-c="histInd">' + lista.map(function (x) { return opt(x.id, x.nome + ' (' + x.unidade_medida + ')', id); }).join('') + '</select>') : '') +
       '<button type="button" class="ps-btn" data-a="histJson">Export approved values as JSON</button></div>';
     if (vista === 'tema') return topo + histTopic(tema);
-    if (!c) return topo + vazio('No indicators in this topic.');
+    if (!c) return topo + vazio(emp ? 'No indicators of ' + emp + ' in this topic.' : 'No indicators in this topic.');
     return topo +
       '<div class="ps-card">' + cabCartao(c.nome, 'ativ', '<span class="ps-mut ps-small">' + e(c.unidade_medida) + '</span>') + '<div class="ps-card-body">' + (pts.length ? graficoLinha(pts, c.unidade_medida, c.casas_decimais) : vazio('No values for this indicator yet.')) +
       '<div class="ps-mt-l">' + tabela([{ t: 'Year' }, { t: 'Value', dir: 1 }, { t: 'Source' }], pts.slice().reverse().map(function (p) { return [String(p.ano), e(P.fmtNum(p.v, c.casas_decimais)), e(p.nota)]; })) + '</div></div></div>';
@@ -1465,10 +1472,10 @@
     var linhas = cs.map(function (c) {
       var m = P.msDoIndicador(c.id), est = m ? P.estadoIndicador(m, c.id) : { txt: 'No task', cls: '' }, r = P.responsavelInd ? P.responsavelInd(c.id) : null;
       return [linkFicha(c.id, c.id + ' ' + c.nome) + '<small class="ps-mut ps-blk">' + e((c.esrs_requisito || '') + (P.esrsDe(c.id).dps.length ? ', ' + P.esrsDe(c.id).dps.length + ' ESRS datapoint(s)' : '')) + '</small>',
-        P.empresasInd(c).map(function (y) { return empHtml(y.nome); }).join(' '), r ? (r.tipo === 'pessoa' ? pessHtml(r.nome) : depHtml(r.dep)) : depHtml(P.donoIndicador(c.id)), e(PERIODO_TXT[c.periodicidade] || c.periodicidade), chip(est.txt, est.cls)];
+        P.empresasInd(c).map(function (y) { return empHtml(y.nome); }).join(' '), r ? (r.tipo === 'pessoa' ? pessHtml(r.nome) : depHtml(r.dep)) : depHtml(P.donoIndicador(c.id)), e(momTxt(c.id)), chip(est.txt, est.cls)];
     });
     return { t: x ? x.norma + ' ' + x.tema : a.norma, s: (x ? MAT_TXT[x.avaliacao] : '') + ', ' + cs.length + ' indicator(s)', largo: true,
-      b: (x && x.justificacao ? '<div class="ps-aviso">' + e(x.justificacao) + '</div>' : '') + tabela([{ t: 'Indicator' }, { t: 'Companies' }, { t: 'Responsible' }, { t: 'Frequency' }, { t: 'Status' }], linhas, 'No indicator is mapped to this topic yet. Map one in Backoffice, Indicators (ESRS standard).'),
+      b: (x && x.justificacao ? '<div class="ps-aviso">' + e(x.justificacao) + '</div>' : '') + tabela([{ t: 'Indicator' }, { t: 'Companies' }, { t: 'Responsible' }, { t: 'Reporting moments' }, { t: 'Status' }], linhas, 'No indicator is mapped to this topic yet. Map one in Backoffice, Indicators (ESRS standard).'),
       p: '<a class="ps-btn" href="' + rota('Backoffice?tab=indicadores') + '" data-a="fecharPainel">Open Indicators</a><span class="ps-sp-flex"></span><button type="button" class="ps-btn pri" data-a="fecharPainel">Close</button>' };
   };
   /* Utilizadores: so pessoas. O papel vem do perfil e os departamentos sao tags (uma pessoa pode ter varios).
@@ -1742,6 +1749,8 @@
     return '<div class="us-tags">' + l.map(function (x) { return '<span class="us-tag">' + avEmpresa() + e(x.nome) + (l.length > 1 ? '<button type="button" class="us-tag-x" data-a="momEmpTirar" data-v="' + e(c.id + '|' + x.id) + '" aria-label="Remove ' + e(x.nome) + ' from ' + e(c.nome) + '">×</button>' : '') + '</span>'; }).join('') +
       (livres.length ? '<label class="ps-sr" for="moe-' + e(c.id) + '">Add a company to ' + e(c.nome) + '</label><select id="moe-' + e(c.id) + '" class="ps-sel us-add" data-c="momEmpJuntar" data-id="' + e(c.id) + '">' + opt('', '+ Add', '') + livres.map(function (x) { return opt(x.id, x.nome, ''); }).join('') + '</select>' : '') + '</div>';
   };
+  /* Momentos de report em texto: T1; T2; T3; T4 ou Year (a frequencia saiu) */
+  var momTxt = function (id) { var per = P.momentosDe(id).per; return P.MOMENTOS_PER.filter(function (x) { return per.indexOf(x[0]) > -1; }).map(function (x) { return x[1]; }).join(', '); };
   B.momentos = function () {
     var q = norm(U.momBusca || ''), fe = U.momEmp || '', l = S.cat.filter(function (c) { return (!q || norm(c.id + ' ' + c.nome + ' ' + P.donoIndicador(c.id)).indexOf(q) > -1) && (!fe || P.empresasInd(c).some(function (x) { return x.id === fe; })); });
     var tot = {};
@@ -1749,15 +1758,15 @@
     var cx = function (c, k, on, rot) { return '<label class="ps-chk ps-mom-c"><input id="mo-' + e(c.id + '-' + k) + '" type="checkbox" data-c="momento" data-id="' + e(c.id + '|per|' + k) + '"' + (on ? ' checked' : '') + '><span class="ps-sr">' + e(rot + ', ' + c.id) + '</span></label>'; };
     var linhas = l.map(function (c) {
       var mo = P.momentosDe(c.id);
-      return [linkFicha(c.id, c.id + ' ' + c.nome) + (mo.proprio ? '<small class="ps-mom-prop" data-fx-ignorar>Custom <button type="button" class="ps-btn liga" data-a="momRepor" data-v="' + e(c.id) + '">Reset</button></small>' : ''), empTags(c), depHtml(P.donoIndicador(c.id)), e(PERIODO_TXT[c.periodicidade] || c.periodicidade)]
+      return [linkFicha(c.id, c.id + ' ' + c.nome), empTags(c), depHtml(P.donoIndicador(c.id))]
         .concat(P.MOMENTOS_PER.map(function (x) { return cx(c, x[0], mo.per.indexOf(x[0]) > -1, x[1]); }));
     });
     return '<div class="ps-card">' + cabCartao('Reporting moments', 'cal') + '<div class="ps-card-body">' +
-      '<p class="ps-mut ps-small">Which indicators go into each reporting period, and for which companies. Periods start from the frequency of the indicator; ticking a box here overrides that for the indicator. Sending tasks and the tags of each task follow this table. Tasks already sent keep their indicators.</p>' +
+      '<p class="ps-mut ps-small">Which indicators go into each reporting period, and for which companies. Tick the periods in which each indicator is reported. Sending tasks and the tags of each task follow this table. Tasks already sent keep their indicators.</p>' +
       '<div class="ps-mom-tot ps-mt">' + P.MOMENTOS_PER.map(function (x) { return '<span><b>' + (tot[x[0]] || 0) + '</b>' + e(x[1]) + '</span>'; }).join('') + '</div>' +
       '<div class="ps-filtros ps-mt">' + campo('mom-busca', 'Search', '<input id="mom-busca" class="ps-in" value="' + e(U.momBusca || '') + '" data-c="momBusca" autocomplete="off">') +
       campo('mom-emp', 'Company', '<select id="mom-emp" class="ps-sel" data-c="momEmpF">' + opt('', 'All companies', fe) + S.ent.map(function (x) { return opt(x.id, x.nome, fe); }).join('') + '</select>') + '</div>' +
-      '<div class="ps-mt ps-mom">' + tabela([{ t: 'Indicator' }, { t: 'Companies', info: 'The companies the indicator is reported for: Entidade A, Entidade B or both. With more than one, the value is entered per company and combined. Remove with ×, add with + Add.' }, { t: 'Department' }, { t: 'Frequency' }].concat(P.MOMENTOS_PER.map(function (x) { return { t: x[1] }; })), linhas, 'No indicators found.') + '</div></div></div>';
+      '<div class="ps-mt ps-mom">' + tabela([{ t: 'Indicator' }, { t: 'Companies', info: 'The companies the indicator is reported for: Entidade A, Entidade B or both. With more than one, the value is entered per company and combined. Remove with ×, add with + Add.' }, { t: 'Department' }].concat(P.MOMENTOS_PER.map(function (x) { return { t: x[1] }; })), linhas, 'No indicators found.') + '</div></div></div>';
   };
   B.periodos = function () {
     var ano = S.ciclo.ano;
@@ -2273,7 +2282,8 @@
     U.rota = lerRota();
     var novo = U.rota.pag + '/' + U.rota.arg;
     U.msFiltro.minhas = U.rota.pag === 'Milestones' && !!U.rota.q.minhas;
-    if (U.rota.pag === 'Milestones' && U.rota.q.periodo !== undefined) U.msFiltro.periodo = U.rota.q.periodo;
+    /* Ao abrir Tasks, o periodo comeca sempre em All (so um link com ?periodo= escolhe outro) */
+    if (U.rota.pag === 'Milestones') U.msFiltro.periodo = U.rota.q.periodo || '';
     var empRota = U.rota.pag === 'Milestones' && U.rota.q.empresa ? S.ent.filter(function (x) { return x.id === U.rota.q.empresa; })[0] : null;
     U.msFiltro.empresa = empRota ? empRota.nome : '';
     if (U.rota.pag === 'Backoffice' && U.rota.q.tab) U.boTab = U.rota.q.tab;
@@ -2679,6 +2689,7 @@
     consEsrs: function (el) { U.consEsrs = el.checked; },
     histInd: function (el) { U.histInd = el.value; R(); },
     histTema: function (el) { U.histTema = el.value; R(); },
+    histEmp: function (el) { U.histEmp = el.value; R(); },
     indBusca: function (el) { U.indBusca = el.value; },
     regraBusca: function (el) { U.regraBusca = el.value; },
     momBusca: function (el) { U.momBusca = el.value; },
