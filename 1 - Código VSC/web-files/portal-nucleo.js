@@ -399,9 +399,10 @@
      Ex.: "Energia e clima · T4 2026 · RQS, MIRR" */
   P.nomeTask = function (m) {
     var temas = []; (m.indicadores || []).forEach(function (id) { var c = P.cat(id), t = c && c.tema ? c.tema : 'Other'; if (temas.indexOf(t) < 0) temas.push(t); });
-    var per = P.periodo(m.periodo), refs = P.relatoriosDe(m).map(function (r) { return r.sigla; });
+    /* Titulo: topico e periodo (T1 a T4 ou Year). Sem as siglas dos reports (RQS, RS, MIRR...), por decisao do Andre */
+    var per = P.periodo(m.periodo);
     var t = !temas.length ? (m.unidade || 'Task') : temas.length === 1 ? temas[0] : temas.length === 2 ? temas.join(' + ') : temas[0] + ' + ' + (temas.length - 1) + ' topics';
-    return t + ' · ' + (per ? per.nome : String(m.ano)) + (refs.length ? ' · ' + refs.slice(0, 3).join(', ') + (refs.length > 3 ? ' +' + (refs.length - 3) : '') : '');
+    return t + ' · ' + (per ? per.nome : String(m.ano));
   };
   P.relatoriosDe = function (m) {
     var per = P.periodo(m.periodo), ano = m.ano, l = [];
@@ -631,7 +632,7 @@
     /* O nome da task nao leva a pessoa (muda quando se reatribui ou quando o processo avanca): tira ", Nome" do fim */
     var nomesPessoas = (S.users || []).map(function (u) { return u.nome; });
     (S.ms || []).forEach(function (m) { nomesPessoas.forEach(function (n) { var suf = ', ' + n; if (m.nome && m.nome.length > suf.length && m.nome.slice(-suf.length) === suf) m.nome = m.nome.slice(0, -suf.length); }); });
-    /* Titulo das tasks: topico, periodo e referencias dos reports (as consolidacoes anuais mantem o nome) */
+    /* Titulo das tasks: topico e periodo, sem referencias dos reports (as consolidacoes anuais mantem o nome) */
     (S.ms || []).forEach(function (m) { if (!m.consolida && m.periodicidade !== 'Novos dados ESRS' && P.nomeTask) m.nome = P.nomeTask(m); });
     /* Pegada de carbono sempre como input (tambem nos dados ja gravados) */
     (S.cat || []).forEach(function (c) { if (P.eCarbono(c)) { c.tipo = 'base'; c.calc_codigos = ''; } });

@@ -1374,7 +1374,7 @@ Pedido do André a 12 de novembro de 2026.
 
 Pedido do André a 12 de novembro de 2026.
 
-- **Título das tasks** (`P.nomeTask`): tópico · período · referências dos reports que a task alimenta, por exemplo "Energia e clima · T4 2026 · RQS, MIRR".
+- **Título das tasks** (`P.nomeTask`): tópico · período, por exemplo "Energia e clima · T4 2026". O período é sempre T1 a T4 ou o ano. Decisão do André a 12 de novembro de 2026: as siglas dos reports (RQS, RS, MIRR, R&C...) saíram do título, das etiquetas nas listas e do "Feeds" no topo da task. Os títulos já gravados são refeitos ao carregar (`P.migrarDados`).
   - Com dois tópicos aparecem os dois ("Água e saneamento + Energia e clima"); com mais, "X + N topics". Mais de 3 reports dá "+N".
   - Aplica-se às tasks novas (Send task, By topic, Assign tasks) e às que já existem, quando os dados carregam. As consolidações anuais e os "Novos dados ESRS" mantêm o nome.
   - O título volta a ser calculado quando se juntam indicadores a uma task.

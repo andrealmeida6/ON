@@ -47,10 +47,8 @@
   var COLS_MS = [{ t: 'Task', info: 'The ring shows the indicators of the task by status; the number is how many are still to report. Hover it for the detail.' }, { t: 'Period' }, { t: 'Perimeter' }, { t: 'Assigned to' }, { t: 'Deadline' }, { t: 'Status' }];
   /* Periodo de reporte e relatorios que a milestone alimenta */
   var tagPer = function (m) { var p = P.periodo(m.periodo); return p ? '<span class="ps-per' + (p.tipo === 'ano' ? ' ano' : '') + '" title="Reporting period ' + e(P.fmtData(p.ini)) + ' to ' + e(P.fmtData(p.fim)) + '">' + e(p.nome) + '</span>' : ''; };
-  var tagsRel = function (m, max) {
-    var l = P.relatoriosDe(m), mostrar = max ? l.slice(0, max) : l;
-    return mostrar.map(function (r) { return '<span class="ps-rel-t" title="' + e(r.nome + ', ' + r.entidade + ', due ' + P.fmtDataAno(r.data)) + '">' + e(r.sigla) + '</span>'; }).join('') + (max && l.length > max ? '<span class="ps-rel-t mais">+' + (l.length - max) + '</span>' : '');
-  };
+  /* As tasks so mostram o periodo (T1 a T4 ou Year); as siglas dos reports (RQS, RS, MIRR...) sairam */
+  var tagsRel = function () { return ''; };
   var tagsMs = function (m, max) { return '<span class="ps-per-l">' + tagPer(m) + tagsRel(m, max) + '</span>'; };
   P.tagPer = tagPer; P.tagsMs = tagsMs;
   /* Estado de cada indicador de uma task, para o donut: aprovado, em aprovacao (submetido), preenchido, por preencher */
@@ -632,7 +630,7 @@
     var ext = S.ext.filter(function (x) { return x.milestone_id === m.id; }).length;
     return '<nav class="ps-mig" aria-label="Breadcrumb"><a href="' + rota('Inicio') + '">Home</a><span>/</span><a href="' + rota('Milestones') + '">Tasks</a><span>/</span>    <a href="' + rotaEmp(m.empresa) + '">' + empHtml(m.empresa) + '</a><span>/</span><b>' + e(m.nome) + '</b></nav>' +
           '<div class="ps-ban"><div class="ps-ban-top"><div><div class="ps-ban-tags"><span class="ps-ban-tag">' + avEmpresa() + e(m.empresa) + '</span><span class="ps-ban-tag forte">' + e(P.rotPeriodo(m)) + '</span><span class="ps-ban-tag">' + e(m.consolida ? 'Annual consolidation' : PERIODO_TXT[m.periodicidade] || m.periodicidade) + '</span>' + (m.periodicidade === 'Novos dados ESRS' ? '<span class="ps-ban-tag">ESRS track</span>' : '') + (m.workflow_ajustado ? '<span class="ps-ban-tag">Adjusted workflow</span>' : '') + '</div>' +
-      '<h1>' + e(m.nome) + '</h1><div class="ps-ban-sub">' + (function () { var p = P.periodo(m.periodo); return p ? 'Data from ' + e(P.fmtDataAno(p.ini)) + ' to ' + e(P.fmtDataAno(p.fim)) : 'Reporting year ' + e(m.ano); })() + ', ' + e(m.unidade) + '</div>' + (P.relatoriosDe(m).length ? '<div class="ps-ban-rel"><span>Feeds</span>' + P.relatoriosDe(m).map(function (r) { return '<span class="ps-ban-tag" title="' + e(r.base) + '">' + e(r.sigla + ', ' + r.entidade + ', ' + P.fmtDataAno(r.data)) + '</span>'; }).join('') + '</div>' : '') + '</div>' +
+      '<h1>' + e(m.nome) + '</h1><div class="ps-ban-sub">' + (function () { var p = P.periodo(m.periodo); return p ? 'Data from ' + e(P.fmtDataAno(p.ini)) + ' to ' + e(P.fmtDataAno(p.fim)) : 'Reporting year ' + e(m.ano); })() + ', ' + e(m.unidade) + '</div>' + '' + '</div>' +
       '<div class="ps-ban-dir"><div class="ps-ban-pill"><small>Due</small>' + e(P.fmtDataAno(m.prazo)) + '</div>' + estChip(m) + '</div></div>' +
       '<div class="ps-ban-stats"><div class="ps-ban-stat"><b>' + preenchidos(m) + '/' + m.indicadores.length + '</b><span>Indicators filled in</span></div><div class="ps-ban-stat"><b>' + m.indicadores.filter(function (id) { return P.item(id, P.chave(m)).evidencias.length; }).length + '</b><span>With evidence</span></div><div class="ps-ban-stat"><b>' + ext + '</b><span>Assistance requests</span></div><div class="ps-ban-stat"><b>' + (P.concluida(m) ? '-' : d + 'd') + '</b><span>Until due</span></div></div></div>';
   };
