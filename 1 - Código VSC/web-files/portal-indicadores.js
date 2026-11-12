@@ -287,12 +287,14 @@
       (l.length > vis.length ? '<div class="ps-sp ps-mt"><button type="button" class="ps-btn" data-a="indMais">Show ' + Math.min(200, l.length - vis.length) + ' more</button><span class="ps-mut ps-small">' + vis.length + ' of ' + l.length + '</span></div>' : '')
       : vazio(S.cat.length ? 'No indicator matches these filters.' : 'No indicators yet. Create one or import your KPI list in Excel.');
     /* Duas vistas no mesmo ecra: a lista dos indicadores e o mapa por departamento e periodo (o antigo Launch by department) */
-    var vistas = '<div class="ki-vistas" role="tablist" aria-label="View">' + [['lista', 'By indicator', l.length + ' indicators'], ['dep', 'By department', 'coverage per period'], ['tl', 'Timeline', 'where we are and what was sent']].map(function (v) { return '<button type="button" role="tab" aria-selected="' + (f.vista === v[0]) + '" class="ki-vista' + (f.vista === v[0] ? ' on' : '') + '" data-a="indVista" data-v="' + v[0] + '"><b>' + v[1] + '</b><small>' + e(v[2]) + '</small></button>'; }).join('') + '</div>';
+    var vistas = '<div class="ki-vistas" role="tablist" aria-label="View">' + [['lista', 'By indicator', l.length + ' indicators'], ['tema', 'By topic', 'coverage per period'], ['tl', 'Timeline', 'where we are and what was sent']].map(function (v) { return '<button type="button" role="tab" aria-selected="' + (f.vista === v[0]) + '" class="ki-vista' + (f.vista === v[0] ? ' on' : '') + '" data-a="indVista" data-v="' + v[0] + '"><b>' + v[1] + '</b><small>' + e(v[2]) + '</small></button>'; }).join('') + '</div>';
     var empresas = '<div class="ki-ents" role="tablist" aria-label="Company">' + [{ id: '', nome: 'All companies' }].concat(S.ent).map(function (x) {
       var n = S.cat.filter(function (c) { return P.indAtivo(c) && (!x.id || (P.reportaInd(c) || {}).id === x.id); }).length;
       return '<button type="button" role="tab" aria-selected="' + (f.emp === x.id) + '" class="ki-ent' + (f.emp === x.id ? ' on' : '') + '" data-a="indEmp" data-v="' + e(x.id) + '">' + (x.id ? X.avEmpresa() : '') + '<b>' + e(x.nome) + '</b><span class="n">' + n + '</span></button>';
     }).join('') + '</div>';
-    if (f.vista === 'dep') return topo + empresas + tiles + vistas + B.lancar();
+    /* By topic (era By department): tema x periodo; cada celula abre o pop-up de atribuir por empresa e responsavel */
+    if (f.vista === 'dep') f.vista = 'tema';
+    if (f.vista === 'tema') return topo + empresas + tiles + vistas + porTema();
     if (f.vista === 'tl') return topo + empresas + tiles + vistas + '<div class="ki-tl">' + (X.Blocos2.timeline ? X.Blocos2.timeline() : vazio('The timeline did not load.')) + '</div>';
     return topo + empresas + tiles + vistas + '<div class="ps-card ki-card"><div class="ps-card-body">' + filtros + lote + '<div class="ki-conta ps-small ps-mut">' + l.length + ' indicator(s)' + (P.gereTudo(usr) ? '' : ', read only') + '</div>' + tabela + '</div></div>';
   };
@@ -334,6 +336,64 @@
   A.indVista = function (d) { U.ind.vista = d.v; R(); };
   A.indMais = function () { U.ind.lim += 200; R(); };
   A.indTile = function (d) { var p = d.v.split('|'), f = U.ind; if (p[0] === 'est') f.est = f.est === p[1] ? 'todos' : p[1]; else f.resp = f.resp === p[1] ? '' : p[1]; R(); };
+
+  /* --- By topic: cobertura tema x periodo e atribuir por empresa e responsavel --------------- */
+  var chavePer = function (p) { return p.tipo === 'trimestre' ? 'T' + p.t : 'A'; };
+  /* Indicadores do tema que se reportam no periodo (momentos do KPI), ativos e da empresa escolhida no topo */
+  var devidos = function (tema, p) {
+    var empF = U.ind && U.ind.emp ? U.ind.emp : '';
+    return S.cat.filter(function (c) { return P.indAtivo(c) && (!tema || (c.tema || 'Other') === tema) && P.momentosDe(c.id).per.indexOf(chavePer(p)) > -1 && !P.eOutput(c) && (!empF || (P.reportaInd(c) || {}).id === empF); }).map(function (c) { return c.id; });
+  };
+  var porTema = function () {
+    var ano = S.ciclo.ano, pers = (S.periodos || []).filter(function (p) { return p.ano === ano; }), temas = Object.keys(P.TEMAS).filter(function (t) { return S.cat.some(function (c) { return c.tema === t; }); });
+    var cel = function (t, p) {
+      /* Pares indicador x empresa: cada empresa tem a sua task */
+      var empF = U.ind && U.ind.emp ? (S.ent.filter(function (x) { return x.id === U.ind.emp; })[0] || null) : null, pares = [];
+      devidos(t, p).forEach(function (id) { P.empresasInd(P.cat(id)).forEach(function (x) { if (!empF || x.id === empF.id) pares.push({ id: id, emp: x.nome }); }); });
+      if (!pares.length) return '<span class="ps-cob nada">Not reported</span>';
+      var ids = pares, env = pares.filter(function (q) { return P.tarefaInd(q.id, p.id, q.emp); }), apr = env.filter(function (q) { return P.indAprovado(P.tarefaInd(q.id, p.id, q.emp), q.id); }), falta = pares.length - env.length;
+      var info = '<small>' + env.length + ' of ' + ids.length + ' sent' + (apr.length ? ', ' + apr.length + ' approved' : '') + '</small>';
+      if (!falta) return '<span class="ps-cob ' + (apr.length === ids.length ? 'ok' : 'info') + '" title="' + e(t + ', ' + p.nome) + '">' + (apr.length === ids.length ? 'Done' : 'All sent') + info + '</span>';
+      return '<button type="button" class="ps-cob vazio" data-a="temaAtribuir" data-v="' + e(t + '|' + p.id) + '" title="Assign the ' + falta + ' indicator(s) of ' + e(t) + ' for ' + e(p.nome) + '">+ Assign ' + falta + info + '</button>';
+    };
+    var cab = pers.map(function (p) { var f2 = 0; devidos('', p).forEach(function (id) { P.empresasInd(P.cat(id)).forEach(function (x) { if ((!U.ind.emp || x.id === U.ind.emp) && !P.tarefaInd(id, p.id, x.nome)) f2++; }); }); return '<th scope="col">' + e(p.nome) + '<small>Close ' + e(P.fmtData(p.fecho)) + '</small>' + (f2 ? '<button type="button" class="ps-btn pri peq ps-cob-lanc" data-a="temaAtribuir" data-v="' + e('|' + p.id) + '">Assign all ' + f2 + '</button>' : '<span class="ps-cob-tudo">All assigned</span>') + '</th>'; }).join('');
+    return '<div class="ps-card">' + cabCartao('By topic and period', 'cal') + '<div class="ps-card-body"><p class="ps-mut ps-small">Each cell is a company topic in a reporting period: how many indicators are reported in that period (one per company covered: each company always gets its own tasks), sent and approved. Click a cell to assign what is missing: the pop-up shows each company and, inside it, the person or department responsible for each indicator.</p>' +
+      '<div class="ps-cob-sc ps-mt" tabindex="0" aria-label="Coverage by topic and period"><table class="ps-cob-t"><thead><tr><th scope="col">Topic</th>' + cab + '</tr></thead><tbody>' +
+      temas.map(function (t) { return '<tr><th scope="row"><span class="kt-tema"><i style="background:' + P.TEMAS[t] + '"></i>' + e(t) + '</span></th>' + pers.map(function (p) { return '<td>' + cel(t, p) + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table></div></div></div>';
+  };
+  U.ta = null;
+  A.temaAtribuir = function (d) { var x = d.v.split('|'), p = P.periodo(x[1]); U.ta = { tema: x[0], pid: x[1], fora: {}, prazo: p ? p.fecho : '', nota: '' }; X.abrePainel('temaAtr', {}); };
+  X.Pn.temaAtr = function () {
+    var T = U.ta, p = P.periodo(T.pid), ids = devidos(T.tema, p), todos = P.planoEnvio(ids, T.pid), escolhidos = ids.filter(function (id) { return !T.fora[id]; }), pl = P.planoEnvio(escolhidos, T.pid);
+    /* Por empresa, e dentro de cada uma por responsavel (pessoa ou departamento): cada grupo e uma task */
+    var porEmp = {};
+    todos.grupos.forEach(function (g) { (porEmp[g.empresa.nome] = porEmp[g.empresa.nome] || []).push(g); });
+    var blocos = Object.keys(porEmp).sort().map(function (en) {
+      var gs = porEmp[en], n = gs.reduce(function (a, g) { return a + g.ids.filter(function (id) { return !T.fora[id]; }).length; }, 0);
+      return '<section class="ta-emp"><h3 class="ta-emp-h">' + X.empHtml(en) + '<span class="ps-mut ps-small">' + n + ' indicator(s) in ' + gs.length + ' task(s)</span></h3>' + gs.map(function (g) {
+        var r = g.resp, quem = r.tipo === 'pessoa' ? X.pessHtml(r.nome) + '<small class="ps-mut">' + e(g.dep) + '</small>' : X.depHtml(g.dep) + '<small class="ps-mut">Whole department</small>';
+        return '<div class="ta-g"><div class="ta-g-h"><span class="ta-quem">' + quem + '</span>' + (g.ms ? '<span class="ps-chip info" title="' + e(g.ms.nome) + '">Adds to the open task</span>' : '<span class="ps-chip">New task</span>') + '</div><div class="ps-dt-chips">' + g.ids.map(function (id) {
+          var on = !T.fora[id], c = P.cat(id);
+          return '<label class="ps-dt-chip' + (on ? ' on' : '') + '"><input type="checkbox" id="ta-' + e(id) + '" data-c="taInd" data-id="' + e(id) + '"' + (on ? ' checked' : '') + '>' + e(id) + '<small>' + e(c.nome) + '</small></label>';
+        }).join('') + '</div></div>';
+      }).join('') + '</section>';
+    }).join('');
+    var fora = todos.fora.length ? '<details class="ta-fora"><summary>' + todos.fora.length + ' indicator(s) cannot be assigned</summary><ul>' + todos.fora.map(function (f) { return '<li><b>' + e(f.id) + '</b> ' + e(P.cat(f.id) ? P.cat(f.id).nome : '') + ': ' + e(f.t) + '</li>'; }).join('') + '</ul></details>' : '';
+    return { t: 'Assign tasks: ' + (T.tema || 'all topics') + ', ' + p.nome, s: 'By company, and inside each company by the person or department responsible for each indicator (Indicators, Companies)', largo: true, cls: 'alto',
+      b: '<div class="ta-topo">' + campo('ta-prazo', 'Due date', '<input id="ta-prazo" type="date" class="ps-in" value="' + e(T.prazo) + '" data-c="taPrazo">') + campo('ta-nota', 'Note to the assignees (optional)', '<input id="ta-nota" class="ps-in" value="' + e(T.nota) + '" data-c="taNota">') + '</div>' +
+        (blocos || '<div class="ps-aviso">Nothing left to assign here.</div>') + fora,
+      p: '<span class="ps-sp-flex"></span><button type="button" class="ps-btn" data-a="fecharPainel">Cancel</button><button type="button" class="ps-btn pri" data-a="taEnviar"' + (pl.n ? '' : ' disabled') + '>Assign ' + pl.n + ' indicator(s) in ' + pl.grupos.length + ' task(s)</button>' };
+  };
+  C.taInd = function (el) { if (el.checked) delete U.ta.fora[el.dataset.id]; else U.ta.fora[el.dataset.id] = 1; R(); };
+  C.taPrazo = function (el) { U.ta.prazo = el.value; };
+  C.taNota = function (el) { U.ta.nota = el.value; };
+  A.taEnviar = function () {
+    var T = U.ta, p = P.periodo(T.pid), ids = devidos(T.tema, p).filter(function (id) { return !T.fora[id]; });
+    var r = P.enviarTarefas({ periodo: T.pid, ids: ids, prazo: T.prazo, nota: T.nota }, u());
+    if (r.erro) return toast(r.erro, 'err');
+    U.ta = null; U.painel = null;
+    toast(r.n + ' indicator(s) assigned: ' + r.criadas + ' new task(s)' + (r.juntas ? ', ' + r.juntas + ' added to open tasks' : '') + '.', 'ok'); R();
+  };
 
   /* --- Painel do indicador: tudo num sitio -------------------------------------------- */
   var inp = function (k, d, extra) { return '<input id="ke-' + k + '" class="ps-in" data-c="indCampo" data-f="' + k + '" value="' + e(d[k] === undefined ? '' : d[k]) + '"' + (extra || '') + '>'; };

@@ -2397,3 +2397,17 @@ tr.rev-pend>td:first-child{box-shadow:inset 3px 0 0 var(--rev)}
 .dp-ch{display:flex;flex-direction:column;gap:2px}
 .dp-ch small{font-size:11px;color:var(--muted)}
 
+/* 71. INDICATORS BY TOPIC: ATRIBUIR POR EMPRESA E RESPONSAVEL */
+.kt-tema{display:inline-flex;align-items:center;gap:8px;font-weight:600}
+.kt-tema i{width:10px;height:10px;border-radius:3px;flex:none}
+.ta-topo{display:grid;grid-template-columns:200px minmax(0,1fr);gap:12px;margin-bottom:14px}
+@media (max-width:640px){.ta-topo{grid-template-columns:minmax(0,1fr)}}
+.ta-emp{border:1px solid var(--line);border-radius:var(--r-lg);padding:12px 14px;margin-bottom:12px}
+.ta-emp-h{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 10px;font-size:14px}
+.ta-g{padding:10px 0;border-top:1px solid var(--line-soft)}
+.ta-g:first-of-type{border-top:0;padding-top:0}
+.ta-g-h{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+.ta-quem{display:inline-flex;align-items:center;gap:8px}
+.ta-fora{margin-top:6px;font-size:12.5px}
+.ta-fora summary{cursor:pointer;color:var(--muted)}
+

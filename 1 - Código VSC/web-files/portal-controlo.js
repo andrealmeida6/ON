@@ -119,7 +119,10 @@
      os volumes somam-se; os racios e percentagens fazem media ponderada pelo peso de cada empresa. */
   P.aditivo = function (c) { return !!c && (ADITIVAS.indexOf(c.unidade_medida) > -1 || P.inteiro(c)); };
   P.valoresEmpresas = function (id, chave) {
-    var it = P.item(id, chave), o = {};
+    var base = P.chavePer ? P.chavePer(chave) : chave, o = {};
+    /* Tasks divididas por empresa: o valor de cada empresa esta na sua chave (periodo@empresa) */
+    (S.ent || []).forEach(function (x) { var ie = S.items[base + '@' + x.id + ':' + id]; if (ie && ie.valor !== null && ie.valor !== undefined) o[x.nome] = ie.valor; });
+    var it = P.item(id, base);
     if (!it || it.valor === null || it.valor === undefined) return o;
     var m = P.ms(it.milestone_id) || P.msDoIndicador(id), nomes = S.ent.map(function (x) { return x.nome; });
     var ent = (it.entradas || []).filter(function (l) { return nomes.indexOf(String(l.local || '').trim()) > -1 && P.lerNumero(l.valor) !== null; });
@@ -129,7 +132,7 @@
       Object.keys(por).forEach(function (k) { o[k] = P.agregar(por[k], ag === 'media' ? 'media' : ag); });
       return o;
     }
-    if (m && m.empresa) o[m.empresa] = it.valor;
+    if (m && m.empresa && o[m.empresa] === undefined) o[m.empresa] = it.valor;
     return o;
   };
   /* Outputs (calculo por codigos): o consolidado nao soma nem faz media do output das empresas.

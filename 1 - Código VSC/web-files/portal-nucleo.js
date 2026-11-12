@@ -229,9 +229,17 @@
   P.periodo = function (id) { return (S.periodos || []).filter(function (p) { return p.id === id; })[0] || null; };
   P.trimestral = function (m) { return !!m && /-T\d$/.test(m.periodo || ''); };
   /* Chave dos valores: o trimestre para as milestones trimestrais, o ano para as anuais (o que vai para o relatorio) */
-  P.chave = function (m) { return P.trimestral(m) ? m.periodo : m.ano; };
+  /* Chave dos valores de uma task: o periodo (ano ou trimestre). Nas tasks divididas por empresa (m.porEmpresa)
+     junta-se a empresa ('2026-T4@E2'), para cada empresa ter o seu valor do mesmo indicador. */
+  P.chave = function (m) {
+    var b = P.trimestral(m) ? m.periodo : m.ano;
+    if (m && m.porEmpresa) { var x = (S.ent || []).filter(function (y) { return y.nome === m.empresa; })[0]; return b + '@' + (x ? x.id : m.empresa); }
+    return b;
+  };
+  /* So o periodo de uma chave (sem a empresa) */
+  P.chavePer = function (ch) { var s = String(ch); if (s.indexOf('@') < 0) return ch; var b = s.split('@')[0]; return /^\d{4}$/.test(b) ? Number(b) : b; };
   P.rotPeriodo = function (m) { var p = P.periodo(m && m.periodo); return p ? p.nome : String(m ? m.ano : ''); };
-  P.rotAnterior = function (chave) { var x = /^(\d{4})-T(\d)$/.exec(String(chave)); return x ? 'T' + x[2] + ' ' + (x[1] - 1) : String(chave - 1); };
+  P.rotAnterior = function (chave) { chave = P.chavePer(chave); var x = /^(\d{4})-T(\d)$/.exec(String(chave)); return x ? 'T' + x[2] + ' ' + (x[1] - 1) : String(chave - 1); };
   /* Como se junta um indicador ao longo do ano: soma (volumes, horas), ultimo valor (efetivos, ativos) ou media (taxas) */
   P.agregacao = function (id) {
     var c = P.cat(id);
@@ -610,6 +618,7 @@
   P.sair = function () { try { sessionStorage.removeItem(PFX + 'esg_sess'); } catch (e) { delete memoria.sess; } };
 
   P.valorAnterior = function (id, ano) {
+    ano = P.chavePer(ano);
     var tri = /^(\d{4})-T(\d)$/.exec(String(ano));
     if (tri) {
       /* Trimestre: o mesmo trimestre do ano anterior; sem ele, a quarta parte do ano anterior nas somas */
@@ -641,6 +650,7 @@
   P.limiarPadrao = function () { var v = S.ciclo && S.ciclo.limiar_padrao; return v === undefined || v === null || v === '' ? P.LIMIAR_BASE : Number(v); };
   P.limiarDe = function (c) { return c && c.limiar_proprio && c.limiar_variacao_pct !== undefined && c.limiar_variacao_pct !== null ? Number(c.limiar_variacao_pct) : P.limiarPadrao(); };
   P.validar = function (c, valor, ano) {
+    ano = P.chavePer(ano);
     var r = { erros: [], alertas: [], variacao: null };
     if (valor === null || valor === undefined) return r;
     if (c.unidade_medida === '%') { if (valor < 0 || valor > 100) r.erros.push('Percentage outside 0 to 100.'); }
@@ -1012,7 +1022,7 @@
     return x ? { tipo: 'pessoa', login: x.login, nome: x.nome, dep: dep } : { tipo: 'grupo', login: '', nome: dep, dep: dep };
   };
   /* Task de um indicador num periodo: a milestone desse periodo que o tem (sem as consolidacoes) */
-  P.tarefaInd = function (id, pid) { var l = S.ms.filter(function (m) { return m.periodo === pid && m.indicadores.indexOf(id) > -1; }); return l.filter(function (m) { return !m.consolida; })[0] || l[0] || null; };
+  P.tarefaInd = function (id, pid, empresa) { var l = S.ms.filter(function (m) { return m.periodo === pid && m.indicadores.indexOf(id) > -1 && (!empresa || m.empresa === empresa); }); return l.filter(function (m) { return !m.consolida; })[0] || l[0] || null; };
   P.estadoTarefaInd = function (id, pid) {
     var m = P.tarefaInd(id, pid);
     if (!m) return { cod: 'nao', txt: 'Not sent', cls: '', m: null };
@@ -1030,15 +1040,19 @@
       var c = P.cat(id);
       if (!c) return;
       if (!P.indAtivo(c)) return fora.push({ id: id, t: 'inactive' });
-      var ja = P.tarefaInd(id, pid);
-      if (ja) return fora.push({ id: id, t: 'already sent in ' + ja.nome });
-      var emp = P.reportaInd(c), r = P.responsavelInd(id, emp && emp.id);
-      if (!emp) return fora.push({ id: id, t: 'no reporting company' });
-      if (!r.dep) return fora.push({ id: id, t: 'no responsible department' });
-      var k = emp.id + '|' + r.dep + '|' + r.login, g = grupos[k] || (grupos[k] = { empresa: emp, dep: r.dep, resp: r, ids: [], ms: null });
-      g.ids.push(id);
+      /* Uma task por empresa: um indicador de varias empresas vai para a task de cada uma, com o responsavel dessa empresa */
+      var emps = P.empresasInd(c);
+      if (!emps.length) return fora.push({ id: id, t: 'no company covered' });
+      emps.forEach(function (emp) {
+        var ja = P.tarefaInd(id, pid, emp.nome);
+        if (ja) return fora.push({ id: id, t: 'already sent in ' + ja.nome + ' (' + emp.nome + ')', empresa: emp.nome });
+        var r = P.responsavelInd(id, emp.id);
+        if (!r.dep) return fora.push({ id: id, t: 'no responsible department in ' + emp.nome, empresa: emp.nome });
+        var k = emp.id + '|' + r.dep + '|' + r.login, g = grupos[k] || (grupos[k] = { empresa: emp, dep: r.dep, resp: r, ids: [], ms: null });
+        g.ids.push(id);
+      });
     });
-    var l = Object.keys(grupos).map(function (k) { return grupos[k]; });
+    var l = Object.keys(grupos).map(function (k) { return grupos[k]; }).sort(function (a, b) { return a.empresa.nome.localeCompare(b.empresa.nome); });
     l.forEach(function (g) {
       /* Junta-se a uma task aberta do mesmo departamento, empresa e pessoa; senao cria-se uma nova */
       g.ms = S.ms.filter(function (m) { return m.periodo === pid && !m.consolida && m.unidade === g.dep && m.empresa === g.empresa.nome && (m.atribuido_a || '') === g.resp.login && !P.concluida(m) && P.passoAtual(m).tipo === 'recolha'; })[0] || null;
@@ -1063,7 +1077,7 @@
         var id = 'M' + String(num).padStart(2, '0') + (per.tipo === 'trimestre' ? '-T' + per.t : '');
         while (P.ms(id)) id += 'b';
         m = {
-          id: id, nome: (per.tipo === 'trimestre' ? 'Entrega T' + per.t + ' ' + per.ano : 'Entrega anual ' + per.ano) + ' de ' + g.dep, ano: per.ano, periodo: per.id, consolida: false,
+          id: id, nome: (per.tipo === 'trimestre' ? 'Entrega T' + per.t + ' ' + per.ano : 'Entrega anual ' + per.ano) + ' de ' + g.dep, ano: per.ano, periodo: per.id, consolida: false, porEmpresa: true,
           empresa: g.empresa.nome, departamentos: [g.dep], atribuido_a: g.resp.login || null, ficheiros_pedidos: [], unidade: g.dep,
           periodicidade: per.tipo === 'trimestre' ? 'Trimestral' : 'Anual', prazo: prazo, indicadores: g.ids.slice(), passos: passosDe(WF_BASE()), passo_atual: 0, devolvida: false, workflow_ajustado: false,
           documentos_gerais: [], comentarios: [], eventos: []
@@ -1074,7 +1088,8 @@
         criadas++;
       }
       if (cfg.nota && String(cfg.nota).trim()) ev(m, 'Note to the assignee: ' + String(cfg.nota).trim(), u.nome);
-      g.ids.forEach(function (i) { if (!S.items[ch + ':' + i]) S.items[ch + ':' + i] = novoItem(i, ch, m.id, P.cat(i).tipo); else S.items[ch + ':' + i].milestone_id = m.id; });
+      var chM = P.chave(m);
+      g.ids.forEach(function (i) { if (!S.items[chM + ':' + i]) S.items[chM + ':' + i] = novoItem(i, chM, m.id, P.cat(i).tipo); else S.items[chM + ':' + i].milestone_id = m.id; });
     });
     if (P.eventoGlobal) P.eventoGlobal('Tasks sent for ' + per.nome + ': ' + pl.n + ' indicator(s) in ' + (criadas + juntas) + ' task(s).', u.nome, 'Creation');
     guardar();

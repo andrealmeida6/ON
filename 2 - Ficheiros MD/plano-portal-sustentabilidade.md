@@ -1338,6 +1338,24 @@ Pedido do André a 12 de novembro de 2026.
 - **Data reviewer:** fica responsável do seu departamento em cada empresa onde trabalha e onde o departamento existe. É recalculado quando muda o perfil, os departamentos ou as empresas da pessoa. Na tabela aparece "Area head of Operações (Entidade B)".
 - **Um só ecrã:** o separador Departments saiu do menu do Backoffice. Em Users and profiles, o botão **Manage departments** abre um pop-up com a lista: criar, renomear, apagar, as empresas onde cada departamento existe e a coluna **Area head by company** (uma lista por empresa). As ligações antigas ao separador abrem Users and profiles.
 
+### Indicators By topic e tasks sempre divididas por empresa
+
+Pedido do André a 12 de novembro de 2026.
+
+- **By topic** (era By department), em Backoffice → Indicators:
+  - A grelha cruza tema e período. Cada célula diz quantos pares indicador × empresa se reportam nesse período, quantos foram enviados e quantos aprovados. Tem o botão "+ Assign N" e, no cabeçalho de cada período, "Assign all N".
+  - O **pop-up de atribuição** (`Pn.temaAtr`) mostra logo cada **empresa** e, dentro de cada uma, a **pessoa ou o departamento responsável** de cada indicador (configurado no indicador, em Companies). Cada grupo é uma task e diz se é "New task" ou se se junta a uma task aberta.
+  - Os indicadores podem ser desmarcados um a um. Também se escolhem o prazo e uma nota. Os que não se podem atribuir aparecem com o motivo.
+  - Usa o mesmo motor do "Send task" (`P.planoEnvio`, `P.enviarTarefas`).
+- **Tasks sempre por empresa:** uma task nunca tem duas empresas.
+  - Um indicador que abrange várias empresas vai para a task de cada uma, com o responsável dessa empresa (`P.responsavelInd(id, empresa)`).
+  - As tasks novas têm `porEmpresa: true`. Os valores ficam na chave do período com a empresa (`2026-T4@Entidade B`, em `P.chave`), por isso cada empresa preenche o seu valor.
+  - `P.chavePer` tira a empresa onde só interessa o período: valor anterior, rótulos e validação.
+  - `P.valoresEmpresas` junta o valor de cada empresa, e o consolidado e as vistas por empresa ou seleção funcionam como antes.
+  - `P.tarefaInd(id, período, empresa)` diz se o indicador já foi enviado nessa empresa.
+  - As tasks que já existiam não mudam.
+- **Ainda por fazer:** o cartão "do ano a partir dos trimestres" nas tasks anuais lê os trimestres pela chave antiga, por isso ainda não junta os valores das tasks trimestrais divididas por empresa.
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.
