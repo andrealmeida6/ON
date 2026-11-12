@@ -2415,3 +2415,5 @@ tr.rev-pend>td:first-child{box-shadow:inset 3px 0 0 var(--rev)}
 .us-nome{min-width:160px;font-weight:600}
 
 select[data-c="userPerfil"]{min-width:220px}
+.ms-acoes{display:inline-flex;gap:4px}
+

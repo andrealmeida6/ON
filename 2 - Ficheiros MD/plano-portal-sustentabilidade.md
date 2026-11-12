@@ -1399,6 +1399,16 @@ Pedido do André a 12 de novembro de 2026.
   - Na vista por task, as tasks concluídas só aparecem em Completed ou All.
   - Na vista By KPI, Ongoing tira os KPIs aprovados e Completed mostra só os aprovados, também os de tasks ainda abertas.
 
+### Tasks sent: tirar indicadores ou apagar a task (reverter o envio)
+
+Pedido do André a 12 de novembro de 2026.
+
+- Na vista By indicator de Backoffice → Tasks sent, cada linha tem duas ações, cada uma com pop-up de confirmação:
+  - **Remove this indicator from the task** (`P.tirarIndTask`, `Pn.indTirar`): o indicador sai da task com o valor e os ficheiros que tinha nela. O título da task é recalculado. Se era o único indicador, a task é apagada. O indicador pode voltar a ser enviado a partir de Indicators.
+  - **Delete the whole task** (`P.apagarTask`, `Pn.msApagar`).
+- Os KPIs aprovados e as tasks concluídas não se tiram nem se apagam, porque ficam no histórico; só mudam por reexpressão.
+- Fica tudo registado no audit trail e no histórico da task.
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.

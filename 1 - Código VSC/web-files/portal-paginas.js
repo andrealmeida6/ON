@@ -1572,9 +1572,12 @@
     var busca = '<div class="ps-filtros">' + campo('bo-ms-q', 'Search', '<input id="bo-ms-q" class="ps-in" type="search" placeholder="Task, company, department, person or KPI" value="' + e(f.q || '') + '" data-c="boMsQ">') + '</div>';
     if (f.vista === 'kpi') {
       var lk = []; todas.forEach(function (m) { m.indicadores.forEach(function (id) { if (P.cat(id)) lk.push({ m: m, id: id }); }); });
-      return '<div class="ps-card">' + cabCartao('Indicators sent (' + lk.length + ' in ' + todas.length + ' tasks)', 'tarefa', seg) + '<div class="ps-card-body">' + busca + tabela([{ t: 'Indicator' }, { t: 'Task' }, { t: 'Company' }, { t: 'Assigned to' }, { t: 'Value', dir: 1 }, { t: 'Due' }, { t: 'Status' }], lk.map(function (x) {
+      var ico = function (d) { return svg(d, 15); }, LIXO = '<path d="M3 6h18M8 6V4h8v2M6 6l1 15h10l1-15"/><path d="M10 11v6M14 11v6"/>', TIRAR = '<path d="M5 12h14"/><circle cx="12" cy="12" r="9"/>';
+      return '<div class="ps-card">' + cabCartao('Indicators sent (' + lk.length + ' in ' + todas.length + ' tasks)', 'tarefa', seg) + '<div class="ps-card-body">' + busca + tabela([{ t: 'Indicator' }, { t: 'Task' }, { t: 'Company' }, { t: 'Assigned to' }, { t: 'Value', dir: 1 }, { t: 'Due' }, { t: 'Status' }, { t: '' }], lk.map(function (x) {
         var c = P.cat(x.id), it = P.item(x.id, P.chave(x.m)), st = estadoTarefa(x.m, x.id);
-        return ['<a href="' + rota('Milestone/' + x.m.id + '?ind=' + encodeURIComponent(x.id)) + '"><b>' + e(c.nome) + '</b></a><small class="ps-mut ps-blk">' + e(x.id + ', ' + c.unidade_medida) + '</small>', '<a href="' + rota('Milestone/' + x.m.id) + '">' + e(x.m.nome) + '</a>', empHtml(x.m.empresa), atribKpi(x.m, x.id), it && it.valor !== null ? '<span class="ps-num">' + e(fmtV(x.id, it.valor)) + '</span>' : '<span class="ps-mut">-</span>', '<span class="ps-nowrap">' + e(P.fmtData(x.m.prazo)) + '</span>', P.chipEstadoTarefa(x.m, st)];
+        var fechado = P.concluida(x.m) || P.indAprovado(x.m, x.id);
+        var acoes = fechado ? '<span class="ps-mut ps-small" title="Approved: it stays in the history">-</span>' : '<span class="ms-acoes"><button type="button" class="ms-del" data-a="boIndTirar" data-v="' + e(x.m.id + '|' + x.id) + '" aria-label="Remove ' + e(x.id) + ' from ' + e(x.m.nome) + '" data-tip="Remove this indicator from the task (it can be sent again)">' + ico(TIRAR) + '</button><button type="button" class="ms-del" data-a="boMsApagar" data-v="' + e(x.m.id) + '" aria-label="Delete the task ' + e(x.m.nome) + '" data-tip="Delete the whole task (' + x.m.indicadores.length + ' indicators)">' + ico(LIXO) + '</button></span>';
+        return ['<a href="' + rota('Milestone/' + x.m.id + '?ind=' + encodeURIComponent(x.id)) + '"><b>' + e(c.nome) + '</b></a><small class="ps-mut ps-blk">' + e(x.id + ', ' + c.unidade_medida) + '</small>', '<a href="' + rota('Milestone/' + x.m.id) + '">' + e(x.m.nome) + '</a>', empHtml(x.m.empresa), atribKpi(x.m, x.id), it && it.valor !== null ? '<span class="ps-num">' + e(fmtV(x.id, it.valor)) + '</span>' : '<span class="ps-mut">-</span>', '<span class="ps-nowrap">' + e(P.fmtData(x.m.prazo)) + '</span>', P.chipEstadoTarefa(x.m, st), acoes];
       }), 'No indicators sent.') + '</div></div>';
     }
     return '<div class="ps-card">' + cabCartao('Tasks (' + todas.length + ')', 'tarefa', seg) + '<div class="ps-card-body">' + busca + tabela([{ t: 'Task', info: 'The ring shows the indicators of the task by status; the number is how many are still to report.' }, { t: 'Company' }, { t: 'Assigned to' }, { t: 'Indicators', dir: 1 }, { t: 'Due' }, { t: 'Status' }, { t: '', sr: 'Actions' }], todas.map(function (m) {
@@ -1834,6 +1837,16 @@
   var abrePainel = function (tipo, args) { U.painel = { tipo: tipo, args: args || {} }; U.painelFoco = true; R(); };
   var fechaPainel = function () { if (U.painel && U.painel.tipo === 'marca' && U.marca) { U.marca = null; U.logoEstado = ''; P.aplicarMarca(); } U.painel = null; R(); };
   var Pn = {};
+  Pn.indTirar = function (a) {
+    var m = P.ms(a.ms), c = P.cat(a.id), it = m ? P.item(a.id, P.chave(m)) : null;
+    if (!m || !c) return { t: 'Remove indicator', b: '<div class="ps-aviso">It is no longer in the task.</div>', p: '<span class="ps-sp-flex"></span><button type="button" class="ps-btn" data-a="fecharPainel">Close</button>' };
+    var tem = it && it.valor !== null, fic = it ? it.evidencias.length : 0, so = m.indicadores.length === 1;
+    return { t: 'Remove ' + a.id + ' from the task?', s: m.nome, cls: 'conf',
+      b: '<div class="ps-conf"><div><p><b>' + e(c.nome) + '</b> leaves <b>' + e(m.nome) + '</b> (' + e(m.empresa) + ', ' + e(P.rotPeriodo(m)) + ').' + (so ? ' It is the only indicator, so the task is deleted.' : '') + '</p>' +
+        (tem || fic ? '<div class="ps-aviso warn">It already has ' + (tem ? 'a value' : '') + (tem && fic ? ' and ' : '') + (fic ? fic + ' file(s)' : '') + ' in this task. They are deleted with it.</div>' : '') +
+        '<p class="ps-small ps-mut">You can send it again from Indicators. It stays in the audit trail.</p></div></div>',
+      p: '<span class="ps-sp-flex"></span><button type="button" class="ps-btn" data-a="fecharPainel">Cancel</button><button type="button" class="ps-btn err" data-a="boIndTirarSim" data-v="' + e(m.id + '|' + a.id) + '">' + (so ? 'Remove and delete the task' : 'Remove the indicator') + '</button>' };
+  };
   Pn.deps = function () { return { t: 'Departments', s: 'The departments of each company and their area head', largo: true, cls: 'alto', b: B.departamentos(), p: '<span class="ps-sp-flex"></span><button type="button" class="ps-btn" data-a="fecharPainel">Close</button>' }; };
   Pn.msApagar = function (a) {
     var m = P.ms(a.id);
@@ -2338,6 +2351,8 @@
     calHoje: function () { U.cal = null; R(); },
     msVista: function (d) { U.msVista = d.v; R(); },
     boMsVista: function (d) { U.boMs.vista = d.v; R(); },
+    boIndTirar: function (d) { var x = d.v.split('|'); abrePainel('indTirar', { ms: x[0], id: x[1] }); },
+    boIndTirarSim: function (d) { var x = d.v.split('|'), r = P.tirarIndTask(x[0], x[1], u()); if (r.erro) return toast(r.erro, 'err'); U.painel = null; toast(r.taskApagada ? 'Task ' + r.nome + ' deleted (it had only ' + x[1] + ').' : x[1] + ' removed from the task. You can send it again from Indicators.', 'ok'); R(); },
     userUnTirarEmp: function (d) {
       var p2 = d.v.split('|'), x = P.user(p2[0]), y = S.ent.filter(function (z) { return z.id === p2[1]; })[0];
       if (!x || !y) return;

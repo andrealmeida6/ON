@@ -991,6 +991,24 @@
   };
   P.msExistente = function (un, pid) { return S.ms.filter(function (m) { return m.unidade === un && m.periodo === pid && !m.consolida; })[0] || null; };
   /* Apagar uma task enviada (ainda nao concluida): sai com os valores e ficheiros dela; fica no registo geral */
+  /* Tirar um indicador de uma task enviada (reverter o envio desse indicador). Sai com o valor e os ficheiros dele nessa task.
+     Uma task que fica sem indicadores e apagada. Aprovados nao se tiram: so mudam por reexpressao. */
+  P.tirarIndTask = function (msId, id, u) {
+    if (!P.gereTudo(u)) return { erro: 'No permission.' };
+    var m = P.ms(msId);
+    if (!m || m.indicadores.indexOf(id) < 0) return { erro: 'This indicator is no longer in the task.' };
+    if (P.concluida(m)) return { erro: 'The task is completed: its values stay in the history.' };
+    if (P.indAprovado(m, id)) return { erro: 'This indicator is approved. It only changes by restatement.' };
+    if (m.indicadores.length === 1) { var r0 = P.apagarTask(msId, u); if (r0.erro) return r0; return { ok: true, taskApagada: true, nome: m.nome }; }
+    var k = P.chave(m) + ':' + id, it = S.items[k];
+    if (it && (it.milestone_id === m.id || !it.milestone_id)) { (it.evidencias || []).forEach(function (x) { if (x.fid && P.apagarConteudo) P.apagarConteudo(x.fid); }); delete S.items[k]; }
+    m.indicadores.splice(m.indicadores.indexOf(id), 1);
+    if (P.nomeTask && !m.consolida) m.nome = P.nomeTask(m);
+    ev(m, 'Indicator ' + id + ' removed from the task in the Backoffice. It can be sent again.', u.nome);
+    if (P.eventoGlobal) P.eventoGlobal('Indicator ' + id + ' removed from ' + m.nome + ' (' + m.id + ', ' + m.empresa + ').', u.nome, 'Change');
+    guardar();
+    return { ok: true, nome: m.nome };
+  };
   P.apagarTask = function (id, u) {
     if (!P.gereTudo(u)) return { erro: 'No permission.' };
     var m = P.ms(id);
