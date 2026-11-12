@@ -1382,6 +1382,12 @@ Pedido do André a 12 de novembro de 2026.
 - **Pie das tasks:** a tooltip começa pelo número de indicadores e por a quem a task está atribuída (pessoa ou departamento inteiro, ou "Completed"), e depois mostra o detalhe por estado.
 - **Backoffice → Tasks sent** abre por omissão na vista **By indicator**.
 
+### Tasks sent só com By indicator
+
+Pedido do André a 12 de novembro de 2026.
+
+- Backoffice → Tasks sent mostra só a vista **By indicator**. A vista By task e o seletor ficam escondidos, mas o código mantém-se.
+
 ## O que falta para produção
 
 1. **Dados:** o estado vive no `localStorage`. Falta criar as tabelas no Dataverse e trocar a secção "Armazenamento" de `portal-nucleo.js` pela Web API do portal.

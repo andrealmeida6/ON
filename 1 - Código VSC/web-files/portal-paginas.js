@@ -1564,7 +1564,9 @@
   U.boMs = { vista: 'kpi', q: '' };
   B.milestones = function () {
     var f = U.boMs, q = norm(f.q || ''), todas = P.msCiclo().filter(function (m) { return !q || norm(m.nome + ' ' + m.empresa + ' ' + m.unidade + ' ' + (P.atribuido(m) ? P.atribuido(m).nome : '') + ' ' + m.indicadores.join(' ')).indexOf(q) > -1; });
-    var seg = '<div class="ps-sp"><div class="ps-seg" role="group" aria-label="View"><button type="button" class="' + (f.vista !== 'kpi' ? 'on' : '') + '" data-a="boMsVista" data-v="task">By task</button><button type="button" class="' + (f.vista === 'kpi' ? 'on' : '') + '" data-a="boMsVista" data-v="kpi">By indicator</button></div></div>';
+    /* Por agora so a vista By indicator (a vista By task fica no codigo, escondida) */
+    f.vista = 'kpi';
+    var seg = '';
     var busca = '<div class="ps-filtros">' + campo('bo-ms-q', 'Search', '<input id="bo-ms-q" class="ps-in" type="search" placeholder="Task, company, department, person or KPI" value="' + e(f.q || '') + '" data-c="boMsQ">') + '</div>';
     if (f.vista === 'kpi') {
       var lk = []; todas.forEach(function (m) { m.indicadores.forEach(function (id) { if (P.cat(id)) lk.push({ m: m, id: id }); }); });
