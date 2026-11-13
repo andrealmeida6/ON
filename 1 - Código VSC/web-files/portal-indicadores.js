@@ -251,8 +251,9 @@
     return (r.tipo === 'pessoa' ? X.pessHtml(r.nome) + '<small class="ki-sub" data-fx-ignorar>' + e(r.dep) + '</small>' : X.depHtml(r.dep) + '<small class="ki-sub" data-fx-ignorar>Whole department</small>');
   };
   var empHtmlInd = function (c) {
-    var rep = P.reportaInd(c), l = P.empresasInd(c);
-    return '<span class="ki-emp">' + (rep ? X.empHtml(rep.nome) : '<span class="ps-mut">-</span>') + '<small class="ki-sub" data-fx-ignorar>Covers ' + (l.length === S.ent.length && l.length > 1 ? 'all ' + l.length + ' companies' : e(l.map(function (x) { return x.nome; }).join(', '))) + '</small></span>';
+    /* So a empresa que reporta: o "Covers all N companies" dava a ideia de que a linha tratava varias empresas */
+    var rep = P.reportaInd(c);
+    return '<span class="ki-emp">' + (rep ? X.empHtml(rep.nome) : '<span class="ps-mut">-</span>') + '</span>';
   };
   B.indicadores = function () {
     var f = U.ind, usr = u(), per = perAtual(), todos = S.cat.filter(function (c) { return P.indAtivo(c) && daEmpresa(c); }), l = filtrados(), sel = selecionados(), vis = l.slice(0, f.lim);
