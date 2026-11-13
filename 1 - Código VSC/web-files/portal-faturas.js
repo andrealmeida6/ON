@@ -432,7 +432,7 @@
       '<span class="fat-vtxt" data-fat-zoom>' + Math.round(v.zoom * 100) + '%</span>' +
       '<button type="button" class="ps-btn peq" data-a="fatZoom" data-v="1" aria-label="Zoom in">+</button>' +
       '<button type="button" class="ps-btn peq" data-a="fatZoom" data-v="0">Fit width</button></span></div>' +
-      '<div class="fat-prev" data-fat-prev tabindex="0" aria-label="Invoice page. Drag to move, Ctrl and the mouse wheel to zoom."><img class="fat-img" data-fat-img src="' + pags[v.pag] + '" alt="Page ' + (v.pag + 1) + ' of ' + e(F.nome) + '" style="width:' + Math.round(v.zoom * 100) + '%" draggable="false"></div></div>';
+      '<div class="fat-prev" data-fat-prev tabindex="0" aria-label="Invoice page. Scroll the mouse wheel to zoom and drag to move."><img class="fat-img" data-fat-img src="' + pags[v.pag] + '" alt="Page ' + (v.pag + 1) + ' of ' + e(F.nome) + '" style="width:' + Math.round(v.zoom * 100) + '%" draggable="false"></div></div>';
   };
   /* Atualiza a imagem e a barra; com zoom, mantem o mesmo ponto no centro */
   var aplicarVis = function (centro) {
@@ -457,11 +457,13 @@
   };
   X.A.fatPag = function (d) { var v = U.fat && U.fat.pv, n = pagsDe(U.fat).length; if (!v) return; v.pag = Math.max(0, Math.min(n - 1, v.pag + Number(d.v))); aplicarVis(); };
   X.A.fatZoom = function (d) { mudaZoom(Number(d.v)); };
-  /* Ctrl + roda do rato para zoom no ponto do cursor; arrastar para mover; setas para mudar de pagina */
+  /* Roda do rato sobre a fatura: zoom no ponto do cursor; arrastar para mover; setas para mudar de pagina */
   document.addEventListener('wheel', function (ev) {
     var cx = ev.target.closest && ev.target.closest('[data-fat-prev]');
-    if (!cx || !(ev.ctrlKey || ev.metaKey)) return;
+    if (!cx) return;
     ev.preventDefault();
+    /* Um passo de zoom de cada vez (os trackpads mandam muitos eventos seguidos) */
+    var agora = Date.now(); if (agora - (cx._ultRoda || 0) < 120 || !ev.deltaY) return; cx._ultRoda = agora;
     var r = cx.getBoundingClientRect();
     mudaZoom(ev.deltaY < 0 ? 1 : -1, { x: (ev.clientX - r.left) / r.width, y: (ev.clientY - r.top) / r.height });
   }, { passive: false });
@@ -485,7 +487,7 @@
     var F = U.fat;
     if (!F) return { t: 'Read invoice', b: '' };
     if (F.estado === 'a ler') return { t: 'Reading ' + F.nome, largo: true,
-      b: '<div class="fat-aler" role="status"><span class="fat-spin" aria-hidden="true"></span><b>Reading the invoice…</b><small>OCR <span data-fat-prog>' + (F.prog || 0) + '%</span> (only for scans and photos)</small></div>', p: '<span class="ps-sp-flex"></span><button type="button" class="ps-btn" data-a="fatFechar">Cancel</button>' };
+      b: '<div class="fat-aler" role="status"><span class="fat-spin" aria-hidden="true"></span><b>Reading the invoice…</b></div>', p: '<span class="ps-sp-flex"></span><button type="button" class="ps-btn" data-a="fatFechar">Cancel</button>' };
     if (F.estado === 'erro') return { t: 'Could not read ' + F.nome, b: '<div class="ps-aviso err" role="alert">' + e(F.erro) + '</div><p class="ps-small ps-mut">' + (F.anexado ? 'The file was attached as evidence. Type the value in the task.' : 'The file is still saved. You can type the values in the task.') + '</p>', p: '<span class="ps-sp-flex"></span><button type="button" class="ps-btn" data-a="fatFechar">Close</button>' };
     var d = F.d, cf = d.leitura.confianca, m = F.ms ? P.ms(F.ms) : null, per = m ? P.periodo(m.periodo) : null, parte = P.parteNoPeriodo(d, per), c = F.ind ? P.cat(F.ind) : null;
     var nivel = function (k) { var x = cf[k]; return x === undefined ? 'nada' : x >= 0.9 ? 'alta' : x >= 0.7 ? 'media' : 'baixa'; };
