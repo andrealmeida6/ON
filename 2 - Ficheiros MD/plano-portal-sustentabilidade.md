@@ -1336,6 +1336,17 @@ Erro reportado pelo André a 13 de novembro de 2026: "Could not load pdf.min.js.
 - Se tudo falhar, a mensagem diz que a rede pode estar a bloquear e indica o domínio a pedir ao IT.
 - Em Power Pages, estes três ficheiros são Web Files como os outros.
 
+### Popup da fatura: páginas e zoom
+
+Pedido do André a 13 de novembro de 2026: no popup da fatura, poder mudar de página e fazer zoom, para confirmar os campos lidos.
+
+- O leitor guarda uma imagem de cada página do PDF (até 6), além da primeira. Por cima da imagem há uma barra com:
+  - ‹ e › para mudar de página ("Page 1 of 4");
+  - − e + para o zoom (de 50% a 400%) e "Fit width" para voltar a 100%.
+- Ctrl com a roda do rato faz zoom no ponto do cursor. Arrastar move a página. Com a imagem selecionada, as setas mudam de página e + e − mudam o zoom.
+- Mudar de página ou de zoom não redesenha o popup, por isso os campos e o que já foi corrigido ficam como estão.
+- Saíram os textos por baixo do título: "Read from the PDF text and the AT QR code. Nothing is saved until you confirm." e, durante a leitura, "QR code, text and OCR run in your browser…".
+
 ### Dashboard executivo (Monitoring → Dashboard)
 
 Pedido do André a 11 de novembro de 2026, com uma imagem de referência.

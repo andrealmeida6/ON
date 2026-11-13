@@ -2328,7 +2328,15 @@ tr.rev-pend>td:first-child{box-shadow:inset 3px 0 0 var(--rev)}
 @media (prefers-reduced-motion:reduce){.fat-spin{animation:none}}
 .fat-g{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:18px;align-items:start}
 @media (max-width:900px){.fat-g{grid-template-columns:minmax(0,1fr)}}
-.fat-prev{position:sticky;top:0;max-height:70vh;overflow:auto;border:1px solid var(--line);border-radius:var(--r);background:#fff}
+.fat-vis{position:sticky;top:0;display:grid;gap:8px;min-width:0}
+.fat-vbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px}
+.fat-vgrp{display:inline-flex;align-items:center;gap:6px}
+.fat-vgrp .ps-btn{min-width:34px;justify-content:center}
+.fat-vtxt{font-size:12.5px;font-weight:600;color:var(--muted);font-variant-numeric:tabular-nums;min-width:44px;text-align:center}
+.fat-prev{height:68vh;overflow:auto;border:1px solid var(--line);border-radius:var(--r);background:#E9EDF3;cursor:grab;touch-action:pan-x pan-y;user-select:none}
+.fat-prev.arrasta{cursor:grabbing}
+.fat-prev:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+.fat-prev .fat-img{max-width:none;margin:0 auto;box-shadow:0 1px 4px rgba(0,0,0,.15);background:#fff}
 .fat-img{display:block;width:100%;height:auto}
 .fat-campos{display:flex;flex-direction:column;gap:12px}
 .fat-leg{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:11.5px;color:var(--muted)}

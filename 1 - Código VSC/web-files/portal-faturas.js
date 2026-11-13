@@ -93,8 +93,11 @@
             return imagem(n, 2).then(function (cv) { qr = lerQR(cv); if (!qr) return imagem(n, 3).then(function (cv3) { qr = lerQR(cv3); delete imagens[n + '@3']; }); });
           });
         }, Promise.resolve());
-        return procurarQR.then(function () {
-          var prev = capa.toDataURL('image/jpeg', 0.85);
+        /* Todas as paginas (ate MAX_PAG) para o visualizador do popup: mudar de pagina e fazer zoom */
+        var paginas = [];
+        var todas = nums.reduce(function (pr, n) { return pr.then(function () { return imagem(n, 2).then(function (cv) { paginas.push(cv.toDataURL('image/jpeg', 0.85)); }); }); }, Promise.resolve());
+        return procurarQR.then(function () { return todas; }).then(function () {
+          var prev = paginas[0] || capa.toDataURL('image/jpeg', 0.85);
           /* PDF digitalizado (sem texto): OCR das primeiras paginas */
           if (texto.replace(/\s/g, '').length < 40 * nums.length) {
             /* Pagina a pagina; para quando ja tem o consumo confirmado, o periodo, o CPE e o total */
@@ -110,9 +113,9 @@
                   chega = (cf['consumo.energia_ativa_kwh'] || 0) >= 0.9 && d.fornecimento.periodo_inicio && d.fornecimento.cpe && d.valores.total_com_iva;
                 });
               });
-            }, Promise.resolve()).then(function () { return { texto: partes.join('\n'), qr: qr, imagem: prev, metodo: 'ocr', motor: motorUsado }; });
+            }, Promise.resolve()).then(function () { return { texto: partes.join('\n'), qr: qr, imagem: prev, paginas: paginas, total: doc.numPages, metodo: 'ocr', motor: motorUsado }; });
           }
-          return { texto: texto, qr: qr, imagem: prev, metodo: 'texto_pdf' };
+          return { texto: texto, qr: qr, imagem: prev, paginas: paginas, total: doc.numPages, metodo: 'texto_pdf' };
         });
       });
     });
@@ -406,10 +409,76 @@
   ];
   var ler = function (d, k) { return k.split('.').reduce(function (o, p) { return o ? o[p] : undefined; }, d); };
   var por = function (d, k, v) { var ps = k.split('.'), o = d; for (var i = 0; i < ps.length - 1; i++) o = o[ps[i]] = o[ps[i]] || {}; o[ps[ps.length - 1]] = v; };
+  /* --- Visualizador da fatura: paginas, zoom e arrastar ------------------------------------
+     Muda so a imagem e a barra, sem redesenhar o popup (os campos e o scroll ficam como estao). */
+  var ZOOMS = [0.5, 0.75, 1, 1.25, 1.5, 2, 2.5, 3, 4];
+  var pagsDe = function (F) { return F && F.lido ? (F.lido.paginas && F.lido.paginas.length ? F.lido.paginas : F.lido.imagem ? [F.lido.imagem] : []) : []; };
+  var visualizador = function (F) {
+    var pags = pagsDe(F);
+    if (!pags.length) return '<div class="ps-aviso">No preview.</div>';
+    var v = F.pv || (F.pv = { pag: 0, zoom: 1 }); if (v.pag >= pags.length) v.pag = 0;
+    var mais = F.lido.total && F.lido.total > pags.length ? ' (first ' + pags.length + ' of ' + F.lido.total + ')' : '';
+    return '<div class="fat-vis"><div class="fat-vbar" role="toolbar" aria-label="Invoice preview">' +
+      '<span class="fat-vgrp"><button type="button" class="ps-btn peq" data-a="fatPag" data-v="-1" aria-label="Previous page"' + (v.pag ? '' : ' disabled') + '>‹</button>' +
+      '<span class="fat-vtxt" data-fat-pag>Page ' + (v.pag + 1) + ' of ' + pags.length + e(mais) + '</span>' +
+      '<button type="button" class="ps-btn peq" data-a="fatPag" data-v="1" aria-label="Next page"' + (v.pag < pags.length - 1 ? '' : ' disabled') + '>›</button></span>' +
+      '<span class="fat-vgrp"><button type="button" class="ps-btn peq" data-a="fatZoom" data-v="-1" aria-label="Zoom out">−</button>' +
+      '<span class="fat-vtxt" data-fat-zoom>' + Math.round(v.zoom * 100) + '%</span>' +
+      '<button type="button" class="ps-btn peq" data-a="fatZoom" data-v="1" aria-label="Zoom in">+</button>' +
+      '<button type="button" class="ps-btn peq" data-a="fatZoom" data-v="0">Fit width</button></span></div>' +
+      '<div class="fat-prev" data-fat-prev tabindex="0" aria-label="Invoice page. Drag to move, Ctrl and the mouse wheel to zoom."><img class="fat-img" data-fat-img src="' + pags[v.pag] + '" alt="Page ' + (v.pag + 1) + ' of ' + e(F.nome) + '" style="width:' + Math.round(v.zoom * 100) + '%" draggable="false"></div></div>';
+  };
+  /* Atualiza a imagem e a barra; com zoom, mantem o mesmo ponto no centro */
+  var aplicarVis = function (centro) {
+    var F = U.fat, v = F && F.pv, pags = pagsDe(F), cx = document.querySelector('[data-fat-prev]'), img = document.querySelector('[data-fat-img]');
+    if (!v || !cx || !img) return;
+    var rx = centro ? centro.x : 0.5, ry = centro ? centro.y : 0.5;
+    var fx = (cx.scrollLeft + cx.clientWidth * rx) / Math.max(1, cx.scrollWidth), fy = (cx.scrollTop + cx.clientHeight * ry) / Math.max(1, cx.scrollHeight);
+    if (img.getAttribute('src') !== pags[v.pag]) { img.src = pags[v.pag]; img.alt = 'Page ' + (v.pag + 1) + ' of ' + F.nome; fx = 0; fy = 0; }
+    img.style.width = Math.round(v.zoom * 100) + '%';
+    var aplicaScroll = function () { cx.scrollLeft = fx * cx.scrollWidth - cx.clientWidth * rx; cx.scrollTop = fy * cx.scrollHeight - cx.clientHeight * ry; };
+    if (img.complete) aplicaScroll(); else img.onload = aplicaScroll;
+    var t = document.querySelector('[data-fat-pag]'), z = document.querySelector('[data-fat-zoom]');
+    if (t) t.textContent = 'Page ' + (v.pag + 1) + ' of ' + pags.length + (F.lido.total > pags.length ? ' (first ' + pags.length + ' of ' + F.lido.total + ')' : '');
+    if (z) z.textContent = Math.round(v.zoom * 100) + '%';
+    var b = document.querySelectorAll('[data-a="fatPag"]'); if (b.length === 2) { b[0].disabled = v.pag === 0; b[1].disabled = v.pag >= pags.length - 1; }
+  };
+  var mudaZoom = function (dir, centro) {
+    var v = U.fat && U.fat.pv; if (!v) return;
+    if (!dir) v.zoom = 1;
+    else { var i = ZOOMS.indexOf(v.zoom); if (i < 0) i = 2; v.zoom = ZOOMS[Math.max(0, Math.min(ZOOMS.length - 1, i + dir))]; }
+    aplicarVis(centro);
+  };
+  X.A.fatPag = function (d) { var v = U.fat && U.fat.pv, n = pagsDe(U.fat).length; if (!v) return; v.pag = Math.max(0, Math.min(n - 1, v.pag + Number(d.v))); aplicarVis(); };
+  X.A.fatZoom = function (d) { mudaZoom(Number(d.v)); };
+  /* Ctrl + roda do rato para zoom no ponto do cursor; arrastar para mover; setas para mudar de pagina */
+  document.addEventListener('wheel', function (ev) {
+    var cx = ev.target.closest && ev.target.closest('[data-fat-prev]');
+    if (!cx || !(ev.ctrlKey || ev.metaKey)) return;
+    ev.preventDefault();
+    var r = cx.getBoundingClientRect();
+    mudaZoom(ev.deltaY < 0 ? 1 : -1, { x: (ev.clientX - r.left) / r.width, y: (ev.clientY - r.top) / r.height });
+  }, { passive: false });
+  var arrasto = null;
+  document.addEventListener('pointerdown', function (ev) {
+    var cx = ev.target.closest && ev.target.closest('[data-fat-prev]');
+    if (!cx || ev.button !== 0) return;
+    arrasto = { cx: cx, x: ev.clientX, y: ev.clientY, sl: cx.scrollLeft, st: cx.scrollTop }; cx.classList.add('arrasta');
+  });
+  document.addEventListener('pointermove', function (ev) { if (!arrasto) return; arrasto.cx.scrollLeft = arrasto.sl - (ev.clientX - arrasto.x); arrasto.cx.scrollTop = arrasto.st - (ev.clientY - arrasto.y); });
+  document.addEventListener('pointerup', function () { if (arrasto) { arrasto.cx.classList.remove('arrasta'); arrasto = null; } });
+  document.addEventListener('keydown', function (ev) {
+    var cx = ev.target.closest && ev.target.closest('[data-fat-prev]');
+    if (!cx) return;
+    if (ev.key === 'PageDown' || ev.key === 'ArrowRight') { ev.preventDefault(); X.A.fatPag({ v: 1 }); }
+    else if (ev.key === 'PageUp' || ev.key === 'ArrowLeft') { ev.preventDefault(); X.A.fatPag({ v: -1 }); }
+    else if (ev.key === '+' || ev.key === '=') { ev.preventDefault(); mudaZoom(1); }
+    else if (ev.key === '-') { ev.preventDefault(); mudaZoom(-1); }
+  });
   X.Pn.fatura = function () {
     var F = U.fat;
     if (!F) return { t: 'Read invoice', b: '' };
-    if (F.estado === 'a ler') return { t: 'Reading ' + F.nome, s: 'QR code, text and OCR run in your browser. The first time, it downloads the reading engine (about 40 MB), which then stays in the browser cache.', largo: true,
+    if (F.estado === 'a ler') return { t: 'Reading ' + F.nome, largo: true,
       b: '<div class="fat-aler" role="status"><span class="fat-spin" aria-hidden="true"></span><b>Reading the invoice…</b><small>OCR <span data-fat-prog>' + (F.prog || 0) + '%</span> (only for scans and photos)</small></div>', p: '<span class="ps-sp-flex"></span><button type="button" class="ps-btn" data-a="fatFechar">Cancel</button>' };
     if (F.estado === 'erro') return { t: 'Could not read ' + F.nome, b: '<div class="ps-aviso err" role="alert">' + e(F.erro) + '</div><p class="ps-small ps-mut">The file is still saved. You can type the values in the task.</p>', p: '<span class="ps-sp-flex"></span><button type="button" class="ps-btn" data-a="fatFechar">Close</button>' };
     var d = F.d, cf = d.leitura.confianca, m = F.ms ? P.ms(F.ms) : null, per = m ? P.periodo(m.periodo) : null, parte = P.parteNoPeriodo(d, per), c = F.ind ? P.cat(F.ind) : null;
@@ -429,8 +498,8 @@
         (mwh !== null && c ? '<p class="fat-val">Value to add: <b>' + e(P.fmtNum(mwh, c.unidade_medida === 'kWh' ? 0 : 3)) + ' ' + e(c.unidade_medida) + '</b><small>It is added to ' + e(c.nome) + ' as one entry for CPE ' + e(d.fornecimento.cpe || '?') + ', with the invoice as evidence.</small></p>' : '') +
         (m && m.indicadores.indexOf('E03') > -1 && d.rotulagem.renovavel_pct !== undefined && d.rotulagem.renovavel_pct !== null ? '<label class="ps-chk"><input id="fat-e03" type="checkbox" data-c="fatE03"' + (F.e03 !== false ? ' checked' : '') + '> Also fill E03 Renewable electricity with ' + e(P.fmtNum(d.rotulagem.renovavel_pct, 1)) + '%</label>' : '')
         : '<div class="ps-aviso warn">No open task with an electricity indicator is in collection with you. The invoice is saved as a document; the values are kept with it.</div>') + '</div>';
-    var prev = F.lido.imagem ? '<img class="fat-img" src="' + F.lido.imagem + '" alt="First page of ' + e(F.nome) + '">' : '<div class="ps-aviso">No preview.</div>';
-    return { t: 'Check the values read from ' + F.nome, s: (F.lido.metodo === 'ocr' ? 'Read by OCR' + (F.lido.motor === 'paddleocr' ? ' (PaddleOCR)' : F.lido.motor === 'tesseract' ? ' (Tesseract)' : '') : 'Read from the PDF text') + (d.leitura.qr ? ' and the AT QR code' : ', no AT QR code found') + '. Nothing is saved until you confirm.', largo: true, cls: 'alto',
+    var prev = visualizador(F);
+    return { t: 'Check the values read from ' + F.nome, largo: true, cls: 'alto',
       b: '<div class="fat-g"><div class="fat-prev">' + prev + '</div><div class="fat-campos"><div class="fat-leg"><span class="alta">High confidence</span><span class="media">Check</span><span class="baixa">Low</span><span class="nada">Not found</span></div><div class="fat-cg">' + campos + '</div>' + pp + destino + '</div></div>',
       p: '<span class="ps-sp-flex"></span><button type="button" class="ps-btn" data-a="fatFechar">Cancel</button><button type="button" class="ps-btn" data-a="fatGuardarSo">Save as document only</button>' + (l.length && c ? '<button type="button" class="ps-btn pri" data-a="fatAplicar">Confirm and add to ' + e(F.ind) + '</button>' : '') };
   };
