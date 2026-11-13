@@ -461,12 +461,33 @@
   };
   /* Detalhe tecnico de um dado: objeto de origem, campo, filtros e consulta. Nunca se mostra o nome do sistema. */
   var codEmpresa = function (nome) { var i = (S.ent || []).map(function (x) { return x.nome; }).indexOf(nome); return i < 0 ? '9900' : String(1000 + i * 100); };
+  /* Query de cada dado de origem: a gerada (com parametros) ou a editada em Backoffice > Connections (S.consultas[k]) */
+  P.consultaPadrao = function (k) {
+    var f = CAMPOS[k]; if (!f) return '';
+    var tab = 'ZESG_' + f.tab.toUpperCase(), col = k.toUpperCase(), fn = { soma: 'SUM', media: 'AVG' }[f.agreg];
+    var onde = " WHERE BUKRS = :company_code\n   AND GJAHR = :year\n   AND POPER BETWEEN :period_from AND :period_to";
+    return fn ? 'SELECT BUKRS, GJAHR, ' + fn + '(' + col + ') AS VALUE\n  FROM ' + tab + '\n' + onde + '\n GROUP BY BUKRS, GJAHR'
+      : 'SELECT BUKRS, GJAHR, POPER, ' + col + ' AS VALUE\n  FROM ' + tab + '\n' + onde + '\n ORDER BY POPER DESC\n FETCH FIRST 1 ROW ONLY';
+  };
+  P.consultaDe = function (k) { var c = (S.consultas || {})[k]; return c && c.q ? c.q : P.consultaPadrao(k); };
+  P.gravarConsulta = function (k, q, u) {
+    if (!P.gereTudo(u)) return { erro: 'No permission.' };
+    if (!CAMPOS[k]) return { erro: 'Unknown source data.' };
+    var t = String(q || '').trim();
+    S.consultas = S.consultas || {};
+    if (!t || t === P.consultaPadrao(k)) delete S.consultas[k]; else S.consultas[k] = { q: t, por: u.nome, em: new Date().toISOString() };
+    if (P.eventoGlobal) P.eventoGlobal('Query of ' + CAMPOS[k].rot + (t && t !== P.consultaPadrao(k) ? ' edited.' : ' back to the generated one.'), u.nome, 'Change');
+    P.guardar();
+    return { ok: true, propria: !!S.consultas[k] };
+  };
   var tecnico = function (m, k) {
     var f = CAMPOS[k], p = P.periodo(m.periodo), t = p && p.t ? p.t : 0, de = t ? (t - 1) * 3 + 1 : 1, ate = t ? t * 3 : 12;
     var per = function (n) { return String(n).padStart(3, '0'); }, tab = 'ZESG_' + f.tab.toUpperCase(), col = k.toUpperCase(), cod = codEmpresa(m.empresa), fn = { soma: 'SUM', media: 'AVG' }[f.agreg];
     var onde = " WHERE BUKRS = '" + cod + "'\n   AND GJAHR = '" + m.ano + "'\n   AND POPER BETWEEN '" + per(de) + "' AND '" + per(ate) + "'";
     var q = fn ? 'SELECT BUKRS, GJAHR, ' + fn + '(' + col + ') AS VALUE\n  FROM ' + tab + '\n' + onde + '\n GROUP BY BUKRS, GJAHR'
       : 'SELECT BUKRS, GJAHR, POPER, ' + col + ' AS VALUE\n  FROM ' + tab + '\n' + onde + '\n ORDER BY POPER DESC\n FETCH FIRST 1 ROW ONLY';
+    /* Query editada: usa-se essa, com os parametros desta task */
+    if ((S.consultas || {})[k]) q = P.consultaDe(k).replace(/:company_code/g, "'" + cod + "'").replace(/:year/g, "'" + m.ano + "'").replace(/:period_from/g, "'" + per(de) + "'").replace(/:period_to/g, "'" + per(ate) + "'");
     return { tab: tab, col: col, cod: cod, per: per(de) + ' to ' + per(ate), q: q };
   };
   var difere = function (a, b) { return a === null || a === undefined || b === null || b === undefined ? a !== b : Math.abs(a - b) > 1e-9; };

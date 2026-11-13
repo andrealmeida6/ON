@@ -2485,3 +2485,8 @@ a.rq-vlig:hover{color:var(--primary);text-decoration-style:solid}
 .rq-a4 .rq-pag-g{display:grid;grid-template-columns:minmax(0,1fr);gap:22px}
 .rq-a4 .ps-tw{overflow-x:auto}
 .rq-a4 .rq-pag-top{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px}
+/* Backoffice > Connections: query de cada dado de origem, editavel */
+.qy-tab td{vertical-align:top}
+.qy-tab td:nth-child(3){width:58%;min-width:320px}
+.ps-ta.qy-q{font-family:var(--mono);font-size:12px;line-height:1.5;white-space:pre;overflow:auto;min-height:118px;resize:vertical}
+.qy-acoes{margin-top:6px;align-items:center;flex-wrap:wrap}

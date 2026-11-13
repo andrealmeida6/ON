@@ -1445,6 +1445,16 @@ Pedido do André: criar a estrutura e carregar os ficheiros em `https://iiaammla
   - No GitHub Pages, o `gerar-mockup.js` escreve `manifest.webmanifest` e `sw.js` na raiz do site, porque o service worker só controla a pasta onde está.
   - No Power Pages ficam na raiz como Web Files (`/manifest.webmanifest`, `/sw.js`).
 
+### Connections: só indicadores e queries (13/11/2026)
+
+Pedido do André: o separador Connections (Backoffice > Platform) fica muito simples, sem sistemas, sem "New connection" e sem contrato da API.
+
+- Uma tabela com o indicador, o dado de origem e a query desse dado, numa caixa editável. Tem pesquisa por indicador, código ou dado.
+- A query gerada (`P.consultaPadrao`) usa os parâmetros `:company_code`, `:year`, `:period_from` e `:period_to`. Cada task preenche-os quando puxa os dados.
+- **Editar:** Save grava a query (`S.consultas`, chave `esg_queries`), com quem e quando, e mostra o chip "Edited". Reset volta à gerada. Só a equipa de sustentabilidade e o administrador editam.
+  - A query é do dado de origem: se o mesmo dado serve vários indicadores, a linha diz "Also used by …" e a alteração vale para todos.
+  - A janela "Pull data from system" da task passa a mostrar a query editada, com os valores da task.
+
 ### Dashboard executivo (Monitoring → Dashboard)
 
 Pedido do André a 11 de novembro de 2026, com uma imagem de referência.

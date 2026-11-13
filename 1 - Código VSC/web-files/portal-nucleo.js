@@ -102,7 +102,7 @@
     docs: 'esg_docs', ent: 'esg_ent', janelas: 'esg_windows', marca: 'esg_brand', amostra: 'esg_sample', users: 'esg_users',
     areas: 'esg_areas', cat: 'esg_catalog', metas: 'esg_metas', deps: 'esg_deps',
     atrib: 'esg_assign', regrasEnt: 'esg_entity_rules', fatores: 'esg_factors', apis: 'esg_connections', evg: 'esg_config_log', selos: 'esg_seals',
-    kpim: 'esg_kpi_master', puxados: 'esg_source_pulls', periodos: 'esg_periods', relatorios: 'esg_reports', tipos: 'esg_data_types', dpdec: 'esg_dp_decisions', gloss: 'esg_glossary', rq: 'esg_report_tables', doc: 'esg_report_doc', defs: 'esg_definitions', saidas: 'esg_outputs', sp: 'esg_sharepoint'
+    kpim: 'esg_kpi_master', puxados: 'esg_source_pulls', periodos: 'esg_periods', relatorios: 'esg_reports', tipos: 'esg_data_types', dpdec: 'esg_dp_decisions', gloss: 'esg_glossary', rq: 'esg_report_tables', doc: 'esg_report_doc', defs: 'esg_definitions', saidas: 'esg_outputs', sp: 'esg_sharepoint', consultas: 'esg_queries'
   };
   var VERSAO_DADOS = 10;
   P.CHAVES = CHAVES;
@@ -650,6 +650,7 @@
     }
     /* Tasks com todos os indicadores ja aprovados um a um: ficam concluidas */
     if (!S.sp || typeof S.sp !== 'object') S.sp = {};
+    if (!S.consultas || typeof S.consultas !== 'object') S.consultas = {};
     if (P.fecharSeTudoAprovado) (S.ms || []).forEach(function (m) { if (!P.concluida(m) && P.passoAtual(m) && P.passoAtual(m).tipo === 'recolha') P.fecharSeTudoAprovado(m, { nome: 'System' }); });
     /* So momentos de report: a frequencia mensal deixou de existir (T1 a T4 e Year) */
     (S.cat || []).forEach(function (c) { if (c.periodicidade === 'Mensal') c.periodicidade = 'Trimestral'; });

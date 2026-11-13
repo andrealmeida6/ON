@@ -301,7 +301,39 @@
       (P.gereTudo(usr) ? '<h3 class="ps-grupo-t">New connection</h3><div class="ps-form">' + campo('api-nome', 'System', '<input id="api-nome" class="ps-in">') + campo('api-amb', 'What it provides', '<input id="api-amb" class="ps-in">') + campo('api-frq', 'Frequency', '<select id="api-frq" class="ps-sel">' + opt('Hourly') + opt('Daily') + opt('Weekly') + opt('Monthly') + '</select>') + '</div><button type="button" class="ps-btn pri ps-mt" data-a="apiNova">Add connection</button>' : '') + '</div></div>' +
       '<div class="ps-card ps-mt">' + cabCartao('Contract for direct integration', 'doc') + '<div class="ps-card-body"><p class="ps-small ps-mut">Each system sends this format. It follows the same validation as a file.</p><pre class="ps-pre ps-mt">POST /api/v1/datapoints\n' + e(corpoJson) + '</pre></div></div>';
   };
-  P.ligacoesHtml = function () { return abaApi(u()); };
+  /* Connections: so os indicadores e as queries de onde vem cada dado, com a query editavel (pedido do Andre a 13/11/2026).
+     A versao anterior (sistemas, nova ligacao e contrato da API) fica em abaApi, sem uso. */
+  U.qry = U.qry || { q: '' };
+  P.ligacoesHtml = function () {
+    var usr = u(), gere = P.gereTudo(usr), CF = P.CAMPOS_FONTE || {}, q = String(U.qry.q || '').toLowerCase();
+    var usosDe = {}, linhas = [];
+    S.cat.forEach(function (c) { var x = P.expressaoDe && P.expressaoDe(c.id); if (!x) return; P.camposDaFormula(x).filter(function (k) { return CF[k]; }).forEach(function (k) { (usosDe[k] = usosDe[k] || []).push(c.id); }); });
+    S.cat.forEach(function (c) {
+      var x = P.expressaoDe && P.expressaoDe(c.id); if (!x) return;
+      var ks = P.camposDaFormula(x).filter(function (k) { return CF[k]; });
+      if (!ks.length) return;
+      if (q && (c.id + ' ' + c.nome + ' ' + ks.map(function (k) { return CF[k].rot + ' ' + k; }).join(' ')).toLowerCase().indexOf(q) < 0) return;
+      ks.forEach(function (k, i) {
+        var f = CF[k], propria = !!(S.consultas || {})[k], outros = usosDe[k].filter(function (id) { return id !== c.id; });
+        var area = '<textarea id="qy-' + e(c.id + '-' + k) + '" class="ps-ta qy-q" rows="6" spellcheck="false" aria-label="Query of ' + e(f.rot) + '" data-k="' + e(k) + '"' + (gere ? '' : ' readonly') + '>' + e(P.consultaDe(k)) + '</textarea>' +
+          '<div class="ps-sp qy-acoes">' + (propria ? chip('Edited', 'info') + '<small class="ps-mut">' + e(S.consultas[k].por + ', ' + P.fmtDataHora(S.consultas[k].em)) + '</small>' : '<small class="ps-mut">Generated</small>') +
+          (outros.length ? '<small class="ps-mut">Also used by ' + e(outros.join(', ')) + '</small>' : '') + '<span class="ps-sp-flex"></span>' +
+          (gere ? (propria ? '<button type="button" class="ps-btn peq" data-a="qyRepor" data-v="' + e(c.id + '|' + k) + '">Reset</button>' : '') + '<button type="button" class="ps-btn peq pri" data-a="qyGuardar" data-v="' + e(c.id + '|' + k) + '">Save</button>' : '') + '</div>';
+        linhas.push([i === 0 ? '<b>' + e(c.id) + '</b> ' + e(c.nome) : '<span class="ps-mut ps-small">' + e(c.id) + '</span>', e(f.rot) + '<small class="ps-mut ps-blk ps-mono">' + e(k) + '</small>', area]);
+      });
+    });
+    return '<div class="ps-card">' + cabCartao('Connections: queries by indicator', 'ativ') + '<div class="ps-card-body">' +
+      '<p class="ps-small ps-mut">Where each indicator gets its data. Parameters: <span class="ps-mono">:company_code</span>, <span class="ps-mono">:year</span>, <span class="ps-mono">:period_from</span> and <span class="ps-mono">:period_to</span>, filled in by each task.</p>' +
+      '<div class="ps-filtros ps-mt">' + campo('qy-busca', 'Search', '<input id="qy-busca" class="ps-in" type="search" autocomplete="off" placeholder="Indicator, code or data" value="' + e(U.qry.q || '') + '" data-c="qyBusca">') + '</div>' +
+      '<div class="ps-mt qy-tab">' + tabela([{ t: 'Indicator' }, { t: 'Data' }, { t: 'Query' }], linhas, 'No indicator matches the search.') + '</div></div></div>';
+  };
+  C.qyBusca = function (el) { U.qry.q = el.value; };
+  A.qyGuardar = function (d) {
+    var x = d.v.split('|'), el = document.getElementById('qy-' + x[0] + '-' + x[1]), r = P.gravarConsulta(x[1], el ? el.value : '', u());
+    if (r.erro) return toast(r.erro, 'err');
+    toast(r.propria ? 'Query saved.' : 'Query is the generated one.', 'ok'); R();
+  };
+  A.qyRepor = function (d) { var x = d.v.split('|'), r = P.gravarConsulta(x[1], '', u()); if (r.erro) return toast(r.erro, 'err'); toast('Query back to the generated one.', 'ok'); R(); };
   Blocos['data-entry'] = function () {
     var usr = u(), t = U.de.tab;
     return '<div class="ps-filtros">' + pills('deTab', [['manual', 'Manual'], ['excel', 'Excel upload'], ['api', 'API connection']], t) + '</div>' + (t === 'excel' ? abaExcel(usr) : t === 'api' ? abaApi(usr) : abaManual(usr));
