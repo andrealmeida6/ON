@@ -2866,10 +2866,14 @@
     tip.classList.toggle('longo', !!tit || tip.textContent.length > 60 || tip.textContent.indexOf('\n') > -1);
     tip.classList.toggle('linhas', tip.textContent.indexOf('\n') > -1);
     tip.hidden = false;
-    var r = t.getBoundingClientRect();
-    var meia = tip.classList.contains('longo') ? 160 : 70;
-    tip.style.left = Math.max(meia, Math.min(window.innerWidth - meia, r.left + r.width / 2)) + 'px';
-    tip.style.top = (t.tagName === 'rect' ? r.top + 24 : r.top - 4) + 'px';
+    /* Posicao medida: por cima do elemento; se nao couber, por baixo; nunca fora do ecra */
+    var r = t.getBoundingClientRect(), M = 8;
+    tip.style.transform = 'none'; tip.style.left = '0px'; tip.style.top = '0px';
+    var w = tip.offsetWidth, h = tip.offsetHeight, vw = window.innerWidth, vh = window.innerHeight;
+    var x = Math.max(M, Math.min(vw - w - M, r.left + r.width / 2 - w / 2));
+    var cima = r.top - h - 8, baixo = (t.tagName === 'rect' ? r.top + 24 : r.bottom + 8);
+    var y = t.tagName !== 'rect' && cima >= M ? cima : baixo + h <= vh - M ? baixo : Math.max(M, cima);
+    tip.style.left = Math.round(x) + 'px'; tip.style.top = Math.round(y) + 'px';
   };
 
   /* --- Arranque ---------------------------------------------------------- */

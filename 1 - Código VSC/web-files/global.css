@@ -238,7 +238,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 /* Informacao "i" e tooltips longos */
 .ps-info{display:inline-grid;place-items:center;width:20px;height:20px;margin-left:5px;padding:0;border:0;border-radius:50%;background:none;color:inherit;opacity:.8;cursor:help;vertical-align:middle}
 .ps-info:hover,.ps-info:focus-visible{opacity:1;background:rgba(127,127,127,.18)}
-.ps-tip{z-index:1400}
+.ps-tip{z-index:6000}
 .ps-tip.longo{white-space:normal;width:max-content;max-width:300px;line-height:1.45;padding:9px 12px}
 .ps-chip-tip{cursor:help;text-decoration:underline dotted;text-underline-offset:3px}
 /* Avatares: pessoa com iniciais, departamento com o simbolo de uma equipa */
@@ -647,7 +647,7 @@ a.ps-row:hover{background:var(--bg)}
 .ps-lin .h{fill:transparent;cursor:pointer}
 .ps-lin .x{stroke:var(--muted);stroke-width:1;opacity:0}
 .ps-lin .pt:hover .x{opacity:1}
-.ps-tip{position:absolute;pointer-events:none;background:var(--text);color:#fff;padding:6px 10px;border-radius:8px;font-size:12px;white-space:nowrap;transform:translate(-50%,-115%);z-index:5}
+.ps-tip{position:absolute;pointer-events:none;background:var(--text);color:#fff;padding:6px 10px;border-radius:8px;font-size:12px;white-space:nowrap;transform:translate(-50%,-115%);z-index:6000}
 .ps-lin-w{position:relative}
 
 /* 13. BACKOFFICE ----------------------------------------------------------- */
