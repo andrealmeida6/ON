@@ -1383,6 +1383,14 @@ Pedido do André a 13 de novembro de 2026: a partir de Documents, ir para o indi
 - Ao lado do nome do ficheiro há um ícone (seta). Numa evidência, abre a task com esse indicador aberto e destacado (`Milestone/<task>?ind=<KPI>`). Se o ficheiro serve vários KPIs, abre o primeiro e a tooltip lista todos. Num documento da task, abre a task.
 - Na coluna KPIs, o código e o nome do indicador também levam ao indicador na task.
 
+### Documents: botão SharePoint folder
+
+Pedido do André a 13 de novembro de 2026.
+
+- Saíram da página Documents os botões "SharePoint folders (Excel)" e "Auditor package (Excel)".
+- Entrou o botão **SharePoint folder**, que abre a biblioteca de documentos (Reporting) no SharePoint, para navegar pelas pastas. Sem o endereço do site configurado, avisa onde se configura.
+- O Excel com a estrutura de pastas e as colunas de metadados, que serve o flow, passou para Backoffice > Data and storage, no cartão SharePoint ("Folder structure (Excel)"). O pacote do auditor continua em Audit (Export data room).
+
 ### Dashboard executivo (Monitoring → Dashboard)
 
 Pedido do André a 11 de novembro de 2026, com uma imagem de referência.

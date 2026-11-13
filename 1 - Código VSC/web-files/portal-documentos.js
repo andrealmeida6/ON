@@ -40,6 +40,12 @@
     return l.sort(function (a, b) { return String(b.em).localeCompare(String(a.em)); });
   };
 
+  /* SharePoint folder: abre a biblioteca de documentos no SharePoint, para navegar pelas pastas */
+  var botaoSP = function () {
+    var ICO = svg('<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>', 14), url = P.urlPastaSP && P.SP ? P.urlPastaSP(P.SP.biblioteca) : '';
+    return url ? '<a class="ps-btn" href="' + e(url) + '" target="_blank" rel="noopener" data-tip="' + e('Open the document library ' + P.SP.biblioteca + ' in SharePoint') + '">' + ICO + 'SharePoint folder</a>'
+      : '<button type="button" class="ps-btn" data-a="spSemSite" data-tip="The SharePoint site address is not set yet (Backoffice, Data and storage).">' + ICO + 'SharePoint folder</button>';
+  };
   var TIPO_TXT = { evidencia: 'KPI evidence', task: 'Task document', pedido: 'Requested file', solto: 'Not linked yet' };
   U.docs = { q: '', emp: '', tipo: '', per: '', ver: 50 };
   var resumoFatura = function (f) {
@@ -75,7 +81,7 @@
       var spUrl = sp && P.urlPastaSP ? P.urlPastaSP(sp) : '', spTxt = svg('<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>', 12) + e('… / ' + spCurto);
       return [P.fichHtml(d.x, ir, d.m, d.kpis) + resumoFatura(d.fatura) + (sp ? (spUrl ? '<a class="dc-sp" href="' + e(spUrl) + '" target="_blank" rel="noopener" data-tip="' + e('Open in SharePoint: ' + P.SP.site + ' / ' + sp) + '">' + spTxt + '</a>' : '<small class="dc-sp" tabindex="0" data-tip="' + e('SharePoint: ' + P.SP.site + ' / ' + sp) + '">' + spTxt + '</small>') : ''), kp, d.m ? (P.tagPer(d.m) || e(P.rotPeriodo(d.m))) : '<span class="ps-mut">-</span>', d.m ? empHtml(d.m.empresa) : '-', e(TIPO_TXT[d.tipo] || d.tipo), '<span class="ps-nowrap">' + e(d.em ? P.fmtData(d.em) : '-') + '</span><small class="ps-mut ps-blk">' + e(d.por || '') + '</small>'];
     });
-    return topo + '<div class="ps-card ps-mt">' + cabCartao('All documents you can access (' + l.length + ')', 'doc', '<div class="ps-sp">' + (P.gereTudo(usr) && P.exportarEsqueletoSP ? '<button type="button" class="ps-btn" data-a="spEsqueleto" data-tip="The SharePoint folder structure: one folder per company, topic, KPI and period, and the metadata columns. For the Power Automate flow that stores the files.">SharePoint folders (Excel)</button>' : '') + '<button type="button" class="ps-btn" data-a="pacExcel">Auditor package (Excel)</button><button type="button" class="ps-btn pri" data-a="docsUpload">' + svg(I.upload, 14) + 'Upload document</button></div>') +
+    return topo + '<div class="ps-card ps-mt">' + cabCartao('All documents you can access (' + l.length + ')', 'doc', '<div class="ps-sp">' + botaoSP() + '<button type="button" class="ps-btn pri" data-a="docsUpload">' + svg(I.upload, 14) + 'Upload document</button></div>') +
       '<div class="ps-card-body">' + filtros + '<div class="ps-mt">' + tabela([{ t: 'Document' }, { t: 'KPIs' }, { t: 'Period' }, { t: 'Company' }, { t: 'Type' }, { t: 'Uploaded' }], linhas, todos.length ? 'No document matches the search.' : 'No documents yet. Upload one, or attach evidence in a task.') + '</div>' +
       (l.length > f.ver ? '<div class="ps-sp ps-mt"><button type="button" class="ps-btn liga" data-a="docsMais">Show ' + Math.min(100, l.length - f.ver) + ' more</button></div>' : '') + '</div></div>';
   };
