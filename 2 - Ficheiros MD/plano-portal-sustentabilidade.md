@@ -1404,6 +1404,21 @@ Pedido do André a 13 de novembro de 2026, para Report > Indicator tables (`port
   - Ignora acentos e aceita várias palavras.
   - Mostra até 12 resultados. Escolher um leva à linha do relatório e destaca-a durante uns segundos.
 
+### Pastas criadas no SharePoint real (13/11/2026)
+
+Pedido do André: criar a estrutura e carregar os ficheiros em `https://iiaammlab.sharepoint.com/sites/ESGDataHub/Reporting`.
+
+- **Acesso:** Microsoft Graph com login do André (fluxo normal com PKCE; o login por código estava bloqueado por Conditional Access). O token ficou só no Codespace, fora do repositório (`~/.cache/esg-sp`).
+- **O que já existia:**
+  - as 9 colunas de metadados, com nomes internos `ESGKPIs`, `ESGTaskID`, `ESGCompany`, `ESGReportingPeriod`, `ESGDocumentType` (escolha: KPI evidence, Task document, Invoice, Requested file, To classify), `ESGUploadedBy` (texto), `ESGUploadedInPlatform` (data), `ESGPlatformFileID` e `ESGInvoiceData` (texto, até 255 caracteres);
+  - 43 pastas de testes ("Empresa B", "Empresa do André", "Empresa do João");
+  - 3 ficheiros.
+
+  Nada disto foi alterado nem apagado.
+- **Criadas 401 pastas:** o esqueleto do ambiente de testes partilhado (`P.esqueletoSP` sobre os dados do Supabase), com 2026, Entidade A e Entidade B, 186 pastas de KPI por período, 110 de `_Task documents` por departamento e `_To classify`, mais as pastas intermédias.
+- **Ficheiros carregados:** os dois ficheiros do ambiente de testes que estão ligados a um indicador, ambos evidência do E01 da Entidade A, no Ano, na task M11. São a fatura `216005179148.pdf` (Document type Invoice, Invoice data com CPE, período, kWh, total e número) e `esg-data-hub-kpi-list-2026-11-13.xlsx` (KPI evidence). Os outros 13 ficheiros guardados no Supabase são exportações de testes sem ligação a nenhuma task e não foram carregados.
+- Para os ícones de pasta da plataforma abrirem estas pastas, o endereço do site (`https://iiaammlab.sharepoint.com/sites/ESGDataHub`) tem de estar em Backoffice > Data and storage.
+
 ### Dashboard executivo (Monitoring → Dashboard)
 
 Pedido do André a 11 de novembro de 2026, com uma imagem de referência.
