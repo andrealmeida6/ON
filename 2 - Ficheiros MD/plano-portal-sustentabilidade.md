@@ -1376,6 +1376,13 @@ Pedido do André a 13 de novembro de 2026: junto de cada evidência e ficheiro, 
   - Sem endereço, o ícone mostra o caminho na tooltip e diz onde se configura.
 - Abre num separador novo. O SharePoint pede o login Microsoft, se ainda não houver sessão.
 
+### Documents: ir para o indicador na task
+
+Pedido do André a 13 de novembro de 2026: a partir de Documents, ir para o indicador, dentro da task, em que o ficheiro serviu de evidência.
+
+- Ao lado do nome do ficheiro há um ícone (seta). Numa evidência, abre a task com esse indicador aberto e destacado (`Milestone/<task>?ind=<KPI>`). Se o ficheiro serve vários KPIs, abre o primeiro e a tooltip lista todos. Num documento da task, abre a task.
+- Na coluna KPIs, o código e o nome do indicador também levam ao indicador na task.
+
 ### Dashboard executivo (Monitoring → Dashboard)
 
 Pedido do André a 11 de novembro de 2026, com uma imagem de referência.
