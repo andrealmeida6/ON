@@ -1358,7 +1358,7 @@ Pedido do André a 13 de novembro de 2026: nos indicadores que recebem faturas, 
   - **Cancel** não guarda nada.
 - Se a leitura falhar, o ficheiro fica na mesma como evidência e o aviso diz para escrever o valor à mão.
 - Nos outros indicadores, e para outros tipos de ficheiro (Excel, Word…), Attach evidence anexa o ficheiro diretamente, como antes.
-- A leitura de faturas a partir de Documents (Upload document, com "This is an invoice") mantém-se.
+- A leitura de faturas a partir de Documents (Upload document, com "It is an invoice: read the values") mantém-se.
 
 ### Dashboard executivo (Monitoring → Dashboard)
 
