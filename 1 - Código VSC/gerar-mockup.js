@@ -23,9 +23,11 @@ const naoUsadas = fs.readdirSync(path.join(cod, 'web-pages')).filter((d) => d !=
 if (naoUsadas.length) throw new Error('Web pages fora do mockup: ' + naoUsadas.join(', '));
 
 let html = resolver(ler('web-templates', 'layout-portal.html').replace(/\{%\s*block main\s*%\}\{%\s*endblock\s*%\}/, () => paginas));
+/* Cada ficheiro leva ?v= com a impressao digital do conteudo: quando muda, o browser vai buscar o novo em vez de usar a cache */
+const versao = (f) => { try { return '?v=' + require('crypto').createHash('md5').update(fs.readFileSync(path.join(cod, 'web-files', f))).digest('hex').slice(0, 8); } catch (er) { return ''; } };
 const montar = (web, config) => '<!-- Gerado por gerar-mockup.js. Nao editar: alterar as web pages, snippets ou templates. -->\n' + html
-  .replace(/(href|src)="\/(global\.css|[\w.-]+\.js)"/g, (_, a, f) => a + '="' + web + f + '"')
-  .replace('<script src="' + web + 'xlsx.full.min.js"', '<script>' + config + '</script>\n<script src="' + web + 'xlsx.full.min.js"');
+  .replace(/(href|src)="\/(global\.css|[\w.-]+\.js)"/g, (_, a, f) => a + '="' + web + f + versao(f) + '"')
+  .replace('<script src="' + web + 'xlsx.full.min.js' + versao('xlsx.full.min.js') + '"', '<script>' + config + '</script>\n<script src="' + web + 'xlsx.full.min.js' + versao('xlsx.full.min.js') + '"');
 /* Ambiente de testes partilhado (portal-partilha.js): mesma base Supabase, tabelas esg_teste_ (015_esg_ambiente_teste.sql) */
 const PARTILHA = 'window.PORTAL_PARTILHA = ' + JSON.stringify({ url: 'https://yujhfscnnngaivwwunom.supabase.co', chave: 'sb_publishable_wU6S2mgSbmnTzz4hQMKZ6g_jTj6MMgo' }) + ';';
 const MODO_MOCKUP = 'window.PORTAL_MODO = "hash"; ' + PARTILHA;

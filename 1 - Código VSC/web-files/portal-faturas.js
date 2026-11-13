@@ -267,7 +267,15 @@
       var pot = pega(new RegExp('potencia[^\\n\\d]{0,40}' + NUM + '\\s*kVA', 'i')) || pega(new RegExp(NUM + '\\s*kVA\\b', 'i'));
       if (pot !== null) { d.fornecimento.potencia_contratada_kva = num(pot); conf['fornecimento.potencia_contratada_kva'] = base - 0.1; }
     }
-    var tens = pega(/\b(BTN|BTE|MT|AT|MAT)\b/); if (tens) { d.fornecimento.nivel_tensao = tens; conf['fornecimento.nivel_tensao'] = base - 0.1; }
+    /* Nivel de tensao: so junto de "tensao" ou por extenso. "AT" sozinho apanhava a Autoridade Tributaria (QR code AT).
+       Sem indicacao, ate 41,4 kVA e Baixa Tensao Normal (BTN), com menos confianca. */
+    var EXT = { 'baixa tensao normal': 'BTN', 'baixa tensao especial': 'BTE', 'media tensao': 'MT', 'muito alta tensao': 'MAT', 'alta tensao': 'AT' };
+    var tlS = tl.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    var tens = pega(/tens[aã]o[^\n]{0,30}?\b(BTN|BTE|MT|AT|MAT)\b/i) || pega(/\b(BTN|BTE|MAT)\b/);
+    if (tens) tens = tens.toUpperCase();
+    if (!tens) Object.keys(EXT).some(function (k) { if (tlS.toLowerCase().indexOf(k) > -1) { tens = EXT[k]; return true; } return false; });
+    if (tens) { d.fornecimento.nivel_tensao = tens; conf['fornecimento.nivel_tensao'] = base - 0.1; }
+    else if (d.fornecimento.potencia_contratada_kva !== null && d.fornecimento.potencia_contratada_kva <= 41.4) { d.fornecimento.nivel_tensao = 'BTN'; conf['fornecimento.nivel_tensao'] = base - 0.3; }
     /* "Se enviar fora destas datas, parte do consumo sera estimado" e um aviso, nao uma leitura estimada */
     var estimada = /(?:leitura|consumo)s?\s*(?:\(\s*)?estimad|\(\s*estimad/i.test(tl.replace(/ser[aá]\s*estimad\w*/gi, ''));
     if (estimada) d.fornecimento.tipo_leitura = 'estimada'; else if (/leitura\s*real|telecontagem|consumos?\s*rea(?:l|is)|energia\s*\(real\)/i.test(tl)) d.fornecimento.tipo_leitura = /telecontagem/i.test(tl) ? 'telecontagem' : 'real';
