@@ -249,7 +249,7 @@
       if (ativaNav(pag) === n) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
     });
     var nPend = pendentesDe(usr).length;
-    document.querySelectorAll('[data-campo="nav-pend"]').forEach(function (el) { el.textContent = nPend || ''; el.hidden = !nPend; });
+    /* O numero de tasks na barra de cima saiu (pedido do Andre a 13/11/2026): nao batia com a tabela */
     var nAprov = pendentesDe(usr).filter(function (m) { return P.passoAtual(m).tipo !== 'recolha'; }).length;
     document.querySelectorAll('[data-campo="nav-aprov"]').forEach(function (el) { el.textContent = nAprov || ''; el.hidden = !nAprov; });
     /* Cada grupo do cabecalho e um menu: esconde-se sem paginas visiveis e fica marcado quando tem a pagina atual */
