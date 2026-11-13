@@ -485,6 +485,31 @@
   };
   var secao = function (g, corpo, ajuda) { var x = GRUPOS.filter(function (y) { return y[0] === g; })[0]; return '<section class="ki-sec" style="--gc:#' + x[2] + '"><h3>' + e(x[1]) + (ajuda ? '<small>' + e(ajuda) + '</small>' : '') + '</h3><div class="ki-g">' + corpo + '</div></section>'; };
   /* Companies, no topo do painel: que empresas o indicador abrange e, em cada uma, o departamento e a pessoa que reportam */
+  /* Fluxo real do workflow, por empresa: quem reporta, o responsavel de area, a equipa de sustentabilidade e a publicacao.
+     l: [{ empresa, quem, dep }] (quem = nome da pessoa ou "" para o departamento todo) */
+  var fluxoHtml = function (l) {
+    var passos = (S.wfbase || []).filter(function (p) { return p.tipo !== 'validacao'; });
+    var esg = (S.users || []).filter(function (x) { return x.perfil === 'esg'; }).map(function (x) { return x.nome; });
+    if (!l.length) return '<p class="ps-small ps-mut">Choose the companies and who reports to see the workflow.</p>';
+    return l.map(function (x) {
+      var chefe = x.dep ? P.chefeDe(x.dep, x.empresa) : null;
+      var etapas = passos.map(function (p) {
+        if (p.tipo === 'recolha') return ['Reports', x.quem || (x.dep ? 'Whole department ' + x.dep : 'Not set'), x.quem && x.dep ? x.dep : ''];
+        if (p.tipo === 'area') return ['Approves, area head', chefe ? chefe.nome : 'No area head', chefe && x.quem && chefe.nome === x.quem ? 'Same person who reports: approved on submit' : !chefe ? 'Step skipped' : x.dep];
+        if (p.tipo === 'publicacao') return ['Published', 'Report tables', 'Automatic'];
+        return [p.responsavel === 'esg' ? 'Approves, sustainability team' : p.nome, p.responsavel === 'esg' ? (esg.join(', ') || 'Sustainability team') : P.nomeResp(null, p.responsavel), ''];
+      });
+      return '<div class="ki-flx">' + (l.length > 1 ? '<div class="ki-flx-emp">' + X.empHtml(x.empresa) + '</div>' : '') + '<ol class="ki-flx-l">' + etapas.map(function (t) {
+        return '<li><span class="ki-flx-k">' + e(t[0]) + '</span><b>' + e(t[1]) + '</b>' + (t[2] ? '<small>' + e(t[2]) + '</small>' : '') + '</li>';
+      }).join('') + '</ol></div>';
+    }).join('');
+  };
+  var fluxoDeInd = function (c) { return P.empresasInd(c).map(function (y) { var r = P.responsavelInd(c.id, y.id); return { empresa: y.nome, quem: r.tipo === 'pessoa' ? r.nome : '', dep: r.dep }; }); };
+  var fluxoDeEd = function (d) {
+    return String(d.empresas || '').split(';').map(function (t) { return t.trim(); }).filter(Boolean).map(function (n) {
+      var r = (d.respEmp || {})[n] || {}; return { empresa: n, quem: r.resp && r.resp !== GRUPO_TXT ? r.resp : '', dep: r.dep || d.dep || '' };
+    });
+  };
   var secaoEmpresas = function (d) {
     var cobre = String(d.empresas || '').split(';').map(function (t) { return t.trim(); }).filter(Boolean);
     var chk = '<div class="ki-emps" role="group" aria-label="Companies covered">' + S.ent.map(function (x, i) { var on = cobre.indexOf(x.nome) > -1; return '<label class="ki-empc' + (on ? ' on' : '') + '"><input id="ke-emp-' + i + '" type="checkbox" data-c="indEmp" data-id="' + e(x.nome) + '"' + (on ? ' checked' : '') + '>' + X.avEmpresa() + e(x.nome) + '</label>'; }).join('') + '</div>';
@@ -536,8 +561,7 @@
       secao('id', (E.novo ? cmp('id', 'KPI ID *', inp('id', d, ' maxlength="24" autocapitalize="characters"'), 'Short unique code, for example W05. It cannot be changed later.') : cmp('id', 'KPI ID', '<input id="ke-id" class="ps-in" readonly value="' + e(d.id) + '">')) +
         cmp('ativo', 'Status', sel('ativo', d, ['Active', 'Inactive']), 'Inactive indicators are not sent in tasks.') +
         '<div class="ki-full">' + cmp('nome', 'KPI Name *', inp('nome', d)) + '</div><div class="ki-full">' + cmp('desc', 'KPI Description', area('desc', d), 'What is measured, with the key definitions.') + '</div>') +
-      secao('resp', cmp('reve', 'Reviewer', sel('reve', d, pessoas('reve').map(function (x) { return x.nome; }), 'Not set'), 'Reviews the value. Cannot be who reports.') +
-        cmp('valida', 'Validator', sel('valida', d, pessoas('valida').map(function (x) { return x.nome; }), 'Not set'), 'Validates at the end.'), 'Who reviews and validates') +
+      secao('resp', '<div class="ki-full">' + fluxoHtml(fluxoDeEd(d)) + '</div>', 'The workflow of the task: who reports, who approves and when it is published') +
       secao('car', cmp('unidade', 'Unit *', inp('unidade', d), 'For example m³, MWh, %, n.º') + cmp('casas', 'Decimals', inp('casas', d, ' inputmode="numeric"')) +
         '<div class="ki-full">' + cmp('freq', 'Reporting moments *', '<div class="ki-mom" role="group" aria-label="Reporting moments">' + MOM.map(function (x) { var on = momLista(d.freq).indexOf(x[0]) > -1; return '<label class="ki-empc' + (on ? ' on' : '') + '"><input id="ke-mom-' + x[0] + '" type="checkbox" data-c="indMom" data-id="' + x[0] + '"' + (on ? ' checked' : '') + '>' + e(x[1]) + '</label>'; }).join('') + '</div>', 'The periods in which this indicator is asked for. Year uses the quarters when they exist.') + '</div>' +
         cmp('agreg', 'Aggregation', sel('agreg', d, AGREG.map(function (f) { return f[1]; })), 'How companies and periods are combined.') + (P.eCarbono(P.cat(U.ind.ed.id || d.id) || { id: d.id, unidade_medida: d.unidade }) ? cmp('natureza', 'Input / Output', '<input id="ke-natureza" class="ps-in" value="Input" readonly>', 'GHG emissions are always an input.') : cmp('natureza', 'Input / Output', sel('natureza', d, ['Input', 'Output']), 'Output: calculated from other indicators.')) + (P.eCarbono(P.cat(U.ind.ed.id || d.id) || { id: d.id, unidade_medida: d.unidade }) ? '<div class="ki-full ps-aviso info ps-small">GHG emissions are always an <b>input</b>: whoever reports calculates them outside the platform and enters the result. They can attach the calculation as evidence in the task.</div>' : editorCalc(d)) +
@@ -563,6 +587,8 @@
     var val = function (f) { var v = ''; try { v = f.get(c); } catch (er) { v = ''; } v = String(v === null || v === undefined ? '' : v).trim(); return v ? e(v) : '<span class="ps-mut">-</span>'; };
     var corpo = (tar ? '<div class="ki-estado"><span>Task for ' + e(per.nome) + '</span>' + chip(tar.txt, tar.cls) + (tar.m ? '<a href="' + rota('Milestone/' + tar.m.id + '?ind=' + encodeURIComponent(c.id)) + '" data-a="fecharPainel">Open the indicator in the task</a>' : '') + '</div>' : '') +
       GRUPOS.map(function (g) {
+        /* Responsabilidade: so o fluxo do workflow, como acontece de facto */
+        if (g[0] === 'resp') return '<section class="ki-sec" style="--gc:#' + g[2] + '"><h3>' + e(g[1]) + '</h3>' + fluxoHtml(fluxoDeInd(c)) + '</section>';
         var fs = CAMPOS.filter(function (f) { return f.g === g[0] && f.get; });
         if (!fs.length) return '';
         return '<section class="ki-sec" style="--gc:#' + g[2] + '"><h3>' + e(g[1]) + '</h3><dl class="ki-fi">' + fs.map(function (f) { return '<div' + (f.longo ? ' class="ki-full"' : '') + '><dt>' + e(f.t) + '</dt><dd>' + val(f) + '</dd></div>'; }).join('') + '</dl></section>';
@@ -607,7 +633,7 @@
     if (!r.dep) { var un = P.unidadesDe ? P.unidadesDe(eu) : []; if (un.length) r.dep = un[0]; }
     sincRep(d); toast(d2.v + ': assigned to you.', 'ok'); R();
   };
-  C.indRespEmp = function (el) { var d = U.ind.ed.d, r = (d.respEmp[el.dataset.id] = d.respEmp[el.dataset.id] || { dep: '', resp: GRUPO_TXT }); r[el.dataset.f] = el.value; sincRep(d); };
+  C.indRespEmp = function (el) { var d = U.ind.ed.d, r = (d.respEmp[el.dataset.id] = d.respEmp[el.dataset.id] || { dep: '', resp: GRUPO_TXT }); r[el.dataset.f] = el.value; sincRep(d); R(); };
   C.indRep = function (el) { var d = U.ind.ed.d; d.reporta = el.dataset.id; sincRep(d); };
   var guardarEd = function () {
     var E = U.ind.ed, usr = u(), d = E.d;

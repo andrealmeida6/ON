@@ -1455,6 +1455,17 @@ Pedido do André: o separador Connections (Backoffice > Platform) fica muito sim
   - A query é do dado de origem: se o mesmo dado serve vários indicadores, a linha diz "Also used by …" e a alteração vale para todos.
   - A janela "Pull data from system" da task passa a mostrar a query editada, com os valores da task.
 
+### Ficha do indicador: Responsibility mostra o fluxo do workflow (13/11/2026)
+
+Pedido do André: a caixa Responsibility mostrava Reviewer e Validator, que não refletiam o que acontece.
+
+- Na ficha e no editor do indicador, a caixa passou a mostrar só o fluxo, por empresa, a partir do workflow de base:
+  1. **Reports:** a pessoa, ou o departamento todo;
+  2. **Approves, area head:** o responsável de área do departamento nessa empresa. Se for a mesma pessoa que reporta, aprova ao submeter; sem responsável, o passo salta;
+  3. **Approves, sustainability team:** as pessoas com o perfil Data approver;
+  4. **Published:** quadros do relatório, automático.
+- Os campos Reviewer e Validator saíram do editor. Quem reporta continua a escolher-se por empresa, na secção Companies, e o fluxo atualiza logo.
+
 ### Dashboard executivo (Monitoring → Dashboard)
 
 Pedido do André a 11 de novembro de 2026, com uma imagem de referência.
