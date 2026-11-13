@@ -634,6 +634,18 @@
     (S.ms || []).forEach(function (m) { nomesPessoas.forEach(function (n) { var suf = ', ' + n; if (m.nome && m.nome.length > suf.length && m.nome.slice(-suf.length) === suf) m.nome = m.nome.slice(0, -suf.length); }); });
     /* Titulo das tasks: topico e periodo, sem referencias dos reports (as consolidacoes anuais mantem o nome) */
     (S.ms || []).forEach(function (m) { if (!m.consolida && m.periodicidade !== 'Novos dados ESRS' && P.nomeTask) m.nome = P.nomeTask(m); });
+    /* Pastas do SharePoint gravadas nos ficheiros: passam a ordem Ano > Empresa > Periodo > Tema > Indicador */
+    if (P.caminhoSPNovo) {
+      var acertaSP = function (o, fundo) {
+        if (!o || typeof o !== 'object' || fundo > 6) return;
+        if (Array.isArray(o)) { o.forEach(function (x) { acertaSP(x, fundo + 1); }); return; }
+        if (typeof o.sp === 'string') o.sp = P.caminhoSPNovo(o.sp);
+        Object.keys(o).forEach(function (k) { if (o[k] && typeof o[k] === 'object') acertaSP(o[k], fundo + 1); });
+      };
+      Object.keys(S.items || {}).forEach(function (k) { acertaSP(S.items[k].evidencias, 0); });
+      (S.ms || []).forEach(function (m) { acertaSP(m.documentos_gerais, 0); acertaSP(m.ficheiros_pedidos, 0); acertaSP(m.ficheiros, 0); });
+      acertaSP(S.docs, 0);
+    }
     /* So momentos de report: a frequencia mensal deixou de existir (T1 a T4 e Year) */
     (S.cat || []).forEach(function (c) { if (c.periodicidade === 'Mensal') c.periodicidade = 'Trimestral'; });
     (S.ms || []).forEach(function (m) { if (m.periodicidade === 'Mensal') m.periodicidade = 'Trimestral'; });

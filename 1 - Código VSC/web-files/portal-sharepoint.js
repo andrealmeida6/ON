@@ -8,9 +8,10 @@
    mudar de sitio se depois se renomear um indicador ou uma empresa.
 
    Biblioteca "Reporting" do site ESG Data Hub:
-     Reporting/<Ano>/<Empresa>/<Tema>/<KPI - Nome>/<Periodo>/ficheiro
-     Reporting/<Ano>/<Empresa>/_Task documents/<Departamento>/<Periodo>/ficheiro
+     Reporting/<Ano>/<Empresa>/<Periodo>/<Tema>/<KPI - Nome>/ficheiro
+     Reporting/<Ano>/<Empresa>/<Periodo>/_Task documents/<Departamento>/ficheiro
      Reporting/<Ano>/_To classify/ficheiro
+   Ano > Empresa > Periodo de report > Tema > Indicador (pedido do Andre a 13/11/2026).
    Um ficheiro de varios KPIs fica uma vez, na pasta do primeiro; os outros
    ficam na coluna de metadados "KPIs" (pesquisa e vistas no SharePoint).
    ============================================================================ */
@@ -31,14 +32,22 @@
   /* Pasta do periodo: T1 a T4, ou Ano */
   var pastaPeriodo = function (pid) { var p = P.periodo(pid); return !p ? limpa(pid) : p.tipo === 'trimestre' ? 'T' + p.t : 'Ano'; };
   var anoDe = function (pid) { var p = P.periodo(pid); return p ? String(p.ano) : String(S.ciclo.ano); };
+  P.pastaTaskSP = function (ano, empresa, per, dep) { return [P.SP.biblioteca, ano, limpa(empresa), per, P.SP.tarefas, limpa(dep)].join('/'); };
+  /* Caminhos gravados com a ordem antiga (Ano/Empresa/Tema/KPI/Periodo e Ano/Empresa/_Task documents/Dep/Periodo) passam a nova */
+  var PERS = ['T1', 'T2', 'T3', 'T4', 'Ano'];
+  P.caminhoSPNovo = function (sp) {
+    var ps = String(sp || '').split('/');
+    if (ps.length !== 6 || PERS.indexOf(ps[5]) < 0 || PERS.indexOf(ps[3]) > -1) return sp;
+    return [ps[0], ps[1], ps[2], ps[5], ps[3], ps[4]].join('/');
+  };
   P.pastaKpiSP = function (ano, empresa, id, per) {
     var c = P.cat(id);
-    return [P.SP.biblioteca, ano, limpa(empresa), limpa(c && c.tema ? c.tema : 'Other'), limpa(id + ' - ' + (c ? c.nome : ''), 80), per].join('/');
+    return [P.SP.biblioteca, ano, limpa(empresa), per, limpa(c && c.tema ? c.tema : 'Other'), limpa(id + ' - ' + (c ? c.nome : ''), 80)].join('/');
   };
   /* Pasta de um ficheiro: o primeiro KPI, a task, ou por classificar */
   P.pastaSP = function (m, kpis) {
     if (m && kpis && kpis.length) return P.pastaKpiSP(anoDe(m.periodo), m.empresa, kpis[0], pastaPeriodo(m.periodo));
-    if (m) return [P.SP.biblioteca, anoDe(m.periodo), limpa(m.empresa), P.SP.tarefas, limpa(m.unidade), pastaPeriodo(m.periodo)].join('/');
+    if (m) return P.pastaTaskSP(anoDe(m.periodo), m.empresa, pastaPeriodo(m.periodo), m.unidade);
     return [P.SP.biblioteca, String(S.ciclo.ano), P.SP.classificar].join('/');
   };
   P.urlSP = function (caminho, nome) { return caminho + '/' + limpa(nome, 120); };
@@ -70,11 +79,12 @@
     S.cat.forEach(function (c) {
       if (P.indAtivo && !P.indAtivo(c)) return;
       var emps = P.empresasInd ? P.empresasInd(c) : S.ent, pers = (P.momentosDe(c.id).per || []).map(function (k) { return k === 'A' ? 'Ano' : k; });
-      if (!pers.length) pers = ['Ano'];
+      /* O Ano existe sempre: a task anual (consolidacao) tambem recebe evidencias dos KPIs trimestrais */
+      if (pers.indexOf('Ano') < 0) pers.push('Ano');
       emps.forEach(function (x) { pers.forEach(function (pe) { junta({ caminho: P.pastaKpiSP(ano, x.nome, c.id, pe), ano: ano, empresa: x.nome, tema: c.tema || 'Other', kpi: c.id, kpi_nome: c.nome, periodo: pe, tipo: 'KPI' }); }); });
     });
     S.ent.forEach(function (x) {
-      (P.depsDaEmpresa ? P.depsDaEmpresa(x.nome) : P.UNIDADES).forEach(function (d) { ['T1', 'T2', 'T3', 'T4', 'Ano'].forEach(function (pe) { junta({ caminho: [P.SP.biblioteca, ano, limpa(x.nome), P.SP.tarefas, limpa(d), pe].join('/'), ano: ano, empresa: x.nome, tema: '', kpi: '', kpi_nome: '', periodo: pe, tipo: 'Task documents', departamento: d }); }); });
+      (P.depsDaEmpresa ? P.depsDaEmpresa(x.nome) : P.UNIDADES).forEach(function (d) { ['T1', 'T2', 'T3', 'T4', 'Ano'].forEach(function (pe) { junta({ caminho: P.pastaTaskSP(ano, x.nome, pe, d), ano: ano, empresa: x.nome, tema: '', kpi: '', kpi_nome: '', periodo: pe, tipo: 'Task documents', departamento: d }); }); });
     });
     junta({ caminho: [P.SP.biblioteca, ano, P.SP.classificar].join('/'), ano: ano, empresa: '', tema: '', kpi: '', kpi_nome: '', periodo: '', tipo: 'To classify' });
     return l.sort(function (a, b) { return a.caminho.localeCompare(b.caminho); });
@@ -96,6 +106,6 @@
         { column: 'Platform file ID', type: 'Text', example: 'f1a2b3c4', why: 'Links back to the record in Dataverse.' },
         { column: 'Invoice data', type: 'Multiple lines (JSON)', example: '{"consumo":{"energia_ativa_kwh":31000}}', why: 'Values read from an invoice (esquema-fatura-energia.json).' }
       ]
-    }, { titulo: 'SharePoint folders ' + ano, descricoes: { folders: 'One folder per company, topic, KPI and period, plus task documents per department and a folder to classify. Library: ' + P.SP.biblioteca + ' in the site ' + P.SP.site + '.', metadata_columns: 'Columns to create in the library. The flow fills them when it saves each file.' } });
+    }, { titulo: 'SharePoint folders ' + ano, descricoes: { folders: 'Year, company, reporting period, topic and KPI, plus task documents per period and department and a folder to classify. Library: ' + P.SP.biblioteca + ' in the site ' + P.SP.site + '.', metadata_columns: 'Columns to create in the library. The flow fills them when it saves each file.' } });
   };
 })();

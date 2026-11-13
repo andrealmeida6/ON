@@ -1288,24 +1288,24 @@ Pedido do André a 11 de novembro de 2026. Hoje os ficheiros ficam no browser (I
 Reporting/
   2026/
     Entidade A/
-      Energia e clima/
-        E01 - Consumo de eletricidade/
-          T1/  T2/  T3/  T4/            <- evidências e faturas do KPI nesse período
-        E03 - Eletricidade de fontes renováveis/
-          Ano/
-      Água e saneamento/
-        A01 - Água entrada no sistema/
-          T1/ … T4/
-      _Task documents/
-        Operações/
-          T1/ … T4/  Ano/               <- documentos da task sem KPI (ficheiros pedidos, gerais)
+      T1/  T2/  T3/  T4/  Ano/            <- periodo de report
+        Energia e clima/                   <- tema
+          E01 - Consumo de eletricidade/   <- evidencias e faturas do KPI nesse periodo
+          E03 - Eletricidade de fontes renováveis/
+        Água e saneamento/
+          A01 - Água entrada no sistema/
+        _Task documents/
+          Operações/                       <- documentos da task sem KPI (ficheiros pedidos, gerais)
     Entidade B/
       …
-    _To classify/                       <- carregados sem task, para ligar depois
+    _To classify/                          <- carregados sem task, para ligar depois
 ```
 
+Ordem: Ano > Empresa > Período de report > Tema > Indicador (pedido do André a 13/11/2026; antes era Ano > Empresa > Tema > Indicador > Período).
+
 - **Regras** (`P.pastaSP`, `P.pastaKpiSP`):
-  - Ano / Empresa / Tema da empresa / "Código - Nome do KPI" / Período (T1 a T4 ou Ano).
+  - Ano / Empresa / Período (T1 a T4 ou Ano) / Tema da empresa / "Código - Nome do KPI". A pasta Ano existe sempre para cada KPI, porque a task anual também recebe evidências dos KPIs trimestrais.
+  - Os caminhos já gravados com a ordem antiga passam à nova ao carregar (`P.caminhoSPNovo`, em `P.migrarDados`).
   - Um ficheiro de vários KPIs fica uma vez, na pasta do primeiro. Os outros ficam na coluna de metadados **KPIs**, para se encontrarem por pesquisa e por vistas.
   - Os nomes são limpos dos caracteres que o SharePoint não aceita (`" * : < > ? / \ | # % & { } ~`) e encurtados para não passar o limite de 400 caracteres do caminho.
 - **Cada ficheiro guarda o caminho** (`x.sp`) no momento do upload: evidências (`P.anexar`), documentos de task, faturas lidas e documentos por classificar. Assim não muda de sítio se depois se renomear um KPI ou uma empresa.
@@ -1418,6 +1418,13 @@ Pedido do André: criar a estrutura e carregar os ficheiros em `https://iiaammla
 - **Criadas 401 pastas:** o esqueleto do ambiente de testes partilhado (`P.esqueletoSP` sobre os dados do Supabase), com 2026, Entidade A e Entidade B, 186 pastas de KPI por período, 110 de `_Task documents` por departamento e `_To classify`, mais as pastas intermédias.
 - **Ficheiros carregados:** os dois ficheiros do ambiente de testes que estão ligados a um indicador, ambos evidência do E01 da Entidade A, no Ano, na task M11. São a fatura `216005179148.pdf` (Document type Invoice, Invoice data com CPE, período, kWh, total e número) e `esg-data-hub-kpi-list-2026-11-13.xlsx` (KPI evidence). Os outros 13 ficheiros guardados no Supabase são exportações de testes sem ligação a nenhuma task e não foram carregados.
 - Para os ícones de pasta da plataforma abrirem estas pastas, o endereço do site (`https://iiaammlab.sharepoint.com/sites/ESGDataHub`) tem de estar em Backoffice > Data and storage.
+
+### SharePoint reorganizado: Ano > Empresa > Período > Tema > Indicador (13/11/2026)
+
+- Só nas pastas das empresas do ambiente de testes, Entidade A e Entidade B.
+  - Foram criadas as pastas novas e os dois ficheiros do E01 passaram para `2026/Entidade A/Ano/Energia e clima/E01 - Consumo de eletricidade`, com as colunas intactas.
+  - As pastas antigas de tema e `_Task documents` (ordem antiga) foram apagadas depois de vazias. Ficam na reciclagem do site.
+- "Empresa B", "Empresa do André", "Empresa do João" e `_To classify` não foram tocadas.
 
 ### Dashboard executivo (Monitoring → Dashboard)
 
