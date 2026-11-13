@@ -187,8 +187,9 @@
   var perAtual = function () {
     var f = U.ind, l = periodos();
     if (f.per && l.some(function (p) { return p.id === f.per; })) return P.periodo(f.per);
+    /* Por omissao, o ano do ciclo (Ano 2026); sem periodo anual, o trimestre corrente */
     var hoje = P.hojeISO(), tri = l.filter(function (p) { return p.tipo === 'trimestre'; });
-    var x = tri.filter(function (p) { return p.ini <= hoje && hoje <= p.fim; })[0] || tri.filter(function (p) { return p.fecho >= hoje; })[0] || l[0];
+    var x = l.filter(function (p) { return p.tipo === 'ano' && p.ano === S.ciclo.ano; })[0] || l.filter(function (p) { return p.tipo === 'ano'; })[0] || tri.filter(function (p) { return p.ini <= hoje && hoje <= p.fim; })[0] || tri.filter(function (p) { return p.fecho >= hoje; })[0] || l[0];
     f.per = x ? x.id : '';
     return x || null;
   };
