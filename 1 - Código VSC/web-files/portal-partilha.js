@@ -22,9 +22,16 @@
   };
   var chaves = function () { var l = Object.keys(P.CHAVES).map(function (n) { return P.CHAVES[n]; }); l.push('esg_versao'); return l; };
   var porChave = function () { var o = {}; Object.keys(P.CHAVES).forEach(function (n) { o[P.CHAVES[n]] = n; }); return o; };
-  var lerLocal = function (k) { try { return localStorage.getItem(P.prefixo + k); } catch (e) { return null; } };
+  /* So devolve texto JSON valido: uma parte estragada (por exemplo "undefined") e ignorada em vez de parar o envio de todas */
+  var lerLocal = function (k) { try { var v = localStorage.getItem(P.prefixo + k); if (v === null || v === 'undefined') return null; JSON.parse(v); return v; } catch (e) { return null; } };
   var gravarLocal = function (k, v) { try { localStorage.setItem(P.prefixo + k, v); } catch (e) { /* sem armazenamento */ } };
-  var enviado = {}, ultimo = '', tEnviar = null, aEnviar = false, ativo = false;
+  var enviado = {}, ultimo = '', tEnviar = null, aEnviar = false, ativo = false, pendente = false;
+  /* Impressao digital do que ja esta no Supabase, guardada no navegador: ao abrir, uma parte local diferente
+     da ultima enviada tem alteracoes por enviar (por exemplo, recarregou-se antes do envio) e nao e substituida */
+  var ASSIN = 'esg_partilha_enviado';
+  var hash = function (t) { var h = 5381, i = t.length; while (i) h = (h * 33) ^ t.charCodeAt(--i); return (h >>> 0).toString(36) + '.' + t.length; };
+  var assin = (function () { try { return JSON.parse(localStorage.getItem(P.prefixo + ASSIN) || '{}') || {}; } catch (e) { return {}; } })();
+  var marcarEnviado = function (k, v) { enviado[k] = v; assin[k] = hash(v); try { localStorage.setItem(P.prefixo + ASSIN, JSON.stringify(assin)); } catch (e) { /* sem armazenamento */ } };
   var est = P.partilha = { estado: 'a ligar', erro: '', em: null };
 
   /* Etiqueta "Test environment" no cabecalho: diz se esta partilhado */
@@ -42,7 +49,11 @@
     return api(ESTADO + '?select=chave,valor,atualizado_em&order=atualizado_em.asc').then(function (rows) {
       ativo = true; est.estado = 'ligado';
       if (rows && rows.length) {
-        rows.forEach(function (r) { var v = JSON.stringify(r.valor); gravarLocal(r.chave, v); enviado[r.chave] = v; });
+        rows.forEach(function (r) {
+          var v = JSON.stringify(r.valor), loc = lerLocal(r.chave);
+          if (loc !== null && loc !== v && assin[r.chave] && hash(loc) !== assin[r.chave]) { enviado[r.chave] = v; pendente = true; return; }
+          gravarLocal(r.chave, v); marcarEnviado(r.chave, v);
+        });
         maxHora(rows);
       } else est.vazio = true;
     }).catch(function (x) { est.estado = 'erro'; est.erro = x.status === 404 ? 'tables not created yet' : x.message; });
@@ -57,7 +68,7 @@
     if (!linhas.length) return;
     aEnviar = true;
     api(ESTADO + '?on_conflict=chave', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=representation' }, body: JSON.stringify(linhas.map(function (l) { return { chave: l.chave, valor: l.valor, atualizado_por: l.atualizado_por }; })) })
-      .then(function (rows) { linhas.forEach(function (l) { enviado[l.chave] = l._v; }); maxHora(rows); est.estado = 'ligado'; est.em = new Date().toISOString(); aEnviar = false; mostrar(); })
+      .then(function (rows) { linhas.forEach(function (l) { marcarEnviado(l.chave, l._v); }); maxHora(rows); est.estado = 'ligado'; est.em = new Date().toISOString(); aEnviar = false; mostrar(); })
       .catch(function (x) { aEnviar = false; est.estado = 'erro'; est.erro = x.message; mostrar(); });
   };
   var agendar = function () { clearTimeout(tEnviar); tEnviar = setTimeout(enviar, 700); };
@@ -73,7 +84,7 @@
       rows.forEach(function (r) {
         var v = JSON.stringify(r.valor);
         if (enviado[r.chave] === v) return;
-        gravarLocal(r.chave, v); enviado[r.chave] = v;
+        gravarLocal(r.chave, v); marcarEnviado(r.chave, v);
         if (mapa[r.chave]) { P.S[mapa[r.chave]] = r.valor; mudou = true; }
       });
       maxHora(rows);
@@ -110,5 +121,15 @@
   };
 
   /* Depois de arrancar: se a base partilhada estava vazia, envia o ambiente semeado neste navegador */
-  P.depoisIniciar = function () { mostrar(); if (ativo && est.vazio) { est.vazio = false; agendar(); } };
+  P.depoisIniciar = function () { mostrar(); if (ativo && (est.vazio || pendente)) { est.vazio = false; pendente = false; agendar(); } };
+  /* Ao fechar ou recarregar com alteracoes por enviar: envia ja, com keepalive (cada parte ate 60 KB) */
+  window.addEventListener('pagehide', function () {
+    if (!ativo) return;
+    var usr = P.sessao ? P.sessao() : null;
+    chaves().forEach(function (k) {
+      var v = lerLocal(k);
+      if (v === null || enviado[k] === v || v.length > 60000) return;
+      try { fetch(CFG.url + '/rest/v1/' + ESTADO + '?on_conflict=chave', { method: 'POST', keepalive: true, headers: Object.assign({}, H, { Prefer: 'resolution=merge-duplicates,return=minimal' }), body: JSON.stringify([{ chave: k, valor: JSON.parse(v), atualizado_por: usr ? usr.nome : null }]) }); } catch (e) { /* fica para a proxima abertura */ }
+    });
+  });
 })();

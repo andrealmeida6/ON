@@ -131,6 +131,8 @@
     catch (e) { return memoria[k] === undefined ? null : memoria[k]; }
   };
   var escrever = function (k, v) {
+    /* undefined gravava o texto "undefined", que nao e JSON e partia o envio para o ambiente partilhado */
+    if (v === undefined) v = null;
     try { localStorage.setItem(PFX + k, JSON.stringify(v)); } catch (e) { memoria[k] = v; }
   };
   var B = window.PortalBackend;
@@ -646,6 +648,9 @@
       (S.ms || []).forEach(function (m) { acertaSP(m.documentos_gerais, 0); acertaSP(m.ficheiros_pedidos, 0); acertaSP(m.ficheiros, 0); });
       acertaSP(S.docs, 0);
     }
+    /* Tasks com todos os indicadores ja aprovados um a um: ficam concluidas */
+    if (!S.sp || typeof S.sp !== 'object') S.sp = {};
+    if (P.fecharSeTudoAprovado) (S.ms || []).forEach(function (m) { if (!P.concluida(m) && P.passoAtual(m) && P.passoAtual(m).tipo === 'recolha') P.fecharSeTudoAprovado(m, { nome: 'System' }); });
     /* So momentos de report: a frequencia mensal deixou de existir (T1 a T4 e Year) */
     (S.cat || []).forEach(function (c) { if (c.periodicidade === 'Mensal') c.periodicidade = 'Trimestral'; });
     (S.ms || []).forEach(function (m) { if (m.periodicidade === 'Mensal') m.periodicidade = 'Trimestral'; });
@@ -952,8 +957,19 @@
     var itA = P.item(id, P.chave(m));
     if (P.etapaInd(m, id) === 'area') { itA.aprovadoArea = { em: agora(), por: u.nome }; ev(m, 'Indicator ' + id + ' approved by the area head. It goes to the sustainability team.', u.nome); }
     else { itA.revisto = { em: agora(), por: u.nome }; itA.publicado = { em: agora() }; ev(m, 'Indicator ' + id + ' approved by the sustainability team ahead of the task and published to the report tables. It is closed.', u.nome); }
+    P.fecharSeTudoAprovado(m, u);
     guardar();
     return { ok: true };
+  };
+  /* Todos os indicadores aprovados um a um: o caminho esta feito, a task fecha (todos os passos concluidos) */
+  P.fecharSeTudoAprovado = function (m, u) {
+    var ids = m.indicadores.filter(function (id) { return !P.eOutput(P.cat(id)); });
+    if (P.concluida(m) || !ids.length || !ids.every(function (id) { var it = P.item(id, P.chave(m)); return it && it.revisto; })) return false;
+    var quando = agora(), sub = ids.map(function (id) { return P.item(id, P.chave(m)).submetido; }).filter(Boolean).sort(function (a, b) { return a.em < b.em ? 1 : -1; })[0];
+    m.passos.forEach(function (p) { if (!p.concluido_em) { p.concluido_em = quando; p.concluido_por = p.tipo === 'recolha' && sub ? sub.por : p.tipo === 'publicacao' ? 'System' : u.nome; } });
+    m.passo_atual = m.passos.length; delete m.devolvida;
+    ev(m, 'All indicators approved and published: task completed.', u.nome, 'avanco');
+    return true;
   };
   P.devolverIndicador = function (m, id, u, comentario) {
     if (!P.podeReverInd(m, id, u)) return { erro: 'This indicator is not waiting for your review.' };

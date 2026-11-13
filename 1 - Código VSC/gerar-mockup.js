@@ -26,7 +26,7 @@ let html = resolver(ler('web-templates', 'layout-portal.html').replace(/\{%\s*bl
 /* Cada ficheiro leva ?v= com a impressao digital do conteudo: quando muda, o browser vai buscar o novo em vez de usar a cache */
 const versao = (f) => { try { return '?v=' + require('crypto').createHash('md5').update(fs.readFileSync(path.join(cod, 'web-files', f))).digest('hex').slice(0, 8); } catch (er) { return ''; } };
 const montar = (web, config) => '<!-- Gerado por gerar-mockup.js. Nao editar: alterar as web pages, snippets ou templates. -->\n' + html
-  .replace(/(href|src)="\/(global\.css|[\w.-]+\.js)"/g, (_, a, f) => a + '="' + web + f + versao(f) + '"')
+  .replace(/(href|src)="\/(global\.css|[\w.-]+\.(?:js|png|webmanifest))"/g, (_, a, f) => a + '="' + web + f + versao(f) + '"')
   .replace('<script src="' + web + 'xlsx.full.min.js' + versao('xlsx.full.min.js') + '"', '<script>' + config + '</script>\n<script src="' + web + 'xlsx.full.min.js' + versao('xlsx.full.min.js') + '"');
 /* Ambiente de testes partilhado (portal-partilha.js): mesma base Supabase, tabelas esg_teste_ (015_esg_ambiente_teste.sql) */
 const PARTILHA = 'window.PORTAL_PARTILHA = ' + JSON.stringify({ url: 'https://yujhfscnnngaivwwunom.supabase.co', chave: 'sb_publishable_wU6S2mgSbmnTzz4hQMKZ6g_jTj6MMgo' }) + ';';
@@ -45,5 +45,13 @@ const LOGIN_ONLINE = false;
    esg_acessos, e entra como essa pessoa. Sem palavra-passe. Depois pode trocar de perfil pelo avatar. */
 const ENTRADA_DIRETA = 'window.PORTAL_ACESSO = true;';
 const configOnline = LOGIN_ONLINE ? MODO_MOCKUP + ' window.PORTAL_BACKEND = ' + JSON.stringify(BACKEND) + ';' : MODO_MOCKUP + ' ' + ENTRADA_DIRETA;
-fs.writeFileSync(path.join(raiz, 'index.html'), montar(encodeURI(path.basename(cod) + '/web-files/'), configOnline).replace(/<!--[\s\S]*?-->\s*/g, ''), 'utf8');
+/* Instalar como aplicacao no GitHub Pages: o manifesto e o service worker ficam na raiz do site (o service worker so controla a pasta onde esta) */
+const webOnline = encodeURI(path.basename(cod) + '/web-files/');
+const man = JSON.parse(fs.readFileSync(path.join(cod, 'web-files', 'manifest.webmanifest'), 'utf8'));
+man.id = './'; man.start_url = './'; man.scope = './';
+man.icons = man.icons.map((i) => Object.assign({}, i, { src: webOnline + i.src.replace(/^\//, '') }));
+fs.writeFileSync(path.join(raiz, 'manifest.webmanifest'), JSON.stringify(man, null, 2) + '\n', 'utf8');
+fs.writeFileSync(path.join(raiz, 'sw.js'), fs.readFileSync(path.join(cod, 'web-files', 'sw.js'), 'utf8'), 'utf8');
+fs.writeFileSync(path.join(raiz, 'index.html'), montar(webOnline, configOnline + ' window.PORTAL_SW = "sw.js";').replace(/<!--[\s\S]*?-->\s*/g, '')
+  .replace(/href="[^"]*manifest\.webmanifest[^"]*"/, 'href="manifest.webmanifest?v=' + require('crypto').createHash('md5').update(JSON.stringify(man)).digest('hex').slice(0, 8) + '"'), 'utf8');
 console.log('mockup-final.html e index.html: ' + ORDEM.length + ' web pages, ' + (mockup.match(/<!-- snippet:/g) || []).length + ' snippets, ' + (mockup.match(/<!-- template:/g) || []).length + ' templates, ' + mockup.length + ' caracteres');

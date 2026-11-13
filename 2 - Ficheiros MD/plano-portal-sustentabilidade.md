@@ -1426,6 +1426,25 @@ Pedido do André: criar a estrutura e carregar os ficheiros em `https://iiaammla
   - As pastas antigas de tema e `_Task documents` (ordem antiga) foram apagadas depois de vazias. Ficam na reciclagem do site.
 - "Empresa B", "Empresa do André", "Empresa do João" e `_To classify` não foram tocadas.
 
+### Valores que desapareciam ao recarregar, task concluída e instalar como aplicação (13/11/2026)
+
+- **Causa dos valores que desapareciam (ambiente de testes partilhado):**
+  - A chave nova `esg_sharepoint` era gravada como o texto `undefined`, que não é JSON. Isso fazia falhar todos os envios para o Supabase a partir dessa alteração (13/11, por volta das 11h).
+  - Ao recarregar, a plataforma traz o estado do Supabase e escreve-o por cima do browser, por isso o que se tinha feito desaparecia.
+- **Correções** (`portal-nucleo.js`, `portal-partilha.js`):
+  - `undefined` grava-se como `null`;
+  - uma parte estragada é ignorada em vez de parar o envio de todas;
+  - o browser guarda a impressão digital do que já enviou, e ao abrir não substitui uma parte local com alterações por enviar (envia-a);
+  - ao fechar ou recarregar, as alterações pendentes são enviadas logo (`keepalive`).
+  - O que foi feito no ambiente partilhado entre as 11h e esta correção pode ter de ser refeito.
+- **Todos os indicadores aprovados um a um:** a task fica concluída (`P.fecharSeTudoAprovado`). Todos os passos ficam dados como feitos, a barra do workflow fica a 100% e todos os passos a verde. As tasks que já estavam nesse estado são concluídas ao carregar (`P.migrarDados`).
+- **Instalar como aplicação (PWA):**
+  - Edge e Chrome mostram "Instalar aplicação" na barra de endereço; no iPhone, "Adicionar ao ecrã principal".
+  - Ficheiros novos em `web-files`: `manifest.webmanifest`, `sw.js` (não guarda nada em cache, só mostra um aviso sem rede), `portal-app.js` (regista o service worker) e os ícones `icone-192.png`, `icone-512.png`, `icone-maskable-512.png` e `apple-touch-icon.png`.
+  - O `layout-portal` tem as etiquetas novas no `<head>` e o `portal-app.js`.
+  - No GitHub Pages, o `gerar-mockup.js` escreve `manifest.webmanifest` e `sw.js` na raiz do site, porque o service worker só controla a pasta onde está.
+  - No Power Pages ficam na raiz como Web Files (`/manifest.webmanifest`, `/sw.js`).
+
 ### Dashboard executivo (Monitoring → Dashboard)
 
 Pedido do André a 11 de novembro de 2026, com uma imagem de referência.

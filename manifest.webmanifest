@@ -1,0 +1,32 @@
+{
+  "name": "ESG Data Hub",
+  "short_name": "ESG Data Hub",
+  "description": "Sustainability reporting: tasks, indicators, evidence and report.",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#F4F7FC",
+  "theme_color": "#00338D",
+  "lang": "en",
+  "icons": [
+    {
+      "src": "1%20-%20C%C3%B3digo%20VSC/web-files/icone-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "1%20-%20C%C3%B3digo%20VSC/web-files/icone-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "1%20-%20C%C3%B3digo%20VSC/web-files/icone-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
