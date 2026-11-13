@@ -21,7 +21,8 @@
   if (!P) return;
   var S = P.S;
 
-  P.SP = { site: 'ESG Data Hub', biblioteca: 'Reporting', tarefas: '_Task documents', classificar: '_To classify' };
+  /* Site fixo (pedido do Andre a 13/11/2026): os icones de pasta abrem sempre este SharePoint, sem configuracao */
+  P.SP = { site: 'ESG Data Hub', url: 'https://iiaammlab.sharepoint.com/sites/ESGDataHub', biblioteca: 'Reporting', tarefas: '_Task documents', classificar: '_To classify' };
   /* Nomes validos no SharePoint: sem " * : < > ? / \ | # % & { } ~, sem pontos ou espacos no fim, curtos */
   var limpa = function (t, max) {
     var s = String(t || '').replace(/["*:<>?\/\\|#%&{}~]/g, ' ').replace(/\s+/g, ' ').trim().replace(/[. ]+$/, '');
@@ -53,7 +54,7 @@
   P.urlSP = function (caminho, nome) { return caminho + '/' + limpa(nome, 120); };
   /* Endereco do site SharePoint (Backoffice > Data and storage), por exemplo https://empresa.sharepoint.com/sites/ESGDataHub.
      O caminho da pasta junta-se ao site: <site>/Reporting/2026/Entidade A/... abre a pasta na biblioteca. */
-  P.siteSP = function () { return ((S.sp && S.sp.site) || '').replace(/\/+$/, ''); };
+  P.siteSP = function () { return P.SP.url; };
   P.definirSiteSP = function (url, u) {
     if (!P.gereTudo(u)) return { erro: 'No permission.' };
     var v = String(url || '').trim().replace(/\/+$/, '');

@@ -1370,7 +1370,7 @@ Pedido do André a 13 de novembro de 2026: junto de cada evidência e ficheiro, 
   - página Documents.
 - Na página Documents, a linha com o caminho ("… / R09 - … / T1") também abre a pasta.
 - **Endereço da pasta:** o site SharePoint, mais o caminho gravado no ficheiro (`x.sp`, desde o upload). Se não houver caminho gravado, usa o calculado (`P.pastaDeFich`): numa evidência, a pasta do KPI; num documento da task, a pasta `_Task documents` do departamento. Funções em `portal-sharepoint.js`: `P.siteSP`, `P.definirSiteSP`, `P.urlPastaSP`.
-- **Endereço do site:** em Backoffice > Data and storage, no cartão novo SharePoint, por exemplo `https://empresa.sharepoint.com/sites/ESGDataHub`.
+- **Endereço do site:** fixo no código desde 13/11/2026, a pedido do André (`P.SP.url` em `portal-sharepoint.js`): `https://iiaammlab.sharepoint.com/sites/ESGDataHub`. O cartão SharePoint de Backoffice > Data and storage mostra a ligação à biblioteca e o Excel da estrutura, sem campo para mudar o site. O que vem a seguir neste ponto descreve a versão anterior, configurável.
   - Só aceita endereços `https://….sharepoint.com`.
   - Fica guardado com os outros dados (`esg_sharepoint`) e é partilhado no ambiente de testes.
   - Sem endereço, o ícone mostra o caminho na tooltip e diz onde se configura.
