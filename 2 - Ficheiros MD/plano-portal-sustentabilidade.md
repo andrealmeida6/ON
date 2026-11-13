@@ -1347,6 +1347,19 @@ Pedido do André a 13 de novembro de 2026: no popup da fatura, poder mudar de p�
 - Mudar de página ou de zoom não redesenha o popup, por isso os campos e o que já foi corrigido ficam como estão.
 - Saíram os textos por baixo do título: "Read from the PDF text and the AT QR code. Nothing is saved until you confirm." e, durante a leitura, "QR code, text and OCR run in your browser…".
 
+### Attach evidence e Read invoice num só botão
+
+Pedido do André a 13 de novembro de 2026: nos indicadores que recebem faturas, ler a fatura e juntar a evidência são a mesma coisa.
+
+- O botão **Read invoice** saiu da task. Fica só **Attach evidence**.
+- Nos indicadores de energia (unidade MWh ou kWh), um PDF ou imagem (png, jpg, webp) carregado em Attach evidence abre a leitura da fatura:
+  - **Confirm and add to …** soma o valor ao indicador e deixa a fatura como evidência (como antes);
+  - **Attach as evidence only** deixa a fatura como evidência do indicador, sem usar os valores lidos;
+  - **Cancel** não guarda nada.
+- Se a leitura falhar, o ficheiro fica na mesma como evidência e o aviso diz para escrever o valor à mão.
+- Nos outros indicadores, e para outros tipos de ficheiro (Excel, Word…), Attach evidence anexa o ficheiro diretamente, como antes.
+- A leitura de faturas a partir de Documents (Upload document, com "This is an invoice") mantém-se.
+
 ### Dashboard executivo (Monitoring → Dashboard)
 
 Pedido do André a 11 de novembro de 2026, com uma imagem de referência.

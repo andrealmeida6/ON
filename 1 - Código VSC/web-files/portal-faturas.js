@@ -399,7 +399,13 @@
       U.fat.ms = ms ? ms.id : '';
       U.fat.ind = ms ? (pref && pref.ind && ms.indicadores.indexOf(pref.ind) > -1 ? pref.ind : ms.indicadores.filter(function (id) { return ENERGIA(P.cat(id)) && !P.eOutput(P.cat(id)); })[0]) : '';
       R();
-    }).catch(function (x) { if (U.fat) { U.fat.estado = 'erro'; U.fat.erro = x.message; R(); } });
+    }).catch(function (x) {
+      if (!U.fat) return;
+      U.fat.estado = 'erro'; U.fat.erro = x.message;
+      /* Mesmo sem leitura, o ficheiro escolhido em Attach evidence fica como evidencia */
+      if (U.fat.pref && U.fat.pref.evid && anexarEvid(U.fat, u())) { U.fat.anexado = true; P.guardar(); }
+      R();
+    });
   };
   var CAMPOS_FAT = [
     ['Supplier', 'fornecedor.nome'], ['Supplier VAT', 'fornecedor.nif'], ['Customer VAT', 'cliente.nif'], ['Invoice number', 'fatura.numero'], ['ATCUD', 'fatura.atcud'], ['Issue date', 'fatura.data_emissao', 'date'],
@@ -480,7 +486,7 @@
     if (!F) return { t: 'Read invoice', b: '' };
     if (F.estado === 'a ler') return { t: 'Reading ' + F.nome, largo: true,
       b: '<div class="fat-aler" role="status"><span class="fat-spin" aria-hidden="true"></span><b>Reading the invoice…</b><small>OCR <span data-fat-prog>' + (F.prog || 0) + '%</span> (only for scans and photos)</small></div>', p: '<span class="ps-sp-flex"></span><button type="button" class="ps-btn" data-a="fatFechar">Cancel</button>' };
-    if (F.estado === 'erro') return { t: 'Could not read ' + F.nome, b: '<div class="ps-aviso err" role="alert">' + e(F.erro) + '</div><p class="ps-small ps-mut">The file is still saved. You can type the values in the task.</p>', p: '<span class="ps-sp-flex"></span><button type="button" class="ps-btn" data-a="fatFechar">Close</button>' };
+    if (F.estado === 'erro') return { t: 'Could not read ' + F.nome, b: '<div class="ps-aviso err" role="alert">' + e(F.erro) + '</div><p class="ps-small ps-mut">' + (F.anexado ? 'The file was attached as evidence. Type the value in the task.' : 'The file is still saved. You can type the values in the task.') + '</p>', p: '<span class="ps-sp-flex"></span><button type="button" class="ps-btn" data-a="fatFechar">Close</button>' };
     var d = F.d, cf = d.leitura.confianca, m = F.ms ? P.ms(F.ms) : null, per = m ? P.periodo(m.periodo) : null, parte = P.parteNoPeriodo(d, per), c = F.ind ? P.cat(F.ind) : null;
     var nivel = function (k) { var x = cf[k]; return x === undefined ? 'nada' : x >= 0.9 ? 'alta' : x >= 0.7 ? 'media' : 'baixa'; };
     var TXT_N = { alta: 'Read with high confidence', media: 'Check this value', baixa: 'Low confidence: check it', nada: 'Not found: type it if you need it' };
@@ -501,7 +507,7 @@
     var prev = visualizador(F);
     return { t: 'Check the values read from ' + F.nome, largo: true, cls: 'alto',
       b: '<div class="fat-g"><div class="fat-prev">' + prev + '</div><div class="fat-campos"><div class="fat-leg"><span class="alta">High confidence</span><span class="media">Check</span><span class="baixa">Low</span><span class="nada">Not found</span></div><div class="fat-cg">' + campos + '</div>' + pp + destino + '</div></div>',
-      p: '<span class="ps-sp-flex"></span><button type="button" class="ps-btn" data-a="fatFechar">Cancel</button><button type="button" class="ps-btn" data-a="fatGuardarSo">Save as document only</button>' + (l.length && c ? '<button type="button" class="ps-btn pri" data-a="fatAplicar">Confirm and add to ' + e(F.ind) + '</button>' : '') };
+      p: '<span class="ps-sp-flex"></span><button type="button" class="ps-btn" data-a="fatFechar">Cancel</button><button type="button" class="ps-btn" data-a="fatGuardarSo">' + (F.pref && F.pref.evid ? 'Attach as evidence only' : 'Save as document only') + '</button>' + (l.length && c ? '<button type="button" class="ps-btn pri" data-a="fatAplicar">Confirm and add to ' + e(F.ind) + '</button>' : '') };
   };
   X.C.fatCampo = function (el) {
     var v = el.value.trim(), t = el.dataset.t;
@@ -518,8 +524,18 @@
     var mS = F.ms ? P.ms(F.ms) : null;
     return { id: 'ev' + Date.now() + Math.random().toString(36).slice(2, 5), ficheiro: F.nome, por: usr.nome, em: new Date().toISOString(), fid: F.fid, fatura: F.d, tipoDoc: 'Invoice', sp: P.pastaSP ? P.pastaSP(mS, F.ind && mS ? [F.ind] : []) : '' };
   };
+  /* Aberto pelo Attach evidence de um indicador: a fatura fica como evidencia desse indicador, mesmo sem usar os valores */
+  var anexarEvid = function (F, usr) {
+    var m = F.pref && F.pref.ms ? P.ms(F.pref.ms) : null, id = F.pref && F.pref.ind;
+    if (!m || !id) return false;
+    var it = P.item(id, P.chave(m)), reg = registoDoc({ nome: F.nome, fid: F.fid, d: F.d || null, ms: m.id, ind: id }, usr);
+    if (!it.evidencias.some(function (x) { return x.fid === F.fid; })) it.evidencias.push(reg);
+    P.evento(m, 'Evidence attached to ' + P.cat(id).nome + ': ' + F.nome + '.', usr.nome);
+    return true;
+  };
   X.A.fatGuardarSo = function () {
     var F = U.fat, usr = u(), m = F.ms ? P.ms(F.ms) : (F.pref.ms ? P.ms(F.pref.ms) : null);
+    if (F.pref && F.pref.evid && anexarEvid(F, usr)) { P.guardar(); U.fat = null; U.painel = null; toast('Invoice attached as evidence, without using its values.', 'ok'); R(); return; }
     if (m) { (m.documentos_gerais = m.documentos_gerais || []).push(registoDoc(F, usr)); P.evento(m, 'Invoice saved as a document: ' + F.nome + '.', usr.nome); }
     else { var rg = registoDoc(F, usr); rg.solto = true; (S.docs = S.docs || []).push(rg); }
     P.guardar(); U.fat = null; U.painel = null; toast('Invoice saved as a document, with the values read.', 'ok'); R();
