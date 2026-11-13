@@ -368,6 +368,8 @@
         return ['<b>' + e(c.nome) + '</b> <span class="ps-mut ps-small">' + e(x.id) + '</span>', (P.tagPer(x.m) || e(P.rotPeriodo(x.m))), emp(x.m.empresa), it.valor === null ? '-' : e(fmtV(x.id, it.valor) + ' ' + c.unidade_medida), v.variacao === null ? '-' : '<span class="' + (v.alertas.length ? 'ps-txt-err' : '') + '">' + (v.variacao > 0 ? '+' : '') + P.fmtNum(v.variacao, 1) + '%</span>', e(it.submetido.por + ', ' + P.fmtDataHora(it.submetido.em)), '<a class="ps-btn peq pri" href="' + X.rota('Milestone/' + x.m.id + '?ind=' + encodeURIComponent(x.id)) + '">Review →</a>'];
       })) + '</div></div>';
   };
+  /* Os numeros contam indicadores, nao tasks (pedido do Andre a 13/11/2026) */
+  var nInd = function (l) { return l.reduce(function (t, m) { return t + m.indicadores.filter(function (id) { return P.cat(id) && !P.indAprovado(m, id); }).length; }, 0); };
   Blocos['approvals'] = function () {
     var usr = u(), todas = aprovaveis(), f = U.apr, minhas = todas.filter(function (m) { return P.esperaPor(m, usr); }), alerta = todas.filter(function (m) { return alertasMs(m).length; });
     if (U.rota.q.ms && !f.sel) f.sel = U.rota.q.ms;
@@ -388,7 +390,7 @@
         '<p class="ps-small ps-mt"><a href="' + rota('Milestone/' + m.id) + '">Open the task</a></p></div></div>';
     }
     return filaRevisao(usr) + '<div class="ps-card ps-apr-passos' + (P.revParaMim && P.revParaMim(usr).length ? ' ps-mt' : '') + '">' + passos.map(function (p, i) { return '<div class="ps-apr-p"><i>' + (i + 1) + '</i><span><b>' + e(p.nome) + '</b><small>' + e(P.nomeResp(null, p.responsavel)) + '</small></span></div>'; }).join('') + '</div>' +
-      '<div class="ps-grid-apr ps-mt"><div class="ps-card"><div class="ps-card-body">' + pills('aprFiltro', [['todas', 'All', todas.length], ['minhas', 'Waiting on me', minhas.length], ['alertas', 'With alerts', alerta.length]], f.filtro) + '<div class="ps-mt">' +
+      '<div class="ps-grid-apr ps-mt"><div class="ps-card"><div class="ps-card-body">' + pills('aprFiltro', [['todas', 'All', nInd(todas)], ['minhas', 'Waiting on me', nInd(minhas)], ['alertas', 'With alerts', alerta.reduce(function (t, m) { return t + alertasMs(m).length; }, 0)]], f.filtro) + '<div class="ps-mt">' +
       tabela([{ t: 'Task' }, { t: 'Perimeter' }, { t: 'Assigned to' }, { t: 'Alerts', dir: 1 }, { t: 'Deadline' }], lista.map(function (x) {
         return { attrs: (m && x.id === m.id ? 'class="ps-sel-l" aria-selected="true"' : ''), celulas: ['<button type="button" class="ps-btn liga" data-a="aprVer" data-v="' + e(x.id) + '">' + e(x.nome) + '</button>', emp(x.empresa), atribHtml(x), alertasMs(x).length, '<span class="ps-nowrap">' + e(X.prazoTxt(x)) + '</span>'] };
       }), 'Nothing waiting here.') + '</div></div></div>' + (det || '<div class="ps-card">' + vazio('Choose a task.') + '</div>') + '</div>';

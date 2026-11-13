@@ -298,9 +298,11 @@
     /* Ao lado de cada pessoa: quantas milestones tem e quantas esperam por ela */
     var resumo = function (x) {
       if (x.perfil === 'ext') return '';
-      var minhas = P.msCiclo().filter(function (m) { return doUtilizador(m, x); }).length, esp = pendentesDe(x).length;
+      /* Em indicadores: os que esperam pela pessoa, ou os das suas tasks */
+      var nI = function (l) { return l.reduce(function (t, m) { return t + m.indicadores.filter(function (id) { return P.cat(id) && !P.indAprovado(m, id); }).length; }, 0); };
+      var minhas = nI(P.msCiclo().filter(function (m) { return doUtilizador(m, x); })), esp = nI(pendentesDe(x));
       if (!minhas && !esp) return '';
-      return '<span class="ps-ent-n">' + (esp ? '<b>' + esp + '</b> waiting' : minhas + ' task' + (minhas === 1 ? '' : 's')) + '</span>';
+      return '<span class="ps-ent-n">' + (esp ? '<b>' + esp + '</b> waiting' : minhas + ' indicator' + (minhas === 1 ? '' : 's')) + '</span>';
     };
     return ambienteHtml() + grupos.map(function (g) {
       return '<div class="ps-ent-grp"><h3>' + e(g[0]) + '</h3>' + S.users.filter(function (x) { return x.perfil === g[1]; }).map(function (x) {
@@ -529,7 +531,7 @@
         : '<span class="ps-mut ps-small">' + (p && p.tipo === 'recolha' ? 'All values in, to submit' : 'All values in, ' + e(p ? p.nome.toLowerCase() : 'done')) + '</span>';
       return ['<a href="' + rota('Milestone/' + m.id) + '"><b>' + e(m.nome) + '</b></a><span class="tl-prog" aria-label="' + feitos + ' of ' + tot + ' reported"><i style="width:' + pct + '%"></i></span>', tagPer(m) || e(P.rotPeriodo(m)), empHtml(m.empresa), atribHtml(m), '<span class="ps-nowrap">' + e(prazoTxt(m)) + '</span>', estChip(m), falta];
     });
-    return '<div class="ps-card ps-mt">' + cabCartao('Tasks in progress', 'tarefa', '<span class="ps-small ps-mut">' + l.length + ' task(s), ' + nFalta + ' value(s) still to report</span>') + '<div class="ps-card-body">' + filtros +
+    return '<div class="ps-card ps-mt">' + cabCartao('Tasks in progress', 'tarefa', '<span class="ps-small ps-mut">' + l.reduce(function (t, m) { return t + m.indicadores.length; }, 0) + ' indicator(s), ' + nFalta + ' still to report</span>') + '<div class="ps-card-body">' + filtros +
       tabela([{ t: 'Task' }, { t: 'Period' }, { t: 'Perimeter' }, { t: 'Assigned to' }, { t: 'Deadline' }, { t: 'Status' }, { t: 'Still to report' }], linhas, f.falta ? 'Every task in progress already has all its values.' : 'No task in progress.') + '</div></div>';
   };
   /* Outputs & Reporting Timeline: o filtro por destino (All, ERSAR, APA, ...) serve a timeline e os outputs */
