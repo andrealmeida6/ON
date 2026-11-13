@@ -1327,6 +1327,15 @@ Reporting/
 3. **Mover quando se reclassifica:** quando um documento de "_To classify" é ligado a uma task ou KPI, *Move file* para a pasta nova e atualiza as colunas.
 4. **Permissões:** grupos por empresa (leitura) e a equipa de sustentabilidade (edição). Os auditores ficam só com leitura. As pastas do ano fechado passam a só leitura no fecho do ciclo.
 
+### Leitura de faturas sem depender de CDNs
+
+Erro reportado pelo André a 13 de novembro de 2026: "Could not load pdf.min.js. Check the internet connection." ao usar Read invoice numa task. A rede ou o browser bloqueava o cdnjs.
+
+- O pdf.js 3.11.174 (`pdf.min.js` e `pdf.worker.min.js`) e o jsQR 1.4.0 (`jsQR.min.js`) passaram a estar em `web-files/`. `portal-faturas.js` carrega primeiro a cópia do site e só usa a CDN se essa falhar.
+- O OCR (Tesseract 5.1.0) continua na CDN, porque precisa dos modelos de língua. Só é usado em faturas digitalizadas sem texto; as faturas em PDF com texto e as que têm QR code AT não precisam dele.
+- Se tudo falhar, a mensagem diz que a rede pode estar a bloquear e indica o domínio a pedir ao IT.
+- Em Power Pages, estes três ficheiros são Web Files como os outros.
+
 ### Dashboard executivo (Monitoring → Dashboard)
 
 Pedido do André a 11 de novembro de 2026, com uma imagem de referência.

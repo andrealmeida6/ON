@@ -18,22 +18,37 @@
   if (!P || !P.ext) return;
   var S = P.S, X = P.ext, e = X.e, chip = X.chip, toast = X.toast, R = X.R, u = X.u, campo = X.campo, opt = X.opt, U = X.U;
 
-  /* --- Bibliotecas, carregadas so quando sao precisas ------------------------------------- */
+  /* --- Bibliotecas, carregadas so quando sao precisas -------------------------------------
+     Primeiro a copia do proprio site (web-files), para funcionar em redes que bloqueiam CDNs;
+     se falhar, a CDN. O OCR (Tesseract) precisa dos modelos de lingua e fica so na CDN. */
+  var BASE = (function () { var s = document.currentScript && document.currentScript.src; return s ? s.slice(0, s.lastIndexOf('/') + 1) : ''; })();
   var LIBS = {
-    pdf: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js',
-    pdfWorker: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js',
-    qr: 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js',
-    ocr: 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.0/dist/tesseract.min.js'
+    pdf: [BASE + 'pdf.min.js', 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js'],
+    pdfWorker: [BASE + 'pdf.worker.min.js', 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'],
+    qr: [BASE + 'jsQR.min.js', 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js'],
+    ocr: ['https://cdn.jsdelivr.net/npm/tesseract.js@5.1.0/dist/tesseract.min.js']
   };
   var carregados = {};
-  var script = function (url) {
+  var umScript = function (url) {
     if (carregados[url]) return carregados[url];
     carregados[url] = new Promise(function (ok, falha) {
       var s = document.createElement('script'); s.src = url; s.async = true;
-      s.onload = function () { ok(); }; s.onerror = function () { delete carregados[url]; falha(new Error('Could not load ' + url.split('/').slice(-1)[0] + '. Check the internet connection.')); };
+      s.onload = function () { ok(url); }; s.onerror = function () { delete carregados[url]; s.remove(); falha(new Error('Could not load ' + url.split('/').slice(-1)[0] + '.')); };
       document.head.appendChild(s);
     });
     return carregados[url];
+  };
+  /* Tenta cada endereco por ordem; resolve com o que carregou */
+  var script = function (urls) {
+    var l = [].concat(urls).filter(Boolean), i = 0;
+    var tenta = function () {
+      return umScript(l[i]).catch(function (er) {
+        i++;
+        if (i < l.length) return tenta();
+        throw new Error(er.message + ' The network may be blocking it: try another network or ask IT to allow ' + (l[l.length - 1].split('/')[2] || 'the CDN') + '.');
+      });
+    };
+    return tenta();
   };
 
   /* --- Leitura do ficheiro ----------------------------------------------------------------- */
@@ -46,8 +61,8 @@
      pre-visualizacao (a primeira), para o QR da AT (que pode estar em qualquer pagina) e para o OCR */
   var MAX_PAG = 6, MAX_OCR = 4;
   var lerPdf = function (buf, progresso) {
-    return script(LIBS.pdf).then(function () {
-      var lib = window.pdfjsLib; lib.GlobalWorkerOptions.workerSrc = LIBS.pdfWorker;
+    return script(LIBS.pdf).then(function (url) {
+      var lib = window.pdfjsLib; lib.GlobalWorkerOptions.workerSrc = url === LIBS.pdf[0] ? LIBS.pdfWorker[0] : LIBS.pdfWorker[1];
       return lib.getDocument({ data: buf }).promise;
     }).then(function (doc) {
       var nums = [], textos = [], imagens = {};
