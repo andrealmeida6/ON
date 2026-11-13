@@ -1391,6 +1391,19 @@ Pedido do André a 13 de novembro de 2026.
 - Entrou o botão **SharePoint folder**, que abre a biblioteca de documentos (Reporting) no SharePoint, para navegar pelas pastas. Sem o endereço do site configurado, avisa onde se configura.
 - O Excel com a estrutura de pastas e as colunas de metadados, que serve o flow, passou para Backoffice > Data and storage, no cartão SharePoint ("Folder structure (Excel)"). O pacote do auditor continua em Audit (Export data room).
 
+### Report: preview, valores com ligação à task e pesquisa
+
+Pedido do André a 13 de novembro de 2026, para Report > Indicator tables (`portal-quadros.js`).
+
+- **Preview:** um botão só com esse nome abre o relatório como fica no Word.
+  - Páginas brancas sobre fundo cinzento, com o cabeçalho "Report <ano>, <vista>", a página Environmental e a página Social, cada quadro a toda a largura.
+  - Segue a vista escolhida (Consolidated ou uma empresa) e o filtro de valores (All values ou Approved only).
+  - Tem os botões Close e Export to Word.
+- **Valores com ligação:** cada valor do ano ligado a um KPI abre a task e o indicador onde foi reportado (`Milestone/<task>?ind=<KPI>`), com a linha aberta. Na vista de uma empresa, abre a task dessa empresa; no Consolidated, abre a task anual, ou a primeira. A tooltip diz qual é. Os valores escritos à mão (linhas sem KPI) e o ano anterior não têm ligação.
+- **Pesquisa:** uma caixa de texto livre ("Search the report") procura nos quadros, tópicos, subtópicos, linhas e indicadores (código, nome do catálogo e tema).
+  - Ignora acentos e aceita várias palavras.
+  - Mostra até 12 resultados. Escolher um leva à linha do relatório e destaca-a durante uns segundos.
+
 ### Dashboard executivo (Monitoring → Dashboard)
 
 Pedido do André a 11 de novembro de 2026, com uma imagem de referência.

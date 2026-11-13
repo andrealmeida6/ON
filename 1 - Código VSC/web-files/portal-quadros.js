@@ -89,6 +89,11 @@
   var SETA = { bom: '↗', mau: '↘', igual: '→', '': '-' };
   var COR_SETA = { bom: '00A651', mau: 'E5005B', igual: '00385F', '': '00385F' };
   var num = function (x, c) { return x === null ? '-' : P.fmtNum(x, c); };
+  /* Task onde o valor foi reportado: na vista de uma empresa, a task dessa empresa; no consolidado, a do ano (ou a primeira) */
+  var taskDoValor = function (k) {
+    var ano = S.ciclo.ano, emp = U.rep.emp, l = P.msCiclo(ano).filter(function (m) { return m.indicadores.indexOf(k) > -1 && (!emp || m.empresa === emp); });
+    return l.filter(function (m) { return !P.trimestral(m); })[0] || l[0] || null;
+  };
   var ePendente = function (id) { return linhasDe(quadro(id)).some(function (r) { return valores(r).pend; }); };
 
   /* --- Ecra ----------------------------------------------------------------- */
@@ -122,8 +127,11 @@
           var rot = r.k ? '<button type="button" class="rq-lig" data-a="ficha" data-v="' + e(r.k) + '">' + pt + e(r.r) + '</button>' : pt + e(r.r);
           var cels = ed && !r.k ?
             '<td class="rq-n"><input class="ps-in ps-num rq-in" id="rq-a-' + e(r.id) + '" aria-label="' + e(r.r + ', ' + (ano - 1)) + '"'+ (P.inteiro({ unidade_medida: r.u }) ? ' inputmode="numeric" data-int="1"' : ' inputmode="decimal"') + ' data-c="rqVal" data-id="' + e(r.id) + '" data-f="ant" value="' + e(v.ant === null ? '' : v.ant) + '"></td><td class="rq-n rq-at"><input class="ps-in ps-num rq-in" id="rq-v-' + e(r.id) + '" aria-label="' + e(r.r + ', ' + ano) + '"'+ (P.inteiro({ unidade_medida: r.u }) ? ' inputmode="numeric" data-int="1"' : ' inputmode="decimal"') + ' data-c="rqVal" data-id="' + e(r.id) + '" data-f="val" value="' + e(v.val === null ? '' : v.val) + '"></td>' :
-            '<td class="rq-n">' + e(num(v.ant, c)) + '</td><td class="rq-n rq-at' + (v.pend ? ' rq-pend' : '') + '">' + e(num(v.val, c)) + '</td>';
-          return '<tr class="' + (r.l ? 'rq-l' : '') + '">' + gcel() + '<td class="rq-r">' + rot + '</td><td class="rq-u">' + e(r.u) + '</td>' + cels + '<td class="rq-e" data-ev="' + (ev || 'nd') + '">' + SETA[ev] + '</td></tr>';
+            '<td class="rq-n">' + e(num(v.ant, c)) + '</td><td class="rq-n rq-at' + (v.pend ? ' rq-pend' : '') + '">' + (function () {
+              var mt = r.k && v.val !== null && !U.rq.semLig ? taskDoValor(r.k) : null;
+              return mt ? '<a class="rq-vlig" href="' + X.rota('Milestone/' + mt.id + '?ind=' + encodeURIComponent(r.k)) + '" data-tip="' + e('Open ' + r.k + ' in the task ' + mt.nome + ' (' + mt.empresa + ')') + '">' + e(num(v.val, c)) + '</a>' : e(num(v.val, c));
+            })() + '</td>';
+          return '<tr id="rqr-' + e(r.id) + '" class="' + (r.l ? 'rq-l' : '') + '">' + gcel() + '<td class="rq-r">' + rot + '</td><td class="rq-u">' + e(r.u) + '</td>' + cels + '<td class="rq-e" data-ev="' + (ev || 'nd') + '">' + SETA[ev] + '</td></tr>';
         }).join('');
       }).join('') + '</tbody>';
     }).join('');
@@ -134,7 +142,8 @@
   };
   var abaQuadros = function () {
     var d = U.rq, adm = P.gereTudo(u()), pend = QD.some(function (q) { return ePendente(q.id); });
-    return '<div class="ps-sp ps-nao-imprimir ps-filtros"><button type="button" class="ps-btn pri" data-a="rqExcel">Export to Excel</button><button type="button" class="ps-btn" data-a="rqWord">Export to Word</button><button type="button" class="ps-btn" data-a="imprimir">Print or save as PDF</button>' +
+    return '<div class="rq-busca ps-nao-imprimir">' + campo('rq-q', 'Search the report', '<input id="rq-q" class="ps-in" type="search" autocomplete="off" placeholder="Topic, indicator, code (for example Water, Waste, A01)…" data-i="rqBusca" aria-controls="rq-res">') + '<div id="rq-res" class="rq-res" role="listbox" hidden></div></div>' +
+      '<div class="ps-sp ps-nao-imprimir ps-filtros"><button type="button" class="ps-btn" data-a="rqPreview">Preview</button><button type="button" class="ps-btn pri" data-a="rqExcel">Export to Excel</button><button type="button" class="ps-btn" data-a="rqWord">Export to Word</button><button type="button" class="ps-btn" data-a="imprimir">Print or save as PDF</button>' +
       campo('rq-modo', 'Values', '<select id="rq-modo" class="ps-sel" data-c="rqModo">' + opt('todos', 'All values', d.modo) + opt('aprovados', 'Approved only', d.modo) + '</select>') +
       (adm ? '<label class="ps-chk"><input id="rq-ed" type="checkbox" data-c="rqEd"' + (d.editar ? ' checked' : '') + '> Edit values not linked to a KPI</label>' : '') + '</div>' +
       (pend ? '<p class="ps-small ps-mut ps-nao-imprimir">Values in italics are not approved yet.</p>' : '') +
@@ -170,6 +179,48 @@
   };
 
   A.rqSep = function (d) { U.rq.sep = d.v; R(); };
+  /* --- Pesquisa: topicos (quadros, grupos, subgrupos), linhas e indicadores; leva a linha e destaca-a --- */
+  var norm = function (t) { return String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase(); };
+  var indice = function () {
+    var l = [];
+    QD.forEach(function (q) {
+      var primeira = linhasDe(q)[0]; if (primeira) l.push({ tipo: 'Table', t: q.t, onde: PAGS[q.pag], id: primeira.id, txt: q.t });
+      q.g.forEach(function (g) {
+        var r0 = g.s[0] && g.s[0].r[0]; if (r0) l.push({ tipo: 'Topic', t: g.n, onde: q.t, id: r0.id, txt: g.n });
+        g.s.forEach(function (sb) {
+          if (sb.n && sb.r[0]) l.push({ tipo: 'Sub-topic', t: sb.n, onde: q.t + ' · ' + g.n, id: sb.r[0].id, txt: sb.n });
+          sb.r.forEach(function (r) { var c = r.k && P.cat(r.k); l.push({ tipo: r.k ? r.k : 'Row', t: r.r, onde: q.t + ' · ' + g.n, id: r.id, txt: r.r + ' ' + (r.k || '') + ' ' + (c ? c.nome + ' ' + (c.tema || '') : '') }); });
+        });
+      });
+    });
+    return l;
+  };
+  X.Live.rqBusca = function (el) {
+    var q = norm(el.value).trim(), box = document.getElementById('rq-res');
+    if (!box) return;
+    if (q.length < 2) { box.hidden = true; box.innerHTML = ''; return; }
+    var ws = q.split(/\s+/), res = indice().filter(function (x) { var t = norm(x.txt + ' ' + x.onde); return ws.every(function (w) { return t.indexOf(w) > -1; }); }).slice(0, 12);
+    box.innerHTML = res.length ? res.map(function (x) { return '<button type="button" role="option" class="rq-res-i" data-a="rqIr" data-v="' + e(x.id) + '"><span class="ps-chip">' + e(x.tipo) + '</span><b>' + e(x.t) + '</b><small>' + e(x.onde) + '</small></button>'; }).join('') : '<p class="ps-small ps-mut">Nothing found in the report.</p>';
+    box.hidden = false;
+  };
+  A.rqIr = function (d) {
+    var box = document.getElementById('rq-res'); if (box) box.hidden = true;
+    var tr = document.getElementById('rqr-' + d.v);
+    if (!tr) return toast('That line is not in this view.', 'err');
+    tr.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    tr.classList.remove('rq-achada'); void tr.offsetWidth; tr.classList.add('rq-achada');
+    setTimeout(function () { tr.classList.remove('rq-achada'); }, 2600);
+  };
+  /* --- Preview: o relatorio como fica no Word, em paginas, antes de exportar --- */
+  X.Pn.rqPreview = function () {
+    U.rq.semLig = true;
+    var corpo;
+    try { corpo = '<div class="rq-a4"><div class="rq-a4-cab"><span data-marca-c="logo-claro"></span><b>Report ' + S.ciclo.ano + ', ' + e(nomeVista()) + '</b></div>' + paginaHtml('env') + '</div><div class="rq-a4">' + paginaHtml('soc') + '</div>'; }
+    finally { U.rq.semLig = false; }
+    return { t: 'Preview', s: 'Report ' + S.ciclo.ano + ', ' + nomeVista() + (U.rq.modo === 'aprovados' ? ', approved values only' : ''), largo: true, cls: 'alto rq-prevp', b: '<div class="rq-a4-fundo">' + corpo + '</div>',
+      p: '<span class="ps-sp-flex"></span><button type="button" class="ps-btn" data-a="fecharPainel">Close</button><button type="button" class="ps-btn pri" data-a="rqWord">Export to Word</button>' };
+  };
+  A.rqPreview = function () { X.abrePainel('rqPreview', {}); };
   C.rqModo = function (el) { U.rq.modo = el.value; };
   C.rqEd = function (el) { U.rq.editar = el.checked; };
   C.rqVal = function (el) {
