@@ -2443,3 +2443,10 @@ select[data-c="userPerfil"]{min-width:220px}
 .ki-fi dt{font-size:11.5px;font-weight:600;color:var(--muted);margin-bottom:2px}
 .ki-fi dd{margin:0;font-size:13.5px;overflow-wrap:anywhere;white-space:pre-line}
 @media (max-width:640px){.ki-fi{grid-template-columns:1fr}}
+/* Evidencias do indicador na task: uma por linha, com o rotulo a esquerda */
+.fc-l.rq2-ev{display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:12px;row-gap:6px;align-items:center}
+.rq2-ev>.ps-lab{grid-column:1;grid-row:1;align-self:start;padding-top:2px}
+.rq2-ev>*:not(.ps-lab){grid-column:2;min-width:0}
+.rq2-ev>.fc{display:flex;flex-wrap:wrap;align-items:center;gap:2px 6px}
+.rq2-ev>.fc .fc-n{overflow-wrap:anywhere;text-align:left}
+@media (max-width:640px){.fc-l.rq2-ev{grid-template-columns:minmax(0,1fr)}.rq2-ev>.ps-lab{grid-row:auto}.rq2-ev>*:not(.ps-lab){grid-column:1}}
