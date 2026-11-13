@@ -24,10 +24,10 @@
     return 'preenchido';
   };
   /* As linhas: mine (o que espera por mim) ou everyone (o que esta em aberto) */
-  var escopo = function () {
+  var escopo = function (escForcado) {
     var usr = u(), gere = P.gereTudo(usr), minhas = X.pendentesDe(usr);
     if (!U.tarEsc) U.tarEsc = minhas.length || !gere ? 'minhas' : 'todas';
-    var esc = gere ? U.tarEsc : 'minhas', lista = (esc === 'todas' ? X.abertas() : minhas).slice().sort(function (a, b) { return a.prazo < b.prazo ? -1 : a.prazo > b.prazo ? 1 : 0; });
+    var esc = gere ? (escForcado || U.tarEsc) : 'minhas', lista = (esc === 'todas' ? X.abertas() : minhas).slice().sort(function (a, b) { return a.prazo < b.prazo ? -1 : a.prazo > b.prazo ? 1 : 0; });
     var linhas = [];
     lista.forEach(function (m) { m.indicadores.forEach(function (id) { var c = P.cat(id); if (c) linhas.push({ m: m, id: id, c: c }); }); });
     /* Equipa de sustentabilidade: os indicadores submetidos antes da task, a espera da sua revisao, ficam tambem em "Mine" */
@@ -42,7 +42,7 @@
     ambito.forEach(function (m) { m.indicadores.forEach(function (id) { var c = P.cat(id); if (c && P.indAprovado(m, id)) feitas.push({ m: m, id: id, c: c, feito: true }); }); });
     feitas.sort(function (a, b) { return a.m.prazo < b.m.prazo ? 1 : -1; });
     var pend = linhas.filter(function (x) { return !aprovado(x); });
-    return { esc: esc, gere: gere, nRev: P.revParaMim ? P.revParaMim(usr).length : 0, minhas: minhas, todas: gere ? X.abertas() : [], lista: lista, linhas: U.tarFeito ? feitas : pend, nPend: pend.length, nFeitas: feitas.length };
+    return { esc: esc, gere: gere, nRev: P.revParaMim ? P.revParaMim(usr).length : 0, minhas: minhas, todas: gere ? X.abertas() : [], lista: lista, linhas: U.tarFeito ? feitas : pend, pend: pend, feitas: feitas };
   };
   /* Grupos: as normas ESRS e os temas da empresa que existem nas linhas */
   var grupos = function (linhas) {
@@ -80,9 +80,11 @@
   Blocos['inicio-tarefas'] = function () {
     var usr = u(), E = escopo(), nK = function (l) { return l.reduce(function (a, m) { return a + m.indicadores.length; }, 0); };
     var l = filtrar(E.linhas), mostrar = U.tarTodas ? l : l.slice(0, 12);
-    var estadoSeg = '<div class="ps-seg" role="group" aria-label="Status"><button type="button" class="' + (!U.tarFeito ? 'on' : '') + '" data-a="tarFeito" data-v="">Ongoing <span class="n">' + E.nPend + '</span></button><button type="button" class="' + (U.tarFeito ? 'on' : '') + '" data-a="tarFeito" data-v="1">Completed <span class="n">' + E.nFeitas + '</span></button></div>';
+    /* Os contadores sao sempre o numero de linhas que a tabela mostra nessa vista, com os filtros aplicados */
+    var nLinhas = function (Ex, feito) { return filtrar(feito ? Ex.feitas : Ex.pend).length; };
+    var estadoSeg = '<div class="ps-seg" role="group" aria-label="Status"><button type="button" class="' + (!U.tarFeito ? 'on' : '') + '" data-a="tarFeito" data-v="">Ongoing <span class="n">' + nLinhas(E, false) + '</span></button><button type="button" class="' + (U.tarFeito ? 'on' : '') + '" data-a="tarFeito" data-v="1">Completed <span class="n">' + nLinhas(E, true) + '</span></button></div>';
     var offline = E.lista.filter(function (m) { return P.podePreencher(m, usr); });
-    var dir = '<div class="ps-sp">' + estadoSeg + (E.gere ? '<div class="ps-seg" role="group" aria-label="Whose tasks"><button type="button" class="' + (E.esc === 'minhas' ? 'on' : '') + '" data-a="tarEsc" data-v="minhas">Mine <span class="n">' + (nK(E.minhas) + E.nRev) + '</span></button><button type="button" class="' + (E.esc === 'todas' ? 'on' : '') + '" data-a="tarEsc" data-v="todas">Everyone <span class="n">' + nK(E.todas) + '</span></button></div>' : '') +
+    var dir = '<div class="ps-sp">' + estadoSeg + (E.gere ? '<div class="ps-seg" role="group" aria-label="Whose tasks"><button type="button" class="' + (E.esc === 'minhas' ? 'on' : '') + '" data-a="tarEsc" data-v="minhas">Mine <span class="n">' + nLinhas(E.esc === 'minhas' ? E : escopo('minhas'), !!U.tarFeito) + '</span></button><button type="button" class="' + (E.esc === 'todas' ? 'on' : '') + '" data-a="tarEsc" data-v="todas">Everyone <span class="n">' + nLinhas(E.esc === 'todas' ? E : escopo('todas'), !!U.tarFeito) + '</span></button></div>' : '') +
       '<button type="button" class="ps-btn pri peq tf-abrir" data-a="tarFolha"' + (l.length ? '' : ' disabled') + '><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>Open grid view</button>' +
       '<button type="button" class="ps-btn peq" data-a="tarOffline"' + (offline.length ? '' : ' disabled title="Nothing in collection with you in this list"') + '>Excel (offline)</button>' + X.botaoTl('Timeline') + '</div>';
     var cols = [{ t: 'KPI' }, { t: 'Period' }, { t: 'Perimeter' }, { t: 'Assigned to' }, { t: 'Deadline' }, { t: 'Status' }];
