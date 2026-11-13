@@ -42,6 +42,25 @@
     return [P.SP.biblioteca, String(S.ciclo.ano), P.SP.classificar].join('/');
   };
   P.urlSP = function (caminho, nome) { return caminho + '/' + limpa(nome, 120); };
+  /* Endereco do site SharePoint (Backoffice > Data and storage), por exemplo https://empresa.sharepoint.com/sites/ESGDataHub.
+     O caminho da pasta junta-se ao site: <site>/Reporting/2026/Entidade A/... abre a pasta na biblioteca. */
+  P.siteSP = function () { return ((S.sp && S.sp.site) || '').replace(/\/+$/, ''); };
+  P.definirSiteSP = function (url, u) {
+    if (!P.gereTudo(u)) return { erro: 'No permission.' };
+    var v = String(url || '').trim().replace(/\/+$/, '');
+    if (v && !/^https:\/\/[\w.-]+\.sharepoint\.com(\/.*)?$/i.test(v)) return { erro: 'Use the address of the SharePoint site, for example https://company.sharepoint.com/sites/ESGDataHub.' };
+    S.sp = { site: v };
+    if (P.eventoGlobal) P.eventoGlobal('SharePoint site ' + (v ? 'set to ' + v : 'removed') + '.', u.nome, 'Change');
+    if (P.guardar) P.guardar();
+    return { ok: true };
+  };
+  P.urlPastaSP = function (caminho) {
+    var site = P.siteSP();
+    if (!site || !caminho) return '';
+    return site + '/' + String(caminho).split('/').map(encodeURIComponent).join('/');
+  };
+  /* Pasta de um ficheiro: a que ficou gravada no upload; senao, a calculada pela task e pelos KPIs */
+  P.pastaDeFich = function (ref, m, kpis) { return (ref && ref.sp) || (m ? P.pastaSP(m, kpis || []) : ''); };
 
   /* Esqueleto: uma pasta por empresa, tema, KPI e periodo, para criar antes do arranque do ciclo */
   P.esqueletoSP = function (ano) {

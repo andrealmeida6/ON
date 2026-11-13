@@ -1360,6 +1360,22 @@ Pedido do André a 13 de novembro de 2026: nos indicadores que recebem faturas, 
 - Nos outros indicadores, e para outros tipos de ficheiro (Excel, Word…), Attach evidence anexa o ficheiro diretamente, como antes.
 - A leitura de faturas a partir de Documents (Upload document, com "It is an invoice: read the values") mantém-se.
 
+### Ícone da pasta do SharePoint em cada ficheiro
+
+Pedido do André a 13 de novembro de 2026: junto de cada evidência e ficheiro, um ícone que abre a pasta do SharePoint.
+
+- **Ícone de pasta** ao lado de abrir e descarregar, em todos os sítios que mostram ficheiros:
+  - evidências do indicador na task;
+  - ficheiros pedidos e documentos da task;
+  - página Documents.
+- Na página Documents, a linha com o caminho ("… / R09 - … / T1") também abre a pasta.
+- **Endereço da pasta:** o site SharePoint, mais o caminho gravado no ficheiro (`x.sp`, desde o upload). Se não houver caminho gravado, usa o calculado (`P.pastaDeFich`): numa evidência, a pasta do KPI; num documento da task, a pasta `_Task documents` do departamento. Funções em `portal-sharepoint.js`: `P.siteSP`, `P.definirSiteSP`, `P.urlPastaSP`.
+- **Endereço do site:** em Backoffice > Data and storage, no cartão novo SharePoint, por exemplo `https://empresa.sharepoint.com/sites/ESGDataHub`.
+  - Só aceita endereços `https://….sharepoint.com`.
+  - Fica guardado com os outros dados (`esg_sharepoint`) e é partilhado no ambiente de testes.
+  - Sem endereço, o ícone mostra o caminho na tooltip e diz onde se configura.
+- Abre num separador novo. O SharePoint pede o login Microsoft, se ainda não houver sessão.
+
 ### Dashboard executivo (Monitoring → Dashboard)
 
 Pedido do André a 11 de novembro de 2026, com uma imagem de referência.

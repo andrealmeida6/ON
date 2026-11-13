@@ -2450,3 +2450,8 @@ select[data-c="userPerfil"]{min-width:220px}
 .rq2-ev>.fc{display:flex;flex-wrap:wrap;align-items:center;gap:2px 6px}
 .rq2-ev>.fc .fc-n{overflow-wrap:anywhere;text-align:left}
 @media (max-width:640px){.fc-l.rq2-ev{grid-template-columns:minmax(0,1fr)}.rq2-ev>.ps-lab{grid-row:auto}.rq2-ev>*:not(.ps-lab){grid-column:1}}
+/* Pasta do SharePoint junto de cada ficheiro: icone e linha do caminho clicaveis */
+.fc-b.fc-sp{color:var(--primary)}
+a.fc-b{text-decoration:none}
+a.dc-sp{cursor:pointer;text-decoration:none}
+a.dc-sp:hover{color:var(--primary);text-decoration:underline}

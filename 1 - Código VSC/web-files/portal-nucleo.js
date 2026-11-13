@@ -102,7 +102,7 @@
     docs: 'esg_docs', ent: 'esg_ent', janelas: 'esg_windows', marca: 'esg_brand', amostra: 'esg_sample', users: 'esg_users',
     areas: 'esg_areas', cat: 'esg_catalog', metas: 'esg_metas', deps: 'esg_deps',
     atrib: 'esg_assign', regrasEnt: 'esg_entity_rules', fatores: 'esg_factors', apis: 'esg_connections', evg: 'esg_config_log', selos: 'esg_seals',
-    kpim: 'esg_kpi_master', puxados: 'esg_source_pulls', periodos: 'esg_periods', relatorios: 'esg_reports', tipos: 'esg_data_types', dpdec: 'esg_dp_decisions', gloss: 'esg_glossary', rq: 'esg_report_tables', doc: 'esg_report_doc', defs: 'esg_definitions', saidas: 'esg_outputs'
+    kpim: 'esg_kpi_master', puxados: 'esg_source_pulls', periodos: 'esg_periods', relatorios: 'esg_reports', tipos: 'esg_data_types', dpdec: 'esg_dp_decisions', gloss: 'esg_glossary', rq: 'esg_report_tables', doc: 'esg_report_doc', defs: 'esg_definitions', saidas: 'esg_outputs', sp: 'esg_sharepoint'
   };
   var VERSAO_DADOS = 10;
   P.CHAVES = CHAVES;
