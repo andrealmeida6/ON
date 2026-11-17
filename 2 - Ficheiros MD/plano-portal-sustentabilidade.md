@@ -1497,6 +1497,23 @@ Pedido do André, a partir de um comentário: sair da lógica só de reporte.
   - nos tiles, a meta mais próxima com barra, e o estado do tile passa a ser o dessa meta;
   - o cartão "Trajectory vs target" deu lugar a "Targets", com as cinco metas que precisam de mais atenção.
 
+### Valores históricos e gráfico da evolução face à meta (17/11/2026)
+
+Pedido do André, a partir de um comentário: por indicador, poder ter valores históricos e um gráfico da evolução desde o ano base. Por exemplo, em 2029 com base em 2025: uma barra vertical por ano, de 2025 a 2029, a do ano base noutra cor, e uma linha horizontal com a meta.
+
+- **Valores históricos** (`c.historico = {ano: valor}`, grupo consolidado):
+  - no editor do indicador, há uma secção "Historical values", com um campo por ano dos últimos cinco anos e "+ ano" para recuar mais;
+  - gravam-se com Save, ficam no histórico de alterações e entram na página History.
+  - Um valor histórico ganha o valor da plataforma para o mesmo ano.
+- **Gráfico** (`P.graficoMeta`, `P.serieMeta` em `portal-metas.js`):
+  - uma barra por ano, do ano base mais antigo das metas do indicador até ao ano do ciclo;
+  - o ano base a amarelo, os anos reportados a azul e o ano corrente tracejado quando ainda é YTD;
+  - uma linha vermelha tracejada por meta (até três), com o ano e o valor da meta à direita;
+  - a legenda indica a unidade e o perímetro.
+  - Aparece na ficha do indicador ("Targets and evolution") e em cada indicador da página Targets, com o perímetro escolhido.
+- O estado das metas passa a usar o valor histórico do ano base quando existe.
+- **Dados de demonstração:** valores de 2022 a 2024 para E06, P08, A03 e E08, e o ano base de 2022 nas metas de exemplo desses indicadores (gráficos de 2022 a 2026).
+
 ### Dashboard executivo (Monitoring → Dashboard)
 
 Pedido do André a 11 de novembro de 2026, com uma imagem de referência.

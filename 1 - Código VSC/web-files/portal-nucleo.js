@@ -665,6 +665,13 @@
       ].forEach(function (x) { if (P.cat(x.indicador_id) && !S.metas.some(function (m) { return m.indicador_id === x.indicador_id && Number(m.ano_meta) === x.ano_meta; })) S.metas.push(x); });
     }
     if (P.fecharSeTudoAprovado) (S.ms || []).forEach(function (m) { if (!P.concluida(m) && P.passoAtual(m) && P.passoAtual(m).tipo === 'recolha') P.fecharSeTudoAprovado(m, { nome: 'System' }); });
+    /* Historicos de exemplo e ano base 2022 nas metas de exemplo, para o grafico da evolucao (17/11/2026) */
+    if (!S.ciclo.histDemo) {
+      var HD = { E06: { 2022: 3452100, 2023: 3318400, 2024: 3207900 }, P08: { 2022: 31.5, 2023: 33.2, 2024: 35.6 }, A03: { 2022: 18.16, 2023: 17.7, 2024: 17.52 }, E08: { 2022: 0.062, 2023: 0.058, 2024: 0.054 } };
+      Object.keys(HD).forEach(function (id) { var c = (S.cat || []).filter(function (x) { return x.id === id; })[0]; if (c && !c.historico) c.historico = HD[id]; });
+      (S.metas || []).forEach(function (m) { if (/^mtx[2346]$/.test(m.id || '') && Number(m.ano_base) === 2025) m.ano_base = 2022; });
+      S.ciclo.histDemo = true;
+    }
     /* So momentos de report: a frequencia mensal deixou de existir (T1 a T4 e Year) */
     (S.cat || []).forEach(function (c) { if (c.periodicidade === 'Mensal') c.periodicidade = 'Trimestral'; });
     (S.ms || []).forEach(function (m) { if (m.periodicidade === 'Mensal') m.periodicidade = 'Trimestral'; });

@@ -527,6 +527,16 @@
     return '<section class="ki-sec" style="--gc:#00805A"><h3>Targets<small>One line per deadline. Classification: Financing, Rating, Other commitment or Internal target. Baseline: the year before ' + ano + ', unless set in Monitoring, Targets.</small></h3>' +
       '<div class="ki-mts">' + (linhas || '<p class="ps-small ps-mut">No targets for this indicator yet.</p>') + '<div><button type="button" class="ps-btn peq" data-a="indMetaAdd">+ Add target</button></div></div></section>';
   };
+  /* Valores historicos (grupo consolidado), um por ano, para o grafico desde o ano base */
+  var secaoHist = function (d) {
+    var ano = S.ciclo.ano, h = d.hist || {}, anos = Object.keys(h).map(Number), ini = Math.min.apply(null, anos.concat([ano - 5])), l = [];
+    for (var y = ini; y < ano; y++) l.push(y);
+    return '<section class="ki-sec" style="--gc:#005EB8"><h3>Historical values<small>Group, consolidated. Years before ' + ano + ' that were not reported in the platform. A value reported in the platform for the same year is replaced by this one.</small></h3><div class="ki-hist">' +
+      l.map(function (y) { return '<label class="ki-hist-y"><span>' + y + '</span><input id="kh-' + y + '" class="ps-in ps-num" inputmode="decimal" placeholder="-" value="' + e(h[y] === undefined || h[y] === null ? '' : String(h[y]).replace('.', ',')) + '" data-c="indHist" data-y="' + y + '" aria-label="Value ' + y + '"></label>'; }).join('') +
+      '<button type="button" class="ps-btn peq" data-a="indHistAno" aria-label="Add an earlier year">+ ' + (ini - 1) + '</button></div></section>';
+  };
+  C.indHist = function (el) { var d = U.ind.ed.d; d.hist = d.hist || {}; var v = el.value.trim(); if (v === '') delete d.hist[el.dataset.y]; else d.hist[el.dataset.y] = v; };
+  A.indHistAno = function () { var d = U.ind.ed.d, ano = S.ciclo.ano; d.hist = d.hist || {}; var ini = Math.min.apply(null, Object.keys(d.hist).map(Number).concat([ano - 5])); d.hist[ini - 1] = ''; X.R(); };
   C.indMeta = function (el) { var mt = U.ind.ed.d.metas[Number(el.dataset.i)]; if (mt) mt[el.dataset.f] = el.value; };
   A.indMetaAdd = function () { var d = U.ind.ed.d; (d.metas = d.metas || []).push({ ano_meta: S.ciclo.ano + 4, valor_meta: '', sentido: 'subir', classificacao: 'interna', empresa: '', ano_base: null, valor_base: null, notas: '' }); X.R(); };
   A.indMetaDel = function (dd) { var d = U.ind.ed.d; d.metas.splice(Number(dd.v), 1); X.R(); };
@@ -591,7 +601,7 @@
         cmp('tema', 'Company topic', inp('tema', d)) + cmp('subtema', 'Company sub-topic', inp('subtema', d)) + (d.dps ? '<div class="ki-full ps-small ps-mut">ESRS datapoints: <span class="ps-mono">' + e(d.dps) + '</span>. From the ESRS datapoint list.</div>' : '')) +
       secao('ctrl', cmp('limiar', 'Change threshold (%)', inp('limiar', d, ' inputmode="decimal"'), 'Above it, the platform asks for a justification.') + cmp('evid', 'Evidence required', sel('evid', d, ['Yes', 'No']), 'A document must be attached to submit.') +
         '<div class="ki-full">' + cmp('ctrl', 'Other controls', inp('ctrl', d), 'Controls performed outside the platform.') + '</div>') +
-      secaoMetas(d) +
+      secaoMetas(d) + secaoHist(d) +
       secao('disp', cmp('disp', 'Data available today', sel('disp', d, ['Yes', 'No'], 'Please select')) + cmp('fonte', 'Source or system', inp('fonte', d))) +
       secao('div', cmp('divulga', 'Disclose this KPI', sel('divulga', d, ['Yes', 'No'], 'Please select')) + cmp('uso', 'Report use', inp('uso', d), 'Reports where it is used, separated by commas.') +
         (d.divulga === 'No' ? '<div class="ki-full">' + cmp('motivo', 'If not disclosed, explain why', inp('motivo', d)) + '</div>' : '')) +
@@ -616,18 +626,19 @@
       }).join('');
     /* Metas do indicador e como esta face a cada uma */
     var mts = P.metasDe ? P.metasDe(c.id) : [];
-    corpo += '<section class="ki-sec" style="--gc:#00805A"><h3>Targets</h3>' + (mts.length ? '<div class="ki-fmt">' + mts.map(function (mt) {
+    var graf = P.graficoMeta ? P.graficoMeta(c.id, '') : '';
+    corpo += '<section class="ki-sec" style="--gc:#00805A"><h3>Targets and evolution</h3>' + graf + (mts.length ? '<div class="ki-fmt">' + mts.map(function (mt) {
       var st = P.estadoMeta(mt);
       return '<div class="ki-fmt-r"><span class="mt-ano">' + mt.ano_meta + '</span><span class="mt-chip c-' + e(mt.classificacao) + '">' + e(P.classeMetaTxt(mt.classificacao)) + '</span><b>' + (mt.sentido === 'descer' ? '≤ ' : '≥ ') + e(P.fmtValorMeta(c.id, mt.valor_meta)) + '</b><span class="ki-fmt-b">' + P.barraMeta(st) + '</span>' + chip(st.txt, st.cls) + (mt.notas ? '<small class="ps-mut ki-full">' + e(mt.notas) + '</small>' : '') + '</div>';
     }).join('') + '</div>' : '<p class="ps-small ps-mut">No targets yet. Add them with Edit.</p>') + '</section>';
     return { t: c.nome, s: c.id + ', ' + (c.esrs_requisito || 'no ESRS') + ', ' + campoK.freq.get(c), largo: true, cls: 'alto ki-pan', b: '<div class="ki-ficha">' + corpo + '</div>',
       p: (gere ? '<button type="button" class="ps-btn pri" data-a="indEditar" data-v="' + e(c.id) + '">' + svg(ICO.lapis, 14) + 'Edit</button>' : '') + '<span class="ps-sp-flex"></span><button type="button" class="ps-btn" data-a="fecharPainel">Close</button>' };
   };
-  A.indEditar = function (d) { var c = P.cat(d.v); if (!c) return; var dd = lerInd(c); dd.respEmp = respEmpDe(c, dd); dd.metas = P.metasDe ? P.metasDe(c.id).map(function (m) { return Object.assign({}, m); }) : []; if (!c.calc_codigos && dd.calc && P.sugerirCalc) { var sg0 = P.sugerirCalc(c.id); if (sg0) { dd.calcSug = sg0.sugeridos || []; dd.calcAuto = sg0.fonte; } } U.ind.ed = { id: c.id, novo: false, d: dd, erros: [] }; X.abrePainel('indEd'); };
+  A.indEditar = function (d) { var c = P.cat(d.v); if (!c) return; var dd = lerInd(c); dd.respEmp = respEmpDe(c, dd); dd.metas = P.metasDe ? P.metasDe(c.id).map(function (m) { return Object.assign({}, m); }) : []; dd.hist = Object.assign({}, c.historico || {}); if (!c.calc_codigos && dd.calc && P.sugerirCalc) { var sg0 = P.sugerirCalc(c.id); if (sg0) { dd.calcSug = sg0.sugeridos || []; dd.calcAuto = sg0.fonte; } } U.ind.ed = { id: c.id, novo: false, d: dd, erros: [] }; X.abrePainel('indEd'); };
   A.indNovo = function () {
     var c = novoCat(''), d = lerInd(c);
     d.dep = U.ind.dep || ''; d.resp = GRUPO_TXT; d.reve = ''; d.valida = (pessoas('valida')[0] || {}).nome || ''; d.reporta = (S.ent.filter(function (x) { return x.id === U.ind.emp; })[0] || S.ent[0] || {}).nome || ''; d.freq = 'Year';
-    d.empresas = d.reporta; d.respEmp = respEmpDe(null, d); d.metas = [];
+    d.empresas = d.reporta; d.respEmp = respEmpDe(null, d); d.metas = []; d.hist = {};
     U.ind.ed = { id: '', novo: true, d: d, erros: [] }; X.abrePainel('indEd');
   };
   C.indCampo = function (el) {
@@ -681,6 +692,7 @@
     var r = resolver(d, c);
     /* Metas: validadas aqui, gravadas com o indicador */
     (d.metas || []).forEach(function (mt, i) { if (!P.validarMeta) return; P.validarMeta(Object.assign({}, mt, { indicador_id: (c && c.id) || 'A01', valor_meta: String(mt.valor_meta === null || mt.valor_meta === undefined ? '' : mt.valor_meta).replace(',', '.'), valor_base: '' })).forEach(function (t) { extra.push('Target ' + (i + 1) + ': ' + t); }); });
+    Object.keys(d.hist || {}).forEach(function (y) { var v = d.hist[y]; if (v !== '' && v !== null && v !== undefined && P.lerNumero(String(v)) === null) extra.push('Historical value ' + y + ' must be a number.'); });
     E.erros = extra.concat(r.erros);
     if (E.erros.length) return false;
     if (E.novo) { c = novoCat(d.id); S.cat.push(c); atr(c.id); P.eventoGlobal('Indicator ' + c.id + ' ' + r.val.nome + ': created.', usr.nome, 'Creation'); }
@@ -692,6 +704,9 @@
     if (antesRE !== JSON.stringify(novoRE)) mud.push({ k: 'resp', t: 'Responsible by company', de: '', para: cobre.map(function (nome) { var re = d.respEmp[nome]; return nome + ': ' + re.dep + ', ' + re.resp; }).join('; ') });
     if (!E.novo) registar(c, mud, usr);
     if (P.gravarMetasInd) P.gravarMetasInd(c.id, d.metas || [], usr);
+    /* Historicos: so os anos com valor */
+    var hNovo = {}; Object.keys(d.hist || {}).forEach(function (y) { var v = d.hist[y]; if (v !== '' && v !== null && v !== undefined) hNovo[y] = P.lerNumero(String(v)); });
+    if (JSON.stringify(hNovo) !== JSON.stringify(c.historico || {})) { c.historico = hNovo; if (P.eventoGlobal) P.eventoGlobal('Historical values of ' + c.id + ' updated: ' + (Object.keys(hNovo).join(', ') || 'none') + '.', usr.nome, 'Change'); }
     if (P.eOutput(c)) Object.keys(S.items).map(function (k) { return k.slice(0, k.lastIndexOf(':')); }).filter(function (k, i, l) { return l.indexOf(k) === i; }).forEach(function (ch) { P.calcularOutputs(ch, usr); });
     P.guardar();
     return { c: c, mud: mud, novo: E.novo };

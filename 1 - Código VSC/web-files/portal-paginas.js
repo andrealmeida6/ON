@@ -1343,8 +1343,11 @@
   /* emp: so os valores dessa entidade (a serie historica e o ano anterior sao do grupo e ficam so em All entities) */
   var serieDe = function (id, emp) {
     var pts = [], c = P.cat(id);
-    if (!emp && SERIES[id]) SERIES[id].forEach(function (v, i) { pts.push({ ano: 2011 + i, v: v, nota: 'historical' }); });
-    if (!emp && c.ano_anterior !== null && c.ano_anterior !== undefined) pts.push({ ano: 2025, v: c.ano_anterior, nota: 'prior year' });
+    /* Valores historicos do indicador (introduzidos na ficha) ganham a serie de demonstracao e o ano anterior do mesmo ano */
+    var hist = (!emp && c.historico) || {}, temH = function (a) { return hist[a] !== undefined && hist[a] !== null; };
+    if (!emp && SERIES[id]) SERIES[id].forEach(function (v, i) { if (!temH(2011 + i)) pts.push({ ano: 2011 + i, v: v, nota: 'historical' }); });
+    Object.keys(hist).forEach(function (a) { pts.push({ ano: Number(a), v: Number(hist[a]), nota: 'historical (entered)' }); });
+    if (!emp && c.ano_anterior !== null && c.ano_anterior !== undefined && !temH(S.ciclo.ano - 1)) pts.push({ ano: S.ciclo.ano - 1, v: c.ano_anterior, nota: 'prior year' });
     Object.keys(S.items).forEach(function (k) {
       var it = S.items[k];
       if (it.id !== id || it.valor === null || typeof it.ano !== 'number') return;

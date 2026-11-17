@@ -21,7 +21,12 @@
   P.metasDe = function (id) { return (S.metas || []).filter(function (m) { return m.indicador_id === id; }).sort(function (a, b) { return a.ano_meta - b.ano_meta; }); };
 
   /* Valor de um ano; sem o anual, os trimestres reportados ate agora pela regra do KPI (YTD) */
+  /* Valores historicos do indicador (grupo consolidado), por ano: c.historico = { '2022': 3450000, ... } */
+  P.historicoDe = function (id) { var c = P.cat(id); return (c && c.historico) || {}; };
+  var histAno = function (id, ano, emp) { if (emp || ano >= S.ciclo.ano) return null; var h = P.historicoDe(id)[String(ano)]; return h === null || h === undefined || h === '' || isNaN(Number(h)) ? null : Number(h); };
   var valorAno = function (id, ano, emp) {
+    var hv = histAno(id, ano, emp);
+    if (hv !== null) return { v: hv, ytd: false, hist: true };
     var va = P.valorVista(id, ano, emp).valor;
     if (va !== null && va !== undefined) return { v: va, ytd: false };
     var qs = [1, 2, 3, 4].map(function (t) { return P.valorVista(id, ano + '-T' + t, emp).valor; }).filter(function (x) { return x !== null && x !== undefined; });
@@ -37,7 +42,8 @@
     var cur = valorAno(mt.indicador_id, ano, emp), v = cur.v;
     var anoBase = Number(mt.ano_base) || ano - 1;
     var b = mt.valor_base !== null && mt.valor_base !== undefined && mt.valor_base !== '' ? Number(mt.valor_base) : (function () {
-      var x = anoBase === ano - 1 && P.anteriorVista ? P.anteriorVista(mt.indicador_id, ano, emp) : valorAno(mt.indicador_id, anoBase, emp).v;
+      var x = valorAno(mt.indicador_id, anoBase, emp).v;
+      if ((x === null || x === undefined) && anoBase === ano - 1 && P.anteriorVista) x = P.anteriorVista(mt.indicador_id, ano, emp);
       return x === null || x === undefined ? null : x;
     })();
     var T = Number(mt.valor_meta), desc = mt.sentido === 'descer';
@@ -111,6 +117,49 @@
     var p = Math.max(0, Math.min(1, st.prog)), esp = st.esperado === null ? null : Math.max(0, Math.min(1, st.esperado));
     return '<span class="mt-bar ' + st.cod + '" role="img" aria-label="' + e(Math.round(p * 100) + '% of the way to the target' + (esp !== null ? ', ' + Math.round(esp * 100) + '% expected by now' : '')) + '"><i style="width:' + (p * 100).toFixed(1) + '%"></i>' + (esp !== null && esp < 1 && st.cod !== 'ok' ? '<b style="left:' + (esp * 100).toFixed(1) + '%"></b>' : '') + '</span>';
   };
+  /* --- Grafico da evolucao: uma barra por ano desde o ano base ate ao ano do ciclo; o ano base noutra cor,
+     o ano corrente em YTD tracejado quando ainda nao fechou, e uma linha horizontal por meta --- */
+  P.serieMeta = function (id, emp) {
+    var ano = S.ciclo.ano, mts = P.metasDe(id), bases = mts.map(function (m) { return Number(m.ano_base) || ano - 1; });
+    var hist = Object.keys(P.historicoDe(id)).map(Number).filter(function (y) { return y < ano; });
+    var ini = Math.min.apply(null, (bases.length ? bases : [ano - 1]).concat(bases.length ? [] : hist));
+    var l = [];
+    for (var y = ini; y <= ano; y++) {
+      var r = valorAno(id, y, emp || '');
+      if ((r.v === null || r.v === undefined) && y === ano - 1 && P.anteriorVista) { var a = P.anteriorVista(id, ano, emp || ''); if (a !== null && a !== undefined) r = { v: a, ytd: false }; }
+      l.push({ ano: y, v: r.v === undefined ? null : r.v, ytd: !!r.ytd, base: y === ini });
+    }
+    return l;
+  };
+  P.graficoMeta = function (id, emp, opc) {
+    var c = P.cat(id); if (!c) return '';
+    opc = opc || {};
+    var serie = P.serieMeta(id, emp), mts = P.metasDe(id).filter(function (m) { return !m.empresa || !emp || m.empresa === emp; }).slice(0, 3);
+    if (!serie.some(function (x) { return x.v !== null; }) && !mts.length) return '';
+    var W = 640, H = opc.alto || 230, L = 16, Rr = 150, T = 18, B = 34;
+    var vals = serie.map(function (x) { return x.v; }).filter(function (v) { return v !== null; }).concat(mts.map(function (m) { return Number(m.valor_meta); }));
+    var mx = Math.max.apply(null, vals.concat([0])), mn = Math.min.apply(null, vals.concat([0]));
+    if (mx === mn) mx = mn + 1;
+    var top = mx + (mx - mn) * 0.12, Y = function (v) { return T + (top - v) / (top - mn) * (H - T - B); }, y0 = Y(Math.max(0, mn));
+    var n = serie.length, slot = (W - L - Rr) / n, bw = Math.min(64, slot * 0.6);
+    var casas = c.casas_decimais, f = function (v) { return P.fmtNum(v, casas); }, un = c.unidade_medida || '';
+    var barras = serie.map(function (x, i) {
+      var cx = L + slot * i + slot / 2, cls = x.base ? 'g-base' : x.ytd ? 'g-ytd' : 'g-val';
+      var rot = '<text class="g-ano" x="' + cx.toFixed(1) + '" y="' + (H - 12) + '" text-anchor="middle">' + x.ano + (x.ytd ? ' YTD' : '') + '</text>';
+      if (x.v === null) return '<g><rect class="g-vazio" x="' + (cx - bw / 2).toFixed(1) + '" y="' + (y0 - 2) + '" width="' + bw.toFixed(1) + '" height="2"/><text class="g-v g-nd" x="' + cx.toFixed(1) + '" y="' + (y0 - 8).toFixed(1) + '" text-anchor="middle">no data</text>' + rot + '</g>';
+      var yv = Y(x.v), yt = Math.min(yv, y0), h = Math.max(1.5, Math.abs(y0 - yv));
+      return '<g><title>' + e(x.ano + (x.base ? ' (baseline)' : '') + (x.ytd ? ' (year to date)' : '') + ': ' + f(x.v) + ' ' + un) + '</title><rect class="' + cls + '" x="' + (cx - bw / 2).toFixed(1) + '" y="' + yt.toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + h.toFixed(1) + '" rx="4"/>' +
+        '<text class="g-v" x="' + cx.toFixed(1) + '" y="' + (yt - 6).toFixed(1) + '" text-anchor="middle">' + e(f(x.v)) + '</text>' + rot + '</g>';
+    }).join('');
+    var linhas = mts.map(function (m, i) {
+      var yy = Y(Number(m.valor_meta)), ly = Math.max(T + 10, Math.min(H - B - 4, yy - 6 - i * 0));
+      return '<g class="g-meta"><title>' + e('Target ' + m.ano_meta + ' (' + P.classeMetaTxt(m.classificacao) + '): ' + (m.sentido === 'descer' ? '≤ ' : '≥ ') + f(Number(m.valor_meta)) + ' ' + un) + '</title><line x1="' + L + '" x2="' + (W - Rr + 8) + '" y1="' + yy.toFixed(1) + '" y2="' + yy.toFixed(1) + '"/>' +
+        '<text x="' + (W - Rr + 14) + '" y="' + (ly + 4).toFixed(1) + '">' + e('Target ' + m.ano_meta) + '</text><text class="g-mv" x="' + (W - Rr + 14) + '" y="' + (ly + 19).toFixed(1) + '">' + e((m.sentido === 'descer' ? '≤ ' : '≥ ') + f(Number(m.valor_meta))) + '</text></g>';
+    }).join('');
+    return '<figure class="g-fig"><svg class="g-meta-svg" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + e(c.nome + ': values by year from the baseline, with the targets') + '">' +
+      '<line class="g-eixo" x1="' + L + '" x2="' + (W - Rr + 8) + '" y1="' + y0.toFixed(1) + '" y2="' + y0.toFixed(1) + '"/>' + barras + linhas + '</svg>' +
+      '<figcaption class="g-leg"><span><i class="g-base"></i>Baseline</span><span><i class="g-val"></i>Reported</span><span><i class="g-ytd"></i>Year to date</span>' + (mts.length ? '<span><i class="g-lmeta"></i>Target</span>' : '') + '<span class="g-un">' + e(un) + (emp ? ', ' + e(emp) : ', group') + '</span></figcaption></figure>';
+  };
   var fmtV = function (id, v) { var c = P.cat(id); return v === null || v === undefined ? '-' : P.fmtNum(v, c ? c.casas_decimais : 2) + (c && c.unidade_medida ? ' ' + c.unidade_medida : ''); };
   P.fmtValorMeta = fmtV;
 
@@ -151,6 +200,7 @@
     var lista = ids.map(function (id) {
       var c = P.cat(id), l = porInd[id].sort(function (a, b) { return a.mt.ano_meta - b.mt.ano_meta; });
       return '<article class="mt-ind"><header class="mt-ind-h"><button type="button" class="mt-ind-n" data-a="indFicha" data-v="' + e(id) + '"><span class="ps-cod">' + e(id) + '</span><b>' + e(c.nome) + '</b></button><small class="ps-mut">' + e((c.tema || 'Other') + ' · ' + (c.unidade_medida || '')) + '</small></header>' +
+        '<div class="mt-graf">' + P.graficoMeta(id, f.emp || '') + '</div>' +
         '<div class="mt-rows">' + l.map(function (x) {
           var mt = x.mt, st = x.st, onde = empV(mt) || 'Group, consolidated';
           return '<div class="mt-row"><div class="mt-c mt-c1"><span class="mt-ano">' + mt.ano_meta + '</span><span class="mt-chip c-' + e(mt.classificacao) + '">' + e(P.classeMetaTxt(mt.classificacao)) + '</span></div>' +
