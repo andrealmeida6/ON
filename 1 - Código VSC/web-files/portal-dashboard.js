@@ -57,8 +57,11 @@
     return { v: r.v === null ? null : kg ? r.v / 1000 : r.v, ant: (function () { var x = anterior(k, emp); return x === null ? null : kg ? x / 1000 : x; })(), un: kg ? 'tCO2e' : c.unidade_medida, nome: c.nome, ytd: r.ytd, casas: kg ? 0 : c.casas_decimais, pct: c.unidade_medida === '%' };
   };
   var meta = function (k) { return (S.metas || []).filter(function (m) { return m.indicador_id === k; })[0] || null; };
-  var estado = function (k, l) {
+  var estado = function (k, l, emp) {
     if (l.v === null) return { t: 'No data yet', c: '' };
+    /* Com meta: o estado e o da meta mais proxima (o mesmo da pagina Targets) */
+    var ml = P.metasDe && k !== 'QUAL' && k.indexOf('+') < 0 ? P.metasDe(k) : [];
+    if (ml.length) { var mt0 = ml.filter(function (m) { return m.ano_meta >= ano(); })[0] || ml[ml.length - 1], sm = P.estadoMeta(mt0, emp === undefined || emp === '' ? (mt0.empresa || '') : emp); if (sm.cod !== 'nd') return { t: sm.txt, c: sm.cls }; }
     var mt = meta(k), menos = MENOS_E_MELHOR.indexOf(k) > -1 || (mt && mt.sentido === 'descer');
     if (mt && (menos ? l.v <= mt.valor_meta : l.v >= mt.valor_meta)) return { t: 'On target', c: 'ok' };
     if (k === 'QUAL') return l.v >= 85 ? { t: 'On track', c: 'ok' } : l.v >= 60 ? { t: 'Attention', c: 'warn' } : { t: 'At risk', c: 'err' };
@@ -68,17 +71,27 @@
   };
   var pc = function (v, casas) { return v === null || v === undefined ? '-' : e(P.fmtNum(v, casas === undefined ? 1 : casas)) + '%'; };
   var fmt = function (v, casas) { return v === null || v === undefined ? '-' : P.fmtNum(v, Math.abs(v) >= 1000 ? 0 : casas); };
-  var variacao = function (l) {
+  var variacao = function (l, k) {
     if (l.v === null || l.ant === null) return '';
     var up = l.v >= l.ant, d = l.pct ? Math.abs(l.v - l.ant) : (l.ant ? Math.abs((l.v - l.ant) / l.ant * 100) : null);
     if (d === null) return '';
-    return '<span class="db-var">' + (up ? '▲' : '▼') + ' ' + P.fmtNum(d, 1) + (l.pct ? ' p.p.' : '%') + ' vs ' + (U.dash.per ? 'same quarter ' + (ano() - 1) : ano() - 1) + '</span>';
+    var menos = k && (MENOS_E_MELHOR.indexOf(k) > -1 || (meta(k) && meta(k).sentido === 'descer')), bom = l.v === l.ant ? null : (up !== !!menos);
+    return '<span class="db-var' + (bom === null ? '' : bom ? ' bom' : ' mau') + '">' + (up ? '▲' : '▼') + ' ' + P.fmtNum(d, 1) + (l.pct ? ' p.p.' : '%') + ' vs ' + (U.dash.per ? 'same quarter ' + (ano() - 1) : ano() - 1) + '</span>';
   };
+  /* Meta mais proxima ainda por cumprir (ou a ultima), para o tile */
+  var metaTile = function (k) {
+    if (!P.metasDe || k === 'QUAL' || k.indexOf('+') > -1) return '';
+    var l = P.metasDe(k); if (!l.length) return '';
+    var mt = l.filter(function (m) { return m.ano_meta >= ano(); })[0] || l[l.length - 1], st = P.estadoMeta(mt);
+    return '<span class="db-meta"><span class="db-meta-t">Target ' + mt.ano_meta + ': ' + (mt.sentido === 'descer' ? '≤ ' : '≥ ') + e(P.fmtValorMeta(k, mt.valor_meta)) + '</span>' + P.barraMeta(st) + '</span>';
+  };
+  var PCLS = { Environment: 'p-env', Social: 'p-soc', Governance: 'p-gov', 'Data quality': 'p-qual' };
+  var PICO = { Environment: 'E', Social: 'S', Governance: 'G', 'Data quality': 'Q' };
   var tile = function (k, emp) {
-    var l = leitura(k, emp), st = estado(k, l), cod = k === 'QUAL' ? 'Completeness' : k.replace('+', ' + ');
-    return '<div class="db-tile"><span class="db-pilar">' + e(PILAR(k).toUpperCase()) + '</span><b class="db-v">' + e(fmt(l.v, l.casas)) + (l.pct && l.v !== null ? '<small>%</small>' : '') + '</b>' +
+    var l = leitura(k, emp), st = estado(k, l, emp), cod = k === 'QUAL' ? 'Completeness' : k.replace('+', ' + '), pil = PILAR(k);
+    return '<div class="db-tile ' + (PCLS[pil] || '') + '"><span class="db-pilar"><i aria-hidden="true">' + PICO[pil] + '</i>' + e(pil.toUpperCase()) + '</span><b class="db-v">' + e(fmt(l.v, l.casas)) + (l.pct && l.v !== null ? '<small>%</small>' : '') + '</b>' +
       '<span class="db-n">' + e((l.pct ? '' : l.un + ' · ') + l.nome) + (l.ytd ? ' <span class="db-ytd" title="Year to date: the quarters reported so far">YTD</span>' : '') + '</span>' +
-      '<span class="db-pe">' + variacao(l) + '<span class="ps-tip-alvo" tabindex="0" data-tip="' + e(cod + ': ' + st.t + (meta(k) ? '. Target ' + P.fmtNum(meta(k).valor_meta, 0) + ' ' + meta(k).unidade + ' in ' + meta(k).ano_meta : '')) + '">' + chip(st.t, st.c) + '</span></span></div>';
+      metaTile(k) + '<span class="db-pe">' + variacao(l, k) + '<span class="ps-tip-alvo" tabindex="0" data-tip="' + e(cod + ': ' + st.t + (meta(k) ? '. Target ' + P.fmtNum(meta(k).valor_meta, 0) + ' ' + meta(k).unidade + ' in ' + meta(k).ano_meta : '')) + '">' + chip(st.t, st.c) + '</span></span></div>';
   };
   /* Barras horizontais: rotulo, barra fina, valor em texto (a cor nunca vai sozinha) */
   var barras = function (linhas, un, max) {
@@ -105,25 +118,41 @@
     var sc = '<div class="db-sec"><div class="ps-sp-b"><h2 class="db-h">Scorecard ESG global <small>' + score.length + ' of 8 KPIs</small></h2>' + (P.gereTudo(u()) ? '<button type="button" class="ps-btn peq" data-a="dbEditar">Choose the KPIs</button>' : '') + '</div><div class="db-score">' + score.map(function (k) { return tile(k, emp); }).join('') + '</div></div>';
 
     var s1 = v('E06', emp), s2 = v('E07', emp), s3 = v('N01', emp), ren = v('E03', emp), renA = leitura('E03', emp).ant;
-    var amb = '<div class="db-sec"><h2 class="db-h">Environment</h2><div class="db-g3">' +
+    var amb = '<div class="db-sec"><h2 class="db-h p-env"><i aria-hidden="true">E</i>Environment</h2><div class="db-g3">' +
       cartao('GHG emissions by scope (tCO2e)', barras([{ t: 'Scope 1', v: s1, casas: 0, un: 'tCO2e' }, { t: 'Scope 2', v: s2, casas: 0, un: 'tCO2e' }, { t: 'Scope 3', v: s3, casas: 0, un: 'tCO2e' }], 'tCO2e'), ['See by company and source', X.rota('Consolidado')]) +
       cartao('Energy: renewable share', barras([{ t: String(ano()), v: ren, un: '%' }, { t: String(ano() - 1), v: renA, un: '%', cls: 'ant' }], '%', 100) + lista([['Electricity (MWh)', e(fmt(v('E01', emp), 0))], ['Primary energy (MWh)', e(fmt(v('E04', emp), 0))], ['Sludge valorised', pc(v('R10', emp), 1)]])) +
-      cartao('Trajectory vs target', (S.metas || []).length ? barras((S.metas || []).map(function (mt) { var l = leitura(mt.indicador_id, emp), menos = mt.sentido === 'descer'; var prog = l.v === null ? null : menos ? (l.ant && l.ant > mt.valor_meta ? Math.max(0, Math.min(100, (l.ant - l.v) / (l.ant - mt.valor_meta) * 100)) : null) : Math.max(0, Math.min(100, l.v / (mt.valor_meta || 1) * 100)); return { t: mt.nome.split(',')[0] + ' (' + mt.ano_meta + ')', v: prog, un: '%', casas: 0 }; }), '%', 100) + '<p class="ps-small ps-mut">Progress towards each target. For targets to reduce, the progress of the year against the prior year.</p>' : '<p class="ps-mut ps-small">No targets set.</p>') +
+      cartao('Targets', (function () {
+        var l = (S.metas || []).filter(function (mt) { return P.cat(mt.indicador_id); }).map(function (mt) { return { mt: mt, st: P.estadoMeta(mt) }; });
+        if (!l.length) return '<p class="ps-small ps-mut">No targets yet.</p>';
+        var ordem = ['fora', 'falhou', 'risco', 'curso', 'nd', 'ok'];
+        l.sort(function (a, b) { return ordem.indexOf(a.st.cod) - ordem.indexOf(b.st.cod) || a.mt.ano_meta - b.mt.ano_meta; });
+        return '<ul class="db-mts">' + l.slice(0, 5).map(function (x) { var c = P.cat(x.mt.indicador_id); return '<li><span class="db-mt-n"><b>' + e(x.mt.indicador_id) + '</b> ' + e(c.nome) + ' <small>' + x.mt.ano_meta + ' · ' + e(P.classeMetaTxt(x.mt.classificacao)) + '</small></span>' + P.barraMeta(x.st) + chip(x.st.txt, x.st.cls) + '</li>'; }).join('') + '</ul>';
+      })(), ['See all targets', X.rota('Metas')]) +
       '</div></div>';
 
-    var soc = '<div class="db-sec"><h2 class="db-h">Social</h2><div class="db-g3">' +
+    var soc = '<div class="db-sec"><h2 class="db-h p-soc"><i aria-hidden="true">S</i>Social</h2><div class="db-g3">' +
       cartao('Workforce', lista([['Headcount (31/12)', e(fmt(v('P01', emp), 0))], ['Group employees', e(fmt(v('P02', emp), 0))], ['Turnover', pc(v('P07', emp), 1)], ['Training hours', e(fmt(v('P12', emp), 0))], ['Trained at least once', pc(v('P13', emp), 1)]])) +
       cartao('Women in the workforce', barras([{ t: 'Total workforce', v: v('P04', emp), un: '%' }, { t: 'Leadership', v: v('P08', emp), un: '%' }], '%', 100) + lista([['Gender pay gap', pc(v('N05', emp), 1)]])) +
       cartao('Health and safety', lista([['Severity rate', pc(v('P14', emp), 2) + ' ' + chip(estado('P14', leitura('P14', emp)).t, estado('P14', leitura('P14', emp)).c)], ['Absenteeism', pc(v('P16', emp), 2)], ['Fatal accidents', e(fmt(v('P17', emp), 0))]])) +
       '</div></div>';
 
-    var gov = '<div class="db-sec"><h2 class="db-h">Governance</h2><div class="db-g3">' +
+    var gov = '<div class="db-sec"><h2 class="db-h p-gov"><i aria-hidden="true">G</i>Governance</h2><div class="db-g3">' +
       cartao('Ethics and compliance', barras([{ t: 'Whistleblowing channel coverage', v: v('G03', emp), un: '%' }, { t: 'Anti-corruption training', v: v('G04', emp), un: '%' }, { t: 'Ethics declaration signed', v: v('G05', emp), un: '%' }, { t: 'Alerts with written answer', v: v('G06', emp), un: '%' }], '%', 100)) +
       cartao('Supply chain', lista([['Total purchases (€)', e(fmt(v('G01', emp), 0))]]) + barras([{ t: 'Purchases in domestic markets', v: v('G02', emp), un: '%' }], '%', 100)) +
       cartao('Customers', lista([['Customer satisfaction (NPS)', e(fmt(v('C02', emp), 0))], ['Customer complaints', e(fmt(v('N06', emp), 0))], ['Personal data incidents', e(fmt(v('N07', emp), 0))]])) +
       '</div></div>';
     var nota = '<p class="ps-small ps-mut db-nota">' + (Array.isArray(emp) ? 'Selection of ' + emp.length + ' companies, each at 100%.' : emp ? emp + ', at 100%.' : 'Consolidated by the perimeter of the group.') + ' ' + (d.per ? P.periodo(d.per).nome + ', compared with the same quarter of ' + (ano() - 1) + '.' : 'Year ' + ano() + ': annual values when reported, otherwise the quarters so far (YTD).') + ' Values include those still in approval.</p>';
-    return filtros + nota + sc + amb + soc + gov;
+    /* Topo: o estado do ciclo num relance */
+    var pts = P.pontosCiclo(function (m) { return (!d.per || m.periodo === d.per) && (!emp || (Array.isArray(emp) ? emp.indexOf(m.empresa) > -1 : m.empresa === emp)); });
+    var apr = pts.filter(function (x) { return x.s.cod === 'aprovado'; }).length, atr = pts.filter(function (x) { return x.s.cod === 'atraso'; }).length, compl = pts.length ? Math.round(pts.filter(function (x) { return x.s.cod === 'aprovado' || x.s.cod === 'aprovacao'; }).length / pts.length * 100) : 0;
+    var mts = (S.metas || []).filter(function (mt) { return P.cat(mt.indicador_id); }).map(function (mt) { return P.estadoMeta(mt).cod; }), bem = mts.filter(function (c) { return c === 'ok' || c === 'curso'; }).length, mal = mts.filter(function (c) { return c === 'risco' || c === 'fora' || c === 'falhou'; }).length;
+    var anel = function (pct) { var C = 2 * Math.PI * 26, dd = C * pct / 100; return '<svg class="db-anel" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="26" class="f"/><circle cx="32" cy="32" r="26" class="v" stroke-dasharray="' + dd.toFixed(1) + ' ' + (C - dd).toFixed(1) + '"/></svg>'; };
+    var hero = '<div class="db-hero"><div class="db-hero-t"><span>' + e(Array.isArray(emp) ? 'Selection of ' + emp.length + ' companies' : emp || 'Group, consolidated') + ' · ' + e(d.per ? P.periodo(d.per).nome : 'Year ' + ano()) + '</span><b>ESG performance at a glance</b></div>' +
+      '<div class="db-hero-k">' + anel(compl) + '<span><b>' + compl + '%</b><small>reporting completeness</small></span></div>' +
+      '<div class="db-hero-k"><span><b>' + apr + '<em> / ' + pts.length + '</em></b><small>data points approved</small></span></div>' +
+      '<a class="db-hero-k" href="' + X.rota('Metas') + '"><span><b>' + bem + '<em> / ' + mts.length + '</em></b><small>targets achieved or on track' + (mal ? ', ' + mal + ' need attention' : '') + '</small></span></a>' +
+      '<div class="db-hero-k' + (atr ? ' alerta' : '') + '"><span><b>' + atr + '</b><small>overdue data points</small></span></div></div>';
+    return filtros + hero + nota + sc + amb + soc + gov;
   };
   X.A.dbModo = function (d) { U.dash.modo = d.v; R(); };
   X.C.dbEmp = function (el) { U.dash.emp = el.value; R(); };

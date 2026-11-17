@@ -1466,6 +1466,37 @@ Pedido do André: a caixa Responsibility mostrava Reviewer e Validator, que não
   4. **Published:** quadros do relatório, automático.
 - Os campos Reviewer e Validator saíram do editor. Quem reporta continua a escolher-se por empresa, na secção Companies, e o fluxo atualiza logo.
 
+### KPMG ESG Intelligence & Control Hub: novo nome, metas ESG e dashboard (17/11/2026)
+
+Pedido do André, a partir de um comentário: sair da lógica só de reporte.
+
+- **Nome:** KPMG ESG Intelligence & Control Hub.
+  - Frase de posicionamento: "Turn scattered ESG data into auditable data, management decisions and financial value". Em português: plataforma que transforma dados ESG dispersos em dados auditáveis, decisões de gestão e valor financeiro.
+  - Aplicado na marca (`P.MARCA_BASE`, com a sigla `ESG` no monograma, `S.marca.sigla`), no título das páginas, no manifesto da aplicação (nome curto "KPMG ESG Hub"), nos ícones (ESG), na entrada e na escolha de perfil.
+  - A marca gravada com "ESG Data Hub" muda sozinha (`P.migrarDados`). O site SharePoint continua a chamar-se ESG Data Hub.
+- **Metas ESG** (`web-files/portal-metas.js`):
+  - Cada indicador pode ter várias metas, uma por prazo (por exemplo 2026, 2030 e 2050), cada uma com:
+    - direção (≥ ou ≤);
+    - classificação: Financing, Rating, Other commitment ou Internal target;
+    - âmbito: grupo consolidado ou uma empresa;
+    - ano e valor base (por omissão, o ano anterior e o valor reportado);
+    - nota.
+  - Estado: o valor do ano do ciclo (ou YTD, os trimestres até agora) face à linha reta entre o valor base e a meta. Achieved; On track (até 5 pontos atrás do esperado); At risk (até 20 pontos atrás); Off track; Missed (prazo passado); No data yet.
+  - **No indicador:** secção Targets no editor (uma linha por prazo, grava com Save) e na ficha (com a barra de progresso e o estado).
+  - **Página nova Monitoring > Targets** (web page `Metas`, snippet `Metas/Introducao`, bloco `metas`):
+    - contadores por estado (servem de filtro);
+    - cartões por classificação, com a distribuição dos estados;
+    - filtros de perímetro, tema e pesquisa;
+    - uma linha por meta, agrupadas por indicador: prazo, classificação, meta, base, valor atual, barra com a marca do esperado e estado;
+    - New target e Edit, só para a equipa de sustentabilidade e o administrador.
+  - Os dados (`S.metas`, chave `esg_metas`) ganham `id`, `classificacao`, `empresa`, `ano_base`, `valor_base` e `notas`. As metas antigas são convertidas e entram seis metas de exemplo com as quatro classificações.
+- **Dashboard:**
+  - topo com o estado do ciclo: completude, pontos aprovados, metas atingidas ou em linha e pontos em atraso;
+  - cor e letra por pilar (E, S, G) nos tiles e nas secções;
+  - variação a verde ou vermelho conforme a direção do KPI;
+  - nos tiles, a meta mais próxima com barra, e o estado do tile passa a ser o dessa meta;
+  - o cartão "Trajectory vs target" deu lugar a "Targets", com as cinco metas que precisam de mais atenção.
+
 ### Dashboard executivo (Monitoring → Dashboard)
 
 Pedido do André a 11 de novembro de 2026, com uma imagem de referência.

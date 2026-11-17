@@ -190,7 +190,8 @@
     var p = String(n || '').split(/\s+/).filter(function (w) { return /^[A-ZÀ-Ý]/.test(w); });
     return p.length > 1 && p.length <= 4 ? p.map(function (w) { return w[0]; }).join('') : iniciais(n || 'P').toUpperCase();
   };
-  var monograma = function () { return '<span class="ps-marca-mono" aria-hidden="true">' + e(sigla(nomeMarca())) + '</span>'; };
+  /* A sigla da marca (ESG) ganha a sigla calculada do nome, que num nome longo daria letras sem sentido */
+  var monograma = function () { return '<span class="ps-marca-mono" aria-hidden="true">' + e((S.marca && S.marca.sigla) || sigla(nomeMarca())) + '</span>'; };
   var logoOuMono = function () {
     return S.marca.logotipo ? '<img src="' + e(S.marca.logotipo) + '" alt="' + e(nomeMarca()) + '" data-logo>' : monograma();
   };
@@ -218,7 +219,7 @@
     if (P.daUnidade(usr)) return ['Inicio', 'Milestones', 'Milestone', 'Documentos'];
     var base = ['Inicio', 'Milestones', 'Milestone', 'Timeline', 'Consolidado', 'Documentos', 'Evidencias', 'Relatorio', 'Historico', 'Auditoria'];
     if (usr.perfil !== 'auditor') base.push('Dados');
-    if (P.gereTudo(usr) || usr.perfil === 'auditor') base.push('Dashboard', 'Aprovacoes', 'Estado', 'Trilho');
+    if (P.gereTudo(usr) || usr.perfil === 'auditor') base.push('Dashboard', 'Metas', 'Aprovacoes', 'Estado', 'Trilho');
     if (P.gereTudo(usr)) base.push('Backoffice');
     return base;
   };

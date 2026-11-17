@@ -163,7 +163,7 @@
   var DEPARTAMENTOS = ['Operações', 'Qualidade e Laboratório', 'Comercial e Relação com o Cliente', 'Ambiente, Saúde e Segurança', 'Recursos Humanos', 'Financeira', 'Jurídico e Compliance', 'Compras', 'Frota', 'Sistemas de Informação', 'I&D, CSR e ESG'];
   /* Os departamentos geridos no backoffice sao as unidades de negocio */
   Object.defineProperty(P, 'UNIDADES', { get: function () { return (S.deps || []).map(function (d) { return d.nome; }); } });
-  P.MARCA_BASE = { nome: 'ESG Data Hub', subtitulo: '', logotipo: '', cores: { primary: '#00338D', secondary: '#0091DA', accent: '#1E49E2', bg: '#F4F7FC', text: '#0C233C' } };
+  P.MARCA_BASE = { nome: 'KPMG ESG Intelligence & Control Hub', sigla: 'ESG', subtitulo: '', logotipo: '', cores: { primary: '#00338D', secondary: '#0091DA', accent: '#1E49E2', bg: '#F4F7FC', text: '#0C233C' } };
   P.PALETAS = [
     { nome: 'Blue', cores: { primary: '#00338D', secondary: '#0091DA', accent: '#1E49E2', bg: '#F4F7FC', text: '#0C233C' } },
     { nome: 'Teal', cores: { primary: '#0B4F6C', secondary: '#01A7A3', accent: '#0F7C8F', bg: '#F2F8F9', text: '#10282F' } },
@@ -651,6 +651,19 @@
     /* Tasks com todos os indicadores ja aprovados um a um: ficam concluidas */
     if (!S.sp || typeof S.sp !== 'object') S.sp = {};
     if (!S.consultas || typeof S.consultas !== 'object') S.consultas = {};
+    /* Metas ESG (17/11/2026): cada meta passa a ter id, classificacao, ambito, ano base e notas; entram metas de exemplo
+       com as quatro classificacoes e varios prazos para o mesmo indicador */
+    if (!Array.isArray(S.metas)) S.metas = [];
+    if (S.metas.some(function (m) { return !m.id; })) {
+      S.metas.forEach(function (m, i) { if (m.id) return; m.id = 'mt0' + i; m.classificacao = m.classificacao || (m.indicador_id === 'E06' ? 'compromisso' : 'interna'); m.empresa = m.empresa || ''; if (m.ano_base === undefined) m.ano_base = null; if (m.valor_base === undefined) m.valor_base = null; m.notas = m.notas || (m.indicador_id === 'E06' ? 'Net Zero public commitment.' : ''); });
+      [{ id: 'mtx1', indicador_id: 'E03', nome: 'Eletricidade de fontes renováveis', ano_meta: 2026, valor_meta: 80, sentido: 'subir', unidade: '%', classificacao: 'financiamento', empresa: '', ano_base: 2025, valor_base: null, notas: 'Sustainability-linked loan: margin step-down when the target is met.' },
+       { id: 'mtx2', indicador_id: 'E06', nome: 'Emissões diretas de GHG (Âmbito 1)', ano_meta: 2028, valor_meta: 2800000, sentido: 'descer', unidade: 'kgCO2e', classificacao: 'financiamento', empresa: '', ano_base: 2025, valor_base: null, notas: 'Sustainability-linked bond KPI 1.' },
+       { id: 'mtx3', indicador_id: 'P08', nome: 'Mulheres em cargos de liderança', ano_meta: 2028, valor_meta: 40, sentido: 'subir', unidade: '%', classificacao: 'rating', empresa: '', ano_base: 2025, valor_base: null, notas: 'Gender diversity criterion of the ESG rating.' },
+       { id: 'mtx4', indicador_id: 'E08', nome: 'Intensidade carbónica (Âmbito 1)', ano_meta: 2030, valor_meta: 0.04, sentido: 'descer', unidade: 'kgCO2e/€', classificacao: 'rating', empresa: '', ano_base: 2025, valor_base: null, notas: '' },
+       { id: 'mtx5', indicador_id: 'G04', nome: 'Colaboradores expostos com formação anticorrupção', ano_meta: 2026, valor_meta: 90, sentido: 'subir', unidade: '%', classificacao: 'interna', empresa: '', ano_base: 2025, valor_base: null, notas: '' },
+       { id: 'mtx6', indicador_id: 'A03', nome: 'Água não faturada', ano_meta: 2030, valor_meta: 15, sentido: 'descer', unidade: '%', classificacao: 'compromisso', empresa: '', ano_base: 2025, valor_base: null, notas: 'Commitment in the concession contract.' }
+      ].forEach(function (x) { if (P.cat(x.indicador_id) && !S.metas.some(function (m) { return m.indicador_id === x.indicador_id && Number(m.ano_meta) === x.ano_meta; })) S.metas.push(x); });
+    }
     if (P.fecharSeTudoAprovado) (S.ms || []).forEach(function (m) { if (!P.concluida(m) && P.passoAtual(m) && P.passoAtual(m).tipo === 'recolha') P.fecharSeTudoAprovado(m, { nome: 'System' }); });
     /* So momentos de report: a frequencia mensal deixou de existir (T1 a T4 e Year) */
     (S.cat || []).forEach(function (c) { if (c.periodicidade === 'Mensal') c.periodicidade = 'Trimestral'; });
@@ -682,8 +695,8 @@
       if (!u.unidades) P.definirUnidades(u, u.unidade ? [u.unidade] : []);
       var nv = NOMES_NOVOS[u.login]; if (nv && [].concat(nv[0]).indexOf(u.nome) > -1) u.nome = nv[1];
     });
-    /* A plataforma passou a chamar-se ESG Data Hub: a marca gravada com o nome antigo acompanha a mudanca */
-    if (S.marca && /^(Record to Report \(R2R\)|Portal de Sustentabilidade)$/.test(S.marca.nome || '')) { S.marca.nome = P.MARCA_BASE.nome; escrever(CHAVES.marca, S.marca); }
+    /* A plataforma passou a chamar-se KPMG ESG Intelligence & Control Hub (17/11/2026): a marca gravada com um nome antigo acompanha a mudanca */
+    if (S.marca && /^(Record to Report \(R2R\)|Portal de Sustentabilidade|ESG Data Hub)$/.test(S.marca.nome || '')) { S.marca.nome = P.MARCA_BASE.nome; S.marca.sigla = P.MARCA_BASE.sigla; escrever(CHAVES.marca, S.marca); }
     if (P.garantirEsrs) P.garantirEsrs();
   };
   /* Gera os dados de demonstracao sem tocar no armazenamento: serve o carregamento inicial do Supabase */

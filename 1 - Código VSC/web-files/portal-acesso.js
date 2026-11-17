@@ -53,8 +53,8 @@
     el.setAttribute('role', 'dialog');
     el.setAttribute('aria-modal', 'true');
     el.setAttribute('aria-labelledby', 'ac-tit');
-    el.innerHTML = '<div class="ps-ent"><div class="ps-ent-esq ps-fundo-marca"><div><b class="ps-acesso-marca">ESG Data Hub</b>' +
-      '<h1>Record once, report with confidence.</h1></div></div>' +
+    el.innerHTML = '<div class="ps-ent"><div class="ps-ent-esq ps-fundo-marca"><div><b class="ps-acesso-marca">KPMG ESG Intelligence &amp; Control Hub</b>' +
+      '<h1>Turn scattered ESG data into auditable data, management decisions and financial value.</h1></div></div>' +
       '<div class="ps-ent-dir"><h2 id="ac-tit">Sign in</h2><p class="ps-mut">Enter your username or email.</p>' +
       '<form class="ps-login" data-acesso-form novalidate><div class="ps-campo"><label class="ps-lab" for="ac-user">Username or email</label>' +
       '<input id="ac-user" class="ps-in" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" required></div>' +

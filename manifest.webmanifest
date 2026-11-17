@@ -1,7 +1,7 @@
 {
-  "name": "ESG Data Hub",
-  "short_name": "ESG Data Hub",
-  "description": "Sustainability reporting: tasks, indicators, evidence and report.",
+  "name": "KPMG ESG Intelligence & Control Hub",
+  "short_name": "KPMG ESG Hub",
+  "description": "Turns scattered ESG data into auditable data, management decisions and financial value.",
   "id": "./",
   "start_url": "./",
   "scope": "./",
